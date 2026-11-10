@@ -84,3 +84,39 @@ Supersedes: none
 ## 2026-11-10 No login. The link is public and the game holds nothing personal.
 Reason: Nothing in the game or this repo names the family or the kids, so a login would only add friction on the kids' devices. If the owner wants it private later, Cloudflare Access (already used for Caputo Mountain) can sit in front of the same files.
 Supersedes: none
+
+## 2026-11-10 Milestone two is the modern look: textured models, image-based lighting and real shadows
+Reason: The grove read as blocky. The owner wants a modern 3D game: smooth, textured, properly lit characters and scenery, in the range of Astro Bot or Super Mario Odyssey. Stylized, not photoreal. Heroes are rigged, textured glTF models with skeletal animation, and scenery uses textured models and materials, image-based lighting and real shadows. The shapes were a download-size choice that expected this swap. Game rules, difficulty numbers and controls do not change, apart from playtest tuning.
+Supersedes: "Everything on screen is built from simple shapes in code. No model or picture files."
+
+## 2026-11-10 Hero models are made by the owner in Meshy and live in this repo
+Reason: Hero models were made by the owner in Meshy's web app on a Pro plan (privately owned), from the Caputo Mountain art. Characters and art are all rights reserved, and README.md says so.
+Supersedes: "This repo is public, so it holds no family names and no art from the private repo", for the hero model files only. The rest of that entry stands: no family names, and no other file from the private repo.
+
+## 2026-11-10 Every other third-party asset is CC0 and listed in CREDITS.md
+Reason: CC0 means anyone may use the file for anything, so a public repo can hold it without asking. CREDITS.md lists each one with its source and license.
+Supersedes: none
+
+## 2026-11-10 Download budget rises from 10 MB to 20 MB, and assets are compressed at build time
+Reason: Models and textures need the room. The build enforces the budget. Assets are compressed when the game is built (meshopt for geometry, KTX2 for textures). The start screen appears before the 3D assets finish loading, with a progress bar, so nobody waits at a blank page.
+Supersedes: the 10 MB budget in "Everything on screen is built from simple shapes in code. No model or picture files."
+
+## 2026-11-10 Frame rate targets: 60 on the Mac, a steady 30 or better on the iPad
+Reason: Smooth play matters more than extra detail. Quality tiers are chosen automatically, so each device gets the best look it can hold at its target.
+Supersedes: none
+
+## 2026-11-10 Browser checks run in WebKit as well as Chromium, and WebKit is a required check
+Reason: Every iPad browser is WebKit, and merges publish straight to the kids' devices.
+Supersedes: none
+
+## 2026-11-10 A required check fails any pull request that contains a private term
+Reason: The repo and its Actions logs are public. The terms live only in the repository secret PRIVATE_TERMS. The check looks for each term as a whole word, with the same capitals, in tracked files, the pull request's title and description, and commit messages. It prints only file and line number. If a flagged line is an ordinary word, reword the line; there is no list of exceptions.
+Supersedes: none
+
+## 2026-11-10 Milestone three makes the grove a full level
+Reason: The marmot scout and giant mosquito, hearts, a longer route with checkpoints, Yaarbro's roll and Caputo's pounce. Each move must beat or get past both enemies, so neither hero is the weaker one. Easy stays finishable with walk and jump alone. Enemy models are made the same way as the hero models.
+Supersedes: none
+
+## 2026-11-10 Confirmed: the link stays public, and Claude keeps merging its own pull requests once checks pass
+Reason: The owner confirmed both at the start of milestone two.
+Supersedes: none

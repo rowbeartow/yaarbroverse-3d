@@ -1,9 +1,15 @@
-# Runs on every pull request and on main: the game rule tests, a full build
-# (which also checks the download size), then the browser checks.
+# Runs on every pull request and on main:
+#   1. No private terms: fails if a term from the repository secret PRIVATE_TERMS
+#      appears in a tracked file, the pull request's title or description, or a
+#      commit message.
+#   2. The game rule tests, a full build (which also checks the download size),
+#      then the browser checks.
 name: Checks
 
 on:
   pull_request:
+    # "edited" is here so a changed title or description is checked again.
+    types: [opened, synchronize, reopened, edited]
   push:
     branches: [main]
 
@@ -15,6 +21,31 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  private-terms:
+    name: No private terms
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # Full history, so every commit message in the pull request can be read.
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+      - name: Look in tracked files, the pull request and commit messages
+        # The title and description arrive as environment variables and are
+        # never pasted into a command, so their text cannot run as one.
+        # The script hides each term in this log (::add-mask::) before it
+        # looks, and prints only file and line number.
+        env:
+          PRIVATE_TERMS: ${{ secrets.PRIVATE_TERMS }}
+          PR_TITLE: ${{ github.event.pull_request.title }}
+          PR_BODY: ${{ github.event.pull_request.body }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: node scripts/check-private-terms.mjs
+
   checks:
     name: Tests, build and browser checks
     runs-on: ubuntu-latest
