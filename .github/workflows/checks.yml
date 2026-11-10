@@ -3,7 +3,10 @@
 #      appears in a tracked file, the pull request's title or description, or a
 #      commit message.
 #   2. The game rule tests, a full build (which also checks the download size),
-#      then the browser checks.
+#      then the browser checks in Chromium (Mac-sized with a keyboard, iPad-sized
+#      with touch).
+#   3. The browser checks in WebKit, the engine behind every iPad browser
+#      (iPad-sized with touch).
 name: Checks
 
 on:
@@ -63,5 +66,21 @@ jobs:
         run: npm run build
       - name: Install the test browser
         run: npx playwright install --with-deps chromium
-      - name: Browser checks (keyboard and touch)
-        run: npm run test:browser
+      - name: Browser checks in Chromium (keyboard and touch)
+        run: npx playwright test --project=mac --project=ipad
+
+  webkit:
+    name: Browser checks in WebKit (iPad)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      - name: Install WebKit
+        run: npx playwright install --with-deps webkit
+      - name: Browser checks in WebKit (touch, iPad size)
+        run: npx playwright test --project=ipad-webkit

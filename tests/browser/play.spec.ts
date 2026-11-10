@@ -11,9 +11,9 @@ test.describe('start screen', () => {
       await expect(picture).toHaveAttribute('src', /^data:image\/png/);
     }
     // A flat, empty picture compresses to almost nothing; a drawn forest does not.
+    // WebKit can hand back a picture from before its first drawn frame, so look until it is there.
     await page.locator('#start').evaluate((element) => ((element as HTMLElement).hidden = true));
-    const picture = await page.screenshot();
-    expect(picture.byteLength).toBeGreaterThan(40_000);
+    await expect.poll(async () => (await page.screenshot()).byteLength).toBeGreaterThan(40_000);
     expect(problems).toEqual([]);
   });
 
