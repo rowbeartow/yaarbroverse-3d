@@ -4,6 +4,8 @@ import { defineConfig } from 'vitest/config';
 // GitHub Pages, or opened from any other folder.
 export default defineConfig({
   base: './',
-  build: { target: 'es2022', chunkSizeWarningLimit: 900 },
+  // A stamp on every asset address, so a new build never shows an old copy of a file.
+  define: { __BUILD_ID__: JSON.stringify(Date.now().toString(36)) },
+  build: { target: 'es2022', chunkSizeWarningLimit: 1200 },
   test: { include: ['tests/**/*.test.ts'], environment: 'node' },
 });
