@@ -9,12 +9,12 @@ Read first: `docs/session-handoff.md` (what exists, what's next, open questions)
 ## Status
 
 In development. Milestone one: one playable area, the Bouncing Grove.
-Live at: not published yet.
+Live at: https://rowbeartow.github.io/yaarbroverse-3d/ once the owner has switched GitHub Pages on. `docs/session-handoff.md` says whether that has happened.
 
 ## Architecture
 
 - Framework: Three.js, TypeScript, Vite. No physics library, no model or picture files.
-- Deploy target: none yet.
+- Deploy target: GitHub Pages, static files only. `.github/workflows/publish.yml` builds and publishes on every merge to main.
 - Data layer: none. The browser remembers the last hero and difficulty.
 - Auth: none.
 - External services: none, and none are allowed inside the game (no accounts, payments, online services or AI calls).
@@ -38,6 +38,7 @@ Node 22 (`.nvmrc`).
 - Build: `npm run build` (also fails if the download goes over 10 MB)
 - Browser checks: `npm run test:browser` (builds, serves, then drives the game with keyboard and touch; in a cloud session the test browser is already installed, do not run `playwright install`)
 - Everything: `npm run check`, then `npm run test:browser`
+- Deploy: merging to `main` publishes automatically. Do not deploy by hand. The same checks run on every pull request (`.github/workflows/checks.yml`).
 
 ## Conventions
 

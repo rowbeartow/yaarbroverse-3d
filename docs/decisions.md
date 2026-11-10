@@ -76,3 +76,11 @@ Supersedes: none
 ## 2026-11-10 Browser checks do not replay a whole level with timed key presses
 Reason: Caputo Mountain found those unreliable on slow machines. Here the rule tests play each difficulty start to finish with a bot (fast, exact), and the browser checks cover what only a browser can show: drawing, keyboard, touch, the screens.
 Supersedes: none
+
+## 2026-11-10 Hosting: GitHub Pages, published by GitHub Actions on every merge to main
+Reason: The game is only static files and this repo is public, so Pages is free and needs no other account. It needs the owner to switch Pages on once in the repo settings.
+Supersedes: none
+
+## 2026-11-10 No login. The link is public and the game holds nothing personal.
+Reason: Nothing in the game or this repo names the family or the kids, so a login would only add friction on the kids' devices. If the owner wants it private later, Cloudflare Access (already used for Caputo Mountain) can sit in front of the same files.
+Supersedes: none
