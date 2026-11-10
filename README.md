@@ -51,5 +51,5 @@ npm ci
 npm run dev           # play locally at the address it prints
 npm test              # game rules, no browser
 npm run build         # production build into dist/, with a download size check
-npm run test:browser  # keyboard and touch checks in a real browser
+npm run test:browser  # keyboard and touch checks in Chromium and WebKit (Safari's engine)
 ```

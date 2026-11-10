@@ -21,15 +21,15 @@ Milestone two has not started. It waits on the owner's choices below.
 - **This device remembers** the last hero and difficulty.
 - **Size.** The whole download is about 0.6 MB (budget 10 MB, checked on every build). No model, picture or sound files apart from three small icons.
 - **Publishing.** `.github/workflows/publish.yml` builds and publishes to GitHub Pages on every merge to main. Until Pages is switched on it finishes without publishing. The address will be https://rowbeartow.github.io/yaarbroverse-3d/ .
-- **Checks on every pull request.** `.github/workflows/checks.yml`: a private-terms check (fails if a term from the repository secret `PRIVATE_TERMS` appears in a tracked file, the pull request's title or description, or a commit message), then rule tests, build with size check, browser checks.
+- **Checks on every pull request.** `.github/workflows/checks.yml`, three jobs: a private-terms check (fails if a term from the repository secret `PRIVATE_TERMS` appears in a tracked file, the pull request's title or description, or a commit message); rule tests, build with size check and browser checks in Chromium; browser checks in WebKit, the engine behind every iPad browser.
 
 ## Checks on this state
 
 - `npm test`: 105 tests pass (94 for the game rules, 11 for the private-terms check). They include a bot playing the whole grove on Easy, Normal and Hard as each hero with no falls.
-- `npm run test:browser`: 25 browser checks pass in Chromium, on a Mac-sized window with the keyboard and an iPad-sized window with touch. They pass on GitHub's machines too.
+- `npm run test:browser`: 40 browser checks pass. 26 in Chromium, on a Mac-sized window with the keyboard and an iPad-sized window with touch. 14 in WebKit, on an iPad-sized window with touch: the game loads, draws, takes touch, shows the turn-sideways card and reaches the end card. They pass on GitHub's machines too.
 - **Not checked:**
   - The published page. Nothing has been published, so the publish step itself has never run for real.
-  - Safari, a real iPad, a real Mac. The checks use Chromium on a machine with no graphics card.
+  - Safari itself, a real iPad, a real Mac. The checks use Chromium and WebKit (Safari's engine, built for Linux) on a machine with no graphics card. In WebKit the test tools cannot hold or drag a real finger, so held and dragged touches are simulated at the page; taps on buttons are real.
   - Whether it is fun, and whether Easy is easy enough and Hard hard enough for the kids.
 
 ## What's next
@@ -55,7 +55,6 @@ Smaller: the start screen says "Yaarbroverse 3D" above the level name. That is t
 - No sound, no saved progress, one player.
 - Caputo is long and the footing check is a small circle under his middle, so his head and tail hang over narrow stumps.
 - On a phone-sized screen the start screen is taller than the screen and has to be scrolled. iPads and Macs are fine.
-- Browser checks do not cover Safari's engine.
 
 ## Added as plain scenery, not canon
 

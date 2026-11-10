@@ -1,7 +1,9 @@
 import { defineConfig, devices } from '@playwright/test';
 
-// Browser checks: build the game, serve it, and drive it the way a player would.
-// Headless browsers have no graphics card, so WebGL runs on the software renderer.
+// Browser checks: build the game, serve it, and drive it the way a player would,
+// in Chromium (Mac-sized with a keyboard, iPad-sized with touch) and in WebKit
+// (iPad-sized with touch). Headless browsers have no graphics card, so WebGL
+// runs on the software renderer.
 const webgl = ['--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist'];
 
 export default defineConfig({
@@ -26,7 +28,8 @@ export default defineConfig({
       use: { ...devices['Desktop Chrome'], viewport: { width: 960, height: 600 }, launchOptions: { args: webgl } },
     },
     {
-      // An iPad held sideways: touch, no mouse. Chromium stands in for Safari here.
+      // An iPad held sideways, in Chromium: touch, no mouse. Fingers here are
+      // real touches sent through the browser's own input path.
       name: 'ipad',
       use: {
         viewport: { width: 1024, height: 768 },
@@ -35,6 +38,12 @@ export default defineConfig({
         deviceScaleFactor: 1,
         launchOptions: { args: webgl },
       },
+    },
+    {
+      // The same iPad in WebKit, the engine behind every iPad browser. One
+      // screen pixel per page pixel keeps the software 3D fast enough to test.
+      name: 'ipad-webkit',
+      use: { ...devices['iPad (gen 7) landscape'], viewport: { width: 1024, height: 768 }, deviceScaleFactor: 1 },
     },
   ],
 });

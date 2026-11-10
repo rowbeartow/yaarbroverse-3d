@@ -1,18 +1,69 @@
 import { expect, test, type CDPSession, type Page } from '@playwright/test';
-import { open, play, snapshot } from './helpers';
+import { open, play, snapshot, standOn } from './helpers';
 
 // Touch play, as on the iPad held sideways.
 test.skip(({ hasTouch }) => !hasTouch, 'Touch checks run on the iPad-sized screen');
 
-/** Real finger touches, sent through the browser's own input path. */
-const fingers = async (page: Page): Promise<{ send: (type: string, points: Array<{ x: number; y: number; id: number }>) => Promise<void> }> => {
-  const session: CDPSession = await page.context().newCDPSession(page);
+type Point = { x: number; y: number; id: number };
+type Fingers = { send: (type: 'touchStart' | 'touchMove' | 'touchEnd', points: Point[]) => Promise<void> };
+
+/**
+ * Fingers on the screen. Each call lists the fingers that just came down
+ * (touchStart, alongside any already down), moved (touchMove) or lifted (touchEnd).
+ *
+ * Chromium: real touches, sent through the browser's own input path.
+ *
+ * WebKit: the test tools can tap but cannot hold a finger down or drag one, so
+ * held and dragged fingers are touch pointer events handed to whatever page
+ * element is under the finger. That checks the game's touch handling in
+ * Safari's engine and that nothing covers the controls. Taps on buttons
+ * (Play, Pause, Keep playing) are real taps in both browsers.
+ */
+const fingers = async (page: Page, browserName: string): Promise<Fingers> => {
+  if (browserName === 'chromium') {
+    const session: CDPSession = await page.context().newCDPSession(page);
+    return {
+      send: async (type, points) => {
+        await session.send('Input.dispatchTouchEvent', {
+          type,
+          touchPoints: points.map((point) => ({ ...point, radiusX: 12, radiusY: 12, force: 1 })),
+        });
+      },
+    };
+  }
   return {
     send: async (type, points) => {
-      await session.send('Input.dispatchTouchEvent', {
-        type: type as 'touchStart',
-        touchPoints: points.map((point) => ({ ...point, radiusX: 12, radiusY: 12, force: 1 })),
-      });
+      await page.evaluate(
+        ([kind, list]) => {
+          const page = window as unknown as { __fingers?: Map<number, Element> };
+          // A finger keeps talking to the element it first touched, as real touches do.
+          const down = (page.__fingers ??= new Map<number, Element>());
+          for (const point of list) {
+            const held = down.get(point.id);
+            const name = kind === 'touchEnd' ? 'pointerup' : held ? 'pointermove' : 'pointerdown';
+            const target = held ?? document.elementFromPoint(point.x, point.y);
+            if (!target) throw new Error(`Nothing under the finger at ${point.x}, ${point.y}`);
+            if (name === 'pointerdown') down.set(point.id, target);
+            if (name === 'pointerup') down.delete(point.id);
+            target.dispatchEvent(
+              new PointerEvent(name, {
+                pointerId: point.id + 100,
+                pointerType: 'touch',
+                isPrimary: down.size <= 1,
+                clientX: point.x,
+                clientY: point.y,
+                width: 24,
+                height: 24,
+                pressure: name === 'pointerup' ? 0 : 1,
+                bubbles: true,
+                cancelable: true,
+                composed: true,
+              }),
+            );
+          }
+        },
+        [type, points] as const,
+      );
     },
   };
 };
@@ -26,10 +77,10 @@ test('shows the stick and the Jump button while playing', async ({ page }) => {
   await expect(page.locator('#controls-note')).toContainText('thumb');
 });
 
-test('dragging the left thumb walks the hero that way', async ({ page }) => {
+test('dragging the left thumb walks the hero that way', async ({ page, browserName }) => {
   await open(page);
   await play(page);
-  const touch = await fingers(page);
+  const touch = await fingers(page, browserName);
   const start = await snapshot(page);
 
   // Thumb down on the left side, dragged up: walk away from the camera.
@@ -48,10 +99,10 @@ test('dragging the left thumb walks the hero that way', async ({ page }) => {
   expect((await snapshot(page)).x).toBe(resting.x);
 });
 
-test('pressing the right side jumps, while the left thumb keeps walking', async ({ page }) => {
+test('pressing the right side jumps, while the left thumb keeps walking', async ({ page, browserName }) => {
   await open(page);
   await play(page);
-  const touch = await fingers(page);
+  const touch = await fingers(page, browserName);
   const start = await snapshot(page);
 
   await touch.send('touchStart', [{ x: 200, y: 600, id: 1 }]);
@@ -76,6 +127,27 @@ test('pressing the right side jumps, while the left thumb keeps walking', async 
   const resting = await snapshot(page);
   await page.waitForTimeout(400);
   expect((await snapshot(page)).z).toBe(resting.z);
+});
+
+test('a thumb on the stick walks the hero to the golden leaf, and the end card shows', async ({ page, browserName }) => {
+  await open(page);
+  await play(page, 'Yaarbro', 'easy');
+  // Start at the near end of the last bough (the whole route is played by the
+  // rule tests), then walk the rest by thumb: the leaf is straight ahead.
+  await standOn(page, 'bough', 2);
+  const touch = await fingers(page, browserName);
+  await touch.send('touchStart', [{ x: 200, y: 600, id: 1 }]);
+  await touch.send('touchMove', [{ x: 200, y: 500, id: 1 }]);
+  await expect(page.locator('#end')).toBeVisible({ timeout: 20_000 });
+  await touch.send('touchEnd', [{ x: 200, y: 500, id: 1 }]);
+
+  await expect(page.locator('#end-title')).toHaveText('You found the golden leaf!');
+  await expect(page.locator('#end-hero')).toHaveText('Yaarbro');
+  await expect(page.locator('#end-difficulty')).toHaveText('Easy');
+  await expect(page.locator('#touch')).toBeHidden();
+  await page.locator('#again').tap();
+  await expect(page.locator('#start')).toBeVisible();
+  expect(await snapshot(page)).toMatchObject({ mode: 'start', complete: false });
 });
 
 test('the Pause button works by touch', async ({ page }) => {

@@ -36,7 +36,7 @@ Node 22 (`.nvmrc`).
 - Run locally: `npm run dev`, then open the address it prints
 - Test the rules: `npm test` (fast, no browser)
 - Build: `npm run build` (also fails if the download goes over 10 MB)
-- Browser checks: `npm run test:browser` (builds, serves, then drives the game with keyboard and touch; in a cloud session the test browser is already installed, do not run `playwright install`)
+- Browser checks: `npm run test:browser` (builds, serves, then drives the game with keyboard and touch, in Chromium and in WebKit). In a cloud session Chromium is already installed: do not install it again. WebKit is not: run `npx playwright install --with-deps webkit` once per session. To run one browser: `npx playwright test --project=ipad-webkit` (or `mac`, `ipad`).
 - Everything: `npm run check`, then `npm run test:browser`
 - Deploy: merging to `main` publishes automatically. Do not deploy by hand. The same checks run on every pull request (`.github/workflows/checks.yml`). So does the private-terms check (`scripts/check-private-terms.mjs`); to try it locally: `PRIVATE_TERMS="one,two" node scripts/check-private-terms.mjs`.
 
@@ -57,4 +57,5 @@ Never modify or commit a file unrelated to the current task, including to produc
 ## Known constraints
 
 - The test browser has no graphics card, so 3D draws slowly there (about 10 frames a second). Browser checks run one at a time in small windows for that reason. Real devices are not affected.
-- Browser checks use Chromium, including for the iPad-sized touch checks. Safari on a real iPad is only checked by hand.
+- Browser checks run in Chromium (Mac-sized with a keyboard, iPad-sized with touch) and in WebKit (iPad-sized with touch), each as its own job in `checks.yml`. WebKit is Safari's engine built for Linux, not Safari itself: Safari on a real iPad is only checked by hand.
+- The test tools can tap in WebKit but cannot hold a finger down or drag one. In WebKit, held and dragged fingers are touch pointer events handed to the element under the finger (see `tests/browser/touch.spec.ts`); in Chromium they are real touches.
