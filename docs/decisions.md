@@ -56,3 +56,23 @@ Supersedes: none
 ## 2026-11-10 This repo is public, so it holds no family names and no art from the private repo
 Reason: Public repos make GitHub Pages free. The kids are "the older player" and "the younger player" in these docs. The heroes are redrawn here as low-poly shapes; no file was copied from Caputo Mountain.
 Supersedes: none
+
+## 2026-11-10 Everything on screen is built from simple shapes in code. No model or picture files.
+Reason: The 2D game's 18 MB load is too slow. Low-poly shapes built in code keep the whole download near 0.6 MB (the budget is 10 MB, checked on every build). Detailed models can replace shapes later, one at a time.
+Supersedes: none
+
+## 2026-11-10 The camera sits behind and above the hero and always looks the same way
+Reason: No camera control to learn, which matters most for the younger player on a touch screen. "Up" on the stick is always "away from you". A dark spot under the hero shows where a jump will land; over open air there is no spot.
+Supersedes: none
+
+## 2026-11-10 Touch: drag the left half to move, press the right half to jump
+Reason: Whole halves of the screen are easier for small thumbs than small buttons. The stick appears under the thumb wherever it lands. Keyboard: arrows or W A S D, Space to jump, Esc to pause.
+Supersedes: none
+
+## 2026-11-10 "Turn sideways" shows whenever a touch device's page is taller than it is wide
+Reason: A device held upright and a device turned sideways with its screen locked upright look the same to a web page: the page is tall. One rule covers both, and the card explains how to turn rotation lock off. The game holds still while the card is up. Computers never see the card.
+Supersedes: none
+
+## 2026-11-10 Browser checks do not replay a whole level with timed key presses
+Reason: Caputo Mountain found those unreliable on slow machines. Here the rule tests play each difficulty start to finish with a bot (fast, exact), and the browser checks cover what only a browser can show: drawing, keyboard, touch, the screens.
+Supersedes: none

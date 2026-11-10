@@ -1,4 +1,5 @@
-# Runs on every pull request and on main: the game rule tests and a type check.
+# Runs on every pull request and on main: the game rule tests, a full build
+# (which also checks the download size), then the browser checks.
 name: Checks
 
 on:
@@ -27,5 +28,9 @@ jobs:
       - run: npm ci
       - name: Game rule tests
         run: npm test
-      - name: Type check
-        run: npx tsc --noEmit
+      - name: Build and check the download size
+        run: npm run build
+      - name: Install the test browser
+        run: npx playwright install --with-deps chromium
+      - name: Browser checks (keyboard and touch)
+        run: npm run test:browser

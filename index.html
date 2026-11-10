@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover"
+    />
+    <meta name="theme-color" content="#1d3a33" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="Bouncing Grove" />
+    <link rel="manifest" href="./manifest.webmanifest" />
+    <link rel="icon" href="./icon-192.png" />
+    <link rel="apple-touch-icon" href="./apple-touch-icon.png" />
+    <title>The Bouncing Grove · Yaarbroverse 3D</title>
+  </head>
+  <body>
+    <canvas id="view" aria-label="The Bouncing Grove, a 3D game"></canvas>
+
+    <!-- Shown while playing -->
+    <div id="hud" hidden>
+      <p id="place"></p>
+      <button type="button" id="pause" aria-label="Pause">Pause</button>
+      <p id="message" role="status" aria-live="polite"></p>
+    </div>
+
+    <!-- Touch controls: left thumb moves, right thumb jumps -->
+    <div id="touch" hidden>
+      <div id="stick-zone" aria-label="Move: drag anywhere on the left side">
+        <div id="stick-base"><div id="stick-knob"></div></div>
+      </div>
+      <div id="jump-zone" aria-label="Jump: tap anywhere on the right side">
+        <div id="jump-button">Jump</div>
+      </div>
+    </div>
+
+    <!-- Start screen -->
+    <section id="start" class="screen" aria-labelledby="start-title">
+      <div class="card">
+        <p class="eyebrow">Yaarbroverse 3D</p>
+        <h1 id="start-title">The Bouncing Grove</h1>
+        <p class="lead">Find the golden leaf, tucked in the canopy.</p>
+
+        <h2 id="hero-label">Who is exploring?</h2>
+        <div class="choices heroes" role="radiogroup" aria-labelledby="hero-label">
+          <button type="button" role="radio" data-hero="Yaarbro"><img alt="" /><b>Yaarbro</b></button>
+          <button type="button" role="radio" data-hero="Caputo"><img alt="" /><b>Caputo</b></button>
+        </div>
+
+        <h2 id="difficulty-label">How tough is the grove today?</h2>
+        <div class="choices levels" role="radiogroup" aria-labelledby="difficulty-label">
+          <button type="button" role="radio" data-difficulty="easy"><b>Easy</b><small></small></button>
+          <button type="button" role="radio" data-difficulty="normal"><b>Normal</b><small></small></button>
+          <button type="button" role="radio" data-difficulty="hard"><b>Hard</b><small></small></button>
+        </div>
+
+        <button type="button" id="play" class="go">Play</button>
+        <p class="note" id="controls-note"></p>
+        <p class="note">This device remembers your choices.</p>
+      </div>
+    </section>
+
+    <!-- Pause screen -->
+    <section id="paused" class="screen" hidden role="dialog" aria-labelledby="paused-title">
+      <div class="card small">
+        <h1 id="paused-title">Paused</h1>
+        <button type="button" id="resume" class="go">Keep playing</button>
+        <button type="button" id="restart">Start the grove again</button>
+        <button type="button" id="quit">Change hero or difficulty</button>
+      </div>
+    </section>
+
+    <!-- End card: made to be photographed -->
+    <section id="end" class="screen" hidden role="dialog" aria-labelledby="end-title">
+      <div class="card small">
+        <p class="eyebrow">The Bouncing Grove</p>
+        <h1 id="end-title">You found the golden leaf!</h1>
+        <dl>
+          <div><dt>Difficulty</dt><dd id="end-difficulty"></dd></div>
+          <div><dt>Hero</dt><dd id="end-hero"></dd></div>
+          <div><dt>Time</dt><dd id="end-time"></dd></div>
+          <div><dt>Falls</dt><dd id="end-falls"></dd></div>
+        </dl>
+        <p class="note" id="end-date"></p>
+        <button type="button" id="again" class="go">Play again</button>
+      </div>
+    </section>
+
+    <!-- Shown on phones and tablets held upright -->
+    <section id="rotate" class="screen" hidden aria-live="polite">
+      <div>
+        <svg viewBox="0 0 120 120" width="120" height="120" aria-hidden="true">
+          <rect x="38" y="16" width="44" height="76" rx="8" fill="none" stroke="#fff1ce" stroke-width="6" />
+          <path d="M24 96 a46 46 0 0 0 72 0" fill="none" stroke="#f2c14e" stroke-width="6" stroke-linecap="round" />
+          <path d="M90 84 l7 13 l-14 2" fill="none" stroke="#f2c14e" stroke-width="6" stroke-linecap="round" stroke-linejoin="round" />
+        </svg>
+        <h1>Turn sideways to play</h1>
+        <p id="rotate-lock">
+          Already sideways and still seeing this? The screen is locked upright. Swipe down from the top-right corner
+          and tap the lock button with the arrow around it, then come back.
+        </p>
+      </div>
+    </section>
+
+    <!-- Shown if the browser cannot draw 3D -->
+    <section id="broken" class="screen" hidden role="alert">
+      <div class="card small">
+        <h1>This browser cannot show the game</h1>
+        <p class="lead">It needs 3D graphics (WebGL). Try Safari or Chrome with their latest update.</p>
+      </div>
+    </section>
+
+    <script type="module" src="./src/main.ts"></script>
+  </body>
+</html>
