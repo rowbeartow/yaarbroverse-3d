@@ -1,0 +1,406 @@
+:root {
+  --ink: #1b2a24;
+  --paper: #fff6dd;
+  --paper-edge: #e9d7a6;
+  --moss: #2f6b3f;
+  --moss-deep: #1d3a33;
+  --gold: #f2c14e;
+  --gold-deep: #b97f12;
+  --shade: rgba(16, 32, 28, 0.62);
+  font-family: 'Avenir Next', 'Trebuchet MS', 'Segoe UI', system-ui, sans-serif;
+  color: var(--ink);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: #1d3a33;
+  /* No scrolling, zooming, selecting or long-press menus while playing. */
+  overscroll-behavior: none;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+[hidden] {
+  display: none !important;
+}
+
+#view {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+/* ---------- While playing ---------- */
+
+#hud {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  padding: max(12px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right)) 0
+    max(16px, env(safe-area-inset-left));
+}
+
+#place {
+  position: absolute;
+  top: max(12px, env(safe-area-inset-top));
+  left: max(16px, env(safe-area-inset-left));
+  margin: 0;
+  padding: 6px 12px;
+  border-radius: 999px;
+  background: var(--shade);
+  color: #fff6dd;
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+#pause {
+  position: absolute;
+  top: max(12px, env(safe-area-inset-top));
+  right: max(16px, env(safe-area-inset-right));
+  pointer-events: auto;
+  min-width: 88px;
+  min-height: 48px;
+  padding: 0 18px;
+  border: 2px solid rgba(255, 246, 221, 0.7);
+  border-radius: 999px;
+  background: var(--shade);
+  color: #fff6dd;
+  font: inherit;
+  font-size: 16px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+#message {
+  position: absolute;
+  bottom: max(18px, env(safe-area-inset-bottom));
+  left: 50%;
+  transform: translateX(-50%);
+  margin: 0;
+  /* Narrow enough to sit between the two thumbs on a touch screen. */
+  width: max-content;
+  max-width: min(52vw, 640px);
+  padding: 10px 18px;
+  border-radius: 14px;
+  background: var(--shade);
+  color: #fff6dd;
+  font-size: clamp(16px, 2.4vw, 22px);
+  font-weight: 700;
+  text-align: center;
+  opacity: 0;
+  transition: opacity 0.25s ease;
+}
+
+#message.show {
+  opacity: 1;
+}
+
+/* ---------- Touch controls ---------- */
+
+#touch {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+}
+
+#stick-zone,
+#jump-zone {
+  position: absolute;
+  top: 72px;
+  bottom: 0;
+  pointer-events: auto;
+  touch-action: none;
+}
+
+#stick-zone {
+  left: 0;
+  width: 50%;
+}
+
+#jump-zone {
+  right: 0;
+  width: 50%;
+}
+
+#stick-base {
+  position: absolute;
+  left: max(28px, env(safe-area-inset-left));
+  bottom: max(28px, env(safe-area-inset-bottom));
+  width: clamp(120px, 20vmin, 168px);
+  aspect-ratio: 1;
+  border-radius: 50%;
+  border: 3px solid rgba(255, 246, 221, 0.55);
+  background: rgba(16, 32, 28, 0.28);
+}
+
+#stick-knob {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 46%;
+  aspect-ratio: 1;
+  margin: -23% 0 0 -23%;
+  border-radius: 50%;
+  background: rgba(255, 246, 221, 0.78);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
+}
+
+#jump-button {
+  position: absolute;
+  right: max(28px, env(safe-area-inset-right));
+  bottom: max(28px, env(safe-area-inset-bottom));
+  width: clamp(120px, 20vmin, 168px);
+  aspect-ratio: 1;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  border: 3px solid rgba(255, 246, 221, 0.55);
+  background: rgba(242, 193, 78, 0.5);
+  color: #fff6dd;
+  font-size: clamp(20px, 3.4vmin, 28px);
+  font-weight: 800;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.6);
+}
+
+#jump-zone.down #jump-button {
+  background: rgba(242, 193, 78, 0.85);
+  transform: scale(0.94);
+}
+
+/* ---------- Screens ---------- */
+
+.screen {
+  position: fixed;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: max(12px, env(safe-area-inset-top)) max(12px, env(safe-area-inset-right))
+    max(12px, env(safe-area-inset-bottom)) max(12px, env(safe-area-inset-left));
+  background: rgba(16, 32, 28, 0.45);
+  overflow: auto;
+  touch-action: pan-y;
+}
+
+.card {
+  width: min(94vw, 760px);
+  padding: clamp(14px, 2.6vh, 28px) clamp(16px, 3vw, 36px);
+  border-radius: 22px;
+  border: 3px solid var(--paper-edge);
+  background: var(--paper);
+  box-shadow: 0 18px 50px rgba(0, 0, 0, 0.45);
+  text-align: center;
+}
+
+.card.small {
+  width: min(92vw, 520px);
+}
+
+.eyebrow {
+  margin: 0;
+  color: var(--moss);
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+
+h1 {
+  margin: 2px 0 4px;
+  font-family: Georgia, 'Iowan Old Style', 'Times New Roman', serif;
+  font-size: clamp(26px, 5vh, 44px);
+  line-height: 1.1;
+  color: var(--moss-deep);
+}
+
+h2 {
+  margin: clamp(8px, 2vh, 18px) 0 6px;
+  font-size: clamp(14px, 2.2vh, 18px);
+  font-weight: 700;
+  color: var(--moss-deep);
+}
+
+.lead {
+  margin: 0;
+  font-size: clamp(15px, 2.4vh, 20px);
+}
+
+.note {
+  margin: 8px 0 0;
+  font-size: clamp(12px, 1.9vh, 15px);
+  color: #4f5b50;
+}
+
+.choices {
+  display: grid;
+  gap: 10px;
+}
+
+.choices.heroes {
+  grid-template-columns: repeat(2, 1fr);
+}
+
+.choices.levels {
+  grid-template-columns: repeat(3, 1fr);
+}
+
+button {
+  font: inherit;
+  color: inherit;
+  touch-action: manipulation;
+}
+
+.choices button {
+  display: grid;
+  justify-items: center;
+  align-content: center;
+  gap: 2px;
+  min-height: 64px;
+  padding: 8px 10px;
+  border: 3px solid var(--paper-edge);
+  border-radius: 16px;
+  background: #fffdf4;
+  cursor: pointer;
+}
+
+.choices button b {
+  font-size: clamp(17px, 2.8vh, 22px);
+}
+
+.choices button small {
+  font-size: clamp(11px, 1.8vh, 14px);
+  color: #4f5b50;
+  line-height: 1.25;
+}
+
+.choices.heroes button {
+  grid-template-columns: auto auto;
+  justify-content: center;
+  align-items: center;
+  gap: 12px;
+}
+
+.choices.heroes img {
+  width: clamp(56px, 11vh, 88px);
+  height: clamp(56px, 11vh, 88px);
+  object-fit: contain;
+}
+
+.choices button[aria-checked='true'] {
+  border-color: var(--gold-deep);
+  background: #ffe9a8;
+  box-shadow: inset 0 0 0 2px var(--gold);
+}
+
+.choices button[aria-checked='true'] b::after {
+  content: ' ✓';
+}
+
+.go,
+.card.small button {
+  display: block;
+  width: 100%;
+  min-height: 56px;
+  margin-top: clamp(10px, 2vh, 18px);
+  border: 3px solid var(--moss-deep);
+  border-radius: 16px;
+  background: #fffdf4;
+  font-size: clamp(17px, 2.6vh, 21px);
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.go,
+.card.small button.go {
+  border-color: var(--gold-deep);
+  background: var(--gold);
+  color: #2b1f05;
+  font-size: clamp(20px, 3.2vh, 26px);
+}
+
+button:focus-visible {
+  outline: 4px solid #1f6feb;
+  outline-offset: 2px;
+}
+
+dl {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px 12px;
+  margin: 14px 0 4px;
+}
+
+dl div {
+  padding: 8px 10px;
+  border-radius: 12px;
+  background: #fffdf4;
+  border: 2px solid var(--paper-edge);
+}
+
+dt {
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--moss);
+}
+
+dd {
+  margin: 2px 0 0;
+  font-size: clamp(22px, 4vh, 30px);
+  font-weight: 800;
+}
+
+/* ---------- Turn sideways ---------- */
+
+#rotate {
+  z-index: 10;
+  background: var(--moss-deep);
+  color: #fff1ce;
+  text-align: center;
+}
+
+#rotate h1 {
+  color: #fff1ce;
+  font-size: clamp(26px, 7vw, 40px);
+  margin-top: 14px;
+}
+
+#rotate p {
+  max-width: 30em;
+  margin: 14px auto 0;
+  font-size: clamp(15px, 4vw, 19px);
+  line-height: 1.45;
+  /* The lock hint waits a few seconds, so a quick turn never shows it. */
+  opacity: 0;
+  animation: appear 0.6s ease 3.5s forwards;
+}
+
+@keyframes appear {
+  to {
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #rotate p {
+    animation-duration: 0.01s;
+  }
+
+  #message {
+    transition: none;
+  }
+}
