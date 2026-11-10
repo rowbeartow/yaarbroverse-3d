@@ -21,11 +21,11 @@ Milestone two has not started. It waits on the owner's choices below.
 - **This device remembers** the last hero and difficulty.
 - **Size.** The whole download is about 0.6 MB (budget 10 MB, checked on every build). No model, picture or sound files apart from three small icons.
 - **Publishing.** `.github/workflows/publish.yml` builds and publishes to GitHub Pages on every merge to main. Until Pages is switched on it finishes without publishing. The address will be https://rowbeartow.github.io/yaarbroverse-3d/ .
-- **Checks on every pull request.** `.github/workflows/checks.yml`: rule tests, build with size check, browser checks.
+- **Checks on every pull request.** `.github/workflows/checks.yml`: a private-terms check (fails if a term from the repository secret `PRIVATE_TERMS` appears in a tracked file, the pull request's title or description, or a commit message), then rule tests, build with size check, browser checks.
 
 ## Checks on this state
 
-- `npm test`: 94 rule tests pass. They include a bot playing the whole grove on Easy, Normal and Hard as each hero with no falls.
+- `npm test`: 105 tests pass (94 for the game rules, 11 for the private-terms check). They include a bot playing the whole grove on Easy, Normal and Hard as each hero with no falls.
 - `npm run test:browser`: 25 browser checks pass in Chromium, on a Mac-sized window with the keyboard and an iPad-sized window with touch. They pass on GitHub's machines too.
 - **Not checked:**
   - The published page. Nothing has been published, so the publish step itself has never run for real.

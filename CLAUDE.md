@@ -38,12 +38,13 @@ Node 22 (`.nvmrc`).
 - Build: `npm run build` (also fails if the download goes over 10 MB)
 - Browser checks: `npm run test:browser` (builds, serves, then drives the game with keyboard and touch; in a cloud session the test browser is already installed, do not run `playwright install`)
 - Everything: `npm run check`, then `npm run test:browser`
-- Deploy: merging to `main` publishes automatically. Do not deploy by hand. The same checks run on every pull request (`.github/workflows/checks.yml`).
+- Deploy: merging to `main` publishes automatically. Do not deploy by hand. The same checks run on every pull request (`.github/workflows/checks.yml`). So does the private-terms check (`scripts/check-private-terms.mjs`); to try it locally: `PRIVATE_TERMS="one,two" node scripts/check-private-terms.mjs`.
 
 ## Conventions
 
 - World, characters and tone come from Caputo Mountain (the owner's private `digglesworth` repo: its `docs/` folder and art). Read only; never change that repo. Do not invent canon. If something is needed that is not there, ask the owner.
 - This repo is public. No family names, no files copied from the private repo.
+- A check on every pull request fails if a private term (the repository secret `PRIVATE_TERMS`) appears in a tracked file, the pull request's title or description, or a commit message. The kids are "the younger player" and "the older player" everywhere. If a flagged line is an ordinary word, reword it; never add an allowlist.
 - Every level has Easy, Normal and Hard, with all its numbers in that level's `difficulty.ts`. After changing numbers run `npm test`: a bot plays each difficulty start to finish.
 - Keep rules out of `src/view` and drawing out of `src/game`.
 - Small pull requests with plain-words descriptions: what changed, how it was tested. Claude merges its own once the checks pass (see `docs/decisions.md`).
