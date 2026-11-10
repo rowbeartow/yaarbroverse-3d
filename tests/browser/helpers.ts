@@ -115,3 +115,21 @@ export const standOn = (page: Page, solidId: string, back = 0): Promise<void> =>
     },
     [solidId, back] as const,
   );
+
+/**
+ * Checks the hero has come to a stop and stays there. It waits on the game's
+ * own speed, not on the clock: a machine that draws one frame a second takes
+ * a couple of seconds to play out the slide to a halt.
+ */
+export const expectAtRest = async (page: Page): Promise<void> => {
+  const speed = (): Promise<number> =>
+    page.evaluate(() => {
+      const { game } = (window as unknown as { __grove: { game: { vx: number; vy: number; vz: number } } }).__grove;
+      return Math.hypot(game.vx, game.vy, game.vz);
+    });
+  await expect.poll(speed).toBe(0);
+  const resting = await snapshot(page);
+  await frames(page, 4);
+  const later = await snapshot(page);
+  expect([later.x, later.y, later.z]).toEqual([resting.x, resting.y, resting.z]);
+};

@@ -65,7 +65,8 @@ Never modify or commit a file unrelated to the current task, including to produc
 
 ## Known constraints
 
-- The test browsers have no graphics card. The game notices (Chromium says so; for WebKit the checks add `?quality=minimal`) and uses the lowest tier: plain shading, no shadows, sparse trees, about 3 to 6 frames a second. Browser checks run one at a time for that reason. The full lighting is checked on purpose by `tests/browser/look.spec.ts` at medium and high quality in a small window, which takes seconds a frame. Real devices are not affected.
+- The test browsers have no graphics card. The game notices (Chromium says so; for WebKit the checks add `?quality=minimal`) and uses the lowest tier: plain shading, no shadows, no smoothed edges, sparse trees, about 9 to 15 frames a second here and fewer on GitHub's machines. Browser checks run one at a time for that reason. The full lighting is checked on purpose by `tests/browser/look.spec.ts` at medium and high quality in a small window, which takes seconds a frame. Real devices are not affected.
+- Browser checks must not wait on the clock for the game to do something. A slow machine draws few frames, and the game only moves forward a tenth of a second per frame. Wait on the game's own state (`expectAtRest` and `frames` in `tests/browser/helpers.ts`).
 - Pictures drawn in code (`pictures.ts`) ask for `willReadFrequently`, which keeps the drawing on the processor. Without it a browser with no graphics card takes about 7 seconds to start.
 - polyhaven.com is not reachable from a cloud session. `CREDITS.md` says where the copies of its CC0 files were fetched from.
 - Browser checks run in Chromium (Mac-sized with a keyboard, iPad-sized with touch) and in WebKit (iPad-sized with touch), each as its own job in `checks.yml`. WebKit is Safari's engine built for Linux, not Safari itself: Safari on a real iPad is only checked by hand.

@@ -38,10 +38,10 @@ Nobody has played the new look on a real iPad or Mac yet.
 ## Checks on this state
 
 - `npm test`: 121 tests pass. 94 for the game rules (a bot plays the whole grove on Easy, Normal and Hard as each hero with no falls), 11 for the private-terms check, 16 for the quality tier rules and the animation mixing rules.
-- `npm run test:browser`: 67 browser checks pass. 21 in Chromium at Mac size with the keyboard, 23 in Chromium at iPad size with touch, 23 in WebKit at iPad size with touch. They cover loading and the progress bar, a failed download, the frame counter, fixed and automatic tiers, the full lighting at medium quality (and high at Mac size), the stand-in model loading and animating, and everything milestone one checked.
+- `npm run test:browser`: 65 browser checks pass. 21 in Chromium at Mac size with the keyboard, 22 in Chromium at iPad size with touch, 22 in WebKit at iPad size with touch. They cover loading and the progress bar, a failed download, the frame counter, fixed and automatic tiers, the full lighting at medium quality (and high at Mac size), the stand-in model loading and animating, and everything milestone one checked.
 - **Not checked:**
   - Safari itself, a real iPad, a real Mac. The test browsers have no graphics card, so most checks run on the minimal tier, which has plain shading and no shadows. The full lighting is drawn in both browsers by two checks, slowly and in a small window.
-  - Frame rate on real devices. The only numbers so far are from the test machine: about 6 frames a second in Chromium and 3 in WebKit on the minimal tier, and several seconds a frame on the tiers above. A real device has to be looked at with `?fps`.
+  - Frame rate on real devices. The only numbers so far are from the test machine, which has no graphics card: about 15 frames a second in Chromium and 9 in WebKit on the minimal tier, and several seconds a frame on the tiers above. A real device has to be looked at with `?fps`.
   - In WebKit the test tools cannot hold or drag a real finger, so held and dragged touches are simulated at the page; taps on buttons are real.
   - The CC0 files came from public GitHub copies, not from polyhaven.com (unreachable from a cloud session). See `CREDITS.md`.
   - Whether it is fun, and whether Easy is easy enough and Hard hard enough for the kids.

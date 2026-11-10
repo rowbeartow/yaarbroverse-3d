@@ -48,6 +48,23 @@ const SUN_FROM = new Vector3(-0.52, 0.76, 0.4).normalize();
 /** How much ground the sun's shadows cover around the hero, in metres. */
 const SHADOW_REACH = 34;
 
+/**
+ * The name the graphics card gives itself, read from a throwaway picture
+ * before the real one is made. Empty when the browser will not say.
+ */
+const graphicsCardName = (): string => {
+  try {
+    const gl = document.createElement('canvas').getContext('webgl2');
+    if (!gl) return '';
+    const info = gl.getExtension('WEBGL_debug_renderer_info');
+    const name = String(info ? gl.getParameter(info.UNMASKED_RENDERER_WEBGL) : gl.getParameter(gl.RENDERER));
+    gl.getExtension('WEBGL_lose_context')?.loseContext();
+    return name;
+  } catch {
+    return '';
+  }
+};
+
 const ease = (from: number, to: number, rate: number, dt: number): number =>
   from + (to - from) * (1 - Math.exp(-rate * dt));
 
@@ -101,21 +118,31 @@ export class GroveView {
    * 'No3d') or a file fails to arrive; main.ts shows a plain message for each.
    */
   static async create(canvas: HTMLCanvasElement, onProgress: (share: number) => void): Promise<GroveView> {
+    // Choose where to start from what the device says about itself, or from
+    // the address bar (?quality=high, medium, low or minimal). This comes
+    // first because smooth edges are fixed when the picture is created, and a
+    // machine drawing in software cannot afford them.
+    const touch = navigator.maxTouchPoints > 0 || window.matchMedia('(pointer: coarse)').matches;
+    const asked = new URLSearchParams(window.location.search).get('quality');
+    const start = isTierName(asked) ? asked : startingTier({ touch, renderer: graphicsCardName() });
     let renderer: WebGLRenderer;
     try {
-      renderer = new WebGLRenderer({ canvas, antialias: true, alpha: true, powerPreference: 'high-performance' });
+      renderer = new WebGLRenderer({ canvas, antialias: start !== 'minimal', alpha: true, powerPreference: 'high-performance' });
     } catch (cause) {
       const error = new Error('This browser cannot draw 3D', { cause });
       error.name = 'No3d';
       throw error;
     }
     const assets = await loadAssets(renderer, HERO_MODEL_FILES(), onProgress);
-    return new GroveView(renderer, assets);
+    return new GroveView(renderer, assets, start, !isTierName(asked), touch);
   }
 
   private constructor(
     private readonly renderer: WebGLRenderer,
     private readonly assets: Assets,
+    start: TierName,
+    automatic: boolean,
+    touch: boolean,
   ) {
     installMist(MIST_TOP, MIST_BOTTOM);
     renderer.toneMapping = ACESFilmicToneMapping;
@@ -124,16 +151,8 @@ export class GroveView {
     renderer.info.autoReset = false;
     renderer.shadowMap.type = PCFShadowMap;
 
-    // Choose where to start from what the device says about itself, or from
-    // the address bar (?quality=high, medium, low or minimal).
-    const touch = navigator.maxTouchPoints > 0 || window.matchMedia('(pointer: coarse)').matches;
-    const gl = renderer.getContext();
-    const info = gl.getExtension('WEBGL_debug_renderer_info');
-    const card = String(info ? gl.getParameter(info.UNMASKED_RENDERER_WEBGL) : gl.getParameter(gl.RENDERER));
-    const asked = new URLSearchParams(window.location.search).get('quality');
-    this.automatic = !isTierName(asked);
-    const start = isTierName(asked) ? asked : startingTier({ touch, renderer: card });
-    this.chooser = new TierChooser(start, frameRateGoal(touch).floor, this.automatic);
+    this.automatic = automatic;
+    this.chooser = new TierChooser(start, frameRateGoal(touch).floor, automatic);
     this.tier = TIERS[start];
 
     this.materials = new Materials(assets, this.tier.simple);

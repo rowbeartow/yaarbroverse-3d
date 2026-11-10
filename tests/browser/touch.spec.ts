@@ -1,5 +1,5 @@
 import { expect, test, type CDPSession, type Page } from '@playwright/test';
-import { open, play, snapshot, standOn } from './helpers';
+import { expectAtRest, open, play, snapshot, standOn } from './helpers';
 
 // Touch play, as on the iPad held sideways.
 test.skip(({ hasTouch }) => !hasTouch, 'Touch checks run on the iPad-sized screen');
@@ -93,10 +93,7 @@ test('dragging the left thumb walks the hero that way', async ({ page, browserNa
   await expect.poll(async () => (await snapshot(page)).x).toBeGreaterThan(turned.x + 0.5);
   await touch.send('touchEnd', [{ x: 320, y: 600, id: 1 }]);
 
-  await page.waitForTimeout(600);
-  const resting = await snapshot(page);
-  await page.waitForTimeout(400);
-  expect((await snapshot(page)).x).toBe(resting.x);
+  await expectAtRest(page);
 });
 
 test('pressing the right side jumps, while the left thumb keeps walking', async ({ page, browserName }) => {
@@ -123,10 +120,7 @@ test('pressing the right side jumps, while the left thumb keeps walking', async 
   await expect.poll(async () => (await snapshot(page)).z).toBeLessThan(landed.z - 0.5);
   // Lift the walking thumb: the hero stops.
   await touch.send('touchEnd', [{ x: 200, y: 520, id: 1 }]);
-  await page.waitForTimeout(600);
-  const resting = await snapshot(page);
-  await page.waitForTimeout(400);
-  expect((await snapshot(page)).z).toBe(resting.z);
+  await expectAtRest(page);
 });
 
 test('a thumb on the stick walks the hero to the golden leaf, and the end card shows', async ({ page, browserName }) => {
