@@ -1,9 +1,9 @@
 // Adds up everything in dist/ (what a player downloads) and fails the build if
-// it goes over the budget. The target is a first load well under 10 MB.
+// it goes over the budget of 20 MB (see docs/decisions.md).
 import { readdirSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 
-const BUDGET_MB = 10;
+const BUDGET_MB = 20;
 const files = [];
 const walk = (folder) => {
   for (const name of readdirSync(folder)) {

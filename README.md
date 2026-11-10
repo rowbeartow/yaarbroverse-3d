@@ -4,20 +4,24 @@ A 3D browser game set in the Yaarbroverse, the sibling of the 2D game Caputo Mou
 
 **The first area: the Bouncing Grove.** Cross the fallen log, hop the stumps, bounce on the mushrooms and find the golden leaf, tucked in the canopy. Play as Yaarbro or Caputo.
 
-![Yaarbro on a mossy bank in the Bouncing Grove, with tree stumps and a mushroom ahead](docs/bouncing-grove.jpg)
+![Yaarbro on a mossy bank above a misty gully of fir trees, with a fallen log, tree stumps and a mushroom ahead](docs/bouncing-grove.jpg)
+
+The grove is a lit, textured forest: mossy banks of rock, fallen logs, stumps with cut rings, mushroom springs, firs with real boughs, grass that sways, mist in the gully below and sunlight through the leaves. The heroes are still drawn from simple shapes; their models come next.
 
 ## Play
 
 **https://rowbeartow.github.io/yaarbroverse-3d/**
 
-The link works once GitHub Pages is switched on for this repo (a one-time step for the owner, below). After that, every change merged to `main` is published there within a few minutes.
+The link is live. Every change merged to `main` is published there within a few minutes.
+
+The start screen shows straight away, with a progress bar while the grove loads (about 5 MB).
 
 - **Mac:** arrow keys or W A S D to move, Space to jump (hold for a higher jump), Esc to pause.
 - **iPad:** hold it sideways. Left thumb moves, right thumb jumps.
 
 A fall puts you back on the last safe mossy bank. On Hard only the first bank is safe.
 
-### Switch on the link (owner, one time)
+### Switch on the link (owner, one time, already done)
 
 1. Open https://github.com/rowbeartow/yaarbroverse-3d/settings/pages
 2. Under **Build and deployment**, open the **Source** menu and choose **GitHub Actions**. There is no Save button; it saves by itself.
@@ -36,6 +40,13 @@ If the address is different on your account, the real one is shown at the top of
 
 If the game says "Turn sideways to play" while the iPad is already sideways, rotation lock is on: swipe down from the top-right corner and tap the lock button with the arrow around it.
 
+## How well it runs
+
+The game chooses its own picture quality: it starts high on a computer and medium on an iPad, watches the frame rate, and steps down if it cannot hold 60 frames a second on a computer or a steady 30 on an iPad.
+
+- To see the frame rate and the quality tier, add `?fps` to the address: https://rowbeartow.github.io/yaarbroverse-3d/?fps
+- To fix the tier, add `?quality=high`, `medium`, `low` or `minimal`.
+
 ## Change how hard it is
 
 Every Easy, Normal and Hard number for the grove is in one file: [src/levels/bouncing-grove/difficulty.ts](src/levels/bouncing-grove/difficulty.ts). Each number has a plain-words note. After a change, `npm test` plays all three difficulties start to finish and fails if one has become impossible.
@@ -48,8 +59,14 @@ Node 22 (`.nvmrc`), then:
 
 ```sh
 npm ci
-npm run dev           # play locally at the address it prints
+npm run dev           # prepares the assets, then play locally at the address it prints
 npm test              # game rules, no browser
-npm run build         # production build into dist/, with a download size check
-npm run test:browser  # keyboard and touch checks in Chromium and WebKit (Safari's engine)
+npm run build         # production build into dist/, with a download size check (20 MB)
+npm run test:browser  # keyboard, touch and look checks in Chromium and WebKit (Safari's engine)
 ```
+
+Source textures, the forest light and models live in `assets/`. The build compresses them into `public/media/` (KTX2 textures, meshopt geometry), which is not committed.
+
+## Rights and credits
+
+The Yaarbroverse, its characters and their art are all rights reserved. Every third-party file in this repo is CC0 and is listed with its source in [CREDITS.md](CREDITS.md).

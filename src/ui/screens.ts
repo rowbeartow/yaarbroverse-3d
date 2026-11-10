@@ -74,6 +74,7 @@ export class Screens {
   readonly touch = el('#touch');
   private readonly message = el('#message');
   private readonly place = el('#place');
+  private readonly play = el<HTMLButtonElement>('#play');
   private messageTimer = 0;
 
   constructor(
@@ -126,6 +127,40 @@ export class Screens {
       });
     });
     mark();
+  }
+
+  /**
+   * The progress bar on the start screen while the 3D picture downloads.
+   * A number from 0 to 1 moves the bar; null means done, and Play switches on.
+   */
+  setLoading(share: number | null): void {
+    const loading = el('#loading');
+    if (share === null) {
+      loading.hidden = true;
+      this.play.disabled = false;
+      if (!this.start.hidden) this.play.focus({ preventScroll: true });
+      return;
+    }
+    const percent = Math.round(Math.min(Math.max(share, 0), 1) * 100);
+    loading.hidden = false;
+    this.play.disabled = true;
+    el<HTMLProgressElement>('#loading-bar').value = percent;
+    el('#loading-text').textContent = `Loading the grove… ${percent}%`;
+  }
+
+  /** The game cannot start: this browser has no 3D, or a file did not arrive. */
+  fail(reason: 'no-3d' | 'download'): void {
+    this.start.hidden = true;
+    (reason === 'no-3d' ? this.broken : el('#failed')).hidden = false;
+  }
+
+  /** The frame counter, shown when the address ends in ?fps. */
+  showRate(stats: { framesPerSecond: number; tier: string; automatic: boolean; pixelRatio: number; drawCalls: number; triangles: number }): void {
+    const counter = el('#fps');
+    counter.hidden = false;
+    counter.textContent =
+      `${Math.round(stats.framesPerSecond)} fps · ${stats.tier}${stats.automatic ? '' : ' (fixed)'} · ` +
+      `${stats.pixelRatio.toFixed(2)}x · ${stats.drawCalls} draws · ${Math.round(stats.triangles / 1000)}k triangles`;
   }
 
   setPortrait(hero: HeroName, picture: string): void {

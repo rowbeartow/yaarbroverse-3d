@@ -404,3 +404,59 @@ dd {
     transition: none;
   }
 }
+
+/* ---------- Loading, and the frame counter ---------- */
+
+#loading {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: clamp(10px, 2vh, 18px);
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--moss-deep);
+}
+
+#loading-bar {
+  flex: 1;
+  height: 14px;
+  border: 2px solid var(--moss-deep);
+  border-radius: 999px;
+  background: #fffdf4;
+  overflow: hidden;
+  appearance: none;
+  -webkit-appearance: none;
+}
+
+#loading-bar::-webkit-progress-bar {
+  background: #fffdf4;
+}
+
+#loading-bar::-webkit-progress-value {
+  background: var(--moss);
+}
+
+#loading-bar::-moz-progress-bar {
+  background: var(--moss);
+}
+
+.go:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+
+#fps {
+  position: fixed;
+  top: max(8px, env(safe-area-inset-top));
+  left: 50%;
+  transform: translateX(-50%);
+  margin: 0;
+  padding: 4px 10px;
+  border-radius: 8px;
+  background: var(--shade);
+  color: #fff6dd;
+  font: 600 13px ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+  white-space: nowrap;
+  pointer-events: none;
+  z-index: 5;
+}

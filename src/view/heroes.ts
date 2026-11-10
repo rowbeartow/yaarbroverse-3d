@@ -1,11 +1,14 @@
-// The two heroes, built from simple low-poly shapes, with a walk and a jump
-// worked out from how fast they are moving. Looks follow the family-approved
-// Caputo Mountain art: Yaarbro in his blue tunic with the orange beard, Caputo
-// grey-brown with dark stripes, long fangs and green eyes.
+// The two heroes. A hero with a model file (see hero-model.ts) is drawn from
+// it. A hero without one yet is built here from simple low-poly shapes, with a
+// walk and a jump worked out from how fast it is moving. Looks follow the
+// family-approved Caputo Mountain art: Yaarbro in his blue tunic with the
+// orange beard, Caputo grey-brown with dark stripes, long fangs and green eyes.
 
-import { ConeGeometry, Group, IcosahedronGeometry, Mesh } from 'three';
+import { ConeGeometry, Group, IcosahedronGeometry, Mesh, type Object3D } from 'three';
 import type { HeroName } from '../game/hero';
-import { COLOR, boxAt, fuse, paint } from './shapes';
+import type { Assets } from './assets';
+import { HERO_MODELS, ModelHero, STAND_IN, wantsStandIn } from './hero-model';
+import { COLOR, boxAt, disposeTree, fuse, paint } from './shapes';
 
 /** What the hero is doing this frame, for the animation. */
 export interface Pose {
@@ -16,16 +19,39 @@ export interface Pose {
   rise: number;
 }
 
+/** What the browser checks can ask about the hero on screen. */
+export interface HeroInfo {
+  /** The model file the hero is drawn from, or null for a shape hero. */
+  model: string | null;
+  /** The animation clips in that file, by name. */
+  clips: string[];
+  /** Seconds of animation played so far. */
+  clock: number;
+}
+
 export interface HeroView {
   root: Group;
-  /** Size of the shadow on the ground: across and along the body. */
+  /** Size of the soft spot on the ground: across and along the body. */
   shadow: { across: number; along: number };
   /** Where a portrait camera should look, and from how far. */
   portrait: { height: number; distance: number };
   animate(pose: Pose, dt: number): void;
-  /** A quick squash (landing) or stretch (jumping). */
-  squash(amount: number): void;
+  /** Something just happened: a quick stretch for a jump or bounce, a squash for a landing. */
+  react(event: 'jump' | 'land' | 'bounce'): void;
+  info(): HeroInfo;
+  /** Frees what this hero held. */
+  dispose(): void;
 }
+
+/** A quick squash (positive) or stretch (negative), by what just happened. */
+const SQUASH = { jump: -0.18, land: 0.22, bounce: -0.25 } as const;
+
+/** Lets every part of a hero cast a shadow. */
+const castsShadow = (root: Object3D): void => {
+  root.traverse((node) => {
+    if ((node as Mesh).isMesh) node.castShadow = true;
+  });
+};
 
 const spring = (value: number, dt: number): number => value * Math.exp(-dt * 10);
 
@@ -105,16 +131,21 @@ const yaarbro = (): HeroView => {
   for (const part of [...legs, ...arms, head]) fuse(part);
   fuse(body, [...legs, ...arms, head]);
   root.scale.setScalar(0.82);
+  castsShadow(root);
   let stride = 0;
   let squashed = 0;
+  let clock = 0;
   return {
     root,
     shadow: { across: 1, along: 1 },
     portrait: { height: 1.52, distance: 2.5 },
-    squash(amount) {
-      squashed = amount;
+    react(event) {
+      squashed = SQUASH[event];
     },
+    info: () => ({ model: null, clips: [], clock }),
+    dispose: () => disposeTree(root),
     animate(pose, dt) {
+      clock += dt;
       stride += pose.pace * dt * 13;
       squashed = spring(squashed, dt);
       body.scale.set(1 + squashed * 0.5, 1 - squashed, 1 + squashed * 0.5);
@@ -219,6 +250,7 @@ const caputo = (): HeroView => {
   for (const part of [...legs, head, tail]) fuse(part);
   fuse(body, [...legs, head, tail]);
   root.scale.setScalar(0.96);
+  castsShadow(root);
   let stride = 0;
   let squashed = 0;
   let clock = 0;
@@ -226,9 +258,11 @@ const caputo = (): HeroView => {
     root,
     shadow: { across: 1.1, along: 2.2 },
     portrait: { height: 1.05, distance: 2.9 },
-    squash(amount) {
-      squashed = amount;
+    react(event) {
+      squashed = SQUASH[event];
     },
+    info: () => ({ model: null, clips: [], clock }),
+    dispose: () => disposeTree(root),
     animate(pose, dt) {
       stride += pose.pace * dt * 14;
       clock += dt;
@@ -258,4 +292,22 @@ const caputo = (): HeroView => {
   };
 };
 
-export const buildHero = (name: HeroName): HeroView => (name === 'Caputo' ? caputo() : yaarbro());
+/** The model files to download before the game can start. */
+export const HERO_MODEL_FILES = (): string[] => {
+  const files = new Set<string>();
+  if (wantsStandIn()) files.add(STAND_IN.file);
+  for (const spec of Object.values(HERO_MODELS)) if (spec) files.add(spec.file);
+  return [...files];
+};
+
+/**
+ * Builds a hero: from its model file when it has one, otherwise from shapes.
+ * With ?standin in the address, every hero is the stand-in model, which is how
+ * the model loader and animation player are checked before the real models exist.
+ */
+export const buildHero = (name: HeroName, assets: Assets, simple = false): HeroView => {
+  const spec = wantsStandIn() ? STAND_IN : HERO_MODELS[name];
+  const loaded = spec ? assets.models.get(spec.file) : undefined;
+  if (spec && loaded) return new ModelHero(spec, loaded, simple);
+  return name === 'Caputo' ? caputo() : yaarbro();
+};

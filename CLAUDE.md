@@ -8,12 +8,13 @@ Read first: `docs/session-handoff.md` (what exists, what's next, open questions)
 
 ## Status
 
-In development. Milestone one: one playable area, the Bouncing Grove.
-Live at: https://rowbeartow.github.io/yaarbroverse-3d/ once the owner has switched GitHub Pages on. `docs/session-handoff.md` says whether that has happened.
+In development. One playable area, the Bouncing Grove. Milestone two (the modern look) is in progress; `docs/session-handoff.md` says how far it has got.
+Live at: https://rowbeartow.github.io/yaarbroverse-3d/ . Every merge to `main` publishes there, straight to the kids' devices.
 
 ## Architecture
 
-- Framework: Three.js, TypeScript, Vite. No physics library, no model or picture files.
+- Framework: Three.js, TypeScript, Vite. No physics library.
+- Assets: source textures, the forest light (HDRI) and models in `assets/`. `scripts/build-assets.mjs` compresses them into `public/media/` (KTX2 textures, meshopt geometry, a smaller HDR) before every build and before `npm run dev`. `public/media/` is not committed. Third-party files are CC0 and listed in `CREDITS.md`; the build fails over 20 MB.
 - Deploy target: GitHub Pages, static files only. `.github/workflows/publish.yml` builds and publishes on every merge to main.
 - Data layer: none. The browser remembers the last hero and difficulty.
 - Auth: none.
@@ -23,10 +24,17 @@ How it fits together:
 
 - `src/game/`: the rules. One hero in one level, advanced in fixed steps of 1/60 second. No browser or 3D code, so tests run it without a screen.
 - `src/levels/<level>/difficulty.ts`: every Easy, Normal and Hard number for that level, in one file. `layout.ts` next to it builds the level from those numbers.
-- `src/view/`: turns the level and hero into low-poly shapes and moves the camera. Looks only.
+- `src/view/`: draws the level and hero and moves the camera. Looks only.
+  - `grove-view.ts`: the renderer, lighting (forest light, sun with soft shadows, filmic tone mapping, glow), camera, and switching quality tiers.
+  - `scenery.ts`: the level's solids as smooth textured shapes. `forest.ts`: the gully, trees, ferns, grass, mist, light. Both build shapes with `surface.ts` and `noise.ts`.
+  - `materials.ts`: surfaces, plus three additions to the standard ones: mist by height, moss blending, wind sway. `pictures.ts`: textures drawn in code.
+  - `assets.ts`: downloads `media/` and reports progress. `quality.ts`: the tiers and the rules for choosing one (no 3D code, tested).
+  - `heroes.ts`: builds a hero from its model when it has one (`hero-model.ts`, mixing rules in `hero-motion.ts`), otherwise from shapes (`shapes.ts`). To give a hero a model, see the top of `hero-model.ts`.
 - `src/input/controls.ts`: keyboard and touch, turned into "which way" and "is Jump held".
 - `src/ui/screens.ts` and `index.html`: start screen, pause, end card, "turn sideways" card, messages.
-- `src/main.ts`: the loop that connects them.
+- `src/main.ts`: the loop that connects them. The start screen shows first; the 3D code and files load behind it with a progress bar.
+
+Address-bar switches: `?fps` shows the frame rate and tier, `?quality=high|medium|low|minimal` fixes the tier, `?standin` plays both heroes as the CC0 stand-in model (for checking the loader and animation player).
 
 ## Run and deploy
 
@@ -35,7 +43,8 @@ Node 22 (`.nvmrc`).
 - Install: `npm ci`
 - Run locally: `npm run dev`, then open the address it prints
 - Test the rules: `npm test` (fast, no browser)
-- Build: `npm run build` (also fails if the download goes over 10 MB)
+- Build: `npm run build` (prepares the assets, and fails if the download goes over 20 MB)
+- Pictures for the docs: `node scripts/screenshot.mjs` (see the top of that file)
 - Browser checks: `npm run test:browser` (builds, serves, then drives the game with keyboard and touch, in Chromium and in WebKit). In a cloud session Chromium is already installed: do not install it again. WebKit is not: run `npx playwright install --with-deps webkit` once per session. To run one browser: `npx playwright test --project=ipad-webkit` (or `mac`, `ipad`).
 - Everything: `npm run check`, then `npm run test:browser`
 - Deploy: merging to `main` publishes automatically. Do not deploy by hand. The same checks run on every pull request (`.github/workflows/checks.yml`). So does the private-terms check (`scripts/check-private-terms.mjs`); to try it locally: `PRIVATE_TERMS="one,two" node scripts/check-private-terms.mjs`.
@@ -56,6 +65,9 @@ Never modify or commit a file unrelated to the current task, including to produc
 
 ## Known constraints
 
-- The test browser has no graphics card, so 3D draws slowly there (about 10 frames a second). Browser checks run one at a time in small windows for that reason. Real devices are not affected.
+- The test browsers have no graphics card. The game notices (Chromium says so; for WebKit the checks add `?quality=minimal`) and uses the lowest tier: plain shading, no shadows, no smoothed edges, sparse trees, about 9 to 15 frames a second here and fewer on GitHub's machines. Browser checks run one at a time for that reason. The full lighting is checked on purpose by `tests/browser/look.spec.ts` at medium and high quality in a small window, which takes seconds a frame. Real devices are not affected.
+- Browser checks must not wait on the clock for the game to do something. A slow machine draws few frames, and the game only moves forward a tenth of a second per frame. Wait on the game's own state (`expectAtRest` and `frames` in `tests/browser/helpers.ts`).
+- Pictures drawn in code (`pictures.ts`) ask for `willReadFrequently`, which keeps the drawing on the processor. Without it a browser with no graphics card takes about 7 seconds to start.
+- polyhaven.com is not reachable from a cloud session. `CREDITS.md` says where the copies of its CC0 files were fetched from.
 - Browser checks run in Chromium (Mac-sized with a keyboard, iPad-sized with touch) and in WebKit (iPad-sized with touch), each as its own job in `checks.yml`. WebKit is Safari's engine built for Linux, not Safari itself: Safari on a real iPad is only checked by hand.
 - The test tools can tap in WebKit but cannot hold a finger down or drag one. In WebKit, held and dragged fingers are touch pointer events handed to the element under the finger (see `tests/browser/touch.spec.ts`); in Chromium they are real touches.

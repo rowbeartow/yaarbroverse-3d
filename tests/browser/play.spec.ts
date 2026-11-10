@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { open, play, snapshot, standOn } from './helpers';
+import { open, play, ready, snapshot, standOn } from './helpers';
 
 test.describe('start screen', () => {
   test('loads without errors and draws the grove', async ({ page }) => {
@@ -33,6 +33,7 @@ test.describe('start screen', () => {
     await page.locator('[data-hero="Caputo"]').click();
     await page.locator('[data-difficulty="hard"]').click();
     await page.reload();
+    await ready(page);
     await expect(page.locator('[data-hero="Caputo"]')).toHaveAttribute('aria-checked', 'true');
     await expect(page.locator('[data-difficulty="hard"]')).toHaveAttribute('aria-checked', 'true');
     await page.locator('#play').click();

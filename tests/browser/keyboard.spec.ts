@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { open, play, snapshot } from './helpers';
+import { expectAtRest, open, play, snapshot } from './helpers';
 
 // Keyboard play, as on the Mac.
 test.skip(({ hasTouch }) => Boolean(hasTouch), 'Keyboard checks run on the Mac-sized screen');
@@ -17,11 +17,7 @@ test('arrow keys and W A S D walk the hero, and letting go stops it', async ({ p
   await expect.poll(async () => (await snapshot(page)).x).toBeGreaterThan(start.x + 0.5);
   await page.keyboard.up('KeyD');
 
-  await page.waitForTimeout(600);
-  const resting = await snapshot(page);
-  await page.waitForTimeout(400);
-  const later = await snapshot(page);
-  expect([later.x, later.z]).toEqual([resting.x, resting.z]);
+  await expectAtRest(page);
 });
 
 test('Space jumps', async ({ page }) => {

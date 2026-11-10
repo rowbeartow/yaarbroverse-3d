@@ -56,7 +56,11 @@
           <button type="button" role="radio" data-difficulty="hard"><b>Hard</b><small></small></button>
         </div>
 
-        <button type="button" id="play" class="go">Play</button>
+        <div id="loading" role="status">
+          <progress id="loading-bar" max="100" value="0" aria-label="Loading the grove"></progress>
+          <span id="loading-text">Loading the grove…</span>
+        </div>
+        <button type="button" id="play" class="go" disabled>Play</button>
         <p class="note" id="controls-note"></p>
         <p class="note">This device remembers your choices.</p>
       </div>
@@ -101,6 +105,18 @@
           Already sideways and still seeing this? The screen is locked upright. Swipe down from the top-right corner
           and tap the lock button with the arrow around it, then come back.
         </p>
+      </div>
+    </section>
+
+    <!-- Frame counter: shown when the address ends in ?fps -->
+    <p id="fps" hidden></p>
+
+    <!-- Shown if a file the game needs did not arrive -->
+    <section id="failed" class="screen" hidden role="alert">
+      <div class="card small">
+        <h1>The grove did not finish loading</h1>
+        <p class="lead">Check the internet connection, then try again.</p>
+        <button type="button" id="reload" class="go">Try again</button>
       </div>
     </section>
 

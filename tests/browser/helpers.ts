@@ -1,4 +1,4 @@
-import { expect, type Page } from '@playwright/test';
+import { expect, test, type Page } from '@playwright/test';
 
 /** What the running game looks like right now, read through the page's small test window. */
 export interface Snapshot {
@@ -34,17 +34,58 @@ export const snapshot = (page: Page): Promise<Snapshot> =>
     };
   });
 
-/** Opens the game and collects anything the browser complains about. */
-export const open = async (page: Page): Promise<string[]> => {
+/**
+ * The address to open. WebKit hides what kind of graphics card it has, so on
+ * the test machine (which has none) the game would start on the tier for a
+ * real iPad and spend a minute finding out it cannot hold it. The checks say
+ * so up front instead. Chromium owns up to drawing in software, and the game
+ * picks the lowest tier by itself. `look.spec.ts` checks the choosing itself.
+ */
+export const address = (query = ''): string => {
+  const fixed = test.info().project.name === 'ipad-webkit' && !query.includes('quality=') ? 'quality=minimal' : '';
+  const parts = [fixed, query].filter(Boolean).join('&');
+  return parts ? `/?${parts}` : '/';
+};
+
+/** Collects anything the browser complains about from now on. */
+export const watch = (page: Page): string[] => {
   const problems: string[] = [];
   page.on('pageerror', (error) => problems.push(`error: ${error.message}`));
   page.on('console', (message) => {
     if (message.type() === 'error') problems.push(`console: ${message.text()}`);
   });
-  await page.goto('/');
-  await expect(page.locator('#start')).toBeVisible();
   return problems;
 };
+
+/** Waits until the 3D picture has loaded and Play works. */
+export const ready = async (page: Page, timeout = 60_000): Promise<void> => {
+  await expect(page.locator('#play')).toBeEnabled({ timeout });
+};
+
+/** Opens the game, waits until it is ready to play, and collects anything the browser complains about. */
+export const open = async (page: Page, query = ''): Promise<string[]> => {
+  const problems = watch(page);
+  await page.goto(address(query));
+  await expect(page.locator('#start')).toBeVisible();
+  await ready(page);
+  return problems;
+};
+
+/** Lets the game draw this many more frames. */
+export const frames = (page: Page, count: number): Promise<void> =>
+  page.evaluate(
+    (wanted) =>
+      new Promise<void>((done) => {
+        let drawn = 0;
+        const next = (): void => {
+          drawn += 1;
+          if (drawn > wanted) done();
+          else requestAnimationFrame(next);
+        };
+        requestAnimationFrame(next);
+      }),
+    count,
+  );
 
 export const play = async (page: Page, hero = 'Yaarbro', difficulty = 'normal'): Promise<void> => {
   await page.locator(`[data-hero="${hero}"]`).click();
@@ -74,3 +115,21 @@ export const standOn = (page: Page, solidId: string, back = 0): Promise<void> =>
     },
     [solidId, back] as const,
   );
+
+/**
+ * Checks the hero has come to a stop and stays there. It waits on the game's
+ * own speed, not on the clock: a machine that draws one frame a second takes
+ * a couple of seconds to play out the slide to a halt.
+ */
+export const expectAtRest = async (page: Page): Promise<void> => {
+  const speed = (): Promise<number> =>
+    page.evaluate(() => {
+      const { game } = (window as unknown as { __grove: { game: { vx: number; vy: number; vz: number } } }).__grove;
+      return Math.hypot(game.vx, game.vy, game.vz);
+    });
+  await expect.poll(speed).toBe(0);
+  const resting = await snapshot(page);
+  await frames(page, 4);
+  const later = await snapshot(page);
+  expect([later.x, later.y, later.z]).toEqual([resting.x, resting.y, resting.z]);
+};
