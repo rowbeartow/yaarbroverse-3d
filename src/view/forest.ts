@@ -117,36 +117,76 @@ const strip = (
   }
 };
 
-/** Crowns are drawn this many times taller than they are wide. */
-const CROWN_SHAPE = 5;
+/** Crowns are drawn this many times taller than their lowest boughs reach. */
+const CROWN_SHAPE = 4;
 
 /**
- * The green of one conifer, one unit tall and one unit wide at the bottom:
- * rings of boughs that reach out and droop, wide low down and short at the
- * top. It is made for a tree CROWN_SHAPE times taller than wide, which is how
- * trees are sized below, so a bough's droop comes out right in metres.
+ * The green of one conifer, one unit tall and one unit in reach at the bottom:
+ * a cone that narrows to a point, made of tiers of boughs. Each bough is a flat
+ * spray that leaves the trunk angled out and a little down, as fir and cedar
+ * boughs do, with its tip turning up. A dark inner cone fills the middle, so
+ * the tree is solid from the side and the tiers show as lighter edges.
+ *
+ * It is made for a tree CROWN_SHAPE times taller than its reach, which is how
+ * trees are sized below, so a bough's slope comes out right in metres.
  */
-const crownGeometry = (seed: number, whorls: number, fullest: number, steps = 4): BufferGeometry => {
+const crownGeometry = (seed: number, tiers: number, fullest: number, steps = 4): BufferGeometry => {
   const lists = emptyLists();
   let random = seed;
   const next = (): number => {
     random = (random * 16807) % 2147483647;
     return random / 2147483647;
   };
-  for (let w = 0; w < whorls; w += 1) {
-    // Rings sit closer together toward the top, where the boughs are short.
-    const height = 1 - (1 - w / whorls) ** 1.25;
-    const reach = 0.1 + 0.9 * (1 - height) ** 0.85;
-    const count = Math.max(5, Math.round(fullest * (0.55 + 0.45 * (1 - height))));
-    // Low boughs hang; high ones are held nearly level.
-    const droop = 0.75 - 0.5 * height;
+  /** How far the boughs reach at a height: widest at the bottom, a point at the top. */
+  const reachAt = (height: number): number => 0.11 + 0.89 * (1 - height) ** 0.95;
+
+  // The inner cone. Its colour comes from one dark spot of the bough picture.
+  const sides = 7;
+  const rings = 5;
+  const coreStart = lists.positions.length / 3;
+  for (let r = 0; r <= rings; r += 1) {
+    const height = (r / rings) * 0.97 - 0.02;
+    const radius = 0.24 * reachAt(Math.max(height, 0)) * (r === rings ? 0.2 : 1);
+    for (let k = 0; k <= sides; k += 1) {
+      const angle = (k / sides) * TAU;
+      lists.positions.push(Math.cos(angle) * radius, height, Math.sin(angle) * radius);
+      const out = Math.hypot(1, 0.24 / CROWN_SHAPE);
+      lists.normals.push(Math.cos(angle) / out, 0.24 / CROWN_SHAPE / out, Math.sin(angle) / out);
+      lists.uvs.push(0.47, 0.3);
+      // That spot of the picture is very dark, so these are well over 1 to bring it up to a deep green.
+      const dark = 1.5 + 0.5 * (r / rings) + 0.3 * (((k * 5 + r * 3) % 4) / 3);
+      lists.colors.push(dark * 0.9, dark, dark * 0.85);
+      lists.sway.push(0);
+    }
+  }
+  for (let r = 0; r < rings; r += 1) {
+    for (let k = 0; k < sides; k += 1) {
+      const a = coreStart + r * (sides + 1) + k;
+      const c = a + sides + 1;
+      lists.index.push(a, c, a + 1, a + 1, c, c + 1);
+    }
+  }
+
+  for (let t = 0; t < tiers; t += 1) {
+    // Tiers sit closer together toward the top, where the boughs are short.
+    const height = 1 - (1 - t / tiers) ** 1.2;
+    const reach = reachAt(height);
+    const count = Math.max(6, Math.round(fullest * (0.55 + 0.45 * (1 - height))));
+    // How steeply a bough leaves the trunk: about 30 degrees below level at
+    // the bottom of the tree, easing to 20 at the top. Never level: a flat
+    // bough seen from the side is a line, and the tree turns into plates.
+    const slope = 0.6 - 0.24 * height;
     const offset = next() * TAU;
+    // Every other tier a touch darker, so the tiers read apart.
+    const tierShade = (t % 2 === 0 ? 0.92 : 1.04) * (0.7 + 0.3 * height);
     for (let k = 0; k < count; k += 1) {
-      const turn = offset + ((k + next() * 0.6) / count) * TAU;
-      const length = reach * (0.8 + next() * 0.35);
-      const y = height + (next() - 0.5) * (0.6 / whorls);
-      const shade = 0.62 + 0.38 * height + next() * 0.14;
-      const hang = droop * (0.8 + next() * 0.4);
+      const turn = offset + ((k + (next() - 0.5) * 0.5) / count) * TAU;
+      const length = reach * (0.82 + next() * 0.26);
+      const y = height + (next() - 0.5) * (0.35 / tiers);
+      const shade = tierShade * (0.94 + next() * 0.14);
+      const lean = slope * (0.85 + next() * 0.3);
+      // Wide enough at the far end to meet its neighbours and close the tier.
+      const fan = Math.min(0.62, Math.tan((Math.PI / count) * 1.25));
       strip(
         lists,
         0,
@@ -155,13 +195,13 @@ const crownGeometry = (seed: number, whorls: number, fullest: number, steps = 4)
         turn,
         steps,
         (along) => ({
-          out: 0.03 + length * along,
-          // Out and down, with the tip lifting a little, as fir boughs do.
-          up: (-hang * length * along ** 1.6 + 0.16 * length * Math.sin(along * Math.PI)) / CROWN_SHAPE,
-          halfWidth: length * 0.46,
+          out: 0.02 + length * along,
+          // Out and a little down, sagging slightly, with the tip turning up.
+          up: (-lean * length * along - 0.1 * length * along * along + 0.17 * length * along ** 4) / CROWN_SHAPE,
+          halfWidth: length * (0.07 + fan * along ** 0.75),
         }),
         (along) => {
-          const light = shade * (0.42 + 0.66 * along);
+          const light = shade * (0.4 + 0.72 * along);
           return [light * 0.9, light, light * 0.88];
         },
       );
@@ -172,11 +212,11 @@ const crownGeometry = (seed: number, whorls: number, fullest: number, steps = 4)
     strip(
       lists,
       0,
-      0.94,
+      0.95,
       0,
       (k / 3) * TAU,
       2,
-      (along) => ({ out: 0.05 * along, up: 0.07 * along, halfWidth: 0.07 * (1 - along * 0.6) }),
+      (along) => ({ out: 0.035 * along, up: 0.085 * along, halfWidth: 0.05 * (1 - along * 0.7) }),
       () => [1, 1.05, 0.95],
       0.4,
     );
@@ -184,7 +224,10 @@ const crownGeometry = (seed: number, whorls: number, fullest: number, steps = 4)
   return toGeometry(lists);
 };
 
-/** One trunk, one unit tall and one unit in radius, flaring into roots at the foot. */
+/**
+ * One trunk, one unit tall and one unit in radius at the foot: straight,
+ * tapering to almost nothing at the tip, flaring into roots at the ground.
+ */
 const trunkGeometry = (): BufferGeometry =>
   surface(
     6,
@@ -194,7 +237,7 @@ const trunkGeometry = (): BufferGeometry =>
       const down = rowShare ** 0.45;
       const angle = across * TAU;
       const flare = 1 + 1.3 * smooth(0.9, 1, down) ** 2 * (1 + 0.5 * Math.sin(angle * 4 + 1));
-      const radius = (0.5 + 0.5 * down) * flare * (1 + 0.05 * Math.sin(angle * 3 + down * 9));
+      const radius = (0.1 + 0.9 * down ** 0.7) * flare * (1 + 0.05 * Math.sin(angle * 3 + down * 9));
       point.x = Math.cos(angle) * radius;
       point.y = 1 - down;
       point.z = Math.sin(angle) * radius;
@@ -433,7 +476,7 @@ export const buildForest = (level: Level, materials: Materials, decor: Decor, ra
   // Three crown shapes, so no two neighbours match: two full ones for trees near
   // the path and a lighter one for the many behind. A fourth, sparse one stands
   // in for all of them on the slowest machines.
-  const shapes = [crownGeometry(11, 20, 10), crownGeometry(29, 18, 9), crownGeometry(47, 11, 7), crownGeometry(61, 8, 6, 2)];
+  const shapes = [crownGeometry(11, 24, 10), crownGeometry(29, 22, 9), crownGeometry(47, 13, 7), crownGeometry(61, 9, 6, 2)];
   const lists: Tree[][] = [[], [], []];
   trees.forEach((tree, i) => lists[tree.near ? i % 2 : 2].push(tree));
   // Far trees go in scattered order, so drawing fewer of them thins the forest evenly.
@@ -497,7 +540,7 @@ export const buildForest = (level: Level, materials: Materials, decor: Decor, ra
   if (boughSolid) {
     const crown = new Mesh(crownGeometry(83, 12, 9), materials.foliage);
     crown.position.set(boughSolid.x, boughSolid.top + 8, boughSolid.z - boughSolid.halfZ - 3.6);
-    crown.scale.set(9, 9 * CROWN_SHAPE * 0.6, 9);
+    crown.scale.set(9, 27, 9);
     group.add(crown);
   }
 

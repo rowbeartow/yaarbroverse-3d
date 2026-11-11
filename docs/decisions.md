@@ -128,3 +128,7 @@ Supersedes: "Hero models are made by the owner in Meshy and live in this repo", 
 ## 2026-11-10 Characters Meshy cannot rig are rigged and animated in Blender by a script in tools/, run headless
 Reason: Meshy rigs only humanoids reliably and could not rig Caputo. A script makes the rig repeatable, and reusable for the milestone-three enemies.
 Supersedes: none
+
+## 2026-11-10 The drawn top of a bank never reaches past where a hero can stand
+Reason: The owner's rule: scenery may be made to look more natural, but the walkable area in the rules does not change, and the visible top edge must match where a hero can actually stand, so a jump never looks safe when it isn't. A bank's edge may wander and its corners may be rounded only inside the strip between the bank's rectangle in the rules and the furthest line a hero can stand on (the foot radius past it). Rock, roots and moss go below and beside the top, starting well below it, so they do not read as more ground. `tests/bank-outline.test.ts` checks every bank on every difficulty.
+Supersedes: none
