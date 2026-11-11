@@ -61,6 +61,14 @@ export interface HeroModelSpec {
    * A clip already cut to its airborne part uses all of it: 0 to 1.
    */
   airborne: [number, number];
+  /**
+   * For a jump clip that opens with a crouch and a push off the ground: the
+   * share of the clip that takes (the airborne part starts where it ends),
+   * and how many seconds to play it over when a jump starts. The rules lift
+   * the hero the moment Jump is pressed, so this is a flash of a crouch, not
+   * a wind-up.
+   */
+  pushOff?: { share: number; seconds: number };
   /** Ground speeds, in metres a second, at which the walk and run clips look right. */
   walkSpeed: number;
   runSpeed: number;
@@ -99,7 +107,9 @@ export const HERO_MODELS: Record<HeroName, HeroModelSpec> = {
   },
   // Made by the owner in Meshy. Meshy could not give him a four-legged
   // skeleton, so tools/rig-quadruped.py rigs him and writes his clips: idle,
-  // walk, run, and held poses for jump, falling and landing.
+  // walk, run, jump, falling and landing. The script prints the ground each
+  // stride of the walk and the run covers, which is where the two speeds
+  // below come from (times his height here over his height in the file).
   Caputo: {
     file: 'caputo.glb',
     height: 1.55,
@@ -113,10 +123,11 @@ export const HERO_MODELS: Record<HeroName, HeroModelSpec> = {
       land: ['landing'],
       roll: ['pounce'],
     },
-    // The jump clip is one held pose, so all of it is the airborne part.
-    airborne: [0, 1],
-    walkSpeed: 0.75,
-    runSpeed: 4.9,
+    // His jump opens with a crouch and a push from the hind legs.
+    airborne: [0.2, 1],
+    pushOff: { share: 0.2, seconds: 0.1 },
+    walkSpeed: 1.33,
+    runSpeed: 4.82,
     shadow: { across: 1.1, along: 1.8 },
     portrait: { height: 0.95, distance: 2.45 },
   },
@@ -197,6 +208,8 @@ export class ModelHero implements HeroView {
   private mix = { idle: 1, walk: 0, run: 0 };
   /** How fast the hero was dropping when last in the air, for how hard it lands. */
   private dropping = 0;
+  /** Seconds left of the push off the ground at the start of a jump. */
+  private pushing = 0;
 
   /** Plain materials made for this hero alone (see `simple`), freed with it. */
   private readonly ownMaterials: MeshLambertMaterial[] = [];
@@ -281,6 +294,7 @@ export class ModelHero implements HeroView {
       } else this.squashed = 0.18;
     } else {
       this.squashed = event === 'bounce' ? -0.2 : -0.12;
+      this.pushing = this.spec.pushOff?.seconds ?? 0;
     }
   }
 
@@ -300,12 +314,19 @@ export class ModelHero implements HeroView {
     // upward speed. A falling clip, when there is one, takes over on the way down.
     if (!pose.grounded) this.dropping = Math.max(0, -pose.rise);
     const hasAirPose = Boolean(actions.jump ?? actions.fall);
-    this.air = approach(this.air, pose.grounded || !hasAirPose ? 0 : 1, pose.grounded ? 16 : 22, dt);
+    // A push off the ground has to show at once, or it is over before it is seen.
+    this.air = approach(this.air, pose.grounded || !hasAirPose ? 0 : 1, pose.grounded ? 16 : this.pushing > 0 ? 70 : 22, dt);
     const phase = airPhase(pose.rise, MOVE.jumpSpeed);
     const falling = actions.fall ? Math.min(1, Math.max(0, (phase - 0.5) * 2.2)) : 0;
     if (actions.jump) {
       const clip = actions.jump.getClip();
-      actions.jump.time = clip.duration * (spec.airborne[0] + (spec.airborne[1] - spec.airborne[0]) * phase);
+      let share = spec.airborne[0] + (spec.airborne[1] - spec.airborne[0]) * phase;
+      if (spec.pushOff && this.pushing > 0) {
+        // The crouch and push play through once, then upward speed takes over.
+        share = Math.min(share, spec.pushOff.share * (1 - this.pushing / spec.pushOff.seconds));
+        this.pushing = Math.max(0, this.pushing - dt);
+      }
+      actions.jump.time = clip.duration * share;
       actions.jump.setEffectiveWeight(this.air * (1 - falling));
     }
     actions.fall?.setEffectiveWeight(this.air * (actions.jump ? falling : 1));

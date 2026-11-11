@@ -90,9 +90,10 @@ describe('the hero model files', () => {
     expect(clipNames('caputo.glb').sort()).toEqual(['falling', 'idle', 'jump', 'landing', 'run', 'walk']);
   });
 
-  it('Caputo: has a spine, neck and head, four legs of three bones, and a tail of at least five', () => {
+  it('Caputo: has a spine, neck and head, shoulder blades, ears, four legs of three bones, and a tail of at least five', () => {
     const bones = boneNames('caputo.glb');
     expect(bones).toEqual(expect.arrayContaining(['hips', 'spine1', 'spine2', 'chest', 'neck', 'head']));
+    expect(bones).toEqual(expect.arrayContaining(['blade_l', 'blade_r', 'ear_l', 'ear_r']));
     for (const leg of ['front', 'hind']) {
       for (const side of ['l', 'r']) {
         expect(bones).toEqual(expect.arrayContaining([`${leg}_upper_${side}`, `${leg}_lower_${side}`, `${leg}_paw_${side}`]));
@@ -101,10 +102,10 @@ describe('the hero model files', () => {
     expect(bones.filter((name) => /^tail\d+$/.test(name)).length).toBeGreaterThanOrEqual(5);
   });
 
-  it('Caputo: his moving clips loop, and his held poses do not move', () => {
+  it('Caputo: every clip moves, and the ones that repeat end where they began', () => {
     const root = files.get('caputo.glb')!.getRoot();
     for (const clip of root.listAnimations()) {
-      const held = ['jump', 'falling', 'landing'].includes(clip.getName());
+      const repeats = ['idle', 'walk', 'run', 'falling'].includes(clip.getName());
       let moves = false;
       for (const sampler of clip.listSamplers()) {
         const output = sampler.getOutput()!;
@@ -117,12 +118,33 @@ describe('the hero model files', () => {
           return value.length === 4 ? Math.min(same, flipped) : same;
         };
         // A looping clip ends where it began, so it can repeat without a jump.
-        expect(apart(output.getElement(output.getCount() - 1, []))).toBeLessThan(0.002);
+        if (repeats) expect(apart(output.getElement(output.getCount() - 1, [])), clip.getName()).toBeLessThan(0.002);
         for (let i = 1; i < output.getCount(); i += 1) {
           if (apart(output.getElement(i, [])) > 0.002) moves = true;
         }
       }
-      expect(moves, clip.getName()).toBe(!held);
+      // Never a frozen pose, standing or in the air.
+      expect(moves, clip.getName()).toBe(true);
+    }
+  });
+
+  it('Caputo: no clip carries him away from the spot, because the rules own where he is', () => {
+    const root = files.get('caputo.glb')!.getRoot();
+    for (const clip of root.listAnimations()) {
+      for (const channel of clip.listChannels()) {
+        if (channel.getTargetPath() !== 'translation' || channel.getTargetNode()!.getName() !== 'hips') continue;
+        const output = channel.getSampler()!.getOutput()!;
+        const low = [Infinity, Infinity, Infinity];
+        const high = [-Infinity, -Infinity, -Infinity];
+        for (let i = 0; i < output.getCount(); i += 1) {
+          output.getElement(i, []).forEach((part, k) => {
+            low[k] = Math.min(low[k], part);
+            high[k] = Math.max(high[k], part);
+          });
+        }
+        // His file is in metres. A sway, a crouch or a bound, never a journey.
+        for (const k of [0, 1, 2]) expect(high[k] - low[k], `${clip.getName()} axis ${k}`).toBeLessThan(0.4);
+      }
     }
   });
 });
