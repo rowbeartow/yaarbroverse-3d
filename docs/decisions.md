@@ -188,3 +188,7 @@ Supersedes: none
 ## 2026-11-11 The far limit for drawing is 140 m ahead of the hero, and full detail stops at 85 m
 Reason: With all six sections built, the first limits (the far end of the mist, and 100 m for detail) drew up to 417 thousand triangles a frame against 322 thousand for the short level. At 152 m from the camera the mist hides nineteen twentieths of anything, and at 97 m it hides a third, so those are the new limits. The triangle count is back within 17% of the short level.
 Supersedes: the distances in "Scenery is built in stretches of route, and only the stretches near the hero are drawn". The rest of that entry stands.
+
+## 2026-11-11 Real-device testing is on the owner's Mac in Safari, and nothing waits on an iPad number
+Reason: The owner's note: he has no iPad to test on right now. The iPad frame-rate target (a steady 30 or better) and the touch controls stay as they are, and the browser checks still cover touch at iPad size in Chromium and WebKit. Work no longer waits for a frame rate measured on an iPad.
+Supersedes: none

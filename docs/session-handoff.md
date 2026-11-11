@@ -50,7 +50,7 @@ How to work on Caputo's movement:
 
 Open:
 
-- **Frame rate on the iPad and the Mac has never been checked.** The owner has no iPad to hand. When he does, he opens the live link with `?fps` on the address and says what frame rate and tier show. If the iPad shows under 30, fix that first, in its own pull request.
+- **Real-device testing is on the owner's Mac, in Safari.** He has no iPad to test on right now (his note, 2026-11-11). The iPad frame-rate target (a steady 30) and the touch controls stay as they are, and nothing waits on an iPad number. He opens the live link with `?fps` on the address in Safari on the Mac and says what frame rate and tier show; the target there is 60. Frame rate on a real device has still never been checked. If an iPad number does come in and it is under 30, fix that first, in its own pull request.
 - **Nobody has reported watching Caputo's clips inside the game on a real device.** The owner judges them on the preview page.
 
 ## Where things stand
@@ -135,7 +135,7 @@ Milestone three, part one (the longer grove) is done, in the three merged pull r
 ## What's next
 
 1. **The owner and the kids play the longer level** and say how each section feels on each difficulty. Tuning is a change to `src/levels/bouncing-grove/difficulty.ts` only; run `npm test` after.
-2. **The owner looks at the live link on the iPad and the Mac**, with `?fps` on the address, and says what frame rate and tier show. An iPad under 30 is fixed first.
+2. **The owner looks at the live link in Safari on his Mac**, with `?fps` on the address, and says what frame rate and tier show. No iPad is to hand, so do not wait on an iPad number.
 3. **Milestone three, part two**: the marmot scout and giant mosquito, hearts, Yaarbro's roll and Caputo's pounce. See "Start here" for what is ready and what the owner has to decide.
 4. **The owner plays Caputo's three gaits in the game** and says how they look.
 5. **Checking the Blender scripts on new files.** `tools/rig-quadruped.py` is meant for the enemies too: each needs its own guide file of joint places, like `tools/caputo.rig.json`. Its path for a file that already has a skeleton (keep it, add the bones it lacks) was tried only on Caputo's earlier output, before he had shoulder blades and ears.
