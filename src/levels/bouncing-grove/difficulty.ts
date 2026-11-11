@@ -69,6 +69,18 @@ export interface GroveNumbers {
    * These too are Caputo Mountain's numbers.
    */
   protection: number;
+  /**
+   * The enemies: the marmot scout and the giant mosquito. Each warns before
+   * it attacks and rests after. These three stretch that timing, and are
+   * Caputo Mountain's numbers. 1 is the grove as it comes.
+   *   enemyWarning   times how long a warning lasts (0.8 seconds). Longer is easier.
+   *   enemySpeed     times how fast enemies move, acorns fly and mosquitoes dive.
+   *   enemyRest      times how long an enemy rests after attacking (1.35 seconds),
+   *                  which is the opening to strike it or get past. Longer is easier.
+   */
+  enemyWarning: number;
+  enemySpeed: number;
+  enemyRest: number;
   /** After walking off an edge, Jump still works for this long. */
   coyoteTime: number;
   /** Feet this far below a ledge still get lifted onto it. */
@@ -100,6 +112,9 @@ export const GROVE_DIFFICULTY: Record<Difficulty, GroveNumbers> = {
     checkpoints: [1, 2, 3, 4, 5],
     hearts: 5,
     protection: 1.5,
+    enemyWarning: 1.5,
+    enemySpeed: 0.7,
+    enemyRest: 1.4,
     coyoteTime: 0.2,
     ledgeHelp: 0.5,
   },
@@ -127,6 +142,9 @@ export const GROVE_DIFFICULTY: Record<Difficulty, GroveNumbers> = {
     checkpoints: [1, 2, 3, 4, 5],
     hearts: 3,
     protection: 1,
+    enemyWarning: 1,
+    enemySpeed: 1,
+    enemyRest: 1,
     coyoteTime: 0.12,
     ledgeHelp: 0.3,
   },
@@ -154,6 +172,9 @@ export const GROVE_DIFFICULTY: Record<Difficulty, GroveNumbers> = {
     checkpoints: [2, 4],
     hearts: 2,
     protection: 0.6,
+    enemyWarning: 0.65,
+    enemySpeed: 1.3,
+    enemyRest: 0.7,
     coyoteTime: 0.06,
     ledgeHelp: 0.15,
   },
