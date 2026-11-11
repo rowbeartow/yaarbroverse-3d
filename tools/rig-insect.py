@@ -16,7 +16,8 @@
 #
 # What it does:
 #   1. Opens the model, stands its lowest point on the ground and merges the
-#      doubled points along the seams of its picture.
+#      doubled points along the seams of its picture, then thins the mesh to
+#      about the guide's "triangles".
 #   2. Builds the skeleton from the guide: a body, a head with a beak and two
 #      antennae, an abdomen in three parts, two wings, and the legs, each a
 #      short chain of bones.
@@ -355,6 +356,7 @@ def main():
     say(f"opened {source}: {len(mesh.data.vertices)} points")
     quad.straighten(mesh, None, guide.get('turned_left_degrees', 0))
     quad.merge_seams(mesh)
+    quad.thin(mesh, guide.get('triangles'))
     wings = wing_points(mesh, guide)
     # The shared skeleton builder asks for a plan; give it the insect's.
     quad.skeleton_plan = insect_plan

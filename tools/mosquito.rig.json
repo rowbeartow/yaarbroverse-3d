@@ -1,6 +1,7 @@
 {
-  "about": "Where the giant mosquito's joints are, for tools/rig-insect.py. Each point is [across, up, forward] in metres, measured on the model as it came from Meshy, with its lowest point on the ground: across is to its left, up is from the ground, forward is toward its head. tools/joint-views.py draws the model on a grid to read these from, and draws these over it. Each leg is a list of points from where it leaves the body to its tip, with a bone between each pair. This model's two middle legs came out as one leg under the middle of the body, so it has five legs.",
+  "about": "Where the giant mosquito's joints are, for tools/rig-insect.py. Each point is [across, up, forward] in metres, measured on the model as it came from Meshy, with its lowest point on the ground: across is to its left, up is from the ground, forward is toward its head. tools/joint-views.py draws the model on a grid to read these from, and draws these over it. \"triangles\" is how many triangles the mesh is thinned to: Meshy makes about 31,000, more than twice a hero. Each leg is a list of points from where it leaves the body to its tip, with a bone between each pair. This model's two middle legs came out as one leg under the middle of the body, so it has five legs.",
   "turned_left_degrees": 0,
+  "triangles": 14000,
   "joints": {
     "body": [[0.0, 0.6, -0.1], [0.0, 0.63, 0.2]],
     "head": [[0.0, 0.63, 0.2], [0.0, 0.6, 0.42]],

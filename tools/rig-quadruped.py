@@ -17,7 +17,8 @@
 #      ground.
 #   2. Merges the doubled points along the seams of the model's picture.
 #      Meshy splits the skin into hundreds of loose patches there, and weights
-#      cannot spread across loose patches.
+#      cannot spread across loose patches. If the guide gives "triangles",
+#      the mesh is then thinned to about that many.
 #   3. Builds the skeleton from the guide: hips, spine, chest, neck, head, four
 #      legs (upper, lower, paw) and a tail, plus shoulder blades and ears when
 #      the guide gives them. If the file already has a skeleton it is kept,
@@ -231,6 +232,34 @@ def merge_seams(mesh):
     mesh.data.update()
     pieces, biggest = islands(mesh)
     say(f"merged seam points: {before} points in {pieces_before} pieces -> {len(mesh.data.vertices)} points in {pieces} pieces (the body has {biggest})")
+
+
+def thin(mesh, triangles):
+    """
+    Brings the mesh down to about `triangles` triangles, keeping its shape and
+    its picture. Meshy's models have far more than a small enemy on screen
+    needs, and every one of them is moved by the skeleton on every frame.
+    """
+    mesh.data.calc_loop_triangles()
+    before = len(mesh.data.loop_triangles)
+    if not triangles or before <= triangles:
+        return
+    bpy.ops.object.select_all(action='DESELECT')
+    mesh.select_set(True)
+    bpy.context.view_layer.objects.active = mesh
+    modifier = mesh.modifiers.new('Thin', 'DECIMATE')
+    modifier.decimate_type = 'COLLAPSE'
+    modifier.ratio = triangles / before
+    modifier.use_collapse_triangulate = True
+    bpy.ops.object.modifier_apply(modifier='Thin')
+    # Thinning can leave the odd face with no area, or normals that no longer
+    # fit, and the saver drops a mesh it finds faulty: put it right first.
+    mesh.data.validate(clean_customdata=True)
+    mesh.data.update()
+    mesh.data.calc_loop_triangles()
+    if mesh.data.validate():
+        raise SystemExit('The mesh is still faulty after thinning. Try a different number of triangles in the guide.')
+    say(f"thinned the mesh: {before} triangles -> {len(mesh.data.loop_triangles)}")
 
 
 # ---------- 3: the skeleton ----------
@@ -1328,6 +1357,7 @@ def main():
     say(f"opened {source}: {len(mesh.data.vertices)} points, {'with' if had_skeleton else 'no'} skeleton")
     straighten(mesh, armature, guide.get('turned_left_degrees', 0))
     merge_seams(mesh)
+    thin(mesh, guide.get('triangles'))
     armature, added = build_skeleton(guide, armature)
     say(f"skeleton: {len(armature.data.bones)} bones" + (f", {len(added)} of them added" if had_skeleton else ''))
     skin(mesh, armature, added, had_skeleton)

@@ -1,7 +1,8 @@
 {
-  "about": "Where the marmot scout's joints are, for tools/rig-quadruped.py. Each point is [across, up, forward] in metres, measured on the model as it came from Meshy, standing on the ground: across is to its left, up is from the ground, forward is toward its nose. tools/joint-views.py draws the model on a grid to read these from, and draws these over it. \"character\" picks the marmot scout's own clips in the script, in place of the cat's.",
+  "about": "Where the marmot scout's joints are, for tools/rig-quadruped.py. Each point is [across, up, forward] in metres, measured on the model as it came from Meshy, standing on the ground: across is to its left, up is from the ground, forward is toward its nose. tools/joint-views.py draws the model on a grid to read these from, and draws these over it. \"triangles\" is how many triangles the mesh is thinned to: Meshy makes about 31,000, more than twice a hero. \"character\" picks the marmot scout's own clips in the script, in place of the cat's.",
   "character": "marmot",
   "turned_left_degrees": 0,
+  "triangles": 14000,
   "joints": {
     "spine": [[0.0, 0.48, -0.38], [0.0, 0.55, -0.12], [0.0, 0.6, 0.12], [0.0, 0.64, 0.34], [0.0, 0.72, 0.5]],
     "head": [0.0, 0.8, 0.62],
