@@ -12,21 +12,28 @@ Last updated: 2026-11-11
 
 There are no open pull requests from this work.
 
-**Next is milestone three, part two: enemies, hearts, the roll and the pounce.** Do not start it without the owner's go-ahead and his word on the open questions below. What part one leaves ready for it:
+**Milestone three, part two is under way: enemies, hearts, the roll and the pounce.** The owner gave the go-ahead on 2026-11-11 and set the order, one pull request each: (1) enemy models through Meshy's API, (2) rig and animate his picks in Blender, (3) hearts and damage, (4) Yaarbro's roll and Caputo's pounce, (5) enemy placement and behaviour. His answers to the open questions: everything about the enemies, the hearts and the two moves follows the 2D game (`docs/forest.md` and `src/forest/` in the private repo); anything not found there becomes an issue labeled `needs-decision`, not an invention.
 
-- **Room for three enemies, with nothing placed.** The clearing at the end of section 2 (`bank-2`, 10 m wide and 12 m long) for the marmot scout. The open air beside the high boughs of section 5 for the giant mosquito. The bank at the foot of the last climb (`bank-5`) for a second scout.
-- **Hearts** arrive with the first thing that can hurt (see `docs/decisions.md`). A fall still returns the hero to the last checkpoint and costs nothing else.
-- **The roll and the pounce.** Yaarbro's file already holds a `roll` clip, unused. Caputo has no pounce clip: `tools/rig-quadruped.py` would write one. Each move must beat or get past both enemies, so neither hero is the weaker one.
-- **Enemy models** are made the way the hero models were: by the owner in Meshy, then `tools/rig-quadruped.py` (or `tools/prepare-rigged.py` for one Meshy can rig), then `tools/compress-hero.mjs`.
-- **Easy stays finishable with walk and jump alone.**
+**Where step 1 stands: waiting for the owner's pick.**
 
-Open questions for the owner before part two:
+- Six candidate models exist, three for the marmot scout and three for the giant mosquito, made by Meshy's Image to 3D. They are on a private page for the owner: https://claude.ai/artifact/1HMoWtxB1vsAtWLJtH1Ryt . He replies with one letter for each enemy. Nothing is rigged, and no enemy model is in the repo.
+- The reference pictures were the "Alert" marmot and the "Hover" mosquito from the approved studies (`docs/art-direction/b02a/marmot-scout-study.png` and `giant-mosquito-study.png` on the private repo's `codex/forest-f01` branch), each cut out of the sheet with its background and ground dust removed. The art converted well, so no other reference picture was needed.
+- Candidates A, B and C are Meshy 7.1, Meshy 6, and Meshy 7.1 with the picture left as drawn. Each is about 31 thousand triangles with a 2K colour picture, 4 to 5 MB.
+- **The models are not saved anywhere lasting.** They were downloaded to the session's scratch folder, which is gone when the session ends. Meshy's task numbers, for downloading the picked ones again (`GET https://api.meshy.ai/openapi/v1/image-to-3d/<task>`, then the `glb` address in the reply): marmot A `01a1cb90-4c80-75ee-968a-12bef046e189`, B `01a1cb90-5110-76bb-aff5-cb9c9f384842`, C `01a1cb90-556a-7321-83fc-b360dbd2e1e8`; mosquito A `01a1cb90-63d4-70a0-9727-586c2b46e25e`, B `01a1cb90-67e1-757c-8ab5-89049eee09dd`, C `01a1cb90-6bc4-7196-84e5-86177f2d9020`. Meshy keeps a task's files for about three days. After that a pick has to be made again from the picture, at 30 credits, and will not be the same model.
+- Credits: 1,200 before, 1,020 after, 180 spent (30 for each model). The owner's limit is 300 without asking, so 120 are left under it.
+- On two mosquito candidates the underside of the wings came out dark green. Whichever is picked, the wings are made pale and see-through when it is rigged.
 
-1. How each enemy behaves in 3D. Caputo Mountain's forest has a marmot scout that throws acorns after a warning and a mosquito that dives; its difficulty table (`docs/forest.md` in the private repo) scales warnings, enemy speed and rest by difficulty. Whether the 3D grove follows those rules as they are is his call.
-2. How many hearts on each difficulty (the 2D forest uses 5, 3 and 2).
-3. Which button the roll and the pounce are on, on touch and on the keyboard.
+What part one left ready, and what the owner has settled for the later steps:
 
-The playtest that led to part one (the owner, 2026-11-11): the kids loved it and want more to play. The older player said Normal was about the right difficulty. The first set of jumps was hard for them to figure out, which is why the level now opens with a short hop. Nobody has played the longer level yet.
+- **Room for three enemies, with nothing placed.** The clearing at the end of section 2 (`bank-2`, 10 m wide and 12 m long) for the marmot scout. The open air beside the high boughs of section 5 for the giant mosquito. The bank at the foot of the last climb (`bank-5`) for a second scout. Enemies go only there: never in a diagonal-jump section, which is where the kids fell most.
+- **The difficulty numbers stay as they are.** The kids found the longer grove fun and the right difficulty.
+- **Hearts** follow the 2D game's rules (5, 3 and 2 there), with the numbers in `difficulty.ts` and shown on screen. Running out returns the hero to the last checkpoint on Easy and Normal; on Hard a setback never costs more than about 30 seconds of a perfect run.
+- **The roll and the pounce.** Yaarbro's file already holds a `roll` clip, unused. Caputo's pounce is written in `tools/rig-quadruped.py`. Each move must beat or get past both enemies. On touch, Jump stays the largest target.
+- **Rigging.** `tools/rig-quadruped.py` for the marmot scout, with its own guide file like `tools/caputo.rig.json`. The mosquito gets its own small rig script: body, head, legs and wings, wings beating fast and legs hanging loose. The clips each enemy needs come from its behaviour in the 2D game. Both go on a preview page for the owner's OK before merging.
+- **Easy stays finishable with walk and jump alone**, and on Hard the enemies should make the older player work for it.
+- **Done means** the bot finishes every difficulty as each hero through the enemies without losing a heart, and on Easy without using the move.
+
+The playtest that led to part one (the owner, 2026-11-11): the kids loved it and want more to play. The older player said Normal was about the right difficulty. The first set of jumps was hard for them to figure out, which is why the level now opens with a short hop. The owner and the kids have since played the longer level: fun, and the right difficulty. They fell most on the diagonal jumps. On his Mac in Safari it ran at 60 frames a second on the high tier, with 121 draw calls and 226 thousand triangles at the end of the level.
 
 What the owner has approved:
 
@@ -134,9 +141,9 @@ Milestone three, part one (the longer grove) is done, in the three merged pull r
 
 ## What's next
 
-1. **The owner and the kids play the longer level** and say how each section feels on each difficulty. Tuning is a change to `src/levels/bouncing-grove/difficulty.ts` only; run `npm test` after.
-2. **The owner looks at the live link in Safari on his Mac**, with `?fps` on the address, and says what frame rate and tier show. No iPad is to hand, so do not wait on an iPad number.
-3. **Milestone three, part two**: the marmot scout and giant mosquito, hearts, Yaarbro's roll and Caputo's pounce. See "Start here" for what is ready and what the owner has to decide.
+1. **The owner picks one marmot scout and one giant mosquito** on the candidates page (see "Start here").
+2. **Rig and animate his picks**, then the rest of part two in the order under "Start here", one pull request each.
+3. **Done already:** the owner and the kids played the longer level, and he looked at it in Safari on his Mac (60 frames a second, high tier).
 4. **The owner plays Caputo's three gaits in the game** and says how they look.
 5. **Checking the Blender scripts on new files.** `tools/rig-quadruped.py` is meant for the enemies too: each needs its own guide file of joint places, like `tools/caputo.rig.json`. Its path for a file that already has a skeleton (keep it, add the bones it lacks) was tried only on Caputo's earlier output, before he had shoulder blades and ears.
 
