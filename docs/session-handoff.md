@@ -4,15 +4,17 @@ Last updated: 2026-11-11
 
 ## Start here
 
-Caputo's three gaits are pull request 16 (the smoother walk, the trot, the gallop and the gait changes). The owner gave his OK to merge it on 2026-11-11, and it merges once its checks pass. If `main` does not show a commit named "Caputo walks, trots and gallops", the merge did not happen: look at the pull request before assuming anything. Pull request 15 (his cat skeleton and clips) merged before it.
+Nothing is in progress. Caputo's three gaits (pull request 16: the smoother walk, the trot, the gallop and the gait changes) merged on 2026-11-11 on the owner's OK, and the publish to the live link succeeded. Pull request 15 (his cat skeleton and clips) merged before it. There are no open pull requests from this work.
 
 What the owner has approved:
 
-- Yaarbro, as he is. He is merged and live.
-- Caputo's model, and his skeleton and clips from pull request 15, merged and live. He said the walk reads as a cat, and that idle, jump, falling and landing are good. In pull request 16 those four clips are byte for byte what he approved. Leave them alone unless he asks.
+- Yaarbro, as he is.
+- Caputo's model, skeleton and clips. He said the walk reads as a cat, and that idle, jump, falling and landing are good: leave those four alone unless he asks. He said to merge the three gaits after seeing the preview page. He has not said in his own words how the trot, the gallop or the gait changes look in motion.
 - The jump stays as it is, with no pause before take-off. Jumping the instant the button is pressed matters more for the kids than a crouch that can be seen.
 
-The owner said to merge the three gaits. He has not said in his own words how the trot, the gallop or the gait changes look in motion. If the run reads as moving in pairs to him once he plays it, he brings in an animator and no more script rounds are made.
+If the run reads to him as moving in pairs once he plays it, he brings in an animator and no more script rounds are made (see `docs/decisions.md`).
+
+The next job is the owner's to name. Ask him. The open items are listed below and under "What's next".
 
 How to work on Caputo's movement:
 
@@ -24,7 +26,7 @@ How to work on Caputo's movement:
 6. Measure it: with the page still served, `node tools/preview/measure.mjs` drives the game's own animation player and prints how far planted paws slide in each gait and at each change of gait, whether the three gait clips stay on one clock, and the size he is drawn at.
 7. When it looks right: `node tools/compress-hero.mjs <rigged.glb> caputo` writes `assets/heroes/caputo.glb`. If the script printed new speeds, put them in `walkSpeed`, `trotSpeed` and `runSpeed` for Caputo in `src/view/hero-model.ts`: metres a second from the script, times the size `measure.mjs` prints (1.1211 now). An older note here gave 1.0946, which was wrong for the current idle pose.
 8. Bring the hand-written text in `tools/preview/index.html` up to date, rebuild the page, and publish it over the page the owner already has, so his link stays the same: https://claude.ai/artifact/V3Z9Car7Ttfp1zRNRPLf7D . The top of `tools/preview/build.mjs` lists the files to publish.
-9. A hero change goes in a pull request marked "do not merge until the owner says OK", and waits for his OK on the preview page.
+9. A hero change goes in a pull request marked "do not merge until the owner says OK", and waits for his OK on the preview page. The page now shows the three gaits as merged.
 
 Open:
 
@@ -41,7 +43,7 @@ Milestone two (the modern look) is done apart from the open items above:
 2. Skipped: tuning from the playtest. The playtest notes in the milestone prompt were blank, so no numbers changed.
 3. Done: browser checks run in WebKit as well as Chromium.
 4. Done: the world and lighting. The grove is a lit, textured forest.
-5. Done: the hero models. Yaarbro and Caputo are both drawn from their models, and the owner has approved both. His three gaits are pull request 16 (see "Start here").
+5. Done: the hero models. Yaarbro and Caputo are both drawn from their models, and the owner has approved both. His walk, trot and gallop are merged and live.
 6. Done: the textures and the forest light were fetched straight from Poly Haven and checked against the copies here.
 7. Done: the trees read as conifers, and the banks have irregular, rounded outlines with rock, roots and moss at their edges.
 
