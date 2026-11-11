@@ -6,7 +6,9 @@ A 3D browser game set in the Yaarbroverse, the sibling of the 2D game Caputo Mou
 
 ![Yaarbro on a mossy bank above a misty gully of fir trees, with a fallen log, tree stumps and a mushroom ahead](docs/bouncing-grove.jpg)
 
-The grove is a lit, textured forest: mossy banks of rock, fallen logs, stumps with cut rings, mushroom springs, firs with real boughs, grass that sways, mist in the gully below and sunlight through the leaves. Yaarbro is a rigged, textured model. Caputo is still drawn from simple shapes; his model comes next.
+![Caputo, the saber-tooth cub, walking across the first mossy bank with the fallen log and the stumps behind him](docs/caputo.jpg)
+
+The grove is a lit, textured forest: mossy banks of rock, fallen logs, stumps with cut rings, mushroom springs, firs with real boughs, grass that sways, mist in the gully below and sunlight through the leaves. Yaarbro and Caputo are rigged, textured models that walk, run, jump and land.
 
 ## Play
 
@@ -14,7 +16,7 @@ The grove is a lit, textured forest: mossy banks of rock, fallen logs, stumps wi
 
 The link is live. Every change merged to `main` is published there within a few minutes.
 
-The start screen shows straight away, with a progress bar while the grove loads (about 6 MB).
+The start screen shows straight away, with a progress bar while the grove loads (about 7 MB).
 
 - **Mac:** arrow keys or W A S D to move, Space to jump (hold for a higher jump), Esc to pause.
 - **iPad:** hold it sideways. Left thumb moves, right thumb jumps.
@@ -67,7 +69,7 @@ npm run test:browser  # keyboard, touch and look checks in Chromium and WebKit (
 
 Source textures, the forest light and models live in `assets/`. The build compresses them into `public/media/` (KTX2 textures, meshopt geometry), which is not committed.
 
-The hero models in `assets/heroes/` are kept already compressed. The owner's original files are too big for this repo; `tools/compress-hero.mjs` makes the small file from an original (see the top of that file).
+The hero models in `assets/heroes/` are kept already compressed. The owner's original files are too big for this repo. Three tools in `tools/` make the small files from them, each explained at its top: `prepare-rigged.py` (Blender) puts Yaarbro's clips on one model and cleans up his skin, `rig-quadruped.py` (Blender) gives Caputo his skeleton and clips, and `compress-hero.mjs` compresses the result.
 
 ## Rights and credits
 

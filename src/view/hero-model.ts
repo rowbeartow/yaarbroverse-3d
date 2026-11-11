@@ -2,16 +2,16 @@
 // clips are mixed from how the hero is moving.
 //
 // TO GIVE A CHARACTER ITS MODEL:
-//   1. Meshy exports one file per clip. Put every clip on one model, and take
-//      the travel out of the clips, with tools/prepare-rigged.py (see the top
-//      of that file).
+//   1. If Meshy rigged and animated it, it comes as one file per clip. Put
+//      every clip on one model, take the travel out of the clips and clean up
+//      the skin with tools/prepare-rigged.py. If Meshy could not rig it, rig
+//      and animate it with tools/rig-quadruped.py. (See the top of each.)
 //   2. Compress the result with tools/compress-hero.mjs, which saves it in
 //      assets/heroes/ (for example assets/heroes/yaarbro.glb) and lists its
 //      clips. The build copies it into media/models/.
 //   3. Add it to HERO_MODELS below: the file name, how tall it stands, and the
 //      names of its clips. A missing clip is fine: the player uses what is
 //      there (see `clips` below).
-// Until then the hero is built from shapes (heroes.ts).
 
 import {
   AnimationMixer,
@@ -70,11 +70,11 @@ export interface HeroModelSpec {
   portrait: { height: number; distance: number };
 }
 
-/** The heroes that have a model. A hero not listed here is built from shapes. */
-export const HERO_MODELS: Partial<Record<HeroName, HeroModelSpec>> = {
+/** Each hero's model. */
+export const HERO_MODELS: Record<HeroName, HeroModelSpec> = {
   // Made by the owner in Meshy, and rigged and animated there. Meshy gives one
-  // file per clip; tools/prepare-rigged.py puts them on one model and takes
-  // the travel out of them (see tools/yaarbro.guide.json for which is which).
+  // file per clip; tools/prepare-rigged.py puts them on one model, takes the
+  // travel out of them and cleans up the skin (see tools/yaarbro.guide.json).
   // He has no falling clip of his own: the one Meshy made is a head-first
   // dive, so the airborne part of his jump is held on the way down too.
   Yaarbro: {
@@ -96,6 +96,29 @@ export const HERO_MODELS: Partial<Record<HeroName, HeroModelSpec>> = {
     runSpeed: 4.6,
     shadow: { across: 1.1, along: 0.95 },
     portrait: { height: 1.52, distance: 2.5 },
+  },
+  // Made by the owner in Meshy. Meshy could not give him a four-legged
+  // skeleton, so tools/rig-quadruped.py rigs him and writes his clips: idle,
+  // walk, run, and held poses for jump, falling and landing.
+  Caputo: {
+    file: 'caputo.glb',
+    height: 1.55,
+    turn: 0,
+    clips: {
+      idle: ['idle'],
+      walk: ['walk'],
+      run: ['run'],
+      jump: ['jump'],
+      fall: ['falling'],
+      land: ['landing'],
+      roll: ['pounce'],
+    },
+    // The jump clip is one held pose, so all of it is the airborne part.
+    airborne: [0, 1],
+    walkSpeed: 0.75,
+    runSpeed: 4.9,
+    shadow: { across: 1.1, along: 1.8 },
+    portrait: { height: 0.95, distance: 2.45 },
   },
 };
 

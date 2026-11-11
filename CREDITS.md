@@ -8,7 +8,8 @@ The Yaarbroverse, its characters and their art are not CC0. They are all rights 
 
 | File in this repo | What it is | Source | License |
 | --- | --- | --- | --- |
-| `assets/heroes/yaarbro.glb` | Yaarbro: a textured model on a skeleton, with clips for standing, walking, running, jumping, landing and rolling. Put together from the owner's originals by `tools/prepare-rigged.py` and compressed by `tools/compress-hero.mjs`. | Made, rigged and animated by the owner in Meshy from the Caputo Mountain art | All rights reserved |
+| `assets/heroes/yaarbro.glb` | Yaarbro: a textured model on a skeleton, with clips for standing, walking, running, jumping, landing and rolling. Put together and cleaned up from the owner's originals by `tools/prepare-rigged.py` and compressed by `tools/compress-hero.mjs`. | Made, rigged and animated by the owner in Meshy from the Caputo Mountain art | All rights reserved |
+| `assets/heroes/caputo.glb` | Caputo: a textured model on a skeleton, with clips for standing, walking, running, jumping, falling and landing. The model is the owner's; the skeleton and clips are made by `tools/rig-quadruped.py`, and the file is compressed by `tools/compress-hero.mjs`. | Model made by the owner in Meshy from the Caputo Mountain art. Skeleton and clips made here. | All rights reserved |
 
 ## Forest light
 

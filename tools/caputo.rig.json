@@ -1,0 +1,14 @@
+{
+  "about": "Where Caputo's joints are, for tools/rig-quadruped.py. Each point is [across, up, forward] in metres, measured on the model once it faces straight ahead and stands on the ground: across is to his left, up is from the ground, forward is toward his nose.",
+  "turned_left_degrees": 21.7,
+  "joints": {
+    "spine": [[0.0, 0.80, -0.42], [0.0, 0.83, -0.20], [0.01, 0.86, 0.04], [0.01, 0.90, 0.26], [0.0, 0.98, 0.44]],
+    "head": [-0.01, 1.05, 0.58],
+    "head_end": [-0.03, 1.08, 0.95],
+    "tail": [[-0.03, 0.84, -0.52], [-0.09, 0.84, -0.72], [-0.16, 0.93, -0.90], [-0.20, 1.05, -0.97], [-0.15, 1.17, -0.93], [-0.09, 1.28, -0.88], [-0.04, 1.41, -0.86]],
+    "front_left": [[0.20, 0.80, 0.40], [0.25, 0.47, 0.43], [0.28, 0.17, 0.59], [0.30, 0.03, 0.80]],
+    "front_right": [[-0.20, 0.80, 0.40], [-0.25, 0.47, 0.45], [-0.28, 0.17, 0.61], [-0.31, 0.03, 0.82]],
+    "hind_left": [[0.17, 0.78, -0.42], [0.22, 0.47, -0.28], [0.28, 0.20, -0.50], [0.33, 0.03, -0.30]],
+    "hind_right": [[-0.17, 0.78, -0.44], [-0.21, 0.47, -0.32], [-0.27, 0.20, -0.56], [-0.33, 0.03, -0.37]]
+  }
+}

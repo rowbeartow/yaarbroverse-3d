@@ -37,7 +37,6 @@ import { Materials, WIND, installMist } from './materials';
 import { seeded } from './noise';
 import { MIST_COLOR } from './pictures';
 import { TIERS, TierChooser, frameRateGoal, isTierName, startingTier, type Tier, type TierName } from './quality';
-import { useSimplePaint } from './shapes';
 import { MIST_BOTTOM, MIST_TOP, animateMushroom, blobShadow, buildSolids, type LevelSolids } from './scenery';
 
 /** Where the camera sits relative to the hero: behind, above, looking ahead and down. */
@@ -156,7 +155,6 @@ export class GroveView {
     this.tier = TIERS[start];
 
     this.materials = new Materials(assets, this.tier.simple);
-    useSimplePaint(this.tier.simple);
     assets.setAnisotropy(this.tier.anisotropy);
 
     this.scene.environmentIntensity = 0.85;
@@ -379,7 +377,6 @@ export class GroveView {
     if (this.materials.simple !== tier.simple) {
       this.materials.dispose();
       this.materials = new Materials(this.assets, tier.simple);
-      useSimplePaint(tier.simple);
       if (this.level && this.heroName) {
         const kept = { follow: this.follow, sinceGoal: this.sinceGoal, blink: this.blink, turn: this.hero?.root.rotation.y ?? 0 };
         this.show(this.level, this.heroName);
