@@ -18,7 +18,18 @@
 //
 // To look at it here: `npx vite preview --outDir <folder> --port 4174`, then
 // open http://localhost:4174/ (add ?plain for flat light on a machine with no
-// graphics card).
+// graphics card). `node tools/preview/stills.mjs` takes still frames of it.
+//
+// To publish it (a Claude session does this with its Artifact tool):
+//   - the page is <folder>/index.html, published with <folder> as the root
+//   - the files beside it go with it, at these paths: preview.js,
+//     media/caputo.glb.txt, media/forest.hdr.txt, media/caputo_color.jpg,
+//     media/caputo_mr.png, media/turf_color.jpg, media/turf_normal.jpg
+//   - to replace the page the owner already has, pass that page's address
+//     (docs/session-handoff.md gives it) so the link stays the same
+// The page is private to the owner. What it says under "What you asked for"
+// and after is written by hand in index.html: bring it up to date with the
+// change being reviewed before publishing.
 
 import { copyFileSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
