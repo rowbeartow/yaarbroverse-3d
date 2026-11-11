@@ -74,6 +74,8 @@ export class Screens {
   readonly touch = el('#touch');
   private readonly message = el('#message');
   private readonly place = el('#place');
+  private readonly hearts = el('#hearts');
+  private heartsShown = '';
   private readonly play = el<HTMLButtonElement>('#play');
   private messageTimer = 0;
 
@@ -184,6 +186,29 @@ export class Screens {
     this.place.textContent = `${levelName} · ${DIFFICULTY_LABEL[difficulty]}`;
   }
 
+  /**
+   * Shows the hearts: `left` red ones, then dark outlines up to `of`. Call it
+   * as often as you like; the page only changes when the numbers do.
+   */
+  setHearts(left: number, of: number): void {
+    const key = `${left}/${of}`;
+    if (key === this.heartsShown) return;
+    const lostOne = this.heartsShown !== '' && left < Number(this.heartsShown.split('/')[0]);
+    this.heartsShown = key;
+    const heart = (full: boolean): string =>
+      `<svg class="${full ? 'full' : 'lost'}" viewBox="0 0 32 32" aria-hidden="true"><path stroke-width="2" stroke-linejoin="round" d="M16 28 C6 20 2.5 15 2.5 10 a7 7 0 0 1 13.5 -2.6 a7 7 0 0 1 13.5 2.6 c0 5 -3.5 10 -13.5 18z"/></svg>`;
+    this.hearts.innerHTML = Array.from({ length: of }, (_, i) => heart(i < left)).join('');
+    this.hearts.setAttribute('aria-label', `${left} of ${of} hearts`);
+    this.hearts.dataset.left = String(left);
+    this.hearts.dataset.of = String(of);
+    if (lostOne) {
+      // Restart the little jolt each time a heart goes.
+      this.hearts.classList.remove('hit');
+      void this.hearts.offsetWidth;
+      this.hearts.classList.add('hit');
+    }
+  }
+
   /** Shows a short line near the top for a few seconds. */
   say(text: string, seconds = 3.5): void {
     this.message.textContent = text;
@@ -203,6 +228,7 @@ export class Screens {
     el('#end-hero').textContent = summary.hero;
     el('#end-time').textContent = formatTime(summary.seconds);
     el('#end-falls').textContent = String(summary.falls);
+    el('#end-hearts').textContent = String(summary.heartsLost);
     el('#end-date').textContent = date.toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' });
     this.show('end');
   }

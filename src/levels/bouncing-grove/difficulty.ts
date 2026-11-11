@@ -57,6 +57,18 @@ export interface GroveNumbers {
    * on. A bank left out of the list is bare stone.
    */
   checkpoints: readonly number[];
+  /**
+   * Hearts a hero starts with. Something that hurts takes one. Running out
+   * returns the hero to the last safe bank with all of them again. A fall
+   * costs no heart. These are Caputo Mountain's numbers.
+   */
+  hearts: number;
+  /**
+   * Times how long a hero is protected after being hurt (1.3 seconds) and
+   * after going back to a safe bank with no hearts left (1.5 seconds).
+   * These too are Caputo Mountain's numbers.
+   */
+  protection: number;
   /** After walking off an edge, Jump still works for this long. */
   coyoteTime: number;
   /** Feet this far below a ledge still get lifted onto it. */
@@ -86,6 +98,8 @@ export const GROVE_DIFFICULTY: Record<Difficulty, GroveNumbers> = {
     snagCount: 2,
     climbMushrooms: 1,
     checkpoints: [1, 2, 3, 4, 5],
+    hearts: 5,
+    protection: 1.5,
     coyoteTime: 0.2,
     ledgeHelp: 0.5,
   },
@@ -111,6 +125,8 @@ export const GROVE_DIFFICULTY: Record<Difficulty, GroveNumbers> = {
     snagCount: 4,
     climbMushrooms: 3,
     checkpoints: [1, 2, 3, 4, 5],
+    hearts: 3,
+    protection: 1,
     coyoteTime: 0.12,
     ledgeHelp: 0.3,
   },
@@ -136,6 +152,8 @@ export const GROVE_DIFFICULTY: Record<Difficulty, GroveNumbers> = {
     snagCount: 5,
     climbMushrooms: 4,
     checkpoints: [2, 4],
+    hearts: 2,
+    protection: 0.6,
     coyoteTime: 0.06,
     ledgeHelp: 0.15,
   },

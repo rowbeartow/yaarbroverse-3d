@@ -36,6 +36,20 @@ export const MOVE = {
   footRadius: 0.3,
   /** After a fall, the hero stands still on the safe bank for this long. */
   returnPause: 0.7,
+  /**
+   * Being hurt. These follow Caputo Mountain's forest: a hit costs one heart,
+   * knocks the hero away from what hurt it and takes the controls for a
+   * moment, and then nothing can hurt the hero for a while. A level's
+   * difficulty stretches or shortens the two protected times.
+   */
+  hurtKnockSpeed: 4.5,
+  hurtKnockUp: 6,
+  hurtLock: 0.18,
+  hurtProtection: 1.3,
+  /** Out of hearts: the hero stays down this long, then goes back to the last safe bank. */
+  faintPause: 0.45,
+  /** Protection after going back to a safe bank with no hearts left. */
+  returnProtection: 1.5,
 } as const;
 
 /** Height of a full jump, from the numbers above. */

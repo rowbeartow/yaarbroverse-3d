@@ -336,6 +336,8 @@ export function buildGrove(
     fallY: shape.fallY,
     coyoteTime: n.coyoteTime,
     ledgeHelp: n.ledgeHelp,
+    hearts: n.hearts,
+    protection: n.protection,
     route,
     sections,
     hints: GROVE_HINTS,

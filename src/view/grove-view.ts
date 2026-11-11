@@ -264,7 +264,10 @@ export class GroveView {
       dt,
     );
     this.blink = Math.max(0, this.blink - dt);
-    hero.root.visible = this.blink <= 0 || Math.floor(this.blink * 12) % 2 === 0;
+    // The hero flickers while standing still after a fall, and for as long as
+    // nothing can hurt it after a hit.
+    const flicker = Math.max(this.blink, game.protectedFor);
+    hero.root.visible = flicker <= 0 || Math.floor(flicker * 12) % 2 === 0;
 
     // The soft spot drops straight down onto whatever is below. No ground, no spot.
     const ground = surfaceBelow(level, x, z, y + level.ledgeHelp, MOVE.footRadius);

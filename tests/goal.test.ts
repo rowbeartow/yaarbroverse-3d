@@ -53,9 +53,10 @@ describe('the run record', () => {
     expect(game.seconds).toBe(atLeaf);
   });
 
-  it('reports the level, difficulty, hero, time and falls', () => {
+  it('reports the level, difficulty, hero, time, falls and hearts lost', () => {
     const level = yard([], { leaf: { x: 4, y: 0.8, z: 0, radius: 0.7 }, spawn: { x: -9.5, y: 0, z: 0 } });
     const game = new Game(level, 'hard', 'Caputo');
+    game.hurt(game.x + 1, 0);
     // Walk off the left edge once, then walk right to the leaf.
     while (game.falls === 0) game.step({ ...IDLE, moveX: -1 });
     while (!game.complete) game.step({ ...IDLE, ...RIGHT });
@@ -66,6 +67,7 @@ describe('the run record', () => {
       hero: 'Caputo',
       seconds: game.seconds,
       falls: 1,
+      heartsLost: 1,
       complete: true,
     });
     expect(summary.seconds).toBeGreaterThan(1);
