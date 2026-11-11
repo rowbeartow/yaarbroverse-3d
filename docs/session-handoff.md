@@ -4,7 +4,7 @@ Last updated: 2026-11-11
 
 ## Start here
 
-Caputo's three gaits are on the branch `claude/caputo-gaits-animation-po008z`, in one open pull request that waits for the owner's OK on the preview page. Nothing about Caputo's new skeleton or clips is on `main` or live yet: the game the kids have still shows his first rig. The earlier pull request 15 (his cat skeleton and clips) was never merged, though this file used to say it was. Its commits are in this branch, so merging this pull request brings in both, and 15 should then be closed.
+Caputo's three gaits are on the branch `claude/caputo-gaits-animation-po008z`, in pull request 16, which is open and waits for the owner's OK on the preview page. Nothing about Caputo's new skeleton or clips is on `main` or live yet: the game the kids have still shows his first rig. The earlier pull request 15 (his cat skeleton and clips) was never merged, though this file used to say it was. Its commits are in this branch, so merging this pull request brings in both, and 15 should then be closed.
 
 What the owner has approved:
 
