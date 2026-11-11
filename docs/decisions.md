@@ -180,3 +180,7 @@ Supersedes: none
 ## 2026-11-11 Scenery is built in stretches of route, and only the stretches near the hero are drawn
 Reason: The owner's rule for the longer level: draw only what is near enough to matter, and hold the frame-rate targets. Mist hides everything past 165 m, so stretches beyond it, or behind the camera, are left out, and deep in the mist trees wear lighter crowns. `src/view/route.ts` holds the distances and the rule, with tests.
 Supersedes: none
+
+## 2026-11-11 The browser checks on GitHub run inside Playwright's container image, pinned to the version in package.json
+Reason: The owner's call. The jobs used to install the test browser and its system packages from Ubuntu's servers on every run, and four runs in a row failed before any test because GitHub's machines could not reach those servers. The container image already holds the browsers and packages. `scripts/check-playwright-image.mjs` fails the checks if the image is not for the Playwright version `package.json` installs.
+Supersedes: none

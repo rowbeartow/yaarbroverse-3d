@@ -4,11 +4,11 @@ Last updated: 2026-11-11
 
 ## Start here
 
-**Milestone three, part one is in progress: the longer Bouncing Grove.** The owner approved a six-section route on 2026-11-11 (the plan page: https://claude.ai/artifact/MdPwsE2Hg43pBYEjPevSmn ). It is built in three pull requests, each merged on green checks:
+**Milestone three, part one is in progress: the longer Bouncing Grove.** The owner approved a six-section route on 2026-11-11 (the plan page: https://claude.ai/artifact/MdPwsE2Hg43pBYEjPevSmn ). It is built in three pull requests, each to be merged once its checks pass:
 
-1. Done: sections 1 and 2, the checkpoint list, and drawing only the stretch of forest near the hero.
-2. Next: sections 3 and 4.
-3. Then: sections 5 and 6, and this file rewritten with part two (enemies, hearts, roll, pounce) as next.
+1. Pull request 18: sections 1 and 2, the checkpoint list, and drawing only the stretch of forest near the hero. This text arrives with it. If `main` shows a commit named "A longer grove, part 1 of 3", it merged; if not, look at the pull request before assuming anything.
+2. Not opened yet: sections 3 and 4.
+3. Not opened yet: sections 5 and 6, and this file rewritten with part two (enemies, hearts, roll, pounce) as next.
 
 The six sections, each ending on a mossy bank (a checkpoint):
 
@@ -107,7 +107,7 @@ Nobody has played the new look on a real iPad or Mac yet.
 - **This device remembers** the last hero and difficulty.
 - **Size.** The whole download is about 6.8 MB (budget 20 MB, checked on every build). The build compresses textures to KTX2 and models with meshopt.
 - **Credits.** `CREDITS.md` lists every third-party file. All are CC0. It also lists the hero models, which are not: the README says the characters, their art and the hero models are all rights reserved.
-- **Checks on every pull request.** `.github/workflows/checks.yml`, three jobs: the private-terms check; rule tests, build with size check and browser checks in Chromium; browser checks in WebKit.
+- **Checks on every pull request.** `.github/workflows/checks.yml`, three jobs: the private-terms check; rule tests, build with size check and browser checks in Chromium; browser checks in WebKit. The two browser jobs run inside Playwright's container image, pinned to the Playwright version in `package.json` (1.63.0), so a run installs nothing from Ubuntu's servers. Before this, on 2026-11-11, four runs in a row failed before any test because GitHub's machines could not reach those servers.
 
 ## Checks on this state
 

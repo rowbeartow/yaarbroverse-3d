@@ -49,10 +49,20 @@ jobs:
           HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
         run: node scripts/check-private-terms.mjs
 
+  # The two browser jobs run inside Playwright's own container image, which
+  # already holds the test browsers and every system package they need. Nothing
+  # is installed from Ubuntu's servers during a run. The image's version must be
+  # the exact Playwright version in package.json: the first step of each job
+  # fails with a plain message if the two ever differ. To upgrade Playwright,
+  # change package.json, package-lock.json and both image lines together.
   checks:
     name: Tests, build and browser checks
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 30
+    container:
+      image: mcr.microsoft.com/playwright:v1.63.0-noble
+      # The user GitHub's own files belong to, and shared memory for Chromium.
+      options: --user 1001 --ipc=host
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -60,27 +70,22 @@ jobs:
           node-version-file: .nvmrc
           cache: npm
       - run: npm ci
+      - name: The container holds the browsers for this version of Playwright
+        run: node scripts/check-playwright-image.mjs
       - name: Game rule tests
         run: npm test
       - name: Build and check the download size
         run: npm run build
-      - name: Install the test browser
-        # The install fetches system packages from the Ubuntu servers. When the
-        # machine cannot reach them, wait and try again before giving up.
-        run: |
-          for attempt in 1 2 3; do
-            npx playwright install --with-deps chromium && exit 0
-            echo "Install failed (attempt $attempt of 3). Waiting a minute."
-            sleep 60
-          done
-          exit 1
       - name: Browser checks in Chromium (keyboard, touch and the look)
         run: npx playwright test --project=mac --project=ipad
 
   webkit:
     name: Browser checks in WebKit (iPad)
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 30
+    container:
+      image: mcr.microsoft.com/playwright:v1.63.0-noble
+      options: --user 1001 --ipc=host
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -88,15 +93,7 @@ jobs:
           node-version-file: .nvmrc
           cache: npm
       - run: npm ci
-      - name: Install WebKit
-        # The install fetches system packages from the Ubuntu servers. When the
-        # machine cannot reach them, wait and try again before giving up.
-        run: |
-          for attempt in 1 2 3; do
-            npx playwright install --with-deps webkit && exit 0
-            echo "Install failed (attempt $attempt of 3). Waiting a minute."
-            sleep 60
-          done
-          exit 1
+      - name: The container holds the browsers for this version of Playwright
+        run: node scripts/check-playwright-image.mjs
       - name: Browser checks in WebKit (touch and the look, iPad size)
         run: npx playwright test --project=ipad-webkit
