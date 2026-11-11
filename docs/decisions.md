@@ -217,3 +217,11 @@ Supersedes: the "No hearts yet" part of "A fall returns the hero to the last saf
 Reason: The owner's call. Everything else about the roll follows Caputo Mountain: held on the move button, slower to build than a walk, kept up with the stick let go, and a strike only once it is faster than a walk. The top speed is a deliberate change, because footing is narrower in 3D than on the 2D game's ground: at two and a half times walking speed a roll leaves a log or a bough before a player can steer it. The number is `rollSpeed` in `src/game/hero.ts`.
 Supersedes: none
 
+## 2026-11-11 How far a hit throws a hero is a number for each difficulty
+Reason: The owner's call. Caputo Mountain throws a hero about 2 metres. On a narrow bough that turns one mistake into two: the heart, then a fall. So `knockback` in the level's `difficulty.ts` is 0.5 metres on Easy (a hit on a bough rarely means a fall too), 1.2 on Normal and Caputo Mountain's 2 on Hard. The throw carries until the hero lands, so it clears whatever did the hurting.
+Supersedes: none
+
+## 2026-11-11 Landing on an enemy strikes it on every difficulty, and Hard's enemy numbers wait for the playtest
+Reason: The owner's calls. Landing on top of an enemy strikes it, as in Caputo Mountain, for both heroes and on Easy, Normal and Hard. A perfect run that never stops gets past every enemy untouched even on Hard; whether Hard makes the older player work for it is for the kids to show, and the three Hard numbers (`enemyWarning`, `enemySpeed`, `enemyRest`) stay at Caputo Mountain's until then.
+Supersedes: none
+

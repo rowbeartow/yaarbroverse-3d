@@ -70,11 +70,11 @@ export const MOVE = {
   pounceExitRise: 5.9,
   /**
    * Being hurt. These follow Caputo Mountain's forest: a hit costs one heart,
-   * knocks the hero away from what hurt it and takes the controls for a
-   * moment, and then nothing can hurt the hero for a while. A level's
-   * difficulty stretches or shortens the two protected times.
+   * throws the hero up and away from what hurt it and takes the controls for
+   * a moment, and then nothing can hurt the hero for a while. A level's
+   * difficulty sets how far the throw carries (see `knockSpeed`) and
+   * stretches or shortens the two protected times.
    */
-  hurtKnockSpeed: 4.5,
   hurtKnockUp: 6,
   hurtLock: 0.18,
   hurtProtection: 1.3,
@@ -83,6 +83,12 @@ export const MOVE = {
   /** Protection after going back to a safe bank with no hearts left. */
   returnProtection: 1.5,
 } as const;
+
+/**
+ * How fast a hit throws a hero sideways so that, landing on level ground, it
+ * comes down `distance` metres from where it was hit.
+ */
+export const knockSpeed = (distance: number): number => (distance * MOVE.gravity) / (2 * MOVE.hurtKnockUp);
 
 /** Height of a full jump, from the numbers above. */
 export const fullJumpHeight = (): number => (MOVE.jumpSpeed * MOVE.jumpSpeed) / (2 * MOVE.gravity);

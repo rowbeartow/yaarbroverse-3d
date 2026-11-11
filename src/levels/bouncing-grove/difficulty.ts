@@ -70,6 +70,14 @@ export interface GroveNumbers {
    */
   protection: number;
   /**
+   * How far a hit throws a hero, in metres, measured on level ground. Caputo
+   * Mountain's throw is about 2 metres, which is Hard's. On footing as narrow
+   * as a bough, a long throw turns one mistake into two: the heart, then a
+   * fall. So Easy's is short enough that a hit on a bough rarely means a
+   * fall too, and Normal's is in between.
+   */
+  knockback: number;
+  /**
    * The enemies: the marmot scout and the giant mosquito. Each warns before
    * it attacks and rests after. These three stretch that timing, and are
    * Caputo Mountain's numbers. 1 is the grove as it comes.
@@ -112,6 +120,7 @@ export const GROVE_DIFFICULTY: Record<Difficulty, GroveNumbers> = {
     checkpoints: [1, 2, 3, 4, 5],
     hearts: 5,
     protection: 1.5,
+    knockback: 0.5,
     enemyWarning: 1.5,
     enemySpeed: 0.7,
     enemyRest: 1.4,
@@ -142,6 +151,7 @@ export const GROVE_DIFFICULTY: Record<Difficulty, GroveNumbers> = {
     checkpoints: [1, 2, 3, 4, 5],
     hearts: 3,
     protection: 1,
+    knockback: 1.2,
     enemyWarning: 1,
     enemySpeed: 1,
     enemyRest: 1,
@@ -172,6 +182,7 @@ export const GROVE_DIFFICULTY: Record<Difficulty, GroveNumbers> = {
     checkpoints: [2, 4],
     hearts: 2,
     protection: 0.6,
+    knockback: 2,
     enemyWarning: 0.65,
     enemySpeed: 1.3,
     enemyRest: 0.7,
