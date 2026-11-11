@@ -4,7 +4,7 @@ Last updated: 2026-11-11
 
 ## Start here
 
-Caputo's three gaits are on the branch `claude/caputo-gaits-animation-po008z`, in pull request 16, which is open and waits for the owner's OK on the preview page. Pull request 15 (his cat skeleton and clips) is merged and live, so the game the kids have shows his cat skeleton with the earlier walk and a bounding run that moves the legs in pairs. Pull request 16 holds only the gait work on top of that: the smoother walk, the trot, the gallop and the gait changes.
+Caputo's three gaits are pull request 16 (the smoother walk, the trot, the gallop and the gait changes). The owner gave his OK to merge it on 2026-11-11, and it merges once its checks pass. If `main` does not show a commit named "Caputo walks, trots and gallops", the merge did not happen: look at the pull request before assuming anything. Pull request 15 (his cat skeleton and clips) merged before it.
 
 What the owner has approved:
 
@@ -12,7 +12,7 @@ What the owner has approved:
 - Caputo's model, and his skeleton and clips from pull request 15, merged and live. He said the walk reads as a cat, and that idle, jump, falling and landing are good. In pull request 16 those four clips are byte for byte what he approved. Leave them alone unless he asks.
 - The jump stays as it is, with no pause before take-off. Jumping the instant the button is pressed matters more for the kids than a crouch that can be seen.
 
-Waiting on the owner: whether the trot, the gallop, the smoother walk and the gait changes look right in motion. If the run still reads as moving in pairs to him, he brings in an animator and no more script rounds are made.
+The owner said to merge the three gaits. He has not said in his own words how the trot, the gallop or the gait changes look in motion. If the run reads as moving in pairs to him once he plays it, he brings in an animator and no more script rounds are made.
 
 How to work on Caputo's movement:
 
@@ -28,7 +28,6 @@ How to work on Caputo's movement:
 
 Open:
 
-- **The owner's OK on the three gaits**, as above.
 - **Frame rate on the iPad and the Mac has never been checked.** The owner opens the live link with `?fps` on the address and says what frame rate and tier show.
 - **Nobody has reported watching Caputo's clips inside the game on a real device.** The owner judges them on the preview page.
 
@@ -42,7 +41,7 @@ Milestone two (the modern look) is done apart from the open items above:
 2. Skipped: tuning from the playtest. The playtest notes in the milestone prompt were blank, so no numbers changed.
 3. Done: browser checks run in WebKit as well as Chromium.
 4. Done: the world and lighting. The grove is a lit, textured forest.
-5. Done: the hero models. Yaarbro and Caputo are both drawn from their models, and the owner has approved both. Caputo's three gaits wait for his OK (see "Start here").
+5. Done: the hero models. Yaarbro and Caputo are both drawn from their models, and the owner has approved both. His three gaits are pull request 16 (see "Start here").
 6. Done: the textures and the forest light were fetched straight from Poly Haven and checked against the copies here.
 7. Done: the trees read as conifers, and the banks have irregular, rounded outlines with rock, roots and moss at their edges.
 
@@ -60,7 +59,7 @@ Nobody has played the new look on a real iPad or Mac yet.
 - **Heroes.** Yaarbro and Caputo, picked on the start screen. They move the same: walk, jump (hold for height), bounce on mushrooms. Both are textured models on skeletons, made by the owner in Meshy from the Caputo Mountain art.
   - **Yaarbro** was rigged and animated in Meshy. His file holds six clips: `idle`, `walk`, `run`, `jump`, `landing` and `roll`. Walk and run are mixed by how fast he is moving. In the air the jump clip is held as a pose, moved along by his upward speed, on the way up and on the way down: Meshy's falling clip is a head-first dive, so it is not used for falling. Landing plays once when he touches down, a little after a hop and in full after a long drop, and running straight on cuts it short. The roll is not used until milestone three.
   - **Yaarbro's skin** had a cleanup pass. A pose test showed two things wrong and both were reweighted: his belt skewed with his legs (it now stays with the hips), and his beard sank into his chest when his head tipped down (the lower beard now stays on the chest). He is shaded smooth, with sharp edges kept on the buckle and the boot soles. Armpits, crotch and materials were checked and left as Meshy made them.
-  - **Caputo.** What follows is pull request 16. On `main` and live he has the same skeleton and the same idle, jump, falling and landing, with the earlier walk, no trot, and a bounding run mixed with the walk by pace. Meshy could not rig him, so `tools/rig-quadruped.py` does it in Blender: 29 bones (hips, two spine, chest, neck, head, two shoulder blades, two ears, four legs of upper, lower and paw, six in the tail), skinned with automatic weights, and seven clips written by the script to move like a cat:
+  - **Caputo.** Meshy could not rig him, so `tools/rig-quadruped.py` does it in Blender: 29 bones (hips, two spine, chest, neck, head, two shoulder blades, two ears, four legs of upper, lower and paw, six in the tail), skinned with automatic weights, and seven clips written by the script to move like a cat:
     - `walk`: one paw at a time (left hind, left front, right hind, right front), each hind paw landing in the print of the front paw on its side. The shoulder blades rise in turn, the head stays level, the spine sways, and each front paw curls back at the wrist as it lifts. Every paw eases off the ground and onto it: its speed never changes in a jump.
     - `trot`: diagonal pairs, left hind with right front, then right hind with left front, two even beats in 0.4 seconds with a short float between. Back level, head steady, tail up.
     - `run`: a rotary gallop. Each paw lands by itself, going round the body: left hind, right hind 13 hundredths of a stride later, right front at 57, left front at 70. He is off the ground stretched out after the hind legs push, and for a moment gathered after the front legs push. The back curls and stretches.
@@ -97,7 +96,7 @@ Nobody has played the new look on a real iPad or Mac yet.
 
 ## What's next
 
-1. **The owner's OK on Caputo's three gaits**, as under "Start here", then merge.
+1. **The owner plays Caputo's three gaits in the game** on the iPad and the Mac and says how they look.
 2. **The owner looks at the live link on the iPad and the Mac**, with `?fps` on the address, and says what frame rate and tier show and whether anything looks wrong.
 3. **Checking the Blender scripts on new files.** `tools/rig-quadruped.py` is meant for the milestone-three enemies too: each needs its own guide file of joint places, like `tools/caputo.rig.json`. Its path for a file that already has a skeleton (keep it, add the bones it lacks) was tried only on Caputo's earlier output, before he had shoulder blades and ears.
 4. **Playtest tuning**, when there are notes: change only `src/levels/bouncing-grove/difficulty.ts`.
