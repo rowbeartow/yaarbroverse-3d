@@ -192,3 +192,11 @@ Supersedes: the distances in "Scenery is built in stretches of route, and only t
 ## 2026-11-11 Real-device testing is on the owner's Mac in Safari, and nothing waits on an iPad number
 Reason: The owner's note: he has no iPad to test on right now. The iPad frame-rate target (a steady 30 or better) and the touch controls stay as they are, and the browser checks still cover touch at iPad size in Chromium and WebKit. Work no longer waits for a frame rate measured on an iPad.
 Supersedes: none
+
+## 2026-11-11 Enemy models are made by Claude through Meshy's API, and the owner picks from candidates
+Reason: The owner's instruction for milestone three, part two. `tools/meshy-image-to-3d.mjs` runs Image to 3D on the clearest Caputo Mountain art, three candidates for each enemy, and `tools/preview/candidates.mjs` builds a private page that shows them in the game's light for the owner to pick from. The Meshy key is a network secret on the cloud environment: it is never printed, stored or committed. No more than 300 credits are spent without asking him. Meshy's rigging is not used, because it only handles humanoids. If the art converts poorly, he is asked for a different reference picture.
+Supersedes: "Enemy models are made the same way as the hero models" in "Milestone three makes the grove a full level", for who runs Meshy. The rest of that entry stands.
+
+## 2026-11-11 Part two keeps the difficulty numbers, and the diagonal-jump sections get no enemies
+Reason: The owner's playtest of the longer grove: the kids found it fun and the right difficulty, and fell most on the diagonal jumps. Those sections stay as they are. On his Mac in Safari the level ran at 60 frames a second on the high tier, with 121 draw calls and 226 thousand triangles at the end of the level.
+Supersedes: none
