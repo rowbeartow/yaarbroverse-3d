@@ -32,6 +32,7 @@ import { MOVE, type HeroName } from '../game/hero';
 import { surfaceBelow, type Level } from '../game/level';
 import { loadAssets, type Assets } from './assets';
 import { Scatter, buildForest, type Forest } from './forest';
+import { ENEMY_MODELS, ENEMY_MODEL_FILES, EnemyView } from './enemies';
 import { HERO_MODEL_FILES, buildHero, type HeroView } from './heroes';
 import { Materials, WIND, installMist } from './materials';
 import { seeded } from './noise';
@@ -100,6 +101,7 @@ export class GroveView {
   private tier: Tier;
   private levelView: LevelView | null = null;
   private hero: HeroView | null = null;
+  private enemies: EnemyView[] = [];
   private heroName: HeroName | null = null;
   private level: Level | null = null;
   private follow = { x: 0, y: 0, z: 0 };
@@ -133,7 +135,7 @@ export class GroveView {
       error.name = 'No3d';
       throw error;
     }
-    const assets = await loadAssets(renderer, HERO_MODEL_FILES(), onProgress);
+    const assets = await loadAssets(renderer, [...HERO_MODEL_FILES(), ...ENEMY_MODEL_FILES()], onProgress);
     return new GroveView(renderer, assets, start, !isTierName(asked), touch);
   }
 
@@ -183,6 +185,18 @@ export class GroveView {
       this.scene.remove(this.hero.root);
       this.hero.dispose();
     }
+    for (const enemy of this.enemies) {
+      this.scene.remove(enemy.root, ...enemy.extras);
+      enemy.dispose();
+    }
+    this.enemies = (level.enemies ?? []).map((spot) => {
+      const spec = ENEMY_MODELS[spot.kind];
+      const loaded = this.assets.models.get(spec.file);
+      if (!loaded) throw new Error(`The model file ${spec.file} was not loaded`);
+      const enemy = new EnemyView(spec, loaded, this.tier.simple);
+      this.scene.add(enemy.root, ...enemy.extras);
+      return enemy;
+    });
     this.level = level;
     this.heroName = heroName;
     const random = seeded(20261110);
@@ -213,6 +227,9 @@ export class GroveView {
       else if (event.type === 'land') this.hero?.react('land');
       else if (event.type === 'fall') {
         this.blink = MOVE.returnPause;
+      } else if (event.type === 'strike') {
+        const index = this.level?.enemies?.findIndex((spot) => spot.id === event.id) ?? -1;
+        this.enemies[index]?.strike();
       } else if (event.type === 'goal') this.sinceGoal = 0;
     }
   }
@@ -266,6 +283,9 @@ export class GroveView {
       dt,
     );
     this.blink = Math.max(0, this.blink - dt);
+    const tuning = level.enemyTuning ?? { warning: 1, speed: 1, rest: 1 };
+    this.enemies.forEach((enemy, i) => enemy.update(game.enemies[i], tuning, game.z, dt));
+
     // The hero flickers while standing still after a fall, and for as long as
     // nothing can hurt it after a hit.
     const flicker = Math.max(this.blink, game.protectedFor);
@@ -374,6 +394,11 @@ export class GroveView {
       drawCalls: this.drawn.calls,
       triangles: this.drawn.triangles,
     };
+  }
+
+  /** What each enemy on screen is showing, for the browser checks. */
+  enemyInfo(): Array<{ clip: string; visible: boolean }> {
+    return this.enemies.map((enemy) => enemy.info());
   }
 
   /** What the hero on screen is made of and doing, for the browser checks. */

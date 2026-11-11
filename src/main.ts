@@ -30,6 +30,10 @@ const boot = (): void => {
   let sinceGoal = 0;
   let turned = false;
   const seen = new Set<string>();
+  /** Scouts that have already come out of hiding this run. */
+  const met = new Set<string>();
+  /** Game time until which a line about hearts or enemies keeps the screen. */
+  let newsUntil = 0;
 
   const controls = new Controls(
     document.querySelector<HTMLElement>('#stick-zone')!,
@@ -47,6 +51,8 @@ const boot = (): void => {
     owed = 0;
     sinceGoal = 0;
     seen.clear();
+    met.clear();
+    newsUntil = 0;
     view?.show(level, choice.hero);
     view?.snapCamera(game);
   };
@@ -125,15 +131,29 @@ const boot = (): void => {
   /** What the rules reported this step, turned into messages. */
   const narrate = (events: GameEvent[]): void => {
     let safe = false;
+    // News about hearts and enemies matters more than a prompt about the way ahead.
+    const news = (text: string, seconds: number): void => {
+      screens.say(text, seconds);
+      newsUntil = game.seconds + seconds;
+    };
     for (const event of events) {
       if (event.type === 'fall') screens.say('Back to safety…', 2);
-      else if (event.type === 'hurt' && event.left > 0) screens.say(`Oof! ${event.left} of ${level.hearts} hearts left.`, 2.5);
-      else if (event.type === 'hurt') screens.say('Out of hearts. Back to safety!', 2.5);
-      else if (event.type === 'restored') screens.say(`Safe again, with all ${level.hearts} hearts.`, 3);
-      else if (event.type === 'safe') safe = true;
+      else if (event.type === 'hurt' && event.left > 0) news(`Oof! ${event.left} of ${level.hearts} hearts left.`, 2.5);
+      else if (event.type === 'hurt') news('Out of hearts. Back to safety!', 2.5);
+      else if (event.type === 'restored') news(`Safe again, with all ${level.hearts} hearts.`, 3);
+      else if (event.type === 'enemy' && event.phase === 'idle' && event.kind === 'marmot' && !met.has(event.id)) {
+        // The first time a scout comes out of hiding.
+        met.add(event.id);
+        news('A rustle in the roots… Marmot scout!', 2.5);
+      } else if (event.type === 'strike') {
+        const name = event.kind === 'marmot' ? 'Marmot' : 'Mosquito';
+        news(event.left > 0 ? `${name} knocked back!` : `${name} sent packing!`, 2.5);
+      } else if (event.type === 'safe') safe = true;
       else if (event.type === 'goal') screens.say(level.goalLine ?? 'You made it!', 4);
     }
-    // Each part of the level has one short prompt, shown the first time you stand there.
+    // Each part of the level has one short prompt, shown the first time you
+    // stand there. It waits its turn behind any news.
+    if (game.seconds < newsUntil) return;
     const hint = game.groundId && !seen.has(game.groundId) ? level.hints?.[game.groundId] : undefined;
     if (hint && game.groundId) seen.add(game.groundId);
     if (safe && hint) screens.say(`Safe on the mossy bank. ${hint}`, 5);
@@ -209,6 +229,9 @@ const boot = (): void => {
       },
       get hero() {
         return view ? view.heroInfo() : null;
+      },
+      get enemies() {
+        return view ? view.enemyInfo() : [];
       },
       /** The picture itself, for looking into when something draws wrong or slowly. */
       get view() {
