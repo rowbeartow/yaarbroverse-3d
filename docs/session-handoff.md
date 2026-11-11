@@ -4,11 +4,13 @@ Last updated: 2026-11-11
 
 ## Start here
 
-**Milestone three, part one is built: the Bouncing Grove is a full level.** Six sections, a checkpoint bank between each, and a perfect run of about a minute on Normal. The owner approved the route on a plan page (https://claude.ai/artifact/MdPwsE2Hg43pBYEjPevSmn ) before it was built. It comes in three pull requests:
+**Milestone three, part one is done: the Bouncing Grove is a full level.** Six sections, a checkpoint bank between each, and a perfect run of about a minute on Normal. The owner approved the route on a plan page (https://claude.ai/artifact/MdPwsE2Hg43pBYEjPevSmn ) before it was built. It went in as three pull requests, all merged on 2026-11-11 with their checks green:
 
-1. Merged: pull request 18, sections 1 and 2, the checkpoint list, and drawing only the stretch of forest near the hero.
-2. Merged: pull request 19, sections 3 and 4.
-3. The pull request this text arrives with: sections 5 and 6. If `main` shows a commit named "A longer grove, part 3 of 3", it merged and part one is done; if not, look at the pull request before assuming anything.
+1. Pull request 18: sections 1 and 2, the checkpoint list, drawing only the stretch of forest near the hero, and the browser checks moved into Playwright's container image.
+2. Pull request 19: sections 3 and 4.
+3. Pull request 20: sections 5 and 6.
+
+There are no open pull requests from this work.
 
 **Next is milestone three, part two: enemies, hearts, the roll and the pounce.** Do not start it without the owner's go-ahead and his word on the open questions below. What part one leaves ready for it:
 
@@ -67,7 +69,7 @@ Milestone two (the modern look) is done apart from the open items above:
 
 Nobody has played the new look on a real iPad or Mac yet.
 
-Milestone three, part one (the longer grove) is built, in the three pull requests listed under "Start here":
+Milestone three, part one (the longer grove) is done, in the three merged pull requests listed under "Start here":
 
 1. Sections 1 and 2 (the Broken Logs, the Stump Steps), the checkpoint list, and drawing only the stretch of forest near the hero.
 2. Sections 3 and 4 (the Ravine, the Mushroom Springs), with root shelves as a new kind of platform.
