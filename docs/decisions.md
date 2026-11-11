@@ -213,3 +213,7 @@ Supersedes: none
 Reason: The owner's instruction for part two. Something that hurts takes one heart, throws the hero away from it, takes the controls for a moment and then protects the hero for a while (1.3 seconds, times 1.5 on Easy and 0.6 on Hard). A fall costs no heart. Losing the last heart returns the hero to the last safe bank with every heart again, protected for a moment. That is the same bank a fall returns to, so on Hard the cost stays under about 30 seconds of a perfect run. Hearts and the protection number are in the level's `difficulty.ts`. Hearts show on screen under the level's name, and the end card counts hearts lost.
 Supersedes: the "No hearts yet" part of "A fall returns the hero to the last safe mossy bank. No hearts yet."
 
+## 2026-11-11 Yaarbro's roll tops out at one and a half times walking speed, not the 2D game's two and a half
+Reason: The owner's call. Everything else about the roll follows Caputo Mountain: held on the move button, slower to build than a walk, kept up with the stick let go, and a strike only once it is faster than a walk. The top speed is a deliberate change, because footing is narrower in 3D than on the 2D game's ground: at two and a half times walking speed a roll leaves a log or a bough before a player can steer it. The number is `rollSpeed` in `src/game/hero.ts`.
+Supersedes: none
+

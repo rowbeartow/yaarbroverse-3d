@@ -18,9 +18,18 @@ There are no open pull requests from this work.
 
 **Step 2 is done and merged** (pull request 24, 2026-11-11): both enemies rigged and animated. The owner said OK on the enemies preview page: "both move well".
 
-**Step 3, hearts and damage, is in the pull request this text arrives with.** Hearts are 5, 3 and 2 with the numbers in `difficulty.ts`; a hit takes one, throws the hero and protects it for a while; a fall costs none; running out returns the hero to the last safe bank with all of them. Hearts show under the level's name and on the end card. Nothing in the level hurts yet. The rules are `hurt` in `src/game/game.ts`, tested by `tests/hearts.test.ts` and `tests/browser/hearts.spec.ts`.
+**Step 3 is done and merged** (pull request 25): hearts and damage. Hearts are 5, 3 and 2 with the numbers in `difficulty.ts`; a hit takes one, throws the hero and protects it for a while; a fall costs none; running out returns the hero to the last safe bank with all of them.
 
-**Steps 4 and 5 are built and waiting their turn** on the branches `claude/part-two-step-4` (the roll and the pounce; the owner said OK to Caputo's pounce on his preview page) and `claude/part-two-step-5` (enemy behaviour and placement). Each goes up as its own pull request once the one before has merged.
+**Step 4, the roll and the pounce, is in the pull request this text arrives with.** The owner said OK to Caputo's pounce on his preview page (https://claude.ai/artifact/V3Z9Car7Ttfp1zRNRPLf7D ).
+
+- **Yaarbro's roll**, while the move button is held: he tucks down (he is shorter while he rolls) and builds up to one and a half times walking speed, more slowly than he walks up to speed, and keeps going the way he was with the stick let go. It carries into a jump. The 2D game's roll reaches two and a half times walking speed; the lower top speed is the owner's call (see `docs/decisions.md`).
+- **Caputo's pounce**, when the move button is pressed: a flat burst at about twice walking speed for a fifth of a second, the way the stick points or the way he faces, with a small hop from the ground. One for each time in the air, and a short rest between two.
+- **A strike** is a roll faster than a walk, or a pounce (`striking` in `src/game/game.ts`). Nothing in the level can be struck yet: the enemies arrive in step 5.
+- **Buttons.** Keyboard: X or Shift, as in the 2D game. Touch: a round button above Jump and smaller than it, named Roll or Pounce for the hero; everywhere else on the right half is still Jump. The controls remember a tap that starts and ends between two frames, so a quick press counts on a slow device.
+- **Clips.** Yaarbro's `roll` clip loops while he rolls. Caputo's new `pounce` clip is written by `tools/rig-quadruped.py` and held as a pose that follows how far through the burst he is. His other seven clips are unchanged, number for number.
+- The numbers are in `src/game/hero.ts`. Tests: `tests/moves.test.ts` and `tests/browser/moves.spec.ts`. The bot still finishes every difficulty with walk and jump alone, and the full-run test now says so (`movesUsed` is 0).
+
+**Step 5 is built and waiting its turn** on the branch `claude/part-two-step-5` (enemy behaviour and placement). It goes up as its own pull request once step 4 has merged.
 
 What step 2 made:
 
@@ -113,10 +122,10 @@ Milestone three, part one (the longer grove) is done, in the three merged pull r
 - **Lighting.** A forest photograph lights everything (image-based lighting), a warm sun casts soft shadows, leaf shade drifts over the route, a filmic curve maps light to the screen, mist thickens with distance and with depth, and bright things glow.
 - **Quality tiers.** High, medium, low and minimal, chosen automatically: a computer starts on high, an iPad on medium, a machine with no graphics card on minimal. The game watches the frame rate and steps down (never up) if it cannot hold 60 on a computer or a steady 30 on touch. `?fps` on the address shows the frame rate and tier. `?quality=` fixes the tier.
 - **Loading.** The start screen shows at once. The 3D code and files load behind it with a progress bar, and Play switches on when they are ready. A file that fails to arrive shows a card with a "Try again" button.
-- **Heroes.** Yaarbro and Caputo, picked on the start screen. They move the same: walk, jump (hold for height), bounce on mushrooms. Both are textured models on skeletons, made by the owner in Meshy from the Caputo Mountain art.
-  - **Yaarbro** was rigged and animated in Meshy. His file holds six clips: `idle`, `walk`, `run`, `jump`, `landing` and `roll`. Walk and run are mixed by how fast he is moving. In the air the jump clip is held as a pose, moved along by his upward speed, on the way up and on the way down: Meshy's falling clip is a head-first dive, so it is not used for falling. Landing plays once when he touches down, a little after a hop and in full after a long drop, and running straight on cuts it short. The roll is not used until milestone three.
+- **Heroes.** Yaarbro and Caputo, picked on the start screen. They walk, jump (hold for height) and bounce on mushrooms the same, and each has one move of its own: Yaarbro's roll and Caputo's pounce. Both are textured models on skeletons, made by the owner in Meshy from the Caputo Mountain art.
+  - **Yaarbro** was rigged and animated in Meshy. His file holds six clips: `idle`, `walk`, `run`, `jump`, `landing` and `roll`. Walk and run are mixed by how fast he is moving. In the air the jump clip is held as a pose, moved along by his upward speed, on the way up and on the way down: Meshy's falling clip is a head-first dive, so it is not used for falling. Landing plays once when he touches down, a little after a hop and in full after a long drop, and running straight on cuts it short. The roll loops while he rolls.
   - **Yaarbro's skin** had a cleanup pass. A pose test showed two things wrong and both were reweighted: his belt skewed with his legs (it now stays with the hips), and his beard sank into his chest when his head tipped down (the lower beard now stays on the chest). He is shaded smooth, with sharp edges kept on the buckle and the boot soles. Armpits, crotch and materials were checked and left as Meshy made them.
-  - **Caputo.** Meshy could not rig him, so `tools/rig-quadruped.py` does it in Blender: 29 bones (hips, two spine, chest, neck, head, two shoulder blades, two ears, four legs of upper, lower and paw, six in the tail), skinned with automatic weights, and seven clips written by the script to move like a cat:
+  - **Caputo.** Meshy could not rig him, so `tools/rig-quadruped.py` does it in Blender: 29 bones (hips, two spine, chest, neck, head, two shoulder blades, two ears, four legs of upper, lower and paw, six in the tail), skinned with automatic weights, and eight clips written by the script to move like a cat (the eighth is `pounce`):
     - `walk`: one paw at a time (left hind, left front, right hind, right front), each hind paw landing in the print of the front paw on its side. The shoulder blades rise in turn, the head stays level, the spine sways, and each front paw curls back at the wrist as it lifts. Every paw eases off the ground and onto it: its speed never changes in a jump.
     - `trot`: diagonal pairs, left hind with right front, then right hind with left front, two even beats in 0.4 seconds with a short float between. Back level, head steady, tail up.
     - `run`: a rotary gallop. Each paw lands by itself, going round the body: left hind, right hind 13 hundredths of a stride later, right front at 57, left front at 70. He is off the ground stretched out after the hind legs push, and for a moment gathered after the front legs push. The back curls and stretches.
@@ -125,7 +134,7 @@ Milestone three, part one (the longer grove) is done, in the three merged pull r
     - `idle`: 8 seconds of breathing, weight shifting, two looks around, ear flicks and tail-tip flicks.
     - `jump`: a crouch and push from the hind legs, then fully stretched. The game plays the crouch and push in a tenth of a second as he leaves the ground (the rules lift him the moment Jump is pressed), then holds the rest as a pose moved along by his upward speed.
     - `falling` (legs down and spread, tail out) and `landing` (front paws, then hind paws, the body sinks, he stands).
-    - His tail follows his body late, bone by bone. Paws are placed by working each leg back from where the toes should be, and the script stops if a planted paw is asked to reach further than its leg is long. Pounce comes in milestone three.
+    - His tail follows his body late, bone by bone. Paws are placed by working each leg back from where the toes should be, and the script stops if a planted paw is asked to reach further than its leg is long. His `pounce` clip is the eighth.
   - **The hero preview page** is the page the owner looks at before a hero change is merged: the hero in the game's light playing each clip, the clips mixed by the game's own animation player, and slow side views of the walk, the trot and the run over ground that moves at the game's speed, each with speed buttons, pause, a slider to step through a stride, and the skeleton. Its code is in `tools/preview/`: `build.mjs` builds it, `preview.ts` is the viewer, `index.html` is the page and its hand-written notes, `stills.mjs` takes still frames of it, and `measure.mjs` measures paw slide on it. It is published as a private Claude artifact, not as part of the game. The current one is https://claude.ai/artifact/V3Z9Car7Ttfp1zRNRPLf7D .
   - Every clip happens on the spot, because the rules own where a hero is. Meshy's clips carried Yaarbro about (the dive started fourteen metres up, the roll travelled five metres, and the landing pushed his right hand 40 cm into the ground). `tools/prepare-rigged.py` takes that out.
   - A model is stood on the spot the rules use by its footprint: soles or paws on the ground, the middle of them over the spot, so the soft dark spot sits under the feet and an edge looks as safe as it is.
@@ -134,7 +143,7 @@ Milestone three, part one (the longer grove) is done, in the three merged pull r
 - **Difficulty.** Easy, Normal, Hard on the start screen. All numbers are in `src/levels/bouncing-grove/difficulty.ts`.
 - **Falls and hearts.** A fall returns the hero to the last safe mossy bank and is counted. Hearts are in the rules and on screen (5, 3 and 2); nothing in the level takes one yet.
 - **End card.** Difficulty, hero, time, falls, hearts lost, date. "Play again" returns to the start screen.
-- **Controls.** Mac: arrows or W A S D, Space, Esc. Touch: drag the left half to move, press the right half to jump.
+- **Controls.** Mac: arrows or W A S D, Space, X or Shift for the hero's own move, Esc. Touch: drag the left half to move, press the right half to jump, and a smaller round button above Jump for the hero's own move.
 - **Turn sideways.** A touch device whose page is taller than wide gets a "Turn sideways to play" card.
 - **This device remembers** the last hero and difficulty.
 - **Size.** The whole download is 8.19 MB (budget 20 MB, checked on every build). 1.3 MB of that is the two enemy models, which nothing loads until the enemies are placed. The build compresses textures to KTX2 and models with meshopt.
@@ -143,7 +152,7 @@ Milestone three, part one (the longer grove) is done, in the three merged pull r
 
 ## Checks on this state
 
-- `npm test`: 332 tests pass. Seven check the enemy model files, and nineteen check hearts: what a hit costs, protection, a fall costing none, and running out in each section. They cover: the game rules; a bot playing the whole grove on Easy, Normal and Hard as each hero with no falls, crossing every platform in order; the sections and checkpoints (the six sections are the planned ones, each ends on a bank, a fall in each returns to the right bank, a fall on Hard costs under about 30 seconds, a perfect run takes as long as planned); every number in `difficulty.ts` showing up in the level; the route line the forest follows and the rule for drawing by distance; every bank's and root shelf's drawn top against where the rules let a hero stand; the private-terms check; the quality tiers and animation mixing; and the hero model files.
+- `npm test`: 354 tests pass. Among them: seven on the enemy model files, nineteen on hearts, and twenty-two on the roll and the pounce.
 - `npm run test:browser`: 68 browser checks pass. 22 in Chromium at Mac size with the keyboard, 23 in Chromium at iPad size with touch, 23 in WebKit at iPad size with touch. They cover loading and the progress bar, a failed download, the frame counter, fixed and automatic tiers, the full lighting at medium quality (and high at Mac size), each hero's model loading with its clips and animating while it stands, runs and jumps, the stand-in model doing the same, and everything milestone one checked.
 - **Not checked:**
   - Safari itself, a real iPad, a real Mac. The test browsers have no graphics card, so most checks run on the minimal tier, which has plain shading and no shadows. The full lighting is drawn in both browsers by two checks, slowly and in a small window.
@@ -153,7 +162,7 @@ Milestone three, part one (the longer grove) is done, in the three merged pull r
 
 ## What's next
 
-1. **Merge step 3, then put up step 4 and step 5**, one pull request each, each merged on green checks (the owner's instruction).
+1. **Merge step 4, then put up step 5**, merged on green checks (the owner's instruction).
 2. **Then rewrite this file** and report to the owner.
 3. **Done already:** the owner and the kids played the longer level, and he looked at it in Safari on his Mac (60 frames a second, high tier).
 4. **The owner plays Caputo's three gaits in the game** and says how they look.

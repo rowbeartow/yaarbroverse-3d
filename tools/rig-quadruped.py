@@ -28,8 +28,8 @@
 #      weights of the nearest part of the body. If the automatic weights fail
 #      on the mesh as it is, a clean copy of it is weighted and the weights
 #      are carried across.
-#   5. Writes the clips: idle, walk, trot, run, jump, falling, landing. They
-#      are a cat's (see the Quadruped class). Paws are placed by working the
+#   5. Writes the clips: idle, walk, trot, run, jump, falling, landing, pounce.
+#      They are a cat's (see the Quadruped class). Paws are placed by working the
 #      leg joints back from where the toes should be, so a paw on the ground
 #      stays where it is put, and the script stops if a clip asks a planted
 #      paw to reach further than its leg is long. The walk, the trot and the
@@ -1074,6 +1074,22 @@ class Quadruped:
         seconds = 0.6
         self.shape(keyed(self.JUMP, phase), time=phase * seconds, lag=0.035, tail=lambda at: keyed(self.JUMP, max(0.0, at) / seconds)['tail'])
 
+    # The pounce is one movement: he gathers, drives off his hind legs and
+    # goes out long and flat, front paws reaching ahead with the claws up. The
+    # game holds it as a pose that follows how far through the burst he is,
+    # so the clip's length does not matter. It ends near the jump's own pose
+    # over the top, which is what takes over when the burst is done.
+    POUNCE = [
+        (0.0, dict(rise=-0.2, lean=4, arch=12, follow=0.6, look=4, front=(0.06, 0.02, -10, 0), hind=(0.14, 0, 0, 0), tail=-10)),
+        (0.2, dict(rise=-0.02, lean=10, arch=-8, follow=0.6, look=-6, front=(0.26, 0.3, -10, 0.02), hind=(-0.34, 0.0, -50, 0), tail=-60)),
+        (0.55, dict(rise=0.0, lean=2, arch=-16, follow=0.55, look=-2, front=(0.36, 0.38, 25, 0.04), hind=(-0.5, 0.14, -66, 0), tail=-125)),
+        (1.0, dict(rise=0.0, lean=-10, arch=-4, follow=0.5, look=6, front=(0.3, 0.16, 30, 0.05), hind=(-0.36, 0.14, -50, 0.03), tail=-100)),
+    ]
+
+    def pounce(self, phase):
+        seconds = 0.3
+        self.shape(keyed(self.POUNCE, phase), time=phase * seconds, lag=0.03, tail=lambda at: keyed(self.POUNCE, max(0.0, at) / seconds)['tail'])
+
     def falling(self, phase):
         # Dropping: legs reaching down and spread to meet the ground, back a
         # little rounded, tail out behind and working for balance.
@@ -1107,7 +1123,7 @@ class Quadruped:
         self.shape(keyed(self.LANDING, phase), time=phase * seconds, lag=0.04, tail=lambda at: keyed(self.LANDING, max(0.0, at) / seconds)['tail'])
 
     # Clips in which a paw on the ground may be asked for more than its leg's length.
-    stretched = ('jump', 'falling')
+    stretched = ('jump', 'falling', 'pounce')
 
     def clips(self):
         """Every clip: its name, the function that poses it, and how long it lasts in seconds."""
@@ -1119,6 +1135,7 @@ class Quadruped:
             ('jump', self.jump, 0.6),
             ('falling', self.falling, 1.0),
             ('landing', self.landing, self.LANDING_SECONDS),
+            ('pounce', self.pounce, 0.3),
         ]
 
     def report(self, lasts):

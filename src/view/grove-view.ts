@@ -260,6 +260,8 @@ export class GroveView {
         pace: Math.min(Math.hypot(game.vx, game.vz) / MOVE.walkSpeed, 1),
         grounded: game.grounded,
         rise: game.vy,
+        rolling: game.rolling,
+        pounce: game.pouncing > 0 ? 1 - game.pouncing / MOVE.pounceTime : null,
       },
       dt,
     );

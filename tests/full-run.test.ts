@@ -16,6 +16,9 @@ describe.each(DIFFICULTIES)('a full run of the Bouncing Grove on %s', (difficult
     const summary = game.summary();
     expect(summary.complete).toBe(true);
     expect(summary.falls).toBe(0);
+    // With walk and jump alone: the level never needs a roll or a pounce.
+    expect(game.movesUsed).toBe(0);
+    expect(summary.heartsLost).toBe(0);
     expect(summary).toMatchObject({ level: 'The Bouncing Grove', difficulty, hero });
     expect(summary.seconds).toBeGreaterThan(30);
     expect(summary.seconds).toBeLessThan(90);

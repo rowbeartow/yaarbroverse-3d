@@ -223,6 +223,34 @@ body {
   text-shadow: 0 1px 3px rgba(0, 0, 0, 0.6);
 }
 
+/* The hero's own move: above the Jump button and a good deal smaller than
+   it, so Jump stays the biggest thing under the right thumb. */
+#move-button {
+  position: absolute;
+  right: calc(max(28px, env(safe-area-inset-right)) + clamp(120px, 20vmin, 168px) * 0.62);
+  bottom: calc(max(28px, env(safe-area-inset-bottom)) + clamp(120px, 20vmin, 168px) + 14px);
+  width: clamp(76px, 12.5vmin, 104px);
+  aspect-ratio: 1;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  border: 3px solid rgba(255, 246, 221, 0.55);
+  background: rgba(47, 107, 63, 0.6);
+  color: #fff6dd;
+  font-size: clamp(15px, 2.4vmin, 20px);
+  font-weight: 800;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.6);
+  pointer-events: auto;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+#move-button.down {
+  background: rgba(47, 107, 63, 0.92);
+  transform: scale(0.94);
+}
+
 #jump-zone.down #jump-button {
   background: rgba(242, 193, 78, 0.85);
   transform: scale(0.94);

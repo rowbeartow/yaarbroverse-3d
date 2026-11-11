@@ -93,8 +93,8 @@ export class Screens {
       difficulty,
     }));
     el('#controls-note').textContent = isTouchDevice()
-      ? 'Left thumb moves. Right thumb jumps: hold for a higher jump.'
-      : 'Arrow keys or W A S D to move. Space to jump: hold for a higher jump. Esc to pause.';
+      ? 'Left thumb moves. Right thumb jumps: hold for a higher jump. The smaller button above Jump is Yaarbro’s roll or Caputo’s pounce.'
+      : 'Arrow keys or W A S D to move. Space to jump: hold for a higher jump. X or Shift for Yaarbro’s roll or Caputo’s pounce. Esc to pause.';
   }
 
   /** Wires one row of choice buttons: click or arrow keys pick, one is always picked. */
@@ -207,6 +207,13 @@ export class Screens {
       void this.hearts.offsetWidth;
       this.hearts.classList.add('hit');
     }
+  }
+
+  /** Names the touch button for the hero's own move: Roll or Pounce. */
+  setMove(name: string): void {
+    const button = el('#move-button');
+    button.textContent = name;
+    button.setAttribute('aria-label', name);
   }
 
   /** Shows a short line near the top for a few seconds. */
