@@ -2,30 +2,36 @@
 // clips are mixed from how the hero is moving.
 //
 // TO GIVE A HERO ITS MODEL:
-//   1. Put the file in assets/models/ (for example assets/models/yaarbro.glb).
-//      The build compresses it into media/models/.
+//   1. Compress the owner's original file with tools/compress-hero.mjs, which
+//      saves it in assets/heroes/ (for example assets/heroes/yaarbro.glb) and
+//      lists its clips. The build copies it into media/models/.
 //   2. Add the hero to HERO_MODELS below: the file name, how tall the hero
 //      stands, and the names of its clips. A missing clip is fine: the player
 //      uses what is there (see `clips` below).
 // Until then the hero is built from shapes (heroes.ts).
 
 import {
+  AnimationClip,
   AnimationMixer,
   Box3,
   Group,
   LoopOnce,
   LoopRepeat,
   MeshLambertMaterial,
+  Quaternion,
+  QuaternionKeyframeTrack,
   Vector3,
   type AnimationAction,
-  type AnimationClip,
+  type Interpolant,
+  type KeyframeTrack,
   type Mesh,
   type MeshStandardMaterial,
+  type Object3D,
 } from 'three';
 import type { GLTF } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { clone as cloneRigged } from 'three/examples/jsm/utils/SkeletonUtils.js';
 import { MOVE, type HeroName } from '../game/hero';
-import { airPhase, approach, groundMix, strideRate } from './hero-motion';
+import { airPhase, approach, breath, groundMix, strideRate } from './hero-motion';
 import type { HeroInfo, HeroView, Pose } from './heroes';
 
 export type ClipRole = 'idle' | 'walk' | 'run' | 'jump' | 'fall' | 'land' | 'roll';
@@ -43,8 +49,8 @@ export interface HeroModelSpec {
    * A kind with no match is done without:
    *   no run     the walk is played faster
    *   no walk    the run is played slower
-   *   no idle    the hero holds the first frame of its walk
-   *   no jump    the hero keeps its ground pose in the air, with a stretch
+   *   no idle    the hero stands in the middle pose of its walk, breathing
+   *   no jump    a stride of the run (or walk) is held in the air
    *   no fall    the late part of the jump is held on the way down
    *   no land    a quick squash instead
    */
@@ -53,6 +59,8 @@ export interface HeroModelSpec {
    * Library jump clips start with a crouch and end with a landing. These are
    * the shares of the clip (0 to 1) where the airborne part starts and ends.
    * In the air that part is held as a pose, moved along by upward speed.
+   * For a hero with no jump clip, they are the shares of its run clip to hold
+   * instead: the part of a stride where both feet are off the ground.
    */
   airborne: [number, number];
   /** Ground speeds, in metres a second, at which the walk and run clips look right. */
@@ -64,8 +72,32 @@ export interface HeroModelSpec {
   portrait: { height: number; distance: number };
 }
 
-/** The heroes that have a model. Empty until the models arrive; see the top of this file. */
-export const HERO_MODELS: Partial<Record<HeroName, HeroModelSpec>> = {};
+/** The heroes that have a model. A hero not listed here is built from shapes. */
+export const HERO_MODELS: Partial<Record<HeroName, HeroModelSpec>> = {
+  // Made by the owner in Meshy and rigged there as a humanoid. The file holds
+  // two clips, Walking and Running. Idle, jump, falling, landing and roll are
+  // listed so they are picked up as soon as the file has them.
+  Yaarbro: {
+    file: 'yaarbro.glb',
+    height: 2.2,
+    turn: 0,
+    clips: {
+      idle: ['Idle'],
+      walk: ['Walking', 'Walk'],
+      run: ['Running', 'Run'],
+      jump: ['Jump'],
+      fall: ['Falling', 'Fall'],
+      land: ['Landing', 'Land'],
+      roll: ['Roll'],
+    },
+    // No jump clip: these are the part of the run with both feet off the ground.
+    airborne: [0.08, 0.2],
+    walkSpeed: 1.5,
+    runSpeed: 4.6,
+    shadow: { across: 1.05, along: 0.9 },
+    portrait: { height: 1.52, distance: 2.5 },
+  },
+};
 
 /**
  * A stand-in used to build and check the loader and animation player: a CC0
@@ -98,6 +130,68 @@ export const findClip = (clips: AnimationClip[], names: string[] | undefined): A
   return null;
 };
 
+/**
+ * A standing pose made from a walk: every joint held at the middle of its
+ * swing. Used when a model has no idle clip of its own.
+ */
+export const standingPose = (walk: AnimationClip): AnimationClip => {
+  const samples = 32;
+  const tracks: KeyframeTrack[] = [];
+  for (const track of walk.tracks) {
+    const size = track.getValueSize();
+    // Each track knows how to read itself between keys; the type list leaves the method out.
+    const reader = (track as unknown as { createInterpolant(): Interpolant }).createInterpolant();
+    const sum = new Array<number>(size).fill(0);
+    let first: ArrayLike<number> | null = null;
+    for (let i = 0; i < samples; i += 1) {
+      const value = reader.evaluate((walk.duration * i) / samples) as ArrayLike<number>;
+      // The same turn can be written two ways round; add them up the same way round.
+      let sign = 1;
+      if (track instanceof QuaternionKeyframeTrack) {
+        if (!first) first = Array.from(value);
+        else if (first[0] * value[0] + first[1] * value[1] + first[2] * value[2] + first[3] * value[3] < 0) sign = -1;
+      }
+      for (let k = 0; k < size; k += 1) sum[k] += sign * value[k];
+    }
+    let middle = sum.map((total) => total / samples);
+    if (track instanceof QuaternionKeyframeTrack) middle = new Quaternion().fromArray(middle).normalize().toArray();
+    const held = track.clone();
+    held.times = new Float32Array([0, 1]);
+    held.values = new Float32Array([...middle, ...middle]);
+    tracks.push(held);
+  }
+  return new AnimationClip(`${walk.name} (standing)`, 1, tracks);
+};
+
+/**
+ * Where a model stands in the pose it is in now: the height of its lowest and
+ * highest points, and the middle of its footprint (the lowest twentieth of it).
+ */
+const footprint = (model: Object3D, meshes: Mesh[]): { ground: number; top: number; x: number; z: number } => {
+  model.updateMatrixWorld(true);
+  const points: number[] = [];
+  const point = new Vector3();
+  let ground = Infinity;
+  let top = -Infinity;
+  for (const mesh of meshes) {
+    const count = mesh.geometry.getAttribute('position').count;
+    for (let i = 0; i < count; i += 1) {
+      // For a mesh on a skeleton this follows the bones.
+      mesh.getVertexPosition(i, point).applyMatrix4(mesh.matrixWorld);
+      points.push(point.x, point.y, point.z);
+      ground = Math.min(ground, point.y);
+      top = Math.max(top, point.y);
+    }
+  }
+  const soles = ground + (top - ground) * 0.05;
+  const box = new Box3();
+  for (let i = 0; i < points.length; i += 3) {
+    if (points[i + 1] <= soles) box.expandByPoint(point.set(points[i], points[i + 1], points[i + 2]));
+  }
+  const middle = box.getCenter(new Vector3());
+  return { ground, top, x: middle.x, z: middle.z };
+};
+
 export class ModelHero implements HeroView {
   readonly root = new Group();
   readonly shadow: { across: number; along: number };
@@ -111,6 +205,9 @@ export class ModelHero implements HeroView {
   private landing = 0;
   private squashed = 0;
   private mix = { idle: 1, walk: 0, run: 0 };
+  /** True when the idle is a held pose made from the walk, which needs a breath added. */
+  private readonly stillIdle: boolean;
+  private clock = 0;
 
   /** Plain materials made for this hero alone (see `simple`), freed with it. */
   private readonly ownMaterials: MeshLambertMaterial[] = [];
@@ -131,16 +228,11 @@ export class ModelHero implements HeroView {
     // Each hero on screen gets its own copy of the skeleton; the meshes and
     // textures are shared with the downloaded file.
     const model = cloneRigged(source.scene);
-    model.updateMatrixWorld(true);
-    const size = new Box3().setFromObject(model);
-    const tall = Math.max(size.max.y - size.min.y, 0.001);
-    const scale = spec.height / tall;
-    const middle = size.getCenter(new Vector3());
-    model.position.set(-middle.x * scale, -size.min.y * scale, -middle.z * scale);
-    model.scale.multiplyScalar(scale);
+    const meshes: Mesh[] = [];
     model.traverse((node) => {
       const mesh = node as Mesh;
       if (!mesh.isMesh) return;
+      meshes.push(mesh);
       mesh.castShadow = true;
       mesh.receiveShadow = true;
       // A moving skeleton can carry the mesh outside the box it was measured in.
@@ -153,14 +245,26 @@ export class ModelHero implements HeroView {
       }
     });
     this.body.add(model);
-    this.body.rotation.y = spec.turn;
     this.root.add(this.body);
 
     this.mixer = new AnimationMixer(model);
+    const found: Partial<Record<ClipRole, AnimationClip>> = {};
     for (const role of ['idle', 'walk', 'run', 'jump', 'fall', 'land', 'roll'] as const) {
       const clip = findClip(source.animations, spec.clips[role]);
-      if (!clip) continue;
-      const action = this.mixer.clipAction(clip);
+      if (clip) found[role] = clip;
+    }
+    // Doing without (see `clips` in HeroModelSpec): stand in the middle pose
+    // of the walk, and hold a stride of the run in the air.
+    const stride = found.walk ?? found.run;
+    this.stillIdle = !found.idle && Boolean(stride);
+    if (!found.idle && stride) found.idle = standingPose(stride);
+    const leap = found.run ?? found.walk;
+    if (!found.jump && !found.fall && leap) {
+      found.jump = leap.clone();
+      found.jump.name = `${leap.name} (held in the air)`;
+    }
+    for (const role of Object.keys(found) as ClipRole[]) {
+      const action = this.mixer.clipAction(found[role]!);
       action.enabled = true;
       action.setEffectiveWeight(0);
       this.actions[role] = action;
@@ -179,6 +283,16 @@ export class ModelHero implements HeroView {
       land.clampWhenFinished = true;
     }
     this.animate({ pace: 0, grounded: true, rise: 0 }, 0);
+
+    // Stand the model on the spot the rules use, as it stands at rest: scaled
+    // to its height, soles on the ground, and the middle of its footprint
+    // over the spot. Then an edge it can stand on looks like one, and the
+    // soft spot sits under its feet.
+    const stance = footprint(model, meshes);
+    const scale = spec.height / Math.max(stance.top - stance.ground, 0.001);
+    model.scale.multiplyScalar(scale);
+    model.position.set(-stance.x * scale, -stance.ground * scale, -stance.z * scale);
+    this.body.rotation.y = spec.turn;
   }
 
   react(event: 'jump' | 'land' | 'bounce'): void {
@@ -250,8 +364,12 @@ export class ModelHero implements HeroView {
     }
     this.mixer.update(dt);
 
+    this.clock += dt;
     this.squashed *= Math.exp(-dt * 10);
-    this.body.scale.set(1 + this.squashed * 0.5, 1 - this.squashed, 1 + this.squashed * 0.5);
+    // A held standing pose would look frozen, so the body breathes a little.
+    const swell = this.stillIdle ? breath(this.clock) * ((ground * this.mix.idle) / total) : 0;
+    const squash = this.squashed - swell;
+    this.body.scale.set(1 + squash * 0.5, 1 - squash, 1 + squash * 0.5);
   }
 
   info(): HeroInfo {
