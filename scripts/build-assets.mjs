@@ -4,6 +4,7 @@
 //   textures  JPG or PNG  ->  KTX2 (stays compressed on the graphics card)
 //   models    GLB         ->  GLB with meshopt geometry and KTX2 textures
 //   heroes    GLB         ->  copied (they are committed already compressed)
+//   enemies   GLB         ->  copied, the same way
 //   sky light HDR         ->  a smaller HDR (lighting only needs a small one)
 //
 // Runs before every build and before `npm run dev`. A file is only redone when
@@ -51,12 +52,14 @@ for (const file of existsSync(join(SOURCE, 'models')) ? readdirSync(join(SOURCE,
 }
 
 /**
- * Hero models. These are already compressed: tools/compress-hero.mjs makes
- * them from the owner's original files, which are too big to keep here.
+ * Hero and enemy models. These are already compressed: tools/compress-hero.mjs
+ * makes them from the original files, which are too big to keep here.
  */
 const HEROES = [];
-for (const file of existsSync(join(SOURCE, 'heroes')) ? readdirSync(join(SOURCE, 'heroes')).sort() : []) {
-  if (file.endsWith('.glb')) HEROES.push({ from: `heroes/${file}`, to: `models/${file}` });
+for (const folder of ['heroes', 'enemies']) {
+  for (const file of existsSync(join(SOURCE, folder)) ? readdirSync(join(SOURCE, folder)).sort() : []) {
+    if (file.endsWith('.glb')) HEROES.push({ from: `${folder}/${file}`, to: `models/${file}` });
+  }
 }
 
 const HDR = [{ from: 'hdri/forest_slope_1k.hdr', to: 'hdri/forest.hdr', width: 512 }];

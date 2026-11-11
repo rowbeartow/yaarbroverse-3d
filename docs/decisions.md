@@ -200,3 +200,12 @@ Supersedes: "Enemy models are made the same way as the hero models" in "Mileston
 ## 2026-11-11 Part two keeps the difficulty numbers, and the diagonal-jump sections get no enemies
 Reason: The owner's playtest of the longer grove: the kids found it fun and the right difficulty, and fell most on the diagonal jumps. Those sections stay as they are. On his Mac in Safari the level ran at 60 frames a second on the high tier, with 121 draw calls and 226 thousand triangles at the end of the level.
 Supersedes: none
+
+## 2026-11-11 The owner picked marmot B and mosquito C, and enemy models are kept compressed in assets/enemies/
+Reason: His pick from the six candidates. The compressed files (about 1 MB each) are committed in `assets/enemies/` and the build copies them as it does the heroes; the originals from Meshy go on the `hero-models` release with the heroes' originals. They are made from the Caputo Mountain art, so like the hero models they are all rights reserved, and CREDITS.md says so.
+Supersedes: none
+
+## 2026-11-11 Each enemy has one clip for each thing it does in the 2D forest, and the mosquito has its own rig script
+Reason: The owner's instruction: clips come from the behaviour in the 2D game. Its enemies are concealed, idle, warning, attacking, resting or defeated, and the marmot also dodges and takes two hits. So the marmot scout has idle, walk, warning, throw, winded, hit, hop and defeated, written in `tools/rig-quadruped.py` as its own set beside the cat's. The giant mosquito has hover, warning, dive, winded and defeated, from `tools/rig-insect.py`: body, head, abdomen, legs and wings, with the wings beating fast and the legs hanging loose. Meshy's wings are solid colour, so the script gives them a see-through material and repaints them pale. Every clip happens on the spot, as the heroes' do. Both go on a preview page for the owner's OK before they merge.
+Supersedes: none
+

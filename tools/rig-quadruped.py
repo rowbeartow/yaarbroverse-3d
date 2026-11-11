@@ -17,7 +17,8 @@
 #      ground.
 #   2. Merges the doubled points along the seams of the model's picture.
 #      Meshy splits the skin into hundreds of loose patches there, and weights
-#      cannot spread across loose patches.
+#      cannot spread across loose patches. If the guide gives "triangles",
+#      the mesh is then thinned to about that many.
 #   3. Builds the skeleton from the guide: hips, spine, chest, neck, head, four
 #      legs (upper, lower, paw) and a tail, plus shoulder blades and ears when
 #      the guide gives them. If the file already has a skeleton it is kept,
@@ -231,6 +232,34 @@ def merge_seams(mesh):
     mesh.data.update()
     pieces, biggest = islands(mesh)
     say(f"merged seam points: {before} points in {pieces_before} pieces -> {len(mesh.data.vertices)} points in {pieces} pieces (the body has {biggest})")
+
+
+def thin(mesh, triangles):
+    """
+    Brings the mesh down to about `triangles` triangles, keeping its shape and
+    its picture. Meshy's models have far more than a small enemy on screen
+    needs, and every one of them is moved by the skeleton on every frame.
+    """
+    mesh.data.calc_loop_triangles()
+    before = len(mesh.data.loop_triangles)
+    if not triangles or before <= triangles:
+        return
+    bpy.ops.object.select_all(action='DESELECT')
+    mesh.select_set(True)
+    bpy.context.view_layer.objects.active = mesh
+    modifier = mesh.modifiers.new('Thin', 'DECIMATE')
+    modifier.decimate_type = 'COLLAPSE'
+    modifier.ratio = triangles / before
+    modifier.use_collapse_triangulate = True
+    bpy.ops.object.modifier_apply(modifier='Thin')
+    # Thinning can leave the odd face with no area, or normals that no longer
+    # fit, and the saver drops a mesh it finds faulty: put it right first.
+    mesh.data.validate(clean_customdata=True)
+    mesh.data.update()
+    mesh.data.calc_loop_triangles()
+    if mesh.data.validate():
+        raise SystemExit('The mesh is still faulty after thinning. Try a different number of triangles in the guide.')
+    say(f"thinned the mesh: {before} triangles -> {len(mesh.data.loop_triangles)}")
 
 
 # ---------- 3: the skeleton ----------
@@ -1077,9 +1106,12 @@ class Quadruped:
         seconds = self.LANDING_SECONDS
         self.shape(keyed(self.LANDING, phase), time=phase * seconds, lag=0.04, tail=lambda at: keyed(self.LANDING, max(0.0, at) / seconds)['tail'])
 
-    def write(self):
-        """Writes every clip into Blender, each on its own track so it is saved as its own animation."""
-        clips = [
+    # Clips in which a paw on the ground may be asked for more than its leg's length.
+    stretched = ('jump', 'falling')
+
+    def clips(self):
+        """Every clip: its name, the function that poses it, and how long it lasts in seconds."""
+        return [
             ('idle', self.idle, self.setting('idle', 'seconds', 8.0)),
             ('walk', self.walk, self.setting('walk', 'seconds', 0.8)),
             ('trot', self.trot, self.setting('trot', 'seconds', 0.4)),
@@ -1088,10 +1120,25 @@ class Quadruped:
             ('falling', self.falling, 1.0),
             ('landing', self.landing, self.LANDING_SECONDS),
         ]
+
+    def report(self, lasts):
+        """Prints what the game needs to know about the gaits: speeds, and when each paw lands."""
+        on_ground, stride, front_middle, hind_middle, travel = self.walk_plan()
+        say(f"walk: {travel:.2f} m of ground a cycle, {travel / lasts['walk']:.2f} m a second. Front paws work from {front_middle + stride / 2:.2f} to {front_middle - stride / 2:.2f} m ahead of the middle, hind paws from {hind_middle + stride / 2:.2f} to {hind_middle - stride / 2:.2f}: each hind paw lands in the print of the front paw on its side")
+        names = {'hind_l': 'left hind', 'hind_r': 'right hind', 'front_l': 'left front', 'front_r': 'right front'}
+        for name, plan in (('trot', self.trot_plan()), ('run', self.run_plan())):
+            on_ground, _, travel, starts = plan
+            seconds = lasts[name]
+            order, air = self.footfalls(on_ground, starts)
+            landings = ', '.join(f"{names[leg]} at {start:.2f}" for leg, start in order)
+            say(f"{name}: {travel:.2f} m of ground a cycle, {travel / seconds:.2f} m a second. Paws land: {landings} of the cycle, each down for {on_ground:.2f} of it. No paw is down for {air:.2f} of it")
+
+    def write(self):
+        """Writes every clip into Blender, each on its own track so it is saved as its own animation."""
         armature = self.armature
         armature.animation_data_create()
         lasts = {}
-        for name, pose, seconds in clips:
+        for name, pose, seconds in self.clips():
             action = bpy.data.actions.new(name)
             armature.animation_data.action = action
             frames = max(1, round(seconds * FPS))
@@ -1113,21 +1160,164 @@ class Quadruped:
             say(f"clip {name}: {seconds:.2f} s")
             # A paw on the ground asked to go further than its leg is long would not
             # be where the clip put it. (In the air a leg may stretch right out.)
-            if name not in ('jump', 'falling') and self.poser.short > 0.002:
+            if name not in self.stretched and self.poser.short > 0.002:
                 raise SystemExit(f"In the {name} clip a paw on the ground ({self.poser.short_where}) is asked to reach {self.poser.short * 100:.1f} cm further than its leg is long. Shorten the stride or move the paws' path (see the guide's \"clips\").")
-        on_ground, stride, front_middle, hind_middle, travel = self.walk_plan()
-        say(f"walk: {travel:.2f} m of ground a cycle, {travel / lasts['walk']:.2f} m a second. Front paws work from {front_middle + stride / 2:.2f} to {front_middle - stride / 2:.2f} m ahead of the middle, hind paws from {hind_middle + stride / 2:.2f} to {hind_middle - stride / 2:.2f}: each hind paw lands in the print of the front paw on its side")
-        names = {'hind_l': 'left hind', 'hind_r': 'right hind', 'front_l': 'left front', 'front_r': 'right front'}
-        for name, plan in (('trot', self.trot_plan()), ('run', self.run_plan())):
-            on_ground, _, travel, starts = plan
-            seconds = lasts[name]
-            order, air = self.footfalls(on_ground, starts)
-            landings = ', '.join(f"{names[leg]} at {start:.2f}" for leg, start in order)
-            say(f"{name}: {travel:.2f} m of ground a cycle, {travel / seconds:.2f} m a second. Paws land: {landings} of the cycle, each down for {on_ground:.2f} of it. No paw is down for {air:.2f} of it")
+        self.report(lasts)
         # Leave the skeleton at rest.
         for bone in armature.pose.bones:
             bone.location = (0, 0, 0)
             bone.rotation_quaternion = (1, 0, 0, 0)
+
+
+class MarmotScout(Quadruped):
+    """
+    The marmot scout's clips, one for each thing it does in the game (its
+    behaviour is Caputo Mountain's): it watches on all fours, shuffles toward
+    or away from a hero, rears up with an acorn as a warning, throws, stands
+    winded after a throw, hops back out of the way, flinches when struck, and
+    goes over on its back when beaten. A guide picks these with
+    "character": "marmot". Its front legs are its arms.
+    """
+
+    stretched = ('hop',)
+
+    # A whole-body pose in a few numbers. Each paw is (forward, lift, toes,
+    # out), as `paw` takes them; fl is the front left paw, hr the hind right.
+    DOWN = (0.0, 0.0, 0.0, 0.0)
+    ALERT = dict(rise=0.0, lean=0.0, arch=0.0, roll=0.0, follow=0.4, look=0.0, drop=0.0, fl=DOWN, fr=DOWN, hl=DOWN, hr=DOWN, tail=0.0, ears=0.0)
+    # Up on its hind legs, right arm back over the shoulder with the acorn,
+    # left paw at its chest.
+    REARED = dict(ALERT, rise=-0.05, lean=50.0, arch=-6.0, follow=1.0, look=-46.0, fl=(-0.44, 0.7, -30.0, -0.1), fr=(-0.86, 1.3, -25.0, 0.06), tail=-16.0, ears=10.0)
+    # Head hung, back rounded, sagging over its front paws.
+    WINDED = dict(ALERT, rise=-0.08, lean=-7.0, arch=9.0, follow=1.0, look=-20.0, drop=-0.05, tail=-22.0, ears=22.0)
+
+    def stance(self, s, time=0.0, tail_sway=None, turn=0.0):
+        """Poses the whole marmot from one of the dicts above."""
+        self.trunk(rise=s['rise'], lean=s['lean'], arch=s['arch'], hips_roll=s['roll'], chest_roll=s['roll'])
+        self.head(follow=s['follow'], turn=yaw(turn) @ pitch(s['look']), neck_turn=yaw(turn * 0.4), shift=Vector((0, 0, s['drop'])))
+        self.ear('l', s['ears'])
+        self.ear('r', s['ears'])
+        for leg, key in (('front_l', 'fl'), ('front_r', 'fr'), ('hind_l', 'hl'), ('hind_r', 'hr')):
+            forward, lift, toes, out = s[key]
+            self.paw(leg, forward=forward, lift=lift, toes=toes, out=out)
+        self.tail_curve(time, sway=tail_sway or (lambda at: 0.0), lift=lambda at: s['tail'], lag=0.05)
+
+    def idle(self, phase):
+        # On watch: breathing, sniffing the air, a look to each side, ears and tail twitching.
+        seconds = 4.0
+        t = phase * seconds
+        breath = wave(phase * 3, 0.1)
+        look = 26 * bump(t, 0.6, 1.7, 0.35) - 22 * bump(t, 2.3, 3.3, 0.35)
+        sniff = 5 * flick(t, 0.2, 0.18) + 5 * flick(t, 0.42, 0.18) + 4 * flick(t, 1.9, 0.16) + 4 * flick(t, 2.1, 0.16)
+        s = dict(self.ALERT, rise=0.008 * breath, arch=-1.5 * breath, look=sniff + 1.0 * breath, ears=18 * flick(t, 1.2, 0.18) + 16 * flick(t, 3.5, 0.18))
+        self.stance(s, t, tail_sway=lambda at: 10 * flick(at, 0.9, 0.3) - 9 * flick(at, 2.8, 0.3), turn=look)
+
+    def walk_plan(self):
+        on_ground = 0.62
+        stride = self.setting('walk', 'stride', 0.16)
+        return on_ground, stride, stride / on_ground
+
+    def walk(self, phase):
+        # A low shuffle in diagonal pairs, rocking from side to side.
+        on_ground, stride, _ = self.walk_plan()
+        starts = {'hind_l': 0.0, 'front_r': 0.06, 'hind_r': 0.5, 'front_l': 0.56}
+        for leg, start in starts.items():
+            front = leg.startswith('front')
+            middle = -self.toe[leg].y - (0.09 if front else 0.0)
+            ahead, height, tipped, _ = self.step(phase - start, on_ground, middle + stride / 2, middle - stride / 2,
+                                                 lift=0.08 if front else 0.06, heel=24, curl=30, toes_up=8)
+            self.paw(leg, at=ahead, lift=height, toes=tipped, soft=True)
+        self.trunk(rise=-0.07 - 0.008 * wave(phase * 2, 0.25), sway=0.015 * wave(phase, 0.3),
+                   hips_roll=4.0 * wave(phase, 0.3), chest_roll=-2.5 * wave(phase, 0.3),
+                   hips_yaw=-4.0 * wave(phase, 0.0), chest_yaw=3.0 * wave(phase, 0.0))
+        self.head(follow=0.3)
+        self.ear('l')
+        self.ear('r')
+        self.tail_curve(phase, sway=lambda at: 12 * wave(at, 0.15), lift=lambda at: 0.0, lag=0.06)
+
+    def warning(self, phase):
+        # Rears up with the acorn, then holds it there, arm trembling, until the throw.
+        s = keyed([(0.0, self.ALERT), (0.16, dict(self.ALERT, rise=-0.07, arch=8.0, look=6.0)), (0.5, self.REARED), (1.0, self.REARED)], phase)
+        held = smoothstep((phase - 0.5) / 0.1)
+        shake = 0.02 * held * wave(phase * 9)
+        forward, lift, toes, out = s['fr']
+        s = dict(s, fr=(forward - shake, lift + shake, toes, out), lean=s['lean'] + 1.2 * held * wave(phase * 4.5))
+        self.stance(s, phase)
+
+    def throw(self, phase):
+        # The arm whips over and forward, the acorn leaves at the top, and it drops back onto all fours.
+        s = keyed([
+            (0.0, self.REARED),
+            # The acorn leaves the paw here.
+            (0.2, dict(self.REARED, lean=38.0, look=-28.0, fr=(-0.2, 1.0, 5.0, 0.0), fl=(-0.5, 0.5, -30.0, -0.06), tail=-6.0)),
+            (0.42, dict(self.REARED, rise=-0.03, lean=20.0, look=-14.0, fr=(-0.02, 0.5, 10.0, 0.0), fl=(-0.3, 0.3, -20.0, -0.03), tail=6.0)),
+            (0.75, dict(self.ALERT, rise=-0.06, lean=-3.0, arch=6.0, look=-6.0, follow=1.0)),
+            (1.0, dict(self.ALERT, follow=1.0)),
+        ], phase)
+        self.stance(s, phase)
+
+    def winded(self, phase):
+        # Getting its breath back: heavy, quick breaths, head hung.
+        pant = wave(phase * 4, 0.1)
+        s = dict(self.WINDED, rise=self.WINDED['rise'] + 0.014 * pant, arch=self.WINDED['arch'] - 3.0 * pant, look=self.WINDED['look'] + 2.5 * pant)
+        self.stance(s, phase * 2.0, tail_sway=lambda at: 3 * wave(at, 0.0))
+
+    def hit(self, phase):
+        # Struck: it rocks back off its front paws, then sags, winded.
+        s = keyed([
+            (0.0, self.ALERT),
+            (0.3, dict(self.ALERT, rise=0.03, lean=16.0, look=14.0, follow=1.0, fl=(-0.08, 0.14, -20.0, 0.04), fr=(-0.08, 0.14, -20.0, 0.04), tail=14.0, ears=30.0)),
+            (0.7, dict(self.WINDED, rise=-0.1)),
+            (1.0, self.WINDED),
+        ], phase)
+        self.stance(s, phase)
+
+    def hop(self, phase):
+        # A hop out of the way. The game moves it; here it only crouches, tucks its legs and lands.
+        tucked = (0.0, 0.13, -30.0, 0.0)
+        s = keyed([
+            (0.0, dict(self.ALERT, rise=-0.1, arch=10.0)),
+            (0.25, dict(self.ALERT, lean=12.0, arch=-4.0, look=-8.0, follow=1.0, fl=(0.0, 0.16, -30.0, 0.0), fr=(0.0, 0.16, -30.0, 0.0), hl=tucked, hr=tucked, tail=20.0)),
+            (0.7, dict(self.ALERT, lean=-8.0, arch=4.0, look=6.0, follow=1.0, fl=(0.04, 0.03, 10.0, 0.0), fr=(0.04, 0.03, 10.0, 0.0), hl=(0.0, 0.07, -15.0, 0.0), hr=(0.0, 0.07, -15.0, 0.0), tail=-10.0)),
+            (0.86, dict(self.WINDED, rise=-0.12)),
+            (1.0, self.WINDED),
+        ], phase)
+        self.stance(s, phase)
+
+    def defeated(self, phase):
+        # Beaten: it tips over sideways onto its back and lies there, paws in the air.
+        over = keyed([(0.0, 0.0), (0.12, -8.0), (0.6, 186.0), (0.8, 176.0), (1.0, 180.0)], phase)
+        on_back = smoothstep(over / 180.0)
+        drop = self.setting('defeated', 'drop', 0.2)
+        self.trunk(rise=0.05 * math.sin(math.pi * min(1.0, phase / 0.6)) - drop * on_back, lean=-self.setting('defeated', 'level', 8.0) * on_back,
+                   arch=6.0 * on_back, hips_roll=over, chest_roll=over)
+        self.head(follow=1.0, turn=pitch(-10.0 * on_back))
+        self.ear('l', 25 * on_back)
+        self.ear('r', 25 * on_back)
+        # The legs go with the body, and the paws fold in a little.
+        kick = wave(phase * 3) * (1 - on_back) * 10
+        for leg, (upper, lower, paw) in self.legs.items():
+            self.poser.place(upper)
+            self.poser.place(lower, turn=pitch((-18.0 if leg.startswith('front') else 14.0) * on_back + kick))
+            self.poser.place(paw)
+        self.tail_curve(phase, sway=lambda at: 0.0, lift=lambda at: -14.0 * on_back, lag=0.04)
+
+    def clips(self):
+        return [
+            ('idle', self.idle, 4.0),
+            ('walk', self.walk, self.setting('walk', 'seconds', 0.6)),
+            ('warning', self.warning, 0.8),
+            ('throw', self.throw, 0.5),
+            ('winded', self.winded, 2.0),
+            ('hit', self.hit, 0.4),
+            ('hop', self.hop, 0.5),
+            ('defeated', self.defeated, 0.9),
+        ]
+
+    def report(self, lasts):
+        _, _, travel = self.walk_plan()
+        say(f"walk: {travel:.2f} m of ground a cycle, {travel / lasts['walk']:.2f} m a second, in the model's own size")
+        say('throw: the acorn leaves the paw a fifth of the way through the clip')
 
 
 # ---------- 6: save ----------
@@ -1151,6 +1341,9 @@ def save(path):
     )
 
 
+CHARACTERS = {'cat': Quadruped, 'marmot': MarmotScout}
+
+
 def main():
     arguments = sys.argv[sys.argv.index('--') + 1:] if '--' in sys.argv else []
     if len(arguments) != 3:
@@ -1164,12 +1357,14 @@ def main():
     say(f"opened {source}: {len(mesh.data.vertices)} points, {'with' if had_skeleton else 'no'} skeleton")
     straighten(mesh, armature, guide.get('turned_left_degrees', 0))
     merge_seams(mesh)
+    thin(mesh, guide.get('triangles'))
     armature, added = build_skeleton(guide, armature)
     say(f"skeleton: {len(armature.data.bones)} bones" + (f", {len(added)} of them added" if had_skeleton else ''))
     skin(mesh, armature, added, had_skeleton)
-    Quadruped(armature, guide).write()
+    CHARACTERS[guide.get('character', 'cat')](armature, guide).write()
     save(out)
     say(f"saved {out}")
 
 
-main()
+if __name__ == '__main__':
+    main()

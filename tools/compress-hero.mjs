@@ -2,11 +2,12 @@
 // and saves it in assets/heroes/. The originals are far too big to keep in
 // this repo (20 to 30 MB each), so only what this makes is committed.
 //
-//   node tools/compress-hero.mjs <original.glb> <name> [texture size]
+//   node tools/compress-hero.mjs <original.glb> <name> [texture size] [folder]
 //
 //   original.glb   the file from Meshy, or from tools/rig-quadruped.py
-//   name           yaarbro or caputo: the file is saved as assets/heroes/<name>.glb
+//   name           yaarbro, caputo, marmot or mosquito: the file is saved as <name>.glb
 //   texture size   the size of the colour picture, 2048 unless given
+//   folder         heroes unless given. An enemy goes in enemies: assets/enemies/<name>.glb
 //
 // What it does:
 //   1. Fills the empty gaps in the model's pictures with the colours next to
@@ -26,13 +27,13 @@ import { dirname, join } from 'node:path';
 import { compressModel, modelIO } from '../scripts/lib/compress-model.mjs';
 import { fillGaps } from '../scripts/lib/fill-gaps.mjs';
 
-const [from, name, sizeText = '2048'] = process.argv.slice(2);
+const [from, name, sizeText = '2048', folder = 'heroes'] = process.argv.slice(2);
 if (!from || !name) {
-  console.error('Usage: node tools/compress-hero.mjs <original.glb> <name> [texture size]');
+  console.error('Usage: node tools/compress-hero.mjs <original.glb> <name> [texture size] [folder]');
   process.exit(1);
 }
 const colorSize = Number(sizeText);
-const to = join('assets', 'heroes', `${name}.glb`);
+const to = join('assets', folder, `${name}.glb`);
 
 const io = await modelIO();
 const document = await io.readBinary(new Uint8Array(readFileSync(from)));
