@@ -4,6 +4,8 @@
 //
 // Every top surface matches the footing in the rules: flat where you stand,
 // and as wide as the solid says. The lumps and flares are all below or beside.
+// A bank's top has an irregular edge, which never reaches past where a hero
+// can stand (bank-outline.ts).
 
 import {
   AdditiveBlending,
@@ -13,8 +15,11 @@ import {
   DoubleSide,
   Float32BufferAttribute,
   Group,
+  IcosahedronGeometry,
+  InstancedMesh,
   Mesh,
   MeshBasicMaterial,
+  Object3D,
   PlaneGeometry,
   Points,
   PointsMaterial,
@@ -22,7 +27,10 @@ import {
   SpriteMaterial,
   type Material,
 } from 'three';
+import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
+import { MOVE } from '../game/hero';
 import type { Level, Solid } from '../game/level';
+import { bankOutline, bankSeed } from './bank-outline';
 import type { Materials } from './materials';
 import { noise, rough, smooth } from './noise';
 import { glowPicture } from './pictures';
@@ -51,96 +59,122 @@ const solid = (geometry: BufferGeometry, material: Material): Mesh => {
 
 // ---------- Mossy banks ----------
 
-/** A point on a rectangle with rounded corners, `across` of the way round, with the outward direction. */
-const roundedRect = (
-  across: number,
-  halfX: number,
-  halfZ: number,
-  corner: number,
-): { x: number; z: number; outX: number; outZ: number; along: number } => {
-  const straightX = 2 * (halfX - corner);
-  const straightZ = 2 * (halfZ - corner);
-  const arc = (Math.PI / 2) * corner;
-  const total = 2 * straightX + 2 * straightZ + 4 * arc;
-  let left = (((across % 1) + 1) % 1) * total;
-  const along = left;
-  // Start halfway up the right-hand edge and go round toward +z.
-  const pieces: Array<['line' | 'arc', number, number, number, number, number]> = [
-    ['line', straightZ / 2, halfX, 0, 0, 1],
-    ['arc', arc, halfX - corner, halfZ - corner, 0, 0],
-    ['line', straightX, halfX - corner, halfZ, -1, 0],
-    ['arc', arc, -(halfX - corner), halfZ - corner, Math.PI / 2, 0],
-    ['line', straightZ, -halfX, halfZ - corner, 0, -1],
-    ['arc', arc, -(halfX - corner), -(halfZ - corner), Math.PI, 0],
-    ['line', straightX, -(halfX - corner), -halfZ, 1, 0],
-    ['arc', arc, halfX - corner, -(halfZ - corner), Math.PI * 1.5, 0],
-    ['line', straightZ / 2, halfX, -(halfZ - corner), 0, 1],
-  ];
-  for (const [kind, length, a, b, c, d] of pieces) {
-    if (left > length) {
-      left -= length;
-      continue;
-    }
-    if (kind === 'line') {
-      // (a, b) is the start, (c, d) the direction of travel.
-      return { x: a + c * left, z: b + d * left, outX: d, outZ: -c, along };
-    }
-    // (a, b) is the corner's centre, c the angle it starts at.
-    const angle = c + left / corner;
-    return {
-      x: a + Math.cos(angle) * corner,
-      z: b + Math.sin(angle) * corner,
-      outX: Math.cos(angle),
-      outZ: Math.sin(angle),
-      along,
-    };
+/** A lumpy boulder about two units across, for the rock that shows round a bank's sides. */
+const boulderGeometry = (): BufferGeometry => {
+  const geometry = new IcosahedronGeometry(1, 2);
+  const position = geometry.getAttribute('position');
+  const moss = new Float32Array(position.count);
+  for (let i = 0; i < position.count; i += 1) {
+    const x = position.getX(i);
+    const y = position.getY(i);
+    const z = position.getZ(i);
+    // Big lumps and small ones, so no two sides of it look alike.
+    const lump = 1 + 0.38 * rough(x * 1.1, y * 1.1, z * 1.1) + 0.1 * rough(x * 3.1, y * 3.1, z * 3.1);
+    position.setXYZ(i, x * lump, y * lump, z * lump);
+    moss[i] = smooth(0.1, 0.7, y) * (0.5 + 0.5 * noise(x * 2, y * 2, z * 2));
   }
-  return { x: halfX, z: 0, outX: 1, outZ: 0, along };
+  geometry.setAttribute('moss', new Float32BufferAttribute(moss, 1));
+  geometry.computeVertexNormals();
+  return geometry;
 };
 
 const bank = (s: Solid, materials: Materials, decor: Decor, random: () => number): Group => {
   const group = new Group();
-  const corner = 0.8;
-  // The picture reaches a touch past the footing, as far as feet may overhang.
-  const halfX = s.halfX + 0.1;
-  const halfZ = s.halfZ + 0.1;
-  const lipDepth = s.safe ? 0.55 : 0.25;
-  const seed = s.x * 0.7 + s.z * 0.13;
-  /** The edge wanders in and out a little, so the bank is not a ruled rectangle. */
-  const outline = (across: number): ReturnType<typeof roundedRect> => {
-    const edge = roundedRect(across, halfX, halfZ, corner);
-    const wander = 0.11 * rough(edge.along * 0.45, seed, 2.2);
-    return { ...edge, x: edge.x + edge.outX * wander, z: edge.z + edge.outZ * wander };
-  };
+  const seed = bankSeed(s.x, s.z);
+  // The top's edge: irregular and round-cornered, but never past where a hero
+  // can stand (see bank-outline.ts).
+  const outline = bankOutline(s.halfX, s.halfZ, MOVE.footRadius, seed);
+  const around = Math.max(48, Math.round(outline.length / 0.32));
+  const ring = outline.length / TAU;
 
   // The top you stand on: flat, with the texture laid in world metres.
-  const top = surface(
-    4,
-    48,
-    (across, down, point) => {
-      const edge = outline(across);
-      const share = Math.sqrt(down);
-      point.x = edge.x * share;
-      point.y = s.top;
-      point.z = edge.z * share;
-      point.s = (point.x + s.x) / 3;
-      point.t = (point.z + s.z) / 3;
-    },
-  );
+  const top = surface(5, around, (across, down, point) => {
+    const edge = outline.at(across);
+    const share = Math.sqrt(down);
+    point.x = edge.x * share;
+    point.y = s.top;
+    point.z = edge.z * share;
+    point.s = (point.x + s.x) / 3;
+    point.t = (point.z + s.z) / 3;
+  });
   group.add(solid(top, s.safe ? materials.mossTop : materials.stoneTop));
 
-  // The lip: a cushion of moss hanging over the edge (or a worn stone edge).
-  const lip = surface(
-    4,
-    48,
+  /**
+   * Where the rock face is, `depth` metres below the top and `across` of the
+   * way round. At the top it is the top's own edge. Just below it tucks in
+   * under the turf. Lower down it swells into lobes and lumps, and the whole
+   * stack eases from the top's outline toward a rough oval, so the bank
+   * stands on a rounded mass of rock and not a box. None of the swelling
+   * starts until well below the top, so nothing beside the top looks like
+   * more ground to stand on.
+   */
+  const rockAt = (across: number, depth: number): { x: number; z: number; outX: number; outZ: number } => {
+    const edge = outline.at(across);
+    const round = 0.8 * smooth(0.6, 7, depth);
+    const angle = Math.atan2(edge.z / s.halfZ, edge.x / s.halfX);
+    const x = edge.x + (Math.cos(angle) * s.halfX * 1.08 - edge.x) * round;
+    const z = edge.z + (Math.sin(angle) * s.halfZ * 1.08 - edge.z) * round;
+    const y = s.top - depth;
+    const tuck = -0.16 * smooth(0, 0.35, depth) * (1 - smooth(0.7, 2, depth));
+    const flare = 0.05 * depth + 0.009 * depth * depth;
+    const lobes = 0.9 * rough(x * 0.21 + seed, y * 0.17, z * 0.21) * smooth(0.6, 2.8, depth);
+    const lumps =
+      (0.3 * rough(x * 0.45 + seed, y * 0.45, z * 0.45) + 0.12 * rough(x * 1.3, y * 1.3 + seed, z * 1.3)) * smooth(0.25, 1.4, depth);
+    const out = tuck + flare + lobes + lumps;
+    return { x: x + edge.outX * out, z: z + edge.outZ * out, outX: edge.outX, outZ: edge.outZ };
+  };
+
+  /**
+   * How far the moss spills down the side at each place round the bank, in
+   * metres: broad curtains with narrow tongues between, never a ruled hem.
+   * A bare stone bank has only a thin worn edge.
+   */
+  const spill = (across: number): number => {
+    if (!s.safe) return 0.22;
+    const angle = across * TAU;
+    const u = Math.cos(angle) * ring;
+    const v = Math.sin(angle) * ring;
+    const curtains = Math.max(0, rough(u * 0.55 + seed, v * 0.55, 9.1));
+    const tongues = smooth(0.5, 0.8, noise(u * 1.8 + seed, v * 1.8, 4.4));
+    return 0.38 + 1.2 * curtains + 0.8 * tongues;
+  };
+
+  // The rock, from the top's edge down into the mist.
+  const tiles = Math.max(1, Math.round(outline.length / 3));
+  const wall = surface(
+    16,
+    around,
     (across, down, point) => {
-      const edge = outline(across);
-      const depth = down * lipDepth;
-      const bulge = (s.safe ? 0.17 : 0.05) * Math.sin(Math.PI * Math.min(down * 0.9, 1));
-      const lump = s.safe ? 0.05 * rough(edge.along * 0.9, seed, 4.2) * down : 0;
-      point.x = edge.x + edge.outX * (bulge + lump);
+      const depth = down ** 1.6 * (s.top - UNDER);
+      const rock = rockAt(across, depth);
+      point.x = rock.x;
       point.y = s.top - depth;
-      point.z = edge.z + edge.outZ * (bulge + lump);
+      point.z = rock.z;
+      point.s = across * tiles;
+      point.t = depth / 3;
+      // Moss creeps on below the cushion, thinning, then only grows in patches.
+      const hem = spill(across);
+      const hang = (s.safe ? 1 : 0.25) * (1 - smooth(hem * 0.8, hem * 1.5 + 0.7, depth));
+      const patches = smooth(0.5, 0.75, noise(rock.x * 0.5 + seed, point.y * 0.35, rock.z * 0.5)) * (s.safe ? 0.9 : 0.45);
+      point.moss = Math.min(1, Math.max(hang, patches));
+    },
+    { closed: true },
+  );
+  group.add(solid(wall, materials.rock));
+
+  // The cushion of moss spilling over the side (or a worn stone edge). It drops
+  // straight from the top's edge, is fattest a little way down and thins to
+  // nothing at its hem.
+  const lip = surface(
+    6,
+    around,
+    (across, down, point) => {
+      const depth = down * spill(across);
+      const rock = rockAt(across, depth);
+      const fat = (s.safe ? 0.2 : 0.05) * Math.sin(Math.PI * Math.min(down * 1.1, 1) ** 0.85) + 0.03 * smooth(0, 0.15, down);
+      point.x = rock.x + rock.outX * fat;
+      point.y = s.top - depth;
+      point.z = rock.z + rock.outZ * fat;
       point.s = (point.x + s.x) / 3;
       point.t = (point.z + s.z) / 3 + depth / 3;
     },
@@ -148,36 +182,64 @@ const bank = (s: Solid, materials: Materials, decor: Decor, random: () => number
   );
   group.add(solid(lip, s.safe ? materials.mossTop : materials.stoneTop));
 
-  // The rock below, lumpier and wider the deeper it goes, down into the mist.
-  const wallTop = s.top - lipDepth;
-  const perimeter = 4 * (halfX + halfZ);
-  const tiles = Math.max(1, Math.round(perimeter / 3));
-  const wall = surface(
-    12,
-    48,
-    (across, down, point) => {
-      const edge = outline(across);
-      const depth = down ** 1.5 * (wallTop - UNDER);
-      const y = wallTop - depth;
-      const tuck = (s.safe ? -0.1 : 0) * (1 - smooth(0, 1.2, depth));
-      const flare = 0.07 * depth + 0.012 * depth * depth;
-      const lumps =
-        (0.75 * rough(edge.x * 0.3 + seed, y * 0.3, edge.z * 0.3) + 0.22 * rough(edge.x * 1.1, y * 1.1 + seed, edge.z * 1.1)) *
-        smooth(0, 2, depth);
-      const out = tuck + flare + lumps;
-      point.x = edge.x + edge.outX * out;
-      point.y = y;
-      point.z = edge.z + edge.outZ * out;
-      point.s = across * tiles;
-      point.t = depth / 3;
-      // Moss hangs down from a safe bank's top, then thins to patches.
-      const hang = (s.safe ? 1 : 0.25) * (1 - smooth(0.2, s.safe ? 2.6 : 1, depth));
-      const patches = smooth(0.5, 0.75, noise(edge.x * 0.5 + seed, y * 0.35, edge.z * 0.5)) * (s.safe ? 0.9 : 0.45);
-      point.moss = Math.min(1, Math.max(hang, patches));
-    },
-    { closed: true },
-  );
-  group.add(solid(wall, materials.rock));
+  // Boulders bedded in the rock round the sides. Each sits well below the top
+  // and half inside the face, so it reads as crag, not as a ledge to land on.
+  const place = new Object3D();
+  const rockCount = Math.round(outline.length / 2.6);
+  const rocks = new InstancedMesh(boulderGeometry(), materials.rock, rockCount);
+  for (let i = 0; i < rockCount; i += 1) {
+    const across = (i + random() * 0.8) / rockCount;
+    const size = 0.28 + random() * random() * 0.42;
+    const depth = 0.6 + size * 1.3 + random() * 1.6;
+    const rock = rockAt(across, depth);
+    place.position.set(rock.x - rock.outX * size * 0.15, s.top - depth, rock.z - rock.outZ * size * 0.15);
+    place.rotation.set(random() * TAU, random() * TAU, random() * 0.5);
+    place.scale.set(size * (0.9 + random() * 0.7), size * (0.6 + random() * 0.3), size * (0.9 + random() * 0.7));
+    place.updateMatrix();
+    rocks.setMatrixAt(i, place.matrix);
+  }
+  rocks.instanceMatrix.needsUpdate = true;
+  rocks.castShadow = true;
+  rocks.receiveShadow = true;
+  group.add(rocks);
+
+  // Roots: they come out from under the turf and grip their way down the rock.
+  const rootCount = Math.round(outline.length / 3);
+  const roots: BufferGeometry[] = [];
+  for (let i = 0; i < rootCount; i += 1) {
+    const start = (i + random() * 0.8) / rootCount;
+    const long = 1.5 + random() * 2.8;
+    const thick = 0.07 + random() * 0.08;
+    const drift = ((random() - 0.5) * 1.6) / outline.length;
+    const wiggle = random() * TAU;
+    const root = surface(
+      Math.max(6, Math.round(long / 0.3)),
+      5,
+      (round, down, point) => {
+        const depth = 0.04 + down * long;
+        const across = start + drift * down + (0.12 / outline.length) * Math.sin(down * 5 + wiggle);
+        const rock = rockAt(across, depth);
+        const radius = thick * (1 - 0.7 * down);
+        // Stand off the rock by a little less than its own thickness.
+        const centreX = rock.x + rock.outX * (radius * 0.7 + 0.02);
+        const centreZ = rock.z + rock.outZ * (radius * 0.7 + 0.02);
+        const turn = round * TAU;
+        point.x = centreX + (rock.outX * Math.cos(turn) - rock.outZ * Math.sin(turn)) * radius;
+        point.y = s.top - depth;
+        point.z = centreZ + (rock.outZ * Math.cos(turn) + rock.outX * Math.sin(turn)) * radius;
+        point.s = round;
+        point.t = depth / 1.5;
+        point.moss = 0.5 * (1 - smooth(0.3, 1.5, depth));
+      },
+      { closed: true },
+    );
+    roots.push(root);
+  }
+  // All of a bank's roots are drawn as one shape.
+  if (roots.length > 0) {
+    group.add(solid(mergeGeometries(roots), materials.bark));
+    for (const root of roots) root.dispose();
+  }
 
   // Ferns and grass along the side edges of safe banks, out of the walking line.
   if (s.safe) {
@@ -185,15 +247,15 @@ const bank = (s: Solid, materials: Materials, decor: Decor, random: () => number
     for (let i = 0; i < count; i += 1) {
       const side = i % 2 === 0 ? -1 : 1;
       const x = s.x + side * (s.halfX - 0.15 - random() * 0.45);
-      const z = s.z + (random() * 2 - 1) * (s.halfZ - 0.5);
+      const z = s.z + (random() * 2 - 1) * (s.halfZ - 0.9);
       if (i % 3 === 0) decor.fern(x, s.top, z, 0.55 + random() * 0.35, random() * TAU);
       else decor.grass(x, s.top, z, 0.75 + random() * 0.6, random() * TAU);
     }
     // Low tufts over the rest of the top, thin enough to see the ground through.
     for (let i = 0; i < Math.round(s.halfX * s.halfZ * 1.2); i += 1) {
       // Mostly toward the sides: the middle is where feet go.
-      const x = s.x + Math.sign(random() - 0.5) * (0.9 + random() * (s.halfX - 1.2));
-      const z = s.z + (random() * 2 - 1) * (s.halfZ - 0.4);
+      const x = s.x + Math.sign(random() - 0.5) * (0.9 + random() * (s.halfX - 1.4));
+      const z = s.z + (random() * 2 - 1) * (s.halfZ - 0.9);
       decor.grass(x, s.top, z, 0.35 + random() * 0.3, random() * TAU);
     }
   } else {
@@ -202,7 +264,7 @@ const bank = (s: Solid, materials: Materials, decor: Decor, random: () => number
       decor.rock(
         s.x + side * (s.halfX - 0.5 - random() * 0.5),
         s.top + 0.05,
-        s.z + (random() * 2 - 1) * (s.halfZ - 0.6),
+        s.z + (random() * 2 - 1) * (s.halfZ - 0.9),
         0.16 + random() * 0.2,
         random() * TAU,
       );

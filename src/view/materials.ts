@@ -121,6 +121,21 @@ export const sways = <T extends Lit>(material: T, strength: number, speed = 1): 
 };
 
 /**
+ * Lights both faces of a thin leaf or bough the same. Left alone, the back of
+ * a two-sided shape is lit as if it faced the other way, so boughs seen from
+ * below go dark and grey. Foliage is lit as if it all faced the sky instead.
+ */
+export const softBothSides = <T extends Lit>(material: T): T => {
+  patched(material, 'soft-sides', (shader) => {
+    shader.fragmentShader = shader.fragmentShader.replace(
+      '#include <normal_fragment_begin>',
+      '#include <normal_fragment_begin>\n#ifdef DOUBLE_SIDED\n\tnormal *= faceDirection;\n#endif',
+    );
+  });
+  return material;
+};
+
+/**
  * Grows moss over a material. Shapes say where through their `moss` values;
  * the edge of the moss follows the grain of the moss picture, so it creeps
  * rather than stopping at a line.
@@ -234,10 +249,8 @@ export class Materials {
     this.gills = make({ map: gillsPicture(), roughness: 0.9, doubleSided: true });
     this.stem = make({ color: 0xf3e6c8, roughness: 0.85 });
 
-    this.foliage = sways(
-      make({ map: boughPicture(), alphaTest: 0.4, doubleSided: true, roughness: 0.82, vertexColors: true }),
-      0.16,
-      0.8,
+    this.foliage = softBothSides(
+      sways(make({ map: boughPicture(), alphaTest: 0.4, doubleSided: true, roughness: 0.82, vertexColors: true }), 0.16, 0.8),
     );
     this.fern = sways(
       make({ map: fernPicture(), alphaTest: 0.45, doubleSided: true, roughness: 0.8, vertexColors: true }),
