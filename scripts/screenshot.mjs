@@ -4,14 +4,16 @@
 //
 //   quality     high, medium, low or minimal (default high)
 //   solid       the part of the level to stand the hero on, such as bank-start,
-//               log-2, bank-1, stump-3, bank-2, high-log or bough (default bank-start)
+//               log-2, bank-1, stump-3, bank-2, ravine-log-1, bank-3, high-log, bank-4
+//               or bough (default bank-start)
 //   back        metres toward the camera from the middle of that part (default 2)
 //   hero        Yaarbro or Caputo
 //   difficulty  easy, normal or hard
 //   frames      how many frames to let the camera settle for (default 6)
 //
 // Builds nothing: run `npm run build` first, then `npx vite preview --port 4173`
-// in another terminal. Set W and H for a window size other than 1280 by 800.
+// in another terminal. Set W and H for a window size other than 1280 by 800,
+// and PORT if the game is served somewhere other than port 4173.
 // The test browser has no graphics card, so above the minimal tier a frame
 // takes several seconds here. Real devices are not affected.
 
@@ -32,7 +34,7 @@ page.on('console', (message) => {
   if (message.type() === 'error' || message.type() === 'warning') console.log(`console ${message.type()}: ${message.text()}`);
 });
 
-await page.goto(`http://localhost:4173/?quality=${quality}`);
+await page.goto(`http://localhost:${process.env.PORT || 4173}/?quality=${quality}`);
 await page.locator('#play:not([disabled])').waitFor({ timeout: 240_000 });
 await page.locator(`[data-hero="${hero}"]`).click();
 await page.locator(`[data-difficulty="${difficulty}"]`).click();

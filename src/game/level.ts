@@ -4,7 +4,7 @@
 // Directions: x is left (-) and right (+), y is up, z is toward the camera (+)
 // and away from it (-). Levels run away from the camera, so "forward" is -z.
 
-export type SolidKind = 'bank' | 'log' | 'stump' | 'mushroom' | 'bough';
+export type SolidKind = 'bank' | 'log' | 'stump' | 'shelf' | 'mushroom' | 'bough';
 
 /** Something a hero can stand on and bump into. */
 export interface Solid {

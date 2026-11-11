@@ -10,11 +10,11 @@ import { bankOutline, bankSeed, roundedRect } from '../src/view/bank-outline';
 
 const SAMPLES = 4000;
 
-/** Every bank in the grove, on every difficulty. */
+/** Every bank and root shelf in the grove, on every difficulty: both have a top with a drawn edge. */
 const banks: Array<{ name: string; bank: Solid }> = [];
 for (const difficulty of DIFFICULTIES) {
   for (const solid of buildGrove(difficulty).solids) {
-    if (solid.kind === 'bank') banks.push({ name: `${solid.id} on ${difficulty}`, bank: solid });
+    if (solid.kind === 'bank' || solid.kind === 'shelf') banks.push({ name: `${solid.id} on ${difficulty}`, bank: solid });
   }
 }
 
@@ -64,7 +64,8 @@ describe('the drawn top of a bank', () => {
       }
     });
 
-    it(`${name}: the edge is not a ruled rectangle`, () => {
+    // Root shelves are small and need not wander: only banks are checked for a natural edge.
+    if (bank.kind === 'bank') it(`${name}: the edge is not a ruled rectangle`, () => {
       // Along the right-hand side the edge moves in and out by several centimetres.
       const reaches: number[] = [];
       for (let i = -40; i <= 40; i += 1) reaches.push(outline.at(i / 1000).x);

@@ -27,11 +27,19 @@ export interface GroveNumbers {
   stumpGap: number;
   /** How much higher each stump is than the one before it. */
   stumpRise: number;
+  /** How many root shelves step down into the ravine. One fewer climb out the far side. */
+  shelfCount: number;
+  /** How big each root shelf is, side to side and front to back. */
+  shelfSize: number;
+  /** The open air between one shelf and the next, measured along the route. */
+  shelfGap: number;
+  /** How much lower (going down) or higher (climbing out) each shelf is than the one before. */
+  shelfStep: number;
   /** How big each mushroom cap is, measured from its middle to its edge. */
   mushroomRadius: number;
   /** The open air on each side of the mushrooms near the end. */
   mushroomGap: number;
-  /** How many mushrooms in a row you bounce across to reach the leaf (1 to 3). */
+  /** How many mushrooms in a row you bounce across to reach the high ledge. */
   mushroomChain: number;
   /**
    * Which mossy banks are checkpoints, counting the banks after the first one
@@ -55,10 +63,14 @@ export const GROVE_DIFFICULTY: Record<Difficulty, GroveNumbers> = {
     stumpRadius: 1.5,
     stumpGap: 1.2,
     stumpRise: 0.25,
+    shelfCount: 2,
+    shelfSize: 3.2,
+    shelfGap: 0.4,
+    shelfStep: 0.4,
     mushroomRadius: 1.5,
     mushroomGap: 0.8,
     mushroomChain: 1,
-    checkpoints: [1, 2],
+    checkpoints: [1, 2, 3, 4],
     coyoteTime: 0.2,
     ledgeHelp: 0.5,
   },
@@ -71,10 +83,14 @@ export const GROVE_DIFFICULTY: Record<Difficulty, GroveNumbers> = {
     stumpRadius: 1.1,
     stumpGap: 2.0,
     stumpRise: 0.4,
+    shelfCount: 3,
+    shelfSize: 2.6,
+    shelfGap: 1.6,
+    shelfStep: 0.8,
     mushroomRadius: 1.15,
     mushroomGap: 1.6,
-    mushroomChain: 2,
-    checkpoints: [1, 2],
+    mushroomChain: 3,
+    checkpoints: [1, 2, 3, 4],
     coyoteTime: 0.12,
     ledgeHelp: 0.3,
   },
@@ -87,10 +103,14 @@ export const GROVE_DIFFICULTY: Record<Difficulty, GroveNumbers> = {
     stumpRadius: 0.75,
     stumpGap: 3.0,
     stumpRise: 0.5,
+    shelfCount: 3,
+    shelfSize: 1.8,
+    shelfGap: 2.6,
+    shelfStep: 1.2,
     mushroomRadius: 0.8,
     mushroomGap: 2.6,
-    mushroomChain: 3,
-    checkpoints: [2],
+    mushroomChain: 4,
+    checkpoints: [2, 4],
     coyoteTime: 0.06,
     ledgeHelp: 0.15,
   },
