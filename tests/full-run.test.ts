@@ -77,8 +77,14 @@ describe('falling in the Bouncing Grove', () => {
     expect(fallFrom('hard', 'stump-2').groundId).toBe('bank-start');
   });
 
-  it('a fall from the high log returns to the clearing on every difficulty', () => {
-    for (const difficulty of DIFFICULTIES) expect(fallFrom(difficulty, 'high-log').groundId).toBe('bank-2');
+  it('a fall from the high log returns to the bank before it on Easy and Normal, and to the clearing on Hard', () => {
+    expect(fallFrom('easy', 'high-log').groundId).toBe('bank-3');
+    expect(fallFrom('normal', 'high-log').groundId).toBe('bank-3');
+    expect(fallFrom('hard', 'high-log').groundId).toBe('bank-2');
+  });
+
+  it('a fall in the ravine returns to the clearing', () => {
+    for (const difficulty of DIFFICULTIES) expect(fallFrom(difficulty, 'ravine-log-2').groundId).toBe('bank-2');
   });
 
   it('a hero can finish after falling', () => {

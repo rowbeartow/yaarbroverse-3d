@@ -21,7 +21,7 @@ The start screen shows straight away, with a progress bar while the grove loads 
 - **Mac:** arrow keys or W A S D to move, Space to jump (hold for a higher jump), Esc to pause.
 - **iPad:** hold it sideways. Left thumb moves, right thumb jumps.
 
-A fall puts you back on the last safe mossy bank. On Hard only the first bank is safe.
+A fall puts you back on the last safe mossy bank. On Easy and Normal every bank is safe; on Hard only some are.
 
 ### Switch on the link (owner, one time, already done)
 

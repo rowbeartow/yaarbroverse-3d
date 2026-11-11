@@ -35,9 +35,9 @@ const cleanRun = (difficulty: Difficulty): { level: Level; reached: Map<string, 
 
 /** How long a perfect run of the whole grove should take on each difficulty, in seconds. */
 const RUN_TIME: Record<Difficulty, [number, number]> = {
-  easy: [15, 40],
-  normal: [18, 45],
-  hard: [20, 50],
+  easy: [20, 50],
+  normal: [25, 60],
+  hard: [28, 70],
 };
 
 describe.each(DIFFICULTIES)('the sections of the grove on %s', (difficulty) => {

@@ -51,14 +51,14 @@ describe('Bouncing Grove difficulty numbers', () => {
   });
 
   it('gives Easy the widest footing and Hard the narrowest', () => {
-    for (const key of ['logWidth', 'stumpRadius', 'mushroomRadius'] as const) {
+    for (const key of ['logWidth', 'stumpRadius', 'shelfSize', 'mushroomRadius'] as const) {
       expect(easy[key]).toBeGreaterThan(normal[key]);
       expect(normal[key]).toBeGreaterThan(hard[key]);
     }
   });
 
   it('gives Easy the shortest jumps and Hard the longest', () => {
-    for (const key of ['firstLogGap', 'logGap', 'stumpGap', 'stumpRise', 'mushroomGap'] as const) {
+    for (const key of ['firstLogGap', 'logGap', 'stumpGap', 'stumpRise', 'shelfGap', 'shelfStep', 'mushroomGap'] as const) {
       expect(easy[key]).toBeLessThan(normal[key]);
       expect(normal[key]).toBeLessThan(hard[key]);
     }
@@ -100,14 +100,24 @@ describe.each(DIFFICULTIES)('the grove built on %s', (difficulty) => {
 
   it('uses the numbers from the difficulty file', () => {
     expect(byId(level, 'log-1').halfX * 2).toBeCloseTo(numbers.logWidth, 5);
-    expect(count(level, 'log')).toBe(numbers.logCount + 1);
+    // The opening logs, two along the bottom of the ravine, and the high log.
+    expect(count(level, 'log')).toBe(numbers.logCount + 3);
     expect(airBetween(byId(level, 'log-1'), byId(level, 'log-2'))).toBeCloseTo(numbers.firstLogGap, 5);
     expect(airBetween(byId(level, 'log-2'), byId(level, 'log-3'))).toBeCloseTo(numbers.logGap, 5);
     expect(count(level, 'stump')).toBe(numbers.stumpCount);
     expect(byId(level, 'stump-1').halfX).toBe(numbers.stumpRadius);
     expect(airBetween(byId(level, 'stump-1'), byId(level, 'stump-2'))).toBeCloseTo(numbers.stumpGap, 5);
     expect(byId(level, 'stump-2').top - byId(level, 'stump-1').top).toBeCloseTo(numbers.stumpRise, 5);
-    // One mushroom always grows in the clearing; the rest are the chain.
+    // Root shelves: some step down into the ravine, one fewer climb out.
+    expect(count(level, 'shelf')).toBe(numbers.shelfCount * 2 - 1);
+    const firstShelf = byId(level, 'shelf-down-1');
+    expect(firstShelf.halfX * 2).toBeCloseTo(numbers.shelfSize, 5);
+    expect(firstShelf.halfZ * 2).toBeCloseTo(numbers.shelfSize, 5);
+    const clearing = byId(level, 'bank-2');
+    expect(clearing.z - clearing.halfZ - (firstShelf.z + firstShelf.halfZ)).toBeCloseTo(numbers.shelfGap, 5);
+    expect(clearing.top - firstShelf.top).toBeCloseTo(numbers.shelfStep, 5);
+    expect(byId(level, 'bank-3').top).toBeCloseTo(clearing.top, 5);
+    // One mushroom always grows on the bank after the ravine; the rest are the chain.
     expect(count(level, 'mushroom')).toBe(numbers.mushroomChain + 1);
     expect(byId(level, 'mushroom-2').halfX).toBe(numbers.mushroomRadius);
     expect(airBetween(byId(level, 'high-log'), byId(level, 'mushroom-2'))).toBeCloseTo(numbers.mushroomGap, 5);
@@ -122,6 +132,21 @@ describe.each(DIFFICULTIES)('the grove built on %s', (difficulty) => {
     const first = byId(level, level.route[0]);
     expect(first.safe).toBe(true);
     expect(level.spawn.y).toBe(first.top);
+  });
+
+  it('takes the ravine down below the clearing and back up, with footing all the way on Easy', () => {
+    const floor = byId(level, 'ravine-log-1');
+    expect(floor.top).toBeLessThan(byId(level, 'bank-2').top);
+    expect(floor.top).toBeGreaterThan(-2);
+    // The route never comes back toward the camera.
+    for (let i = 1; i < level.route.length; i += 1) {
+      expect(byId(level, level.route[i]).z, level.route[i]).toBeLessThan(byId(level, level.route[i - 1]).z + 1e-9);
+    }
+    if (difficulty === 'easy') {
+      // Shelves close enough to walk across and low enough to step up.
+      expect(numbers.shelfGap).toBeLessThan(0.6);
+      expect(numbers.shelfStep).toBeLessThanOrEqual(numbers.ledgeHelp);
+    }
   });
 
   it('lists every solid once in the route', () => {
@@ -161,8 +186,8 @@ describe.each(DIFFICULTIES)('the grove built on %s', (difficulty) => {
     }
   });
 
-  it('leaves room to walk around the mushroom in the clearing', () => {
-    const bank = byId(level, 'bank-2');
+  it('leaves room to walk around the mushroom on its bank', () => {
+    const bank = byId(level, 'bank-3');
     const mushroom = byId(level, 'mushroom-1');
     expect(mushroom.halfX).toBeLessThan(bank.halfX - 1);
     expect(mushroom.z - mushroom.halfZ).toBeGreaterThan(bank.z - bank.halfZ);

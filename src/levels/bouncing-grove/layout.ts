@@ -4,8 +4,11 @@
 // The run, start to goal, in sections that each end on a mossy bank:
 //   1. The Broken Logs: fallen logs end to end, with a break between each pair.
 //   2. The Stump Steps: tree stumps that climb, left and right, to a clearing.
-//   Then a mushroom, a high log, mushrooms over open air, and the big bough
-//   where the golden leaf is tucked in the canopy.
+//   3. The Ravine: root shelves step down and to the right, a low log with a
+//      break crosses the bottom, root shelves climb out.
+//   4. The Mushroom Springs: a mushroom, a high log, mushrooms over open air,
+//      up to a mossy ledge.
+//   Then the big bough where the golden leaf is tucked in the canopy.
 
 import type { Difficulty } from '../../game/difficulty';
 import type { Level, Section, Solid } from '../../game/level';
@@ -17,8 +20,9 @@ export const GROVE_NAME = 'The Bouncing Grove';
 export const GROVE_HINTS: Record<string, string> = {
   'log-1': 'Mind the breaks in the log. Hop the small one, then run and jump!',
   'bank-1': 'Hop from stump to stump.',
-  'bank-2': 'Jump onto the mushroom and bounce up high.',
-  'high-log': 'Bounce across. The golden leaf is close.',
+  'bank-2': 'Step down the roots into the ravine.',
+  'bank-3': 'Jump onto the mushroom and bounce up high.',
+  'high-log': 'Bounce across the mushrooms.',
 };
 
 export const GROVE_GOAL_LINE = 'A golden leaf, tucked in the canopy!';
@@ -33,6 +37,12 @@ export const GROVE_SHAPE = {
   /** The clearing at the top of the stumps: wider and longer than a resting bank. */
   clearingHalfWidth: 5,
   clearingLength: 12,
+  /** Root shelves: where the first one sits, and how far right each next one steps on the way down. */
+  firstShelfSide: 2,
+  shelfSideStep: 3,
+  ravineLogLength: 5,
+  /** The mossy ledge at the top of the mushrooms. */
+  ledgeLength: 7,
   logThickness: 1,
   /** How far stumps and chained mushrooms sit left and right of the middle. */
   stumpSideStep: 1.3,
@@ -151,32 +161,66 @@ export function buildGrove(
   at = stumpAt + n.stumpRadius + n.stumpGap;
 
   // The clearing, level with the last stump.
-  const bank2 = box('bank-2', 'bank', at, at + shape.clearingLength, 0, shape.clearingHalfWidth, top, shape.depth, {
+  box('bank-2', 'bank', at, at + shape.clearingLength, 0, shape.clearingHalfWidth, top, shape.depth, {
     safe: safe(2),
   });
   at += shape.clearingLength;
 
-  // ---- The way up to the leaf ----
+  // ---- Section 3: The Ravine ----
+  section('The Ravine');
+  // Root shelves step down into the ravine, each one further to the right.
+  const shelfHalf = n.shelfSize / 2;
+  let side = shape.firstShelfSide - shape.shelfSideStep;
+  for (let i = 0; i < n.shelfCount; i += 1) {
+    at += n.shelfGap;
+    top -= n.shelfStep;
+    side += shape.shelfSideStep;
+    box(`shelf-down-${i + 1}`, 'shelf', at, at + n.shelfSize, side, shelfHalf, top, shape.depth);
+    at += n.shelfSize;
+  }
+  // From here on the route runs `side` metres to the right of where it started.
+
+  // Along the bottom: a low log with a break in it, starting from the last shelf.
+  box('ravine-log-1', 'log', at, at + shape.logLength, side, n.logWidth / 2, top, top - shape.logThickness);
+  at += shape.logLength + n.logGap;
+  box('ravine-log-2', 'log', at, at + shape.ravineLogLength, side, n.logWidth / 2, top, top - shape.logThickness);
+  at += shape.ravineLogLength;
+
+  // Root shelves climb out the far side, straight ahead, to a bank level with the clearing.
+  for (let i = 0; i < n.shelfCount - 1; i += 1) {
+    at += n.shelfGap;
+    top += n.shelfStep;
+    box(`shelf-up-${i + 1}`, 'shelf', at, at + n.shelfSize, side, shelfHalf, top, shape.depth);
+    at += n.shelfSize;
+  }
+  at += n.shelfGap;
+  top += n.shelfStep;
+  const bank3 = box('bank-3', 'bank', at, at + shape.restBankLength, side, shape.bankHalfWidth, top, shape.depth, {
+    safe: safe(3),
+  });
+  at += shape.restBankLength;
+
+  // ---- Section 4: The Mushroom Springs ----
   section('The Mushroom Springs');
-  // A mushroom at the far end of the clearing.
-  let capTop = bank2.top + shape.mushroomCapHeight;
-  round('mushroom-1', 'mushroom', at - 1.8, 0, n.mushroomRadius, capTop, bank2.top, {
+  // A mushroom at the far end of the bank.
+  let capTop = bank3.top + shape.mushroomCapHeight;
+  round('mushroom-1', 'mushroom', at - 1.8, side, n.mushroomRadius, capTop, bank3.top, {
     bounce: shape.mushroomBounce,
   });
 
   // A high log, reached by bouncing.
   at += 0.6;
   const highTop = capTop + shape.highLogRise;
-  box('high-log', 'log', at, at + shape.highLogLength, 0, n.logWidth / 2 + 0.2, highTop, highTop - shape.logThickness);
+  box('high-log', 'log', at, at + shape.highLogLength, side, n.logWidth / 2 + 0.2, highTop, highTop - shape.logThickness);
   at += shape.highLogLength;
 
-  // Mushrooms over open air, a little below the high log.
+  // Mushrooms over open air, a little below the high log, stepping left and right.
   capTop = highTop - 0.6;
-  let mushroomX = 0;
+  let mushroomX = side;
   let mushroomAt = at + n.mushroomGap + n.mushroomRadius;
   for (let i = 0; i < n.mushroomChain; i += 1) {
     if (i > 0) {
-      const nextX = mushroomX === 0 ? shape.mushroomSideStep : -mushroomX;
+      const nextX = mushroomX === side ? side + shape.mushroomSideStep : 2 * side - mushroomX;
       const between = 2 * n.mushroomRadius + n.mushroomGap;
       mushroomAt += Math.sqrt(Math.max(between * between - (nextX - mushroomX) ** 2, 0));
       mushroomX = nextX;
@@ -187,15 +231,21 @@ export function buildGrove(
   }
   at = mushroomAt + n.mushroomRadius + n.mushroomGap;
 
-  // The big bough in the canopy, and the golden leaf.
-  const boughTop = capTop + shape.boughRise;
-  box('bough', 'bough', at, at + shape.boughLength, mushroomX, shape.boughHalfWidth, boughTop, boughTop - 1.2);
+  // A mossy ledge high up, reached by the last bounce.
+  top = capTop + shape.boughRise;
+  box('bank-4', 'bank', at, at + shape.ledgeLength, side, shape.bankHalfWidth, top, shape.depth, { safe: safe(4) });
+  at += shape.ledgeLength;
+
+  // The big bough in the canopy, running on from the ledge, and the golden leaf.
+  const boughTop = top;
+  box('bough', 'bough', at, at + shape.boughLength, side, shape.boughHalfWidth, boughTop, boughTop - 1.2);
+  const leafX = side;
 
   return {
     name: GROVE_NAME,
     solids,
     spawn: { x: 0, y: 0, z: 0 },
-    leaf: { x: mushroomX, y: boughTop + 1.3, z: -(at + shape.boughLength - 1.6), radius: 0.7 },
+    leaf: { x: leafX, y: boughTop + 1.3, z: -(at + shape.boughLength - 1.6), radius: 0.7 },
     fallY: shape.fallY,
     coyoteTime: n.coyoteTime,
     ledgeHelp: n.ledgeHelp,

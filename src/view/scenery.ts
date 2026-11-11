@@ -393,9 +393,26 @@ const trunk = (
   return solid(geometry, materials.bark);
 };
 
-const highLogPosts = (s: Solid, materials: Materials): Group => {
+/**
+ * True when the end of a log (`end` is -1 for the far end, 1 for the near one)
+ * rests on a bank or a root shelf at its own height.
+ */
+const endRests = (s: Solid, end: number, level: Level): boolean => {
+  const edge = s.z + end * s.halfZ;
+  return level.solids.some(
+    (other) =>
+      (other.kind === 'bank' || other.kind === 'shelf') &&
+      Math.abs(other.top - s.top) < 0.6 &&
+      Math.abs(other.x - s.x) < other.halfX + s.halfX &&
+      Math.abs(edge - (other.z - end * other.halfZ)) < 0.5,
+  );
+};
+
+/** Snags that hold a log up, under each end that rests on nothing else. */
+const logPosts = (s: Solid, materials: Materials, level: Level): Group => {
   const group = new Group();
   for (const end of [-1, 1]) {
+    if (endRests(s, end, level)) continue;
     const post = trunk(materials, 0.4, 0.62, UNDER, s.bottom + 0.25, s.z + end, { mossAtTop: 0.8, lean: end * 0.012 });
     post.position.z = end * (s.halfZ - 0.8);
     group.add(post);
@@ -411,6 +428,63 @@ const bough = (s: Solid, materials: Materials): Group => {
   const cedar = trunk(materials, 2.3, 3.4, UNDER, s.top + 26, 5.5, { mossAtTop: 0 });
   cedar.position.z = trunkZ;
   group.add(cedar);
+  return group;
+};
+
+// ---------- Root shelves ----------
+
+/**
+ * A root shelf: the flat top of a great root or burl, standing on a trunk that
+ * rises out of the mist. The top is as wide as the footing in the rules and no
+ * wider (its edge is drawn the way a bank's is); below it the wood tucks in
+ * quickly to a round trunk, so nothing beside the top looks like more footing.
+ */
+const shelf = (s: Solid, materials: Materials): Group => {
+  const group = new Group();
+  const seed = bankSeed(s.x, s.z);
+  const outline = bankOutline(s.halfX, s.halfZ, MOVE.footRadius, seed);
+  const around = Math.max(32, Math.round(outline.length / 0.3));
+  const top = surface(4, around, (across, down, point) => {
+    const edge = outline.at(across);
+    const share = Math.sqrt(down);
+    point.x = edge.x * share;
+    point.y = s.top;
+    point.z = edge.z * share;
+    point.s = (point.x + s.x) / 2;
+    point.t = (point.z + s.z) / 2;
+    // Moss toward the rim and in patches; the middle is worn by feet.
+    const patch = smooth(0.4, 0.7, noise(point.x * 0.9 + seed, point.z * 0.9, 2.2));
+    point.moss = Math.min(1, 0.25 + 0.5 * smooth(0.5, 1, share) + 0.5 * patch);
+  });
+  group.add(solid(top, materials.bark));
+
+  const height = s.top - UNDER;
+  const waist = Math.min(s.halfX, s.halfZ) * 0.55;
+  const tiles = Math.max(1, Math.round(outline.length / 2));
+  const sides = surface(
+    14,
+    around,
+    (across, down, point) => {
+      const depth = down ** 1.6 * height;
+      const edge = outline.at(across);
+      const angle = Math.atan2(edge.z, edge.x);
+      // Ridges of root that deepen on the way down, as on a stump.
+      const ridges = 1 + 0.14 * Math.max(0, Math.sin(angle * 5 + seed)) * smooth(0.3, 2, depth) + 0.012 * depth;
+      const trunkX = Math.cos(angle) * waist * ridges;
+      const trunkZ = Math.sin(angle) * waist * ridges;
+      const round = smooth(0.1, 1.7, depth);
+      point.x = edge.x + (trunkX - edge.x) * round;
+      point.y = s.top - depth;
+      point.z = edge.z + (trunkZ - edge.z) * round;
+      point.s = across * tiles;
+      point.t = depth / 2;
+      const side = smooth(0.4, 0.75, noise(Math.cos(angle) * 1.2 + seed, depth * 0.4, Math.sin(angle) * 1.2));
+      point.moss = Math.min(1, side * 0.9 + 0.7 * (1 - smooth(0, 0.6, depth)));
+    },
+    { closed: true },
+  );
+  group.add(solid(sides, materials.bark));
+  group.position.set(s.x, 0, s.z);
   return group;
 };
 
@@ -663,11 +737,12 @@ export const buildSolids = (level: Level, materials: Materials, decor: Decor, ra
       mushrooms.set(s.id, made.view);
     } else if (s.kind === 'bank') shape.add(bank(s, materials, decor, random));
     else if (s.kind === 'stump') shape.add(stump(s, materials));
+    else if (s.kind === 'shelf') shape.add(shelf(s, materials));
     else if (s.kind === 'bough') shape.add(bough(s, materials));
     else {
       shape.add(log(s, materials));
-      // Two snags hold a raised log up; a log at bank height rests on the banks.
-      if (s.top > 2) shape.add(highLogPosts(s, materials));
+      // A snag holds up each end that does not rest on a bank or a root shelf.
+      shape.add(logPosts(s, materials, level));
     }
     group.add(shape);
     // A few metres to spare each way: rock swells out below a bank, and the last bough runs on into the cedar.
