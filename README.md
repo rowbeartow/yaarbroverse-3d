@@ -18,8 +18,8 @@ The link is live. Every change merged to `main` is published there within a few 
 
 The start screen shows straight away, with a progress bar while the grove loads (about 7 MB).
 
-- **Mac:** arrow keys or W A S D to move, Space to jump (hold for a higher jump), Esc to pause.
-- **iPad:** hold it sideways. Left thumb moves, right thumb jumps.
+- **Mac:** arrow keys or W A S D to move, Space to jump (hold for a higher jump), X or Shift for the hero's own move (hold it for Yaarbro's roll, press it for Caputo's pounce), Esc to pause.
+- **iPad:** hold it sideways. Left thumb moves, right thumb jumps. The smaller round button above Jump is the hero's own move.
 
 A fall puts you back on the last safe mossy bank. On Easy and Normal every bank is safe; on Hard only some are.
 
