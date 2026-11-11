@@ -14,6 +14,8 @@ export interface Input {
   moveZ: number;
   /** True while the Jump button is held. */
   jump: boolean;
+  /** True while the move button is held: Yaarbro's roll, Caputo's pounce. */
+  move?: boolean;
 }
 
 export const IDLE: Input = { moveX: 0, moveZ: 0, jump: false };
@@ -24,6 +26,8 @@ export type GameEvent =
   | { type: 'land' }
   | { type: 'bounce'; solidId: string }
   | { type: 'fall' }
+  /** Caputo's pounce began. */
+  | { type: 'pounce' }
   /** Lost a heart. `left` is how many remain. */
   | { type: 'hurt'; left: number }
   /** Went back to the last safe bank with every heart again, after losing the last one. */
@@ -70,6 +74,12 @@ export class Game {
   complete = false;
   /** Counts down while the hero stands still after a fall. */
   returning = 0;
+  /** Yaarbro is tucked into his roll. */
+  rolling = false;
+  /** Seconds left of Caputo's pounce. */
+  pouncing = 0;
+  /** How many times the hero's own move has been used: rolls begun and pounces made. */
+  movesUsed = 0;
   /** Hearts left, and hearts lost over the whole run. */
   hearts: number;
   heartsLost = 0;
@@ -84,6 +94,9 @@ export class Game {
 
   private safeSpot: { x: number; y: number; z: number; id: string | null };
   private pending: GameEvent[] = [];
+  private moveWasHeld = false;
+  private pounceReady = true;
+  private pounceRest = 0;
   private coyote = 0;
   private buffer = 0;
   private jumpWasHeld = false;
@@ -100,6 +113,17 @@ export class Game {
     const under = surfaceBelow(level, this.x, this.z, this.y, MOVE.footRadius);
     this.groundId = under ? under.id : null;
     this.safeSpot = { ...level.spawn, id: under?.safe ? under.id : null };
+  }
+
+  /** How tall the hero is right now: shorter while rolling. */
+  get bodyHeight(): number {
+    return this.rolling ? MOVE.rollHeight : MOVE.bodyHeight;
+  }
+
+  /** True while the hero's move would beat an enemy it touches: rolling faster than a walk, or in a pounce. */
+  get striking(): boolean {
+    if (this.pouncing > 0) return true;
+    return this.rolling && Math.hypot(this.vx, this.vz) > MOVE.walkSpeed * 1.02;
   }
 
   /** Where a fall would return the hero right now. */
@@ -149,6 +173,8 @@ export class Game {
     this.buffer = 0;
     this.canCutJump = false;
     this.stunned = MOVE.hurtLock;
+    this.rolling = false;
+    this.pouncing = 0;
     this.protectedFor = MOVE.hurtProtection * this.level.protection;
     if (this.hearts <= 0) this.fainting = MOVE.faintPause;
     this.pending.push({ type: 'hurt', left: this.hearts });
@@ -169,6 +195,8 @@ export class Game {
     this.buffer = 0;
     this.coyote = 0;
     this.stunned = 0;
+    this.rolling = false;
+    this.pouncing = 0;
     // No hearts left: start again from here with all of them, protected for a moment.
     if (this.hearts <= 0) {
       this.hearts = this.level.hearts;
@@ -207,19 +235,80 @@ export class Game {
     if (jumpHeld && !this.jumpWasHeld) this.buffer = MOVE.jumpBuffer;
     this.jumpWasHeld = input.jump;
 
-    // Speed up or slow down toward the speed the stick asks for.
-    const change = (this.grounded ? MOVE.groundAccel : MOVE.airAccel) * dt;
-    const wantX = moveX * MOVE.walkSpeed;
-    const wantZ = moveZ * MOVE.walkSpeed;
-    const gapX = wantX - this.vx;
-    const gapZ = wantZ - this.vz;
-    const gap = Math.hypot(gapX, gapZ);
-    if (gap <= change) {
-      this.vx = wantX;
-      this.vz = wantZ;
+    // The move button: Yaarbro rolls while it is held, Caputo pounces when it is pressed.
+    const moveHeld = frozen ? false : Boolean(input.move);
+    const movePressed = moveHeld && !this.moveWasHeld;
+    this.moveWasHeld = Boolean(input.move);
+    const wasRolling = this.rolling;
+    this.rolling = this.hero === 'Yaarbro' && moveHeld;
+    if (this.rolling && !wasRolling) this.movesUsed += 1;
+    this.pounceRest = Math.max(0, this.pounceRest - dt);
+    if (this.grounded) this.pounceReady = true;
+    const stickLength = Math.hypot(moveX, moveZ);
+    if (this.hero === 'Caputo' && movePressed && this.pounceReady && this.pounceRest <= 0) {
+      // The way the stick points, or the way he faces.
+      const aimX = stickLength > 0.01 ? moveX / stickLength : Math.sin(this.facing);
+      const aimZ = stickLength > 0.01 ? moveZ / stickLength : Math.cos(this.facing);
+      this.vx = aimX * MOVE.pounceSpeed;
+      this.vz = aimZ * MOVE.pounceSpeed;
+      this.vy = this.grounded ? MOVE.pounceHop : 0;
+      this.grounded = false;
+      this.groundId = null;
+      this.coyote = 0;
+      this.canCutJump = false;
+      this.pouncing = MOVE.pounceTime;
+      this.pounceRest = MOVE.pounceRest;
+      this.pounceReady = false;
+      this.movesUsed += 1;
+      this.events.push({ type: 'pounce' });
+    }
+
+    const pouncing = this.pouncing > 0;
+    if (pouncing) {
+      // The burst holds its speed and direction, whatever the stick does.
+      this.pouncing = Math.max(0, this.pouncing - dt);
+      if (this.pouncing === 0) {
+        const speed = Math.hypot(this.vx, this.vz);
+        if (speed > MOVE.pounceExitSpeed) {
+          this.vx *= MOVE.pounceExitSpeed / speed;
+          this.vz *= MOVE.pounceExitSpeed / speed;
+        }
+        this.vy = Math.min(this.vy, MOVE.pounceExitRise);
+      }
     } else {
-      this.vx += (gapX / gap) * change;
-      this.vz += (gapZ / gap) * change;
+      // Speed up or slow down toward the speed the stick asks for.
+      const speed = Math.hypot(this.vx, this.vz);
+      let wantX = moveX * MOVE.walkSpeed;
+      let wantZ = moveZ * MOVE.walkSpeed;
+      let accel: number = this.grounded ? MOVE.groundAccel : MOVE.airAccel;
+      if (this.rolling) {
+        // A roll heads the way the stick points; with the stick let go it
+        // keeps going the way he is moving, or the way he faces.
+        let aimX = Math.sin(this.facing);
+        let aimZ = Math.cos(this.facing);
+        if (stickLength > 0.01) {
+          aimX = moveX / stickLength;
+          aimZ = moveZ / stickLength;
+        } else if (speed > 0.5) {
+          aimX = this.vx / speed;
+          aimZ = this.vz / speed;
+        }
+        wantX = aimX * MOVE.rollSpeed;
+        wantZ = aimZ * MOVE.rollSpeed;
+        // Up to walking speed he gets going as fast as ever; the extra comes slower.
+        if (speed >= MOVE.walkSpeed) accel = this.grounded ? MOVE.rollAccel : MOVE.rollAirAccel;
+      }
+      const change = accel * dt;
+      const gapX = wantX - this.vx;
+      const gapZ = wantZ - this.vz;
+      const gap = Math.hypot(gapX, gapZ);
+      if (gap <= change) {
+        this.vx = wantX;
+        this.vz = wantZ;
+      } else {
+        this.vx += (gapX / gap) * change;
+        this.vz += (gapZ / gap) * change;
+      }
     }
     if (Math.hypot(this.vx, this.vz) > 0.5) this.facing = Math.atan2(this.vx, this.vz);
 
@@ -244,14 +333,15 @@ export class Game {
     }
     if (this.vy <= 0) this.canCutJump = false;
 
-    this.vy = Math.max(this.vy - MOVE.gravity * dt, -MOVE.maxFallSpeed);
+    // Nothing pulls a pounce down while the burst lasts.
+    if (!pouncing) this.vy = Math.max(this.vy - MOVE.gravity * dt, -MOVE.maxFallSpeed);
 
     // Move sideways, then get pushed back out of anything solid at body height.
     let nextX = this.x + this.vx * dt;
     let nextZ = this.z + this.vz * dt;
     for (const s of level.solids) {
       const feetWellBelowTop = this.y < s.top - level.ledgeHelp - EPSILON;
-      const headAboveUnderside = this.y + MOVE.bodyHeight > s.bottom + EPSILON;
+      const headAboveUnderside = this.y + this.bodyHeight > s.bottom + EPSILON;
       if (!feetWellBelowTop || !headAboveUnderside) continue;
       const out = pushOutside(s, nextX, nextZ, MOVE.bodyRadius);
       if (out) {
@@ -289,10 +379,10 @@ export class Game {
     } else {
       // Rising: stop at the underside of anything overhead.
       for (const s of level.solids) {
-        const headWasBelow = previousY + MOVE.bodyHeight <= s.bottom + EPSILON;
-        const headNowInside = nextY + MOVE.bodyHeight > s.bottom;
+        const headWasBelow = previousY + this.bodyHeight <= s.bottom + EPSILON;
+        const headNowInside = nextY + this.bodyHeight > s.bottom;
         if (headWasBelow && headNowInside && touchesFromAbove(s, nextX, nextZ, MOVE.bodyRadius)) {
-          nextY = s.bottom - MOVE.bodyHeight;
+          nextY = s.bottom - this.bodyHeight;
           this.vy = 0;
         }
       }
@@ -305,7 +395,7 @@ export class Game {
 
     // The goal: touch the golden leaf.
     const { leaf } = level;
-    const middleY = this.y + MOVE.bodyHeight / 2;
+    const middleY = this.y + this.bodyHeight / 2;
     const reach = leaf.radius + MOVE.bodyRadius;
     const distanceSquared = (this.x - leaf.x) ** 2 + (middleY - leaf.y) ** 2 + (this.z - leaf.z) ** 2;
     if (distanceSquared <= reach * reach) {

@@ -266,6 +266,7 @@ const CLIPS: ClipChoice[] = [
   { id: 'jump', label: 'Jump', kind: 'Plays once', note: 'Shown here slowly, from the crouch. In the game the crouch and push take a tenth of a second, then the rest follows how fast he is rising.', once: true },
   { id: 'falling', label: 'Falling', kind: 'Loops', note: 'Legs reaching down and spread, back a little rounded, tail out behind and working for balance.' },
   { id: 'landing', label: 'Landing', kind: 'Plays once', note: 'Front paws touch first, hind paws follow, the body sinks to take the drop, then he stands.', once: true },
+  { id: 'pounce', label: 'Pounce', kind: 'Plays once', note: 'His own move. He gathers, drives off his hind legs and goes out long and flat, front paws reaching ahead with the claws up. Shown here slowly: in the game the whole of it passes in a fifth of a second, while he covers nearly three metres.', once: true },
 ];
 
 /** The big view: any clip, or the clips as the game mixes them. Turns slowly, and can be dragged round. */

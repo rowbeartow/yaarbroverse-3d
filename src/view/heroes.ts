@@ -15,6 +15,10 @@ export interface Pose {
   grounded: boolean;
   /** Upward speed; negative when dropping. */
   rise: number;
+  /** Tucked into a roll right now (Yaarbro). */
+  rolling?: boolean;
+  /** How far through a pounce, 0 to 1, or null when not pouncing (Caputo). */
+  pounce?: number | null;
 }
 
 /** What the browser checks can ask about the hero on screen. */
