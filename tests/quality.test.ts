@@ -2,7 +2,7 @@
 // animation clips. Both are plain numbers, checked without a screen.
 
 import { describe, expect, it } from 'vitest';
-import { airPhase, groundMix, strideRate } from '../src/view/hero-motion';
+import { airPhase, groundMix, movingShare, nextGait, strideBeat, strideRate, type Gait } from '../src/view/hero-motion';
 import { TIERS, TierChooser, frameRateGoal, isSoftwareRenderer, lowerTier, startingTier } from '../src/view/quality';
 
 /** Feeds the chooser `seconds` of frames at a steady rate and returns every tier it dropped to. */
@@ -137,5 +137,61 @@ describe('mixing a hero\'s animation clips', () => {
     expect(strideRate(6, groundMix(1), 2, 6)).toBeCloseTo(1, 1);
     expect(strideRate(6, groundMix(1), 2, 4)).toBeCloseTo(1.5, 1);
     expect(strideRate(0, groundMix(0), 2, 6)).toBe(1);
+  });
+});
+
+describe('a hero with three gaits', () => {
+  const bands = { trot: { down: 0.3, up: 0.34 }, run: { down: 0.63, up: 0.68 } };
+
+  it('walks at a slow pace, trots in the middle and runs at top speed', () => {
+    for (const from of ['walk', 'trot', 'run'] as Gait[]) {
+      expect(nextGait(from, 0.1, bands)).toBe('walk');
+      expect(nextGait(from, 0.5, bands)).toBe('trot');
+      expect(nextGait(from, 1, bands)).toBe('run');
+    }
+  });
+
+  it('stays in the gait it is in at a pace between the two sides of a change', () => {
+    expect(nextGait('walk', 0.32, bands)).toBe('walk');
+    expect(nextGait('trot', 0.32, bands)).toBe('trot');
+    expect(nextGait('trot', 0.65, bands)).toBe('trot');
+    expect(nextGait('run', 0.65, bands)).toBe('run');
+  });
+
+  it('does not flick between gaits when the pace wobbles around a change', () => {
+    let gait: Gait = 'walk';
+    let changes = 0;
+    for (let i = 0; i < 200; i += 1) {
+      const next = nextGait(gait, 0.33 + 0.02 * Math.sin(i), bands);
+      if (next !== gait) changes += 1;
+      gait = next;
+    }
+    expect(changes).toBeLessThanOrEqual(1);
+  });
+
+  it('goes straight from a walk to a run, and back, when the pace jumps', () => {
+    expect(nextGait('walk', 0.9, bands)).toBe('run');
+    expect(nextGait('run', 0.05, bands)).toBe('walk');
+  });
+
+  it('is all standing at rest and all moving from a slow walk up', () => {
+    expect(movingShare(0)).toBe(0);
+    expect(movingShare(0.25)).toBe(1);
+    expect(movingShare(1)).toBe(1);
+  });
+
+  it('takes the strides a second that cover the ground, in one gait and in a mix of two', () => {
+    const walk = { ground: 1, seconds: 0.8 };
+    const trot = { ground: 1.2, seconds: 0.4 };
+    const only = (share: number, other: number) => [{ ...walk, share }, { ...trot, share: other }];
+    // Three metres a second on a trot that covers 1.2 m a cycle: 2.5 cycles a second.
+    expect(strideBeat(3, only(0, 1))).toBeCloseTo(2.5);
+    // Half and half covers 1.1 m a cycle.
+    expect(strideBeat(2.2, only(0.5, 0.5))).toBeCloseTo(2);
+    // Never under half or over twice a clip's own speed.
+    expect(strideBeat(0.1, only(1, 0))).toBeCloseTo(0.5 / 0.8);
+    expect(strideBeat(20, only(1, 0))).toBeCloseTo(2 / 0.8);
+    // Standing still, the clips tick over at the first one's own speed.
+    expect(strideBeat(0, only(0, 0))).toBeCloseTo(1 / 0.8);
   });
 });

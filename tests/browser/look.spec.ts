@@ -178,7 +178,7 @@ test.describe('hero models', () => {
     const start = await hero(page);
     expect(start?.model).toBe('caputo.glb');
     // The clips the rig script writes (tools/rig-quadruped.py).
-    expect(start?.clips.slice().sort()).toEqual(['falling', 'idle', 'jump', 'landing', 'run', 'walk']);
+    expect(start?.clips.slice().sort()).toEqual(['falling', 'idle', 'jump', 'landing', 'run', 'trot', 'walk']);
 
     await expect.poll(async () => (await hero(page))?.clock ?? 0).toBeGreaterThan((start?.clock ?? 0) + 0.3);
     const before = await snapshot(page);

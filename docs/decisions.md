@@ -152,3 +152,11 @@ Supersedes: none
 ## 2026-11-11 A jump's crouch plays as he leaves the ground, and does not delay the jump
 Reason: The rules lift a hero the moment Jump is pressed, and changing that would change how the game plays. So a jump clip that opens with a crouch and push plays that part in a tenth of a second as the hero takes off (`pushOff` in `src/view/hero-model.ts`), and the rest follows his upward speed as before. A crouch that can be watched needs a pause before take-off, which is the owner's call.
 Supersedes: none
+
+## 2026-11-11 Caputo has three gaits: walk, trot and run, and run is a rotary gallop
+Reason: The owner's rule. Walk at low speed, a trot in the middle (diagonal pairs, back level, head steady, tail up), and at top speed a gallop in which each paw lands by itself in a rolling order: left hind, right hind, right front, left front. The clips are named walk, trot and run, so run means the same thing for both heroes and trot is Caputo's only extra clip. The jump stays as it is, with no pause before take-off: jumping the instant the button is pressed matters more for the kids than a crouch that can be seen. If a script cannot make the run read as four separate footfalls, the owner brings in an animator and no more script rounds are made.
+Supersedes: none
+
+## 2026-11-11 A hero with three gaits is in one at a time, chosen by pace, and all three share one clock
+Reason: A four-legged hero's gaits put the paws down in different orders, so a steady mix of two would shuffle and slide. Caputo walks up to 0.34 of top speed, trots up to 0.68 and gallops above, and changes back at 0.63 and 0.30, so a pace held near a change does not flick between gaits. The change is a fade of about a tenth of a second. The rig script times the three clips so each paw is as near as it can be to the same point of its step at the same share of each clip, and the game plays them all on one clock, so a change of gait carries on in mid stride. Yaarbro, with two gaits, still mixes walk and run by pace.
+Supersedes: none

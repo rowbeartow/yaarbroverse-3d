@@ -59,6 +59,17 @@ describe('the heroes that have a model', () => {
       expect(spec.airborne[1]).toBeGreaterThan(spec.airborne[0]);
       expect(spec.airborne[1]).toBeLessThanOrEqual(1);
       expect(spec.runSpeed).toBeGreaterThan(spec.walkSpeed);
+      // A hero with a trot says how fast it is and where the gaits change, in order.
+      expect(Boolean(spec.clips.trot)).toBe(Boolean(spec.gaits && spec.trotSpeed));
+      if (spec.gaits && spec.trotSpeed) {
+        expect(spec.trotSpeed).toBeGreaterThan(spec.walkSpeed);
+        expect(spec.trotSpeed).toBeLessThan(spec.runSpeed);
+        const { trot, run } = spec.gaits;
+        expect(trot.down).toBeLessThan(trot.up);
+        expect(trot.up).toBeLessThan(run.down);
+        expect(run.down).toBeLessThan(run.up);
+        expect(run.up).toBeLessThan(1);
+      }
     }
   });
 });

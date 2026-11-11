@@ -87,7 +87,7 @@ describe('the hero model files', () => {
   });
 
   it('Caputo: holds every clip the rig script writes', () => {
-    expect(clipNames('caputo.glb').sort()).toEqual(['falling', 'idle', 'jump', 'landing', 'run', 'walk']);
+    expect(clipNames('caputo.glb').sort()).toEqual(['falling', 'idle', 'jump', 'landing', 'run', 'trot', 'walk']);
   });
 
   it('Caputo: has a spine, neck and head, shoulder blades, ears, four legs of three bones, and a tail of at least five', () => {
@@ -105,7 +105,7 @@ describe('the hero model files', () => {
   it('Caputo: every clip moves, and the ones that repeat end where they began', () => {
     const root = files.get('caputo.glb')!.getRoot();
     for (const clip of root.listAnimations()) {
-      const repeats = ['idle', 'walk', 'run', 'falling'].includes(clip.getName());
+      const repeats = ['idle', 'walk', 'trot', 'run', 'falling'].includes(clip.getName());
       let moves = false;
       for (const sampler of clip.listSamplers()) {
         const output = sampler.getOutput()!;
