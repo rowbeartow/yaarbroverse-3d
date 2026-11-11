@@ -184,3 +184,7 @@ Supersedes: none
 ## 2026-11-11 The browser checks on GitHub run inside Playwright's container image, pinned to the version in package.json
 Reason: The owner's call. The jobs used to install the test browser and its system packages from Ubuntu's servers on every run, and four runs in a row failed before any test because GitHub's machines could not reach those servers. The container image already holds the browsers and packages. `scripts/check-playwright-image.mjs` fails the checks if the image is not for the Playwright version `package.json` installs.
 Supersedes: none
+
+## 2026-11-11 The far limit for drawing is 140 m ahead of the hero, and full detail stops at 85 m
+Reason: With all six sections built, the first limits (the far end of the mist, and 100 m for detail) drew up to 417 thousand triangles a frame against 322 thousand for the short level. At 152 m from the camera the mist hides nineteen twentieths of anything, and at 97 m it hides a third, so those are the new limits. The triangle count is back within 17% of the short level.
+Supersedes: the distances in "Scenery is built in stretches of route, and only the stretches near the hero are drawn". The rest of that entry stands.

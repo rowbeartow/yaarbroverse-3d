@@ -8,7 +8,9 @@
 //      break crosses the bottom, root shelves climb out.
 //   4. The Mushroom Springs: a mushroom, a high log, mushrooms over open air,
 //      up to a mossy ledge.
-//   Then the big bough where the golden leaf is tucked in the canopy.
+//   5. The High Boughs: narrow boughs that turn left twice, with a gap at the corners.
+//   6. The Climb: a mushroom, a high log, tall snags, mushrooms over open air,
+//      then the big bough where the golden leaf is tucked in the canopy.
 
 import type { Difficulty } from '../../game/difficulty';
 import type { Level, Section, Solid } from '../../game/level';
@@ -23,6 +25,8 @@ export const GROVE_HINTS: Record<string, string> = {
   'bank-2': 'Step down the roots into the ravine.',
   'bank-3': 'Jump onto the mushroom and bounce up high.',
   'high-log': 'Bounce across the mushrooms.',
+  'bank-4': 'Follow the boughs. They turn!',
+  'bank-5': 'One more climb. The golden leaf is close.',
 };
 
 export const GROVE_GOAL_LINE = 'A golden leaf, tucked in the canopy!';
@@ -43,6 +47,10 @@ export const GROVE_SHAPE = {
   ravineLogLength: 5,
   /** The mossy ledge at the top of the mushrooms. */
   ledgeLength: 7,
+  /** The high boughs: how long the ones running forward are, and the two lying across. */
+  boughForward: 9,
+  boughAcross: 10,
+  boughAcrossShort: 8,
   logThickness: 1,
   /** How far stumps and chained mushrooms sit left and right of the middle. */
   stumpSideStep: 1.3,
@@ -236,10 +244,89 @@ export function buildGrove(
   box('bank-4', 'bank', at, at + shape.ledgeLength, side, shape.bankHalfWidth, top, shape.depth, { safe: safe(4) });
   at += shape.ledgeLength;
 
-  // The big bough in the canopy, running on from the ledge, and the golden leaf.
-  const boughTop = top;
-  box('bough', 'bough', at, at + shape.boughLength, side, shape.boughHalfWidth, boughTop, boughTop - 1.2);
-  const leafX = side;
+  // ---- Section 5: The High Boughs ----
+  section('The High Boughs');
+  // Five narrow boughs, level with the ledge, that turn left twice: forward,
+  // across to the left, forward, across again, forward. At each corner the next
+  // bough starts either straight ahead of this one's end (a jump away from the
+  // camera) or beside it (a jump across the screen). A corner with no gap is
+  // joined: the boughs touch.
+  const boughHalf = n.boughWidth / 2;
+  const boughBottom = top - shape.logThickness;
+  const cornerGap = (corner: number): number => (corner < n.boughGapCount ? n.boughGap : 0);
+  // Bough 1 runs forward from the ledge.
+  box('bough-1', 'bough', at, at + shape.boughForward, side, boughHalf, top, boughBottom);
+  at += shape.boughForward;
+  // Bough 2 lies across, ahead of the end of bough 1, and runs to the left.
+  at += cornerGap(0);
+  let rightEnd = side + boughHalf;
+  let leftEnd = rightEnd - shape.boughAcross;
+  box('bough-2', 'bough', at, at + n.boughWidth, (leftEnd + rightEnd) / 2, shape.boughAcross / 2, top, boughBottom);
+  // Bough 3 starts beside the left end of bough 2 and runs forward.
+  side = leftEnd - cornerGap(1) - boughHalf;
+  box('bough-3', 'bough', at, at + shape.boughForward, side, boughHalf, top, boughBottom);
+  at += shape.boughForward;
+  // Bough 4 lies across, ahead of the end of bough 3.
+  at += cornerGap(2);
+  rightEnd = side + boughHalf;
+  leftEnd = rightEnd - shape.boughAcrossShort;
+  box('bough-4', 'bough', at, at + n.boughWidth, (leftEnd + rightEnd) / 2, shape.boughAcrossShort / 2, top, boughBottom);
+  // Bough 5 starts beside the left end of bough 4 and runs forward to a bank.
+  side = leftEnd - cornerGap(3) - boughHalf;
+  box('bough-5', 'bough', at, at + shape.boughForward, side, boughHalf, top, boughBottom);
+  at += shape.boughForward;
+  const bank5 = box('bank-5', 'bank', at, at + shape.restBankLength, side, shape.bankHalfWidth, top, shape.depth, {
+    safe: safe(5),
+  });
+  at += shape.restBankLength;
+
+  // ---- Section 6: The Climb ----
+  section('The Climb');
+  // A mushroom at the far end of the bank, and a high log reached by bouncing.
+  capTop = bank5.top + shape.mushroomCapHeight;
+  round('climb-mushroom-1', 'mushroom', at - 1.8, side, n.mushroomRadius, capTop, bank5.top, {
+    bounce: shape.mushroomBounce,
+  });
+  at += 0.6;
+  top = capTop + shape.highLogRise;
+  box('climb-log', 'log', at, at + shape.highLogLength, side, n.logWidth / 2 + 0.2, top, top - shape.logThickness);
+  at += shape.highLogLength;
+
+  // Tall snags, stepping left and right and climbing, like the stumps but high up.
+  let snagX = side - shape.stumpSideStep;
+  let snagAt = at + n.stumpGap + n.stumpRadius;
+  for (let i = 0; i < n.snagCount; i += 1) {
+    if (i > 0) {
+      const nextX = 2 * side - snagX;
+      const between = 2 * n.stumpRadius + n.stumpGap;
+      snagAt += Math.sqrt(Math.max(between * between - (nextX - snagX) ** 2, 0));
+      snagX = nextX;
+    }
+    top += n.stumpRise;
+    round(`snag-${i + 1}`, 'stump', snagAt, snagX, n.stumpRadius, top, shape.depth);
+  }
+
+  // Mushrooms over open air, a little below the last snag.
+  capTop = top - 0.6;
+  mushroomX = side;
+  mushroomAt = snagAt + n.stumpRadius + n.mushroomGap + n.mushroomRadius;
+  for (let i = 0; i < n.climbMushrooms; i += 1) {
+    if (i > 0) {
+      const nextX = mushroomX === side ? side + shape.mushroomSideStep : 2 * side - mushroomX;
+      const between = 2 * n.mushroomRadius + n.mushroomGap;
+      mushroomAt += Math.sqrt(Math.max(between * between - (nextX - mushroomX) ** 2, 0));
+      mushroomX = nextX;
+    }
+    round(`climb-mushroom-${i + 2}`, 'mushroom', mushroomAt, mushroomX, n.mushroomRadius, capTop, shape.depth, {
+      bounce: shape.mushroomBounce,
+    });
+  }
+  at = mushroomAt + n.mushroomRadius + n.mushroomGap;
+
+  // The big bough of the great cedar, and the golden leaf.
+  const boughTop = capTop + shape.boughRise;
+  box('bough', 'bough', at, at + shape.boughLength, mushroomX, shape.boughHalfWidth, boughTop, boughTop - 1.2);
+  const leafX = mushroomX;
 
   return {
     name: GROVE_NAME,

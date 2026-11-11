@@ -41,6 +41,16 @@ export interface GroveNumbers {
   mushroomGap: number;
   /** How many mushrooms in a row you bounce across to reach the high ledge. */
   mushroomChain: number;
+  /** How wide the high boughs are. */
+  boughWidth: number;
+  /** The open air at a corner of the high boughs, where one bough ends and the next begins. */
+  boughGap: number;
+  /** How many of the four corners have a gap. At the others the boughs touch. */
+  boughGapCount: number;
+  /** How many tall snags to hop across on the last climb. */
+  snagCount: number;
+  /** How many mushrooms in a row you bounce across to reach the bough with the leaf. */
+  climbMushrooms: number;
   /**
    * Which mossy banks are checkpoints, counting the banks after the first one
    * (which is always safe). A fall returns you to the last safe bank you stood
@@ -70,16 +80,21 @@ export const GROVE_DIFFICULTY: Record<Difficulty, GroveNumbers> = {
     mushroomRadius: 1.5,
     mushroomGap: 0.8,
     mushroomChain: 1,
-    checkpoints: [1, 2, 3, 4],
+    boughWidth: 2.4,
+    boughGap: 1.2,
+    boughGapCount: 1,
+    snagCount: 2,
+    climbMushrooms: 1,
+    checkpoints: [1, 2, 3, 4, 5],
     coyoteTime: 0.2,
     ledgeHelp: 0.5,
   },
   normal: {
     logWidth: 1.6,
-    logCount: 4,
+    logCount: 5,
     firstLogGap: 1.2,
     logGap: 2.4,
-    stumpCount: 6,
+    stumpCount: 7,
     stumpRadius: 1.1,
     stumpGap: 2.0,
     stumpRise: 0.4,
@@ -89,17 +104,22 @@ export const GROVE_DIFFICULTY: Record<Difficulty, GroveNumbers> = {
     shelfStep: 0.8,
     mushroomRadius: 1.15,
     mushroomGap: 1.6,
-    mushroomChain: 3,
-    checkpoints: [1, 2, 3, 4],
+    mushroomChain: 4,
+    boughWidth: 1.6,
+    boughGap: 2.0,
+    boughGapCount: 4,
+    snagCount: 4,
+    climbMushrooms: 3,
+    checkpoints: [1, 2, 3, 4, 5],
     coyoteTime: 0.12,
     ledgeHelp: 0.3,
   },
   hard: {
     logWidth: 1.0,
-    logCount: 5,
+    logCount: 6,
     firstLogGap: 1.8,
     logGap: 3.6,
-    stumpCount: 7,
+    stumpCount: 8,
     stumpRadius: 0.75,
     stumpGap: 3.0,
     stumpRise: 0.5,
@@ -109,7 +129,12 @@ export const GROVE_DIFFICULTY: Record<Difficulty, GroveNumbers> = {
     shelfStep: 1.2,
     mushroomRadius: 0.8,
     mushroomGap: 2.6,
-    mushroomChain: 4,
+    mushroomChain: 5,
+    boughWidth: 1.0,
+    boughGap: 3.0,
+    boughGapCount: 4,
+    snagCount: 5,
+    climbMushrooms: 4,
     checkpoints: [2, 4],
     coyoteTime: 0.06,
     ledgeHelp: 0.15,

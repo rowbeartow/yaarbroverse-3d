@@ -4,30 +4,27 @@ Last updated: 2026-11-11
 
 ## Start here
 
-**Milestone three, part one is in progress: the longer Bouncing Grove.** The owner approved a six-section route on 2026-11-11 (the plan page: https://claude.ai/artifact/MdPwsE2Hg43pBYEjPevSmn ). It is built in three pull requests, each to be merged once its checks pass:
+**Milestone three, part one is built: the Bouncing Grove is a full level.** Six sections, a checkpoint bank between each, and a perfect run of about a minute on Normal. The owner approved the route on a plan page (https://claude.ai/artifact/MdPwsE2Hg43pBYEjPevSmn ) before it was built. It comes in three pull requests:
 
 1. Merged: pull request 18, sections 1 and 2, the checkpoint list, and drawing only the stretch of forest near the hero.
-2. The pull request this text arrives with: sections 3 and 4. If `main` shows a commit named "A longer grove, part 2 of 3", it merged; if not, look at the pull request before assuming anything.
-3. Not opened yet: sections 5 and 6, and this file rewritten with part two (enemies, hearts, roll, pounce) as next.
+2. Merged: pull request 19, sections 3 and 4.
+3. The pull request this text arrives with: sections 5 and 6. If `main` shows a commit named "A longer grove, part 3 of 3", it merged and part one is done; if not, look at the pull request before assuming anything.
 
-The six sections, each ending on a mossy bank (a checkpoint):
+**Next is milestone three, part two: enemies, hearts, the roll and the pounce.** Do not start it without the owner's go-ahead and his word on the open questions below. What part one leaves ready for it:
 
-1. **The Broken Logs** (built). Fallen logs end to end. The first break is a short hop, the rest are real jumps.
-2. **The Stump Steps** (built). Stumps that climb, left and right, to a wide clearing. The clearing has room for the marmot scout in part two.
-3. **The Ravine** (built). Root shelves stepping down into a ravine and to the right, a low log with a break, root shelves climbing out. Ends on bank 3, 8 m right of the start line (5 m on Easy).
-4. **The Mushroom Springs** (built). A mushroom on bank 3, a high log, mushrooms over open air. Ends on bank 4, a mossy ledge about 8 m up. For now the bough with the golden leaf runs straight on from bank 4; sections 5 and 6 go between them.
-5. **The High Boughs** (not built). Narrow boughs through the canopy that turn left and right, with a gap at each corner: forward, across the screen to the left, forward, across again, forward. Ends on bank 5. Room for the giant mosquito over the boughs.
-6. **The Climb** (not built). A mushroom on bank 5, a high log, tall snags to hop, two mushrooms, then the bough with the golden leaf. Room for a scout on bank 5.
+- **Room for three enemies, with nothing placed.** The clearing at the end of section 2 (`bank-2`, 10 m wide and 12 m long) for the marmot scout. The open air beside the high boughs of section 5 for the giant mosquito. The bank at the foot of the last climb (`bank-5`) for a second scout.
+- **Hearts** arrive with the first thing that can hurt (see `docs/decisions.md`). A fall still returns the hero to the last checkpoint and costs nothing else.
+- **The roll and the pounce.** Yaarbro's file already holds a `roll` clip, unused. Caputo has no pounce clip: `tools/rig-quadruped.py` would write one. Each move must beat or get past both enemies, so neither hero is the weaker one.
+- **Enemy models** are made the way the hero models were: by the owner in Meshy, then `tools/rig-quadruped.py` (or `tools/prepare-rigged.py` for one Meshy can rig), then `tools/compress-hero.mjs`.
+- **Easy stays finishable with walk and jump alone.**
 
-Rules for the rest of the build, from the owner:
+Open questions for the owner before part two:
 
-- A perfect run on Normal takes about a minute. `GROVE_TIMES=1 npx vitest run tests/sections.test.ts --silent=false` prints the bot's time at the end of each section. On Normal the bot takes 7.3 seconds for each of sections 1 and 2, 11.0 for section 3 and 5.9 for section 4: 31.5 seconds to bank 4. Sections 5 and 6 need about 14 seconds each to reach a minute.
-- On Easy and Normal every bank is a checkpoint. On Hard a fall never costs more than about 30 seconds of a perfect run: checkpoints are banks 2 and 4. `tests/sections.test.ts` checks this from the bot's times.
-- Only walk, jump and mushroom bounce. Nothing moves: the Caputo Mountain forest has no moving platform. No enemies, hearts, roll or pounce in part one.
-- Every pull request has screenshots of its sections (`docs/pictures/grove-<number>-<name>.jpg`, taken with `scripts/screenshot.mjs` at medium quality).
-- The route never comes back toward the camera. Sections 3 and 5 move it sideways; the forest follows (see `src/view/route.ts`).
+1. How each enemy behaves in 3D. Caputo Mountain's forest has a marmot scout that throws acorns after a warning and a mosquito that dives; its difficulty table (`docs/forest.md` in the private repo) scales warnings, enemy speed and rest by difficulty. Whether the 3D grove follows those rules as they are is his call.
+2. How many hearts on each difficulty (the 2D forest uses 5, 3 and 2).
+3. Which button the roll and the pounce are on, on touch and on the keyboard.
 
-The playtest that led to this (the owner, 2026-11-11): the kids loved it and want more to play. The older player said Normal was about the right difficulty. The first set of jumps was hard for them to figure out, which is why the level now opens with a short hop. The owner has no iPad to hand, so the iPad frame rate is still unknown.
+The playtest that led to part one (the owner, 2026-11-11): the kids loved it and want more to play. The older player said Normal was about the right difficulty. The first set of jumps was hard for them to figure out, which is why the level now opens with a short hop. Nobody has played the longer level yet.
 
 What the owner has approved:
 
@@ -51,7 +48,7 @@ How to work on Caputo's movement:
 
 Open:
 
-- **Frame rate on the iPad and the Mac has never been checked.** The owner opens the live link with `?fps` on the address and says what frame rate and tier show.
+- **Frame rate on the iPad and the Mac has never been checked.** The owner has no iPad to hand. When he does, he opens the live link with `?fps` on the address and says what frame rate and tier show. If the iPad shows under 30, fix that first, in its own pull request.
 - **Nobody has reported watching Caputo's clips inside the game on a real device.** The owner judges them on the preview page.
 
 ## Where things stand
@@ -70,12 +67,25 @@ Milestone two (the modern look) is done apart from the open items above:
 
 Nobody has played the new look on a real iPad or Mac yet.
 
+Milestone three, part one (the longer grove) is built, in the three pull requests listed under "Start here":
+
+1. Sections 1 and 2 (the Broken Logs, the Stump Steps), the checkpoint list, and drawing only the stretch of forest near the hero.
+2. Sections 3 and 4 (the Ravine, the Mushroom Springs), with root shelves as a new kind of platform.
+3. Sections 5 and 6 (the High Boughs, the Climb).
+
 ## What exists now
 
-- **The level.** Four sections so far, then the leaf. The Broken Logs: a mossy bank, then fallen logs end to end (three on Easy, four on Normal, five on Hard) with a short hop at the first break and real jumps after, then a bank. The Stump Steps: stumps that climb left and right (four, six or seven), then a wide clearing. The Ravine: root shelves step down and to the right (two on Easy, three otherwise), a low log with a break crosses the bottom, and shelves climb out to a bank. On Easy the shelves are close enough to walk down and low enough to step up. The Mushroom Springs: a mushroom bounces the hero to a high log, then mushrooms over open air (one, three or four) to a mossy ledge high up. The bough with the golden leaf runs on from the ledge. Touch the leaf to finish. The bot's perfect run takes 25 seconds on Easy, 33 on Normal and 36 on Hard; a first try will take a good deal longer.
-- **Checkpoints.** Every bank is a checkpoint on Easy and Normal. On Hard only the clearing (bank 2) and the high ledge (bank 4) are; the other banks are bare stone. Which banks are checkpoints is the `checkpoints` list in `difficulty.ts`.
-- **Root shelves** are a new kind of platform (`shelf`): the flat top of a great root on a trunk rising from the mist. Its top edge is drawn the way a bank's is, never past where a hero can stand, and the bank-outline tests cover it. A log end that rests on no bank or shelf is held up by a snag.
-- **Drawing by distance.** The forest, the ferns and grass, and the platforms are built in 36 m stretches of route, and only the stretches between the camera and the far end of the mist (165 m) are drawn. Past 100 m trees wear their lighter crowns and ferns and grass are left out. The forest follows the route's middle, so it bends when the route does. On the test machine at medium quality the start of the level draws 305 thousand triangles in 197 draw calls; the short level drew 322 thousand in 144.
+- **The level.** Six sections, each built around one idea and ending on a mossy bank. About 235 m of route on Normal (164 on Easy, 278 on Hard), climbing about 15 m. It runs away from the camera and never comes back toward it; sections 3 and 5 move it sideways.
+  1. **The Broken Logs.** Fallen logs end to end (three on Easy, five on Normal, six on Hard). The first break is a short hop on every difficulty; the rest are real jumps.
+  2. **The Stump Steps.** Stumps that climb, left and right (four, seven or eight), to a wide clearing.
+  3. **The Ravine.** Root shelves step down and to the right (two on Easy, three otherwise), a low log with a break crosses the bottom, and shelves climb out to a bank. On Easy the shelves are close enough to walk down and low enough to step up.
+  4. **The Mushroom Springs.** A mushroom bounces the hero to a high log, then mushrooms over open air (one, four or five) lead to a mossy ledge high up.
+  5. **The High Boughs.** Five narrow boughs level with the ledge: forward, across the screen to the left, forward, across again, forward to a bank. Each corner is a gap on Normal and Hard: two are jumped away from the camera and two across the screen. On Easy only the first corner has a gap and the others are joined.
+  6. **The Climb.** A mushroom, a high log, tall snags that climb (two, four or five), mushrooms over open air (one, three or four), then the great cedar's bough with the golden leaf. Touch the leaf to finish.
+- **How long it takes.** The test bot's perfect run: 39.6 seconds on Easy, 57.0 on Normal, 61.1 on Hard. On Normal the sections take it 9.0, 8.2, 11.1, 6.9, 11.6 and 10.2 seconds. `GROVE_TIMES=1 npx vitest run tests/sections.test.ts --silent=false` prints these. A first try will take a good deal longer.
+- **Checkpoints.** Every bank is a checkpoint on Easy and Normal, so a fall costs one section at most. On Hard only the clearing (bank 2) and the high ledge (bank 4) are; the other banks are bare stone. The worst fall on Hard, just short of the leaf, costs 23.5 seconds of a perfect run. Which banks are checkpoints is the `checkpoints` list in `difficulty.ts`.
+- **Platform kinds.** Banks, logs, stumps (the tall snags of section 6 are stumps too), mushrooms, root shelves (`shelf`: the flat top of a great root on a trunk rising from the mist) and boughs. A root shelf's top edge is drawn the way a bank's is, never past where a hero can stand, and the bank-outline tests cover it. The high boughs of section 5 are drawn as thick mossy limbs on snags, turned a quarter turn where they lie across; only the last bough of the route is the great cedar's. A log end that rests on no bank or shelf is held up by a snag.
+- **Drawing by distance.** The forest, the ferns and grass, and the platforms are built in 36 m stretches of route. Only the stretches between the camera and 140 m ahead of the hero are drawn: past that the mist has hidden nineteen twentieths of anything. Past 85 m trees wear their lighter crowns, and ferns, grass and the boulders and roots on the sides of banks are left out. The forest follows the route's middle (`src/view/route.ts`), so the gully and the trees bend where the route does, and no tree stands closer than 3.5 m to anything a hero can stand on. Measured on the test machine at medium quality, standing at the start of each section on Normal: 280 to 375 thousand triangles and 179 to 301 draw calls a frame. The short level drew 322 thousand in 144. So the triangle count runs from 13% under to 17% over what it was, and draw calls are up to twice what they were. What that does to the frame rate on a real iPad is not known.
 - **The look.** The route crosses a misty gully in a fir forest. Logs and trunks have bark with moss growing over it, stumps have cut rings, mushrooms have glossy spotted caps. Ferns and grass sway. The golden leaf glows.
   - **Trees.** Firs and cedars are cones that narrow to a point: a straight trunk and tiers of boughs that leave it angled out and a little down, with a dark inner cone so they are solid from the side. The boughs sway.
   - **Banks.** Each bank's top has its own outline: the edge wanders and each corner is rounded by a different amount. Moss spills over the sides in curtains and tongues, roots come out from under the turf and run down the rock, boulders are bedded in the sides, and the rock below swells into lobes and rounds off as it goes down into the mist. The drawn top never reaches past where a hero can stand, and everything else starts well below the top (see `src/view/bank-outline.ts` and `docs/decisions.md`). The walkable area in the rules is unchanged.
@@ -106,13 +116,13 @@ Nobody has played the new look on a real iPad or Mac yet.
 - **Controls.** Mac: arrows or W A S D, Space, Esc. Touch: drag the left half to move, press the right half to jump.
 - **Turn sideways.** A touch device whose page is taller than wide gets a "Turn sideways to play" card.
 - **This device remembers** the last hero and difficulty.
-- **Size.** The whole download is about 6.8 MB (budget 20 MB, checked on every build). The build compresses textures to KTX2 and models with meshopt.
+- **Size.** The whole download is 6.87 MB (budget 20 MB, checked on every build). The build compresses textures to KTX2 and models with meshopt.
 - **Credits.** `CREDITS.md` lists every third-party file. All are CC0. It also lists the hero models, which are not: the README says the characters, their art and the hero models are all rights reserved.
 - **Checks on every pull request.** `.github/workflows/checks.yml`, three jobs: the private-terms check; rule tests, build with size check and browser checks in Chromium; browser checks in WebKit. The two browser jobs run inside Playwright's container image, pinned to the Playwright version in `package.json` (1.63.0), so a run installs nothing from Ubuntu's servers. Before this, on 2026-11-11, four runs in a row failed before any test because GitHub's machines could not reach those servers.
 
 ## Checks on this state
 
-- `npm test`: 284 tests pass. The game rules (a bot plays the whole grove on Easy, Normal and Hard as each hero with no falls), 17 for the sections and checkpoints (each section ends on a bank, a fall returns to the right bank, a fall on Hard costs under about 30 seconds, a perfect run takes as long as planned), 16 for the route line the forest follows and the rule for drawing by distance, 11 for the private-terms check, 22 for the quality tier rules and the animation mixing rules, with choosing a gait by pace and keeping the stride matched to the ground, 6 for finding a model's clips and how hard a landing shows, 39 that check every bank's drawn top against where the rules let a hero stand, 11 that check each hero model file holds its skeleton and clips, that no clip carries a hero away from the spot, that Caputo has the bones and clips his rig script should give him, and that none of his clips is a frozen pose.
+- `npm test`: 306 tests pass. They cover: the game rules; a bot playing the whole grove on Easy, Normal and Hard as each hero with no falls, crossing every platform in order; the sections and checkpoints (the six sections are the planned ones, each ends on a bank, a fall in each returns to the right bank, a fall on Hard costs under about 30 seconds, a perfect run takes as long as planned); every number in `difficulty.ts` showing up in the level; the route line the forest follows and the rule for drawing by distance; every bank's and root shelf's drawn top against where the rules let a hero stand; the private-terms check; the quality tiers and animation mixing; and the hero model files.
 - `npm run test:browser`: 68 browser checks pass. 22 in Chromium at Mac size with the keyboard, 23 in Chromium at iPad size with touch, 23 in WebKit at iPad size with touch. They cover loading and the progress bar, a failed download, the frame counter, fixed and automatic tiers, the full lighting at medium quality (and high at Mac size), each hero's model loading with its clips and animating while it stands, runs and jumps, the stand-in model doing the same, and everything milestone one checked.
 - **Not checked:**
   - Safari itself, a real iPad, a real Mac. The test browsers have no graphics card, so most checks run on the minimal tier, which has plain shading and no shadows. The full lighting is drawn in both browsers by two checks, slowly and in a small window.
@@ -122,15 +132,18 @@ Nobody has played the new look on a real iPad or Mac yet.
 
 ## What's next
 
-1. **The owner plays Caputo's three gaits in the game** on the iPad and the Mac and says how they look.
-2. **The owner looks at the live link on the iPad and the Mac**, with `?fps` on the address, and says what frame rate and tier show and whether anything looks wrong.
-3. **Checking the Blender scripts on new files.** `tools/rig-quadruped.py` is meant for the milestone-three enemies too: each needs its own guide file of joint places, like `tools/caputo.rig.json`. Its path for a file that already has a skeleton (keep it, add the bones it lacks) was tried only on Caputo's earlier output, before he had shoulder blades and ears.
-4. **Playtest tuning**, when there are notes: change only `src/levels/bouncing-grove/difficulty.ts`.
-5. **Milestone three** makes the grove a full level: the marmot scout and giant mosquito, hearts, a longer route with checkpoints, Yaarbro's roll and Caputo's pounce. Each move must beat or get past both enemies. Easy stays finishable with walk and jump alone. See `docs/decisions.md`.
+1. **The owner and the kids play the longer level** and say how each section feels on each difficulty. Tuning is a change to `src/levels/bouncing-grove/difficulty.ts` only; run `npm test` after.
+2. **The owner looks at the live link on the iPad and the Mac**, with `?fps` on the address, and says what frame rate and tier show. An iPad under 30 is fixed first.
+3. **Milestone three, part two**: the marmot scout and giant mosquito, hearts, Yaarbro's roll and Caputo's pounce. See "Start here" for what is ready and what the owner has to decide.
+4. **The owner plays Caputo's three gaits in the game** and says how they look.
+5. **Checking the Blender scripts on new files.** `tools/rig-quadruped.py` is meant for the enemies too: each needs its own guide file of joint places, like `tools/caputo.rig.json`. Its path for a file that already has a skeleton (keep it, add the bones it lacks) was tried only on Caputo's earlier output, before he had shoulder blades and ears.
 
 ## Known limits
 
-- One area, about 150 metres of route so far on Normal (112 on Easy, 178 on Hard).
+- One area. Nothing in it can hurt a hero yet.
+- The high boughs are logs on tall snags. They read clearly as footing, but they do not look like living boughs growing from trees.
+- A hero who falls from high up drops a long way before the fall is counted (the rule is a fixed height, 6 m below the start), and the camera follows it down.
+- The test bot is the only thing that has played the whole level. It measures whether each difficulty can be finished and how long a perfect run takes, not whether a jump reads well or feels fair.
 - No sound, no saved progress, one player.
 - Caputo is long and the footing check is a small circle under his middle, so his head, tail and outer paws hang over narrow stumps.
 - On a phone-sized screen the start screen is taller than the screen and has to be scrolled (issue #5).
@@ -140,4 +153,4 @@ Nobody has played the new look on a real iPad or Mac yet.
 
 ## Added as plain scenery, not canon
 
-Tree stumps to hop on, the great cedar that holds the last bough, and the misty gully the route crosses with its slopes, ferns and boulders. The Caputo Mountain docs do not say what lies below the grove; its forest painting shows a misty valley of firs, which this follows. Everything else (the Bouncing Grove, mossy banks as safe places, mushroom springs, logs with breaks, the golden leaf tucked in the canopy, both heroes' looks, the end card) comes from Caputo Mountain.
+Tree stumps to hop on, the tall snags of the last climb, the snags that hold logs and boughs up, the great cedar that holds the last bough, and the misty gully the route crosses with its slopes, ferns and boulders. The Caputo Mountain docs do not say what lies below the grove; its forest painting shows a misty valley of firs, which this follows. Everything else comes from Caputo Mountain: the Bouncing Grove, mossy banks as safe places, mushroom springs, logs with breaks, root shelves, a ravine, high boughs, a climb that starts with a spring, the golden leaf tucked in the canopy, both heroes' looks, and the end card. Nothing in the level moves, because nothing in the Caputo Mountain forest does.

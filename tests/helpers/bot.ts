@@ -40,12 +40,35 @@ export class Bot {
     if (game.grounded && game.groundId) this.index = level.route.indexOf(game.groundId);
 
     const next = level.solids.find((s) => s.id === level.route[this.index + 1]);
-    const aim = next ? aimPoint(next, game.x, game.z) : { x: level.leaf.x, z: level.leaf.z };
+    let aim = next ? aimPoint(next, game.x, game.z) : { x: level.leaf.x, z: level.leaf.z };
+    let easing = true;
+    // Where the route turns a corner, the straight line to the next piece
+    // would leave this one too soon. Run along this piece first, to the spot
+    // on it nearest the next piece, and turn there.
+    const here = game.grounded ? level.solids.find((s) => s.id === game.groundId) : undefined;
+    if (here && here.shape === 'box' && next) {
+      const insetX = Math.min(0.3, here.halfX * 0.8);
+      const insetZ = Math.min(0.3, here.halfZ * 0.8);
+      const corner = {
+        x: Math.max(here.x - here.halfX + insetX, Math.min(here.x + here.halfX - insetX, aim.x)),
+        z: Math.max(here.z - here.halfZ + insetZ, Math.min(here.z + here.halfZ - insetZ, aim.z)),
+      };
+      const toCorner = Math.hypot(corner.x - game.x, corner.z - game.z);
+      const toAim = Math.hypot(aim.x - game.x, aim.z - game.z);
+      if (toCorner > 0.6 && toAim > 1e-6) {
+        const sameWay = ((corner.x - game.x) * (aim.x - game.x) + (corner.z - game.z) * (aim.z - game.z)) / (toCorner * toAim);
+        // More than about 25 degrees off the straight line: it is a corner.
+        if (sameWay < 0.9) {
+          aim = corner;
+          easing = false;
+        }
+      }
+    }
     const dx = aim.x - game.x;
     const dz = aim.z - game.z;
     const distance = Math.hypot(dx, dz);
     // Push the stick fully until close, then ease off so the hero does not overshoot.
-    const push = Math.min(distance / 1.2, 1);
+    const push = easing ? Math.min(distance / 1.2, 1) : 1;
     const moveX = distance > 1e-6 ? (dx / distance) * push : 0;
     const moveZ = distance > 1e-6 ? (dz / distance) * push : 0;
 
@@ -59,7 +82,8 @@ export class Bot {
       // Jump at a step too high to walk up, once close to it.
       const tooHighToStep = next !== undefined && next.top > game.y + level.ledgeHelp;
       const closeToStep = next !== undefined && distanceToEdge(next, game.x, game.z) < 1.3;
-      pressJump = edgeAhead || (tooHighToStep && closeToStep);
+      // Never while still running to a corner: the turn comes first.
+      pressJump = easing && (edgeAhead || (tooHighToStep && closeToStep));
     }
     // Hold Jump all the way up for a full jump, then let go.
     if (pressJump) this.holdingJump = true;

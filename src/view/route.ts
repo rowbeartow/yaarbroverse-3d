@@ -13,19 +13,20 @@ export const STRETCH = 36;
 
 /**
  * How far ahead of the hero, and how far back toward the camera, a stretch of
- * scenery is still drawn. Ahead is where the mist has closed completely, with
- * room for the tallest tree's width. Behind covers the camera (12 m back) and
- * the trees whose shadows fall into view.
+ * scenery is still drawn. Ahead is where the mist has closed to within a
+ * twentieth of solid (152 m from the camera, which sits 12 m behind the hero):
+ * nothing past it can be told from mist. Behind covers the camera and the
+ * trees whose shadows fall into view.
  */
-export const DRAW_AHEAD = MIST_FAR + 8;
+export const DRAW_AHEAD = 140;
 export const DRAW_BEHIND = 48;
 
 /**
- * Past this distance ahead of the hero the mist is more than half closed:
- * trees are drawn with their lighter crowns, and ferns and grass (too small to
- * see from there) are left out.
+ * Past this distance ahead of the hero the mist is a third closed and things
+ * are small on the screen: trees are drawn with their lighter crowns, and
+ * ferns, grass and the boulders and roots on the sides of banks are left out.
  */
-export const DETAIL_AHEAD = 100;
+export const DETAIL_AHEAD = 85;
 
 /** True when something whose near end is at z `near` is close enough for full detail. */
 export const inDetail = (near: number, heroZ: number): boolean => near >= heroZ - DETAIL_AHEAD;
