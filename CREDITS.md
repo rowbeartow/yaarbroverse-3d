@@ -36,24 +36,24 @@ Each texture is a colour picture (`_diff_`) and a picture of fine bumps (`_nor_g
 
 ## How the files were fetched
 
-The build environment cannot reach polyhaven.com, so the Poly Haven files were taken from public copies on GitHub that keep Poly Haven's own file names. They were not compared byte for byte with Poly Haven's downloads. To replace any of them with a fresh download, open its Poly Haven page above, download the 1K JPG maps, and put them in the same folder under the same names.
+The Poly Haven files were downloaded straight from Poly Haven on 2026-11-10: the list of files for each one from `https://api.polyhaven.com/files/<name>`, and the files themselves from `https://dl.polyhaven.org`. Each download was checked against the checksum Poly Haven publishes for it. To fetch one again, open its Poly Haven page above and download the 1K JPG maps (or the 1K HDR), or use the addresses below.
 
-- Forest light: `hdri/forest_slope_1k.hdr` from `pmndrs/drei-assets` at commit `456060a26bbeb8fdf79326f224b6d99b8bcce736`. SHA-256 `926a6bb81897919b2924f42407162b8d54be91eab2da3fe7fe19daf308cfa09a`.
-- Textures: `<name>_diff_1k.png` and `<name>_nor_gl_1k.png` from `FT1E/Game-Scripts` at commit `0c78653982ae4337a4aa1402833b399a213f3879`, folder `Assets/GreenMossGames/UltimateMaterialLibrary/Textures/`. They were re-saved here from PNG to JPEG (quality 92) to keep the repo small. SHA-256 of each PNG as fetched:
+- Textures: the 1K JPG colour and bump pictures, exactly as Poly Haven serves them, from `https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/<name>/<file>`. SHA-256 of each:
 
 | File | SHA-256 |
 | --- | --- |
-| `aerial_grass_rock_diff_1k.png` | `375dcb05aaced6f690ae53016a45f9a6b780a5b66f77f0a53a90ce840b4d71bc` |
-| `aerial_grass_rock_nor_gl_1k.png` | `23bf3adc3f0d2a59eac317718377ca681dab9398fe824eb89925f89a2469f62e` |
-| `bark_brown_02_diff_1k.png` | `22144dbe0e9f1cfd44de3f3c8311c898fe672f087c1e81a18baab77476dc046f` |
-| `bark_brown_02_nor_gl_1k.png` | `45c632c61b642759ee935a4300b71aa1e6097d2b2d8aae42376c4661ecc518eb` |
-| `coast_sand_rocks_02_diff_1k.png` | `0e3f365244065de9f1a1b230f7b1024d86dd5a0a52dd2ee31a47ff88a776ba38` |
-| `coast_sand_rocks_02_nor_gl_1k.png` | `5c4ce25cd6cf0954adf35c02c057746e95c9e968972a1d98f4dc3879f31d4a59` |
-| `moss_wood_diff_1k.png` | `7db8e60272fb2816ba4025522e134c02bfdab062bfcf054667768e20551349f5` |
-| `moss_wood_nor_gl_1k.png` | `3ff73d9e43e96d4aff2a19b261b0eabfa0136b1b838fa57c87a31308b4e5849c` |
-| `mossy_rock_diff_1k.png` | `f829810c87e0cc54dda4b9cb03eeca703ec53e9cc7e6820cf0936f89b3e2cfa6` |
-| `mossy_rock_nor_gl_1k.png` | `08b01ee4387e4bb3433f901c62acc40d4be8d6d4a481e5fb508400cb4664d82e` |
+| `aerial_grass_rock_diff_1k.jpg` | `57b8041bfe0d0f01430e4dbaad45e7ddddf0a9fc97317f90dbc51f7b0d9e1b5d` |
+| `aerial_grass_rock_nor_gl_1k.jpg` | `1aa3e23bff453f152e089b9f83aa36b4901651e019f7e2ca01d5331a9bbbda78` |
+| `bark_brown_02_diff_1k.jpg` | `920fa0bed0c9d78c1d530e99795113afd532d7db746de440f4a85d7c83ed0f1a` |
+| `bark_brown_02_nor_gl_1k.jpg` | `0d5e691e8ad8bcd093a3587887fda2a6b4a948b5708a4f256f7919584c6eb857` |
+| `coast_sand_rocks_02_diff_1k.jpg` | `78eae8ce6209f79417a15ba863fe828f983c22f7e63a9ee3ef504a0062a05ea9` |
+| `coast_sand_rocks_02_nor_gl_1k.jpg` | `52776374a8f64aaa8334a87ef8484048baa6f689428a9f8b812004871417ef3e` |
+| `moss_wood_diff_1k.jpg` | `758a9720d29ca030d505fac0f8fdd90db172882ff149d8ea730c11d57c98924c` |
+| `moss_wood_nor_gl_1k.jpg` | `008a7f7c7b76f9200bf623418b8d350cd81c42e107e9afed01d1102f176d8797` |
+| `mossy_rock_diff_1k.jpg` | `4dbf37f1b0465c9c8914213163923be159716f5b97fb6946437b6c5e143ef540` |
+| `mossy_rock_nor_gl_1k.jpg` | `232cdd6a9fdfd01bb8bb1f8f604c53dbca79fa0d3d7995edf85c9945757aa8df` |
 
+- Forest light: `https://dl.polyhaven.org/file/ph-assets/HDRIs/hdr/1k/forest_slope_1k.hdr`. SHA-256 `926a6bb81897919b2924f42407162b8d54be91eab2da3fe7fe19daf308cfa09a`. The copy here was first taken from a public copy on GitHub (`pmndrs/drei-assets` at commit `456060a26bbeb8fdf79326f224b6d99b8bcce736`), before Poly Haven could be reached. It was then compared with Poly Haven's own download and is the same file, byte for byte, so it was not replaced.
 - Stand-in model: `examples/models/gltf/RobotExpressive/RobotExpressive.glb` from `mrdoob/three.js`, `dev` branch, fetched 2026-11-10. SHA-256 `047f5e5fb3bb6d378bd1df16ca6137f2a596c99b3a1b5690b4020c05aaf6f319`.
 
 ## Made here
