@@ -54,6 +54,10 @@ export interface Level {
   coyoteTime: number;
   /** A hero whose feet are this far below a surface is lifted onto it. */
   ledgeHelp: number;
+  /** Hearts a hero starts with, and has again after running out and going back to a safe bank. */
+  hearts: number;
+  /** Times how long a hero is protected after being hurt, and after going back to a safe bank. */
+  protection: number;
   /** Ids of the solids in the order a run crosses them, start to goal. */
   route: string[];
   /** The level's sections in order, each with the ids of its solids in route order. */

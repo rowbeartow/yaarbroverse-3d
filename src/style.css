@@ -67,6 +67,53 @@ body {
   letter-spacing: 0.02em;
 }
 
+/* Hearts: big enough to count at a glance, under the level's name. A lost
+   heart stays in its place as a dark outline, so the row never moves. */
+#hearts {
+  position: absolute;
+  top: calc(max(12px, env(safe-area-inset-top)) + 42px);
+  left: max(16px, env(safe-area-inset-left));
+  margin: 0;
+  padding: 6px 10px;
+  display: flex;
+  gap: 6px;
+  border-radius: 999px;
+  background: var(--shade);
+}
+
+#hearts svg {
+  width: clamp(26px, 3.6vw, 36px);
+  height: clamp(26px, 3.6vw, 36px);
+  display: block;
+}
+
+#hearts .full path {
+  fill: #e5484d;
+  stroke: #fff6dd;
+}
+
+#hearts .lost path {
+  fill: rgba(16, 32, 28, 0.55);
+  stroke: rgba(255, 246, 221, 0.55);
+}
+
+#hearts.hit {
+  animation: heart-hit 0.45s ease;
+}
+
+@keyframes heart-hit {
+  30% {
+    transform: scale(1.18);
+    background: rgba(229, 72, 77, 0.75);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #hearts.hit {
+    animation: none;
+  }
+}
+
 #pause {
   position: absolute;
   top: max(12px, env(safe-area-inset-top));

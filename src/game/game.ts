@@ -1,5 +1,5 @@
 // The game rules: one hero in one level. Walk, jump, bounce, fall back to the
-// last safe bank, reach the golden leaf. No browser or drawing code, so the
+// last safe bank, lose a heart to whatever hurts, reach the golden leaf. No browser or drawing code, so the
 // tests (and later a server, for two-device play) can run it as is.
 
 import type { Difficulty } from './difficulty';
@@ -24,6 +24,10 @@ export type GameEvent =
   | { type: 'land' }
   | { type: 'bounce'; solidId: string }
   | { type: 'fall' }
+  /** Lost a heart. `left` is how many remain. */
+  | { type: 'hurt'; left: number }
+  /** Went back to the last safe bank with every heart again, after losing the last one. */
+  | { type: 'restored' }
   | { type: 'safe'; solidId: string }
   | { type: 'goal' };
 
@@ -35,6 +39,8 @@ export interface Summary {
   /** Play time in seconds. Paused time is never counted. */
   seconds: number;
   falls: number;
+  /** Hearts lost over the whole run. */
+  heartsLost: number;
   complete: boolean;
 }
 
@@ -64,10 +70,20 @@ export class Game {
   complete = false;
   /** Counts down while the hero stands still after a fall. */
   returning = 0;
+  /** Hearts left, and hearts lost over the whole run. */
+  hearts: number;
+  heartsLost = 0;
+  /** Seconds for which nothing can hurt the hero: after a hit, and after going back to a safe bank. */
+  protectedFor = 0;
+  /** Seconds for which a hit has taken the controls away. */
+  stunned = 0;
+  /** Out of hearts: counts down to going back to the last safe bank. */
+  fainting = 0;
   /** What happened during the most recent step. */
   events: GameEvent[] = [];
 
   private safeSpot: { x: number; y: number; z: number; id: string | null };
+  private pending: GameEvent[] = [];
   private coyote = 0;
   private buffer = 0;
   private jumpWasHeld = false;
@@ -80,6 +96,7 @@ export class Game {
     this.x = level.spawn.x;
     this.y = level.spawn.y;
     this.z = level.spawn.z;
+    this.hearts = level.hearts;
     const under = surfaceBelow(level, this.x, this.z, this.y, MOVE.footRadius);
     this.groundId = under ? under.id : null;
     this.safeSpot = { ...level.spawn, id: under?.safe ? under.id : null };
@@ -97,20 +114,85 @@ export class Game {
       hero: this.hero,
       seconds: this.seconds,
       falls: this.falls,
+      heartsLost: this.heartsLost,
       complete: this.complete,
     };
+  }
+
+  /**
+   * Something at (fromX, fromZ) hurts the hero: one heart is lost, the hero is
+   * knocked away from it and loses the controls for a moment, and is then
+   * protected for a while. Returns false, and does nothing, while the hero is
+   * protected, already out of hearts, or has finished.
+   */
+  hurt(fromX: number, fromZ: number): boolean {
+    if (this.complete || this.protectedFor > 0 || this.hearts <= 0) return false;
+    this.hearts -= 1;
+    this.heartsLost += 1;
+    let awayX = this.x - fromX;
+    let awayZ = this.z - fromZ;
+    const distance = Math.hypot(awayX, awayZ);
+    if (distance < EPSILON) {
+      // Hurt from right where it stands: knocked back the way it came.
+      awayX = Math.sin(this.facing + Math.PI);
+      awayZ = Math.cos(this.facing + Math.PI);
+    } else {
+      awayX /= distance;
+      awayZ /= distance;
+    }
+    this.vx = awayX * MOVE.hurtKnockSpeed;
+    this.vz = awayZ * MOVE.hurtKnockSpeed;
+    this.vy = MOVE.hurtKnockUp;
+    this.grounded = false;
+    this.groundId = null;
+    this.coyote = 0;
+    this.buffer = 0;
+    this.canCutJump = false;
+    this.stunned = MOVE.hurtLock;
+    this.protectedFor = MOVE.hurtProtection * this.level.protection;
+    if (this.hearts <= 0) this.fainting = MOVE.faintPause;
+    this.pending.push({ type: 'hurt', left: this.hearts });
+    return true;
+  }
+
+  /** Puts the hero on the last safe bank, standing still. */
+  private toSafeSpot(): void {
+    this.x = this.safeSpot.x;
+    this.y = this.safeSpot.y;
+    this.z = this.safeSpot.z;
+    this.vx = 0;
+    this.vy = 0;
+    this.vz = 0;
+    this.grounded = true;
+    this.groundId = this.safeSpot.id;
+    this.returning = MOVE.returnPause;
+    this.buffer = 0;
+    this.coyote = 0;
+    this.stunned = 0;
+    // No hearts left: start again from here with all of them, protected for a moment.
+    if (this.hearts <= 0) {
+      this.hearts = this.level.hearts;
+      this.fainting = 0;
+      this.protectedFor = MOVE.returnProtection * this.level.protection;
+      this.events.push({ type: 'restored' });
+    }
   }
 
   /** Advances the game by one fixed step (STEP seconds). */
   step(input: Input): void {
     const dt = STEP;
     const { level } = this;
-    this.events = [];
+    // A hit between steps (see `hurt`) is reported with this step's events.
+    this.events = this.pending;
+    this.pending = [];
     if (!this.complete) this.seconds += dt;
 
-    // After the leaf, or while standing still after a fall, the buttons do nothing.
-    const frozen = this.complete || this.returning > 0;
+    // After the leaf, while standing still after a fall, and for a moment
+    // after being hurt, the buttons do nothing.
+    const frozen = this.complete || this.returning > 0 || this.stunned > 0 || this.fainting > 0;
     this.returning = Math.max(0, this.returning - dt);
+    this.stunned = Math.max(0, this.stunned - dt);
+    this.protectedFor = Math.max(0, this.protectedFor - dt);
     let moveX = frozen ? 0 : input.moveX;
     let moveZ = frozen ? 0 : input.moveZ;
     const jumpHeld = frozen ? false : input.jump;
@@ -232,21 +314,18 @@ export class Game {
       return;
     }
 
-    // A fall: back to the last safe bank.
+    // A fall: back to the last safe bank, with the hearts the hero had.
     if (this.y < level.fallY) {
       this.falls += 1;
-      this.x = this.safeSpot.x;
-      this.y = this.safeSpot.y;
-      this.z = this.safeSpot.z;
-      this.vx = 0;
-      this.vy = 0;
-      this.vz = 0;
-      this.grounded = true;
-      this.groundId = this.safeSpot.id;
-      this.returning = MOVE.returnPause;
-      this.buffer = 0;
-      this.coyote = 0;
       this.events.push({ type: 'fall' });
+      this.toSafeSpot();
+      return;
+    }
+
+    // Out of hearts: a moment down, then back to the last safe bank with all of them.
+    if (this.fainting > 0) {
+      this.fainting = Math.max(0, this.fainting - dt);
+      if (this.fainting === 0) this.toSafeSpot();
     }
   }
 

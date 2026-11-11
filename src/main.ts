@@ -70,6 +70,7 @@ const boot = (): void => {
     if (!view) return;
     setUp();
     screens.setPlace(level.name, choice.difficulty);
+    screens.setHearts(game.hearts, level.hearts);
     setMode('playing');
     screens.say(
       isTouchDevice() ? 'Left thumb moves. Right thumb jumps.' : 'Arrow keys or W A S D to move. Space to jump.',
@@ -121,6 +122,9 @@ const boot = (): void => {
     let safe = false;
     for (const event of events) {
       if (event.type === 'fall') screens.say('Back to safety…', 2);
+      else if (event.type === 'hurt' && event.left > 0) screens.say(`Oof! ${event.left} of ${level.hearts} hearts left.`, 2.5);
+      else if (event.type === 'hurt') screens.say('Out of hearts. Back to safety!', 2.5);
+      else if (event.type === 'restored') screens.say(`Safe again, with all ${level.hearts} hearts.`, 3);
       else if (event.type === 'safe') safe = true;
       else if (event.type === 'goal') screens.say(level.goalLine ?? 'You made it!', 4);
     }
@@ -148,14 +152,15 @@ const boot = (): void => {
       while (owed >= STEP && steps < 6) {
         before = { x: game.x, y: game.y, z: game.z };
         game.step(mode === 'playing' ? controls.read() : IDLE);
-        // After a fall the hero is somewhere else entirely: do not slide there.
-        if (game.events.some((event) => event.type === 'fall')) before = { x: game.x, y: game.y, z: game.z };
+        // After a fall, or after running out of hearts, the hero is somewhere else entirely: do not slide there.
+        if (game.events.some((event) => event.type === 'fall' || event.type === 'restored')) before = { x: game.x, y: game.y, z: game.z };
         view.handle(game.events);
         narrate(game.events);
         owed -= STEP;
         steps += 1;
       }
       if (steps === 6) owed = 0;
+      screens.setHearts(game.hearts, level.hearts);
       if (game.complete && mode === 'playing') {
         mode = 'ended';
         controls.enabled = false;
