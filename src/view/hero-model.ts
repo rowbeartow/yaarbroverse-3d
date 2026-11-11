@@ -1,29 +1,28 @@
 // Heroes drawn from a model file: a rigged, textured glTF model whose animation
 // clips are mixed from how the hero is moving.
 //
-// TO GIVE A HERO ITS MODEL:
-//   1. Compress the owner's original file with tools/compress-hero.mjs, which
-//      saves it in assets/heroes/ (for example assets/heroes/yaarbro.glb) and
-//      lists its clips. The build copies it into media/models/.
-//   2. Add the hero to HERO_MODELS below: the file name, how tall the hero
-//      stands, and the names of its clips. A missing clip is fine: the player
-//      uses what is there (see `clips` below).
+// TO GIVE A CHARACTER ITS MODEL:
+//   1. Meshy exports one file per clip. Put every clip on one model, and take
+//      the travel out of the clips, with tools/prepare-rigged.py (see the top
+//      of that file).
+//   2. Compress the result with tools/compress-hero.mjs, which saves it in
+//      assets/heroes/ (for example assets/heroes/yaarbro.glb) and lists its
+//      clips. The build copies it into media/models/.
+//   3. Add it to HERO_MODELS below: the file name, how tall it stands, and the
+//      names of its clips. A missing clip is fine: the player uses what is
+//      there (see `clips` below).
 // Until then the hero is built from shapes (heroes.ts).
 
 import {
-  AnimationClip,
   AnimationMixer,
   Box3,
   Group,
   LoopOnce,
   LoopRepeat,
   MeshLambertMaterial,
-  Quaternion,
-  QuaternionKeyframeTrack,
   Vector3,
   type AnimationAction,
-  type Interpolant,
-  type KeyframeTrack,
+  type AnimationClip,
   type Mesh,
   type MeshStandardMaterial,
   type Object3D,
@@ -31,7 +30,7 @@ import {
 import type { GLTF } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { clone as cloneRigged } from 'three/examples/jsm/utils/SkeletonUtils.js';
 import { MOVE, type HeroName } from '../game/hero';
-import { airPhase, approach, breath, groundMix, strideRate } from './hero-motion';
+import { airPhase, approach, groundMix, landingWeight, strideRate } from './hero-motion';
 import type { HeroInfo, HeroView, Pose } from './heroes';
 
 export type ClipRole = 'idle' | 'walk' | 'run' | 'jump' | 'fall' | 'land' | 'roll';
@@ -49,8 +48,8 @@ export interface HeroModelSpec {
    * A kind with no match is done without:
    *   no run     the walk is played faster
    *   no walk    the run is played slower
-   *   no idle    the hero stands in the middle pose of its walk, breathing
-   *   no jump    a stride of the run (or walk) is held in the air
+   *   no idle    the hero holds the first frame of its walk
+   *   no jump    the hero keeps its ground pose in the air, with a stretch
    *   no fall    the late part of the jump is held on the way down
    *   no land    a quick squash instead
    */
@@ -59,8 +58,7 @@ export interface HeroModelSpec {
    * Library jump clips start with a crouch and end with a landing. These are
    * the shares of the clip (0 to 1) where the airborne part starts and ends.
    * In the air that part is held as a pose, moved along by upward speed.
-   * For a hero with no jump clip, they are the shares of its run clip to hold
-   * instead: the part of a stride where both feet are off the ground.
+   * A clip already cut to its airborne part uses all of it: 0 to 1.
    */
   airborne: [number, number];
   /** Ground speeds, in metres a second, at which the walk and run clips look right. */
@@ -74,27 +72,29 @@ export interface HeroModelSpec {
 
 /** The heroes that have a model. A hero not listed here is built from shapes. */
 export const HERO_MODELS: Partial<Record<HeroName, HeroModelSpec>> = {
-  // Made by the owner in Meshy and rigged there as a humanoid. The file holds
-  // two clips, Walking and Running. Idle, jump, falling, landing and roll are
-  // listed so they are picked up as soon as the file has them.
+  // Made by the owner in Meshy, and rigged and animated there. Meshy gives one
+  // file per clip; tools/prepare-rigged.py puts them on one model and takes
+  // the travel out of them (see tools/yaarbro.guide.json for which is which).
+  // He has no falling clip of his own: the one Meshy made is a head-first
+  // dive, so the airborne part of his jump is held on the way down too.
   Yaarbro: {
     file: 'yaarbro.glb',
     height: 2.2,
     turn: 0,
     clips: {
-      idle: ['Idle'],
-      walk: ['Walking', 'Walk'],
-      run: ['Running', 'Run'],
-      jump: ['Jump'],
-      fall: ['Falling', 'Fall'],
-      land: ['Landing', 'Land'],
-      roll: ['Roll'],
+      idle: ['idle'],
+      walk: ['walk'],
+      run: ['run'],
+      jump: ['jump'],
+      fall: ['falling'],
+      land: ['landing'],
+      roll: ['roll'],
     },
-    // No jump clip: these are the part of the run with both feet off the ground.
-    airborne: [0.08, 0.2],
+    // The jump clip is already cut to the part where he is in the air.
+    airborne: [0, 1],
     walkSpeed: 1.5,
     runSpeed: 4.6,
-    shadow: { across: 1.05, along: 0.9 },
+    shadow: { across: 1.1, along: 0.95 },
     portrait: { height: 1.52, distance: 2.5 },
   },
 };
@@ -128,39 +128,6 @@ export const findClip = (clips: AnimationClip[], names: string[] | undefined): A
     if (partial) return partial;
   }
   return null;
-};
-
-/**
- * A standing pose made from a walk: every joint held at the middle of its
- * swing. Used when a model has no idle clip of its own.
- */
-export const standingPose = (walk: AnimationClip): AnimationClip => {
-  const samples = 32;
-  const tracks: KeyframeTrack[] = [];
-  for (const track of walk.tracks) {
-    const size = track.getValueSize();
-    // Each track knows how to read itself between keys; the type list leaves the method out.
-    const reader = (track as unknown as { createInterpolant(): Interpolant }).createInterpolant();
-    const sum = new Array<number>(size).fill(0);
-    let first: ArrayLike<number> | null = null;
-    for (let i = 0; i < samples; i += 1) {
-      const value = reader.evaluate((walk.duration * i) / samples) as ArrayLike<number>;
-      // The same turn can be written two ways round; add them up the same way round.
-      let sign = 1;
-      if (track instanceof QuaternionKeyframeTrack) {
-        if (!first) first = Array.from(value);
-        else if (first[0] * value[0] + first[1] * value[1] + first[2] * value[2] + first[3] * value[3] < 0) sign = -1;
-      }
-      for (let k = 0; k < size; k += 1) sum[k] += sign * value[k];
-    }
-    let middle = sum.map((total) => total / samples);
-    if (track instanceof QuaternionKeyframeTrack) middle = new Quaternion().fromArray(middle).normalize().toArray();
-    const held = track.clone();
-    held.times = new Float32Array([0, 1]);
-    held.values = new Float32Array([...middle, ...middle]);
-    tracks.push(held);
-  }
-  return new AnimationClip(`${walk.name} (standing)`, 1, tracks);
 };
 
 /**
@@ -205,9 +172,8 @@ export class ModelHero implements HeroView {
   private landing = 0;
   private squashed = 0;
   private mix = { idle: 1, walk: 0, run: 0 };
-  /** True when the idle is a held pose made from the walk, which needs a breath added. */
-  private readonly stillIdle: boolean;
-  private clock = 0;
+  /** How fast the hero was dropping when last in the air, for how hard it lands. */
+  private dropping = 0;
 
   /** Plain materials made for this hero alone (see `simple`), freed with it. */
   private readonly ownMaterials: MeshLambertMaterial[] = [];
@@ -248,23 +214,10 @@ export class ModelHero implements HeroView {
     this.root.add(this.body);
 
     this.mixer = new AnimationMixer(model);
-    const found: Partial<Record<ClipRole, AnimationClip>> = {};
     for (const role of ['idle', 'walk', 'run', 'jump', 'fall', 'land', 'roll'] as const) {
       const clip = findClip(source.animations, spec.clips[role]);
-      if (clip) found[role] = clip;
-    }
-    // Doing without (see `clips` in HeroModelSpec): stand in the middle pose
-    // of the walk, and hold a stride of the run in the air.
-    const stride = found.walk ?? found.run;
-    this.stillIdle = !found.idle && Boolean(stride);
-    if (!found.idle && stride) found.idle = standingPose(stride);
-    const leap = found.run ?? found.walk;
-    if (!found.jump && !found.fall && leap) {
-      found.jump = leap.clone();
-      found.jump.name = `${leap.name} (held in the air)`;
-    }
-    for (const role of Object.keys(found) as ClipRole[]) {
-      const action = this.mixer.clipAction(found[role]!);
+      if (!clip) continue;
+      const action = this.mixer.clipAction(clip);
       action.enabled = true;
       action.setEffectiveWeight(0);
       this.actions[role] = action;
@@ -300,7 +253,8 @@ export class ModelHero implements HeroView {
       const land = this.actions.land;
       if (land) {
         land.reset().play();
-        this.landing = 1;
+        // A hop lands lightly and a long drop lands hard.
+        this.landing = landingWeight(this.dropping, MOVE.jumpSpeed);
       } else this.squashed = 0.18;
     } else {
       this.squashed = event === 'bounce' ? -0.2 : -0.12;
@@ -321,6 +275,7 @@ export class ModelHero implements HeroView {
 
     // In the air: the airborne part of the jump, held and moved along by
     // upward speed. A falling clip, when there is one, takes over on the way down.
+    if (!pose.grounded) this.dropping = Math.max(0, -pose.rise);
     const hasAirPose = Boolean(actions.jump ?? actions.fall);
     this.air = approach(this.air, pose.grounded || !hasAirPose ? 0 : 1, pose.grounded ? 16 : 22, dt);
     const phase = airPhase(pose.rise, MOVE.jumpSpeed);
@@ -364,12 +319,8 @@ export class ModelHero implements HeroView {
     }
     this.mixer.update(dt);
 
-    this.clock += dt;
     this.squashed *= Math.exp(-dt * 10);
-    // A held standing pose would look frozen, so the body breathes a little.
-    const swell = this.stillIdle ? breath(this.clock) * ((ground * this.mix.idle) / total) : 0;
-    const squash = this.squashed - swell;
-    this.body.scale.set(1 + squash * 0.5, 1 - squash, 1 + squash * 0.5);
+    this.body.scale.set(1 + this.squashed * 0.5, 1 - this.squashed, 1 + this.squashed * 0.5);
   }
 
   info(): HeroInfo {

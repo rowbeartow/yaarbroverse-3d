@@ -15,7 +15,7 @@ Live at: https://rowbeartow.github.io/yaarbroverse-3d/ . Every merge to `main` p
 
 - Framework: Three.js, TypeScript, Vite. No physics library.
 - Assets: source textures, the forest light (HDRI) and models in `assets/`. `scripts/build-assets.mjs` compresses them into `public/media/` (KTX2 textures, meshopt geometry, a smaller HDR) before every build and before `npm run dev`. `public/media/` is not committed. Third-party files are CC0 and listed in `CREDITS.md`; the build fails over 20 MB.
-- Hero models: `assets/heroes/` holds them already compressed, and the build copies them as they are. The owner's originals (20 to 30 MB each, files on the `hero-models` release) are never committed. `tools/compress-hero.mjs` makes the small file from an original and lists its clips.
+- Hero models: `assets/heroes/` holds them already compressed, and the build copies them as they are. The owner's originals (20 to 30 MB each, files on the `hero-models` release) are never committed. Meshy gives one file per clip: `tools/prepare-rigged.py` (Blender, no window) puts every clip on one model and makes each happen on the spot, and `tools/compress-hero.mjs` makes the small file from that and lists its clips.
 - Deploy target: GitHub Pages, static files only. `.github/workflows/publish.yml` builds and publishes on every merge to main.
 - Data layer: none. The browser remembers the last hero and difficulty.
 - Auth: none.
@@ -47,7 +47,8 @@ Node 22 (`.nvmrc`).
 - Test the rules: `npm test` (fast, no browser)
 - Build: `npm run build` (prepares the assets, and fails if the download goes over 20 MB)
 - Pictures for the docs: `node scripts/screenshot.mjs` (see the top of that file)
-- Compress a hero model: `node tools/compress-hero.mjs <original.glb> <name>` (see the top of that file)
+- Rebuild Yaarbro from his Meshy files: `blender -b -P tools/prepare-rigged.py -- <folder of Meshy files> <out.glb> tools/yaarbro.guide.json`, then compress the result (see the top of that file). A cloud session has Blender; it also needs `apt-get install -y python3-numpy` once.
+- Compress a hero model: `node tools/compress-hero.mjs <model.glb> <name>` (see the top of that file)
 - Browser checks: `npm run test:browser` (builds, serves, then drives the game with keyboard and touch, in Chromium and in WebKit). In a cloud session Chromium is already installed: do not install it again. WebKit is not: run `npx playwright install --with-deps webkit` once per session. To run one browser: `npx playwright test --project=ipad-webkit` (or `mac`, `ipad`).
 - Everything: `npm run check`, then `npm run test:browser`
 - Deploy: merging to `main` publishes automatically. Do not deploy by hand. The same checks run on every pull request (`.github/workflows/checks.yml`). So does the private-terms check (`scripts/check-private-terms.mjs`); to try it locally: `PRIVATE_TERMS="one,two" node scripts/check-private-terms.mjs`.

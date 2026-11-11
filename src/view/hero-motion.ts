@@ -47,7 +47,8 @@ export const approach = (value: number, target: number, rate: number, dt: number
   value + (target - value) * (1 - Math.exp(-rate * dt));
 
 /**
- * A slow breath for a hero standing still with no idle clip: how much taller
- * than normal the body is, as a share of its height, `seconds` into standing.
+ * How much of the landing clip to show, 0 to 1, from how fast the hero was
+ * dropping when it touched down: a little for a hop, all of it for a full jump
+ * or more.
  */
-export const breath = (seconds: number): number => 0.012 * Math.sin(seconds * 2.1);
+export const landingWeight = (dropSpeed: number, jumpSpeed: number): number => 0.25 + 0.75 * smooth(0.3, 0.95, dropSpeed / jumpSpeed);

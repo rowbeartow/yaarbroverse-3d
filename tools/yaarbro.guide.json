@@ -1,0 +1,13 @@
+{
+  "about": "Which of Yaarbro's Meshy files holds which clip, for tools/prepare-rigged.py. Times are seconds into the file's own clip. stay: the hips are held over one spot. airborne: a body in the air is brought down to stand on the ground. lift: a body pushed into the ground is lifted out. hands_on_ground: these arms are raised until their hands are not below the ground. parts: two pieces of the clip joined together.",
+  "body": "Meshy_AI_Animation_Idle_11_withSkin.glb",
+  "hips": "Hips",
+  "clips": [
+    { "name": "idle", "file": "Meshy_AI_Animation_Idle_11_withSkin.glb", "loop": true },
+    { "name": "walk", "file": "Meshy_AI_Animation_Walking_withSkin.glb", "loop": true },
+    { "name": "run", "file": "Meshy_AI_Animation_Running_withSkin.glb", "loop": true },
+    { "name": "jump", "file": "Meshy_AI_Animation_Regular_Jump_withSkin.glb", "from": 0.57, "to": 1.07, "stay": true, "airborne": true },
+    { "name": "landing", "file": "Meshy_AI_Animation_Dive_Down_and_Land_2_withSkin.glb", "parts": [[0.47, 0.67], [1.6, 2.4]], "stay": true, "hands_on_ground": ["RightArm", "LeftArm"] },
+    { "name": "roll", "file": "Meshy_AI_Animation_Run_Jump_and_Roll_withSkin.glb", "from": 1.85, "to": 2.85, "stay": true, "lift": true }
+  ]
+}

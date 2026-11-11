@@ -132,3 +132,11 @@ Supersedes: none
 ## 2026-11-10 The drawn top of a bank never reaches past where a hero can stand
 Reason: The owner's rule: scenery may be made to look more natural, but the walkable area in the rules does not change, and the visible top edge must match where a hero can actually stand, so a jump never looks safe when it isn't. A bank's edge may wander and its corners may be rounded only inside the strip between the bank's rectangle in the rules and the furthest line a hero can stand on (the foot radius past it). Rock, roots and moss go below and beside the top, starting well below it, so they do not read as more ground. `tests/bank-outline.test.ts` checks every bank on every difficulty.
 Supersedes: none
+
+## 2026-11-10 A clip never carries a character across the level: the rules own position
+Reason: The owner's rule. Library clips move the whole body (Yaarbro's dive starts fourteen metres up, his roll travels five metres). In the game the rules decide where a hero is, so every clip is made to happen on the spot before it is used: the hips stay over one place, a body in the air is brought down to stand on the ground, and a body or hand pushed into the ground is lifted out. `tools/prepare-rigged.py` does this, and `tests/hero-files.test.ts` checks the result.
+Supersedes: none
+
+## 2026-11-10 Yaarbro is built from Meshy's one-clip files, and falls in his jump pose
+Reason: Meshy exports one file per clip, each with the whole model in it: walk, run, idle, jump, a dive that ends in a landing, and a run, jump and roll. `tools/prepare-rigged.py` takes the model from one and puts every clip on it, cut to the part the game uses (`tools/yaarbro.guide.json` says which). The dive is head-first, which looks wrong as an ordinary fall, so by the owner's rule for that case falling uses the airborne part of the jump and only the landing is kept from the dive. Only the roll itself is kept from the last file, for milestone three.
+Supersedes: none
