@@ -4,7 +4,7 @@
 
 import type { Difficulty } from './difficulty';
 import { ENEMY, newEnemy, sendHome, stepEnemy, type Enemy, type EnemyPhase, type EnemyTuning } from './enemy';
-import { MOVE, STEP, type HeroName } from './hero';
+import { MOVE, STEP, knockSpeed, type HeroName } from './hero';
 import { pushOutside, surfaceBelow, touchesFromAbove, type Level, type Solid } from './level';
 
 /** What the player is asking for during one step. */
@@ -181,8 +181,9 @@ export class Game {
       awayX /= distance;
       awayZ /= distance;
     }
-    this.vx = awayX * MOVE.hurtKnockSpeed;
-    this.vz = awayZ * MOVE.hurtKnockSpeed;
+    const thrown = knockSpeed(this.level.knockback);
+    this.vx = awayX * thrown;
+    this.vz = awayZ * thrown;
     this.vy = MOVE.hurtKnockUp;
     this.grounded = false;
     this.groundId = null;

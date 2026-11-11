@@ -410,6 +410,7 @@ export function buildGrove(
     ledgeHelp: n.ledgeHelp,
     hearts: n.hearts,
     protection: n.protection,
+    knockback: n.knockback,
     route,
     sections,
     hints: GROVE_HINTS,

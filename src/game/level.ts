@@ -60,6 +60,8 @@ export interface Level {
   hearts: number;
   /** Times how long a hero is protected after being hurt, and after going back to a safe bank. */
   protection: number;
+  /** How far a hit throws a hero, in metres, measured on level ground. */
+  knockback: number;
   /** The enemies, each where it lives. None when left out. */
   enemies?: EnemySpot[];
   /** How this difficulty stretches the enemies' warnings, speed and rest. All 1 when left out. */

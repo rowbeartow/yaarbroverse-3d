@@ -42,6 +42,17 @@ describe('being hurt', () => {
     expect(Math.abs(fromBehind.x)).toBeLessThan(1e-6);
   });
 
+  it('throws the hero as far as the level’s difficulty says, with the stick let go', () => {
+    for (const knockback of [0.5, 1.2, 2]) {
+      const game = start(yard([], { knockback }));
+      game.hurt(-1, 0);
+      for (let i = 0; i < 300 && (i === 0 || !game.grounded); i += 1) game.step(IDLE);
+      // To within one step's travel.
+      expect(game.x).toBeGreaterThan(knockback * 0.9);
+      expect(game.x).toBeLessThan(knockback * 1.1 + 0.05);
+    }
+  });
+
   it('takes the controls for a moment, then gives them back', () => {
     const game = start();
     game.hurt(1, 0);
@@ -154,6 +165,29 @@ describe('running out of hearts', () => {
 });
 
 describe('hearts in the grove', () => {
+  it('throws a hero a short way on Easy, Caputo Mountain’s 2 metres on Hard, and in between on Normal', () => {
+    const [easy, normal, hard] = DIFFICULTIES.map((difficulty) => GROVE_DIFFICULTY[difficulty]);
+    expect(hard.knockback).toBe(2);
+    expect(easy.knockback).toBeLessThan(normal.knockback);
+    expect(normal.knockback).toBeLessThan(hard.knockback);
+    for (const difficulty of DIFFICULTIES) expect(buildGrove(difficulty).knockback).toBe(GROVE_DIFFICULTY[difficulty].knockback);
+  });
+
+  it('on Easy a hit in the middle of a high bough leaves the hero on it; on Hard it throws the hero off', () => {
+    const thrownOff = (difficulty: (typeof DIFFICULTIES)[number]): boolean => {
+      const level = buildGrove(difficulty);
+      // A bough that runs forward: hit from one side, the throw goes across it.
+      const bough = level.solids.find((s) => s.id === 'bough-3')!;
+      const game = new Game(level, difficulty, 'Yaarbro');
+      Object.assign(game, { x: bough.x, y: bough.top, z: bough.z, grounded: true });
+      game.hurt(bough.x - 1, bough.z);
+      for (let i = 0; i < 600 && game.falls === 0 && (i < 5 || !game.grounded); i += 1) game.step(IDLE);
+      return game.falls > 0;
+    };
+    expect(thrownOff('easy')).toBe(false);
+    expect(thrownOff('hard')).toBe(true);
+  });
+
   it('follows Caputo Mountain: 5 on Easy, 3 on Normal, 2 on Hard', () => {
     expect(DIFFICULTIES.map((difficulty) => GROVE_DIFFICULTY[difficulty].hearts)).toEqual([5, 3, 2]);
     expect(DIFFICULTIES.map((difficulty) => GROVE_DIFFICULTY[difficulty].protection)).toEqual([1.5, 1, 0.6]);
