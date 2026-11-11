@@ -4,6 +4,8 @@
 // Directions: x is left (-) and right (+), y is up, z is toward the camera (+)
 // and away from it (-). Levels run away from the camera, so "forward" is -z.
 
+import type { EnemySpot, EnemyTuning } from './enemy';
+
 export type SolidKind = 'bank' | 'log' | 'stump' | 'shelf' | 'mushroom' | 'bough';
 
 /** Something a hero can stand on and bump into. */
@@ -58,6 +60,10 @@ export interface Level {
   hearts: number;
   /** Times how long a hero is protected after being hurt, and after going back to a safe bank. */
   protection: number;
+  /** The enemies, each where it lives. None when left out. */
+  enemies?: EnemySpot[];
+  /** How this difficulty stretches the enemies' warnings, speed and rest. All 1 when left out. */
+  enemyTuning?: EnemyTuning;
   /** Ids of the solids in the order a run crosses them, start to goal. */
   route: string[];
   /** The level's sections in order, each with the ids of its solids in route order. */

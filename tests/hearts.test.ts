@@ -101,9 +101,11 @@ describe('running out of hearts', () => {
     const game = start(twoBanks());
     hold(game, RIGHT, 2.2);
     expect(game.safe.id).toBe('far');
-    game.hurt(game.x + 1, 0);
+    // Hurt from the near side each time, so the throw keeps it on the far bank.
+    game.hurt(game.x - 1, 0);
     hold(game, {}, MOVE.hurtProtection + 0.1);
-    game.hurt(game.x + 1, 0);
+    expect(game.safe.id).toBe('far');
+    game.hurt(game.x - 1, 0);
     expect(game.hearts).toBe(0);
     let restored = false;
     for (let i = 0; i < 120 && !restored; i += 1) {

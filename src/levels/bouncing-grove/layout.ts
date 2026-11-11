@@ -13,6 +13,7 @@
 //      then the big bough where the golden leaf is tucked in the canopy.
 
 import type { Difficulty } from '../../game/difficulty';
+import type { EnemySpot } from '../../game/enemy';
 import type { Level, Section, Solid } from '../../game/level';
 import { GROVE_DIFFICULTY, type GroveNumbers } from './difficulty';
 
@@ -52,6 +53,22 @@ export const GROVE_SHAPE = {
   boughAcross: 10,
   boughAcrossShort: 8,
   logThickness: 1,
+  /**
+   * The enemies. The first scout waits to the left of the way through the
+   * clearing, in its far half. The second waits to the left on the bank at the
+   * foot of the last climb. Neither leaves its bank, and each stays this far
+   * in from the edge.
+   */
+  scoutAside: 2.8,
+  scoutAhead: 1.5,
+  footScoutAside: 2.5,
+  footScoutAhead: 0,
+  scoutInset: 0.7,
+  /** The mosquito: how far above the boughs it waits, how far to each side of them it flies, and its lowest and highest. */
+  mosquitoHover: 3.6,
+  mosquitoMargin: 1.2,
+  mosquitoFloor: 0.8,
+  mosquitoCeiling: 5,
   /** How far stumps and chained mushrooms sit left and right of the middle. */
   stumpSideStep: 1.3,
   mushroomSideStep: 0.9,
@@ -328,9 +345,64 @@ export function buildGrove(
   box('bough', 'bough', at, at + shape.boughLength, mushroomX, shape.boughHalfWidth, boughTop, boughTop - 1.2);
   const leafX = mushroomX;
 
+  // ---- The enemies ----
+  // Only where the route left room for them (see docs/decisions.md): the
+  // clearing after the stumps, the air over the later high boughs, and the
+  // bank at the foot of the last climb. None in a section of diagonal jumps.
+  const byId = (id: string): Solid => solids.find((s) => s.id === id) as Solid;
+  const patch = (bank: Solid, inset: number): EnemySpot['arena'] => ({
+    minX: bank.x - bank.halfX + inset,
+    maxX: bank.x + bank.halfX - inset,
+    minZ: bank.z - bank.halfZ + inset,
+    maxZ: bank.z + bank.halfZ - inset,
+  });
+  const clearing = byId('bank-2');
+  const foot = byId('bank-5');
+  const [third, fifth] = [byId('bough-3'), byId('bough-5')];
+  const enemies: EnemySpot[] = [
+    // A marmot scout in the clearing, off to the left of the way through.
+    {
+      id: 'scout-clearing',
+      kind: 'marmot',
+      x: clearing.x - shape.scoutAside,
+      y: clearing.top,
+      z: clearing.z - shape.scoutAhead,
+      arena: patch(clearing, shape.scoutInset),
+      notice: shape.scoutInset,
+    },
+    // A giant mosquito over the last three high boughs, past the corner that has a gap on every difficulty.
+    {
+      id: 'mosquito-boughs',
+      kind: 'mosquito',
+      x: (third.x + fifth.x) / 2,
+      y: third.top + shape.mosquitoHover,
+      z: (third.z + fifth.z) / 2,
+      arena: {
+        minX: fifth.x - shape.mosquitoMargin,
+        maxX: third.x + shape.mosquitoMargin,
+        minZ: fifth.z - fifth.halfZ,
+        maxZ: third.z + third.halfZ,
+      },
+      floor: third.top + shape.mosquitoFloor,
+      ceiling: third.top + shape.mosquitoCeiling,
+    },
+    // A second scout on the bank at the foot of the last climb.
+    {
+      id: 'scout-climb',
+      kind: 'marmot',
+      x: foot.x - shape.footScoutAside,
+      y: foot.top,
+      z: foot.z - shape.footScoutAhead,
+      arena: patch(foot, shape.scoutInset),
+      notice: shape.scoutInset,
+    },
+  ];
+
   return {
     name: GROVE_NAME,
     solids,
+    enemies,
+    enemyTuning: { warning: n.enemyWarning, speed: n.enemySpeed, rest: n.enemyRest },
     spawn: { x: 0, y: 0, z: 0 },
     leaf: { x: leafX, y: boughTop + 1.3, z: -(at + shape.boughLength - 1.6), radius: 0.7 },
     fallY: shape.fallY,
