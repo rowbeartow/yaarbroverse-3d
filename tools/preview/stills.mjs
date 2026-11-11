@@ -3,7 +3,7 @@
 //
 //   node tools/preview/stills.mjs <sheet.jpg> <what> [bones] [columns]
 //
-//   what      side:<walk|run>:<shares>            the slow side view, held at each share (0 to 1) of the stride
+//   what      side:<walk|trot|run>:<shares>       the slow side view, held at each share (0 to 1) of the stride
 //             pose:<clip>:<shares>:<angle>        the stage holding a clip at each share, seen from `angle` radians round
 //                                                 (0 is from in front, -1.57 from his right side)
 //             game:<seconds>:<angle>              the stage's "In the game" loop at each moment

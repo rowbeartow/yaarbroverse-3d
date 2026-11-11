@@ -4,31 +4,33 @@ Last updated: 2026-11-11
 
 ## Start here
 
-The next job is Caputo's gait: the owner wants changes to his run and to how smooth his walk is. He has not yet said what the changes are. Ask him before touching anything, then work in `tools/rig-quadruped.py` (the `walk` and `run` functions of the `Quadruped` class, and `step`, which moves one paw through one stride).
+Caputo's three gaits are on the branch `claude/caputo-gaits-animation-po008z`, in one open pull request that waits for the owner's OK on the preview page. Nothing about Caputo's new skeleton or clips is on `main` or live yet: the game the kids have still shows his first rig. The earlier pull request 15 (his cat skeleton and clips) was never merged, though this file used to say it was. Its commits are in this branch, so merging this pull request brings in both, and 15 should then be closed.
 
-What the owner has approved, and what is merged and live:
+What the owner has approved:
 
-- Yaarbro, as he is.
-- Caputo's model, and his new skeleton and clips (pull request 15). The owner said the walk reads as a cat, and that idle, jump, falling and landing are good. Leave those four alone unless he asks.
+- Yaarbro, as he is. He is merged and live.
+- Caputo's model. On the preview page: that his walk reads as a cat, and his idle, jump, falling and landing. Those four clips are byte for byte what he approved. Leave them alone unless he asks.
+- The jump stays as it is, with no pause before take-off. Jumping the instant the button is pressed matters more for the kids than a crouch that can be seen.
+
+Waiting on the owner: whether the trot, the gallop, the smoother walk and the gait changes look right in motion. If the run still reads as moving in pairs to him, he brings in an animator and no more script rounds are made.
 
 How to work on Caputo's movement:
 
 1. Get his source file. It is not in the repo. It is a file on the `hero-models` release: https://github.com/rowbeartow/yaarbroverse-3d/releases/download/hero-models/Meshy_AI_SaberToothCatGameRead_1110213716_texture.glb (20.9 MB). Download it to a scratch folder, never into the repo.
 2. Once per session: `apt-get install -y python3-numpy` (Blender needs it), `npm ci`, `npm run assets`.
-3. Rig him: `blender -b -P tools/rig-quadruped.py -- <source.glb> <rigged.glb> tools/caputo.rig.json`. It takes about five seconds. It prints the ground a stride of the walk and of the run covers, and stops if a planted paw is asked to reach further than its leg is long. His joint places, and any numbers changed from the script's own, are in `tools/caputo.rig.json`.
+3. Rig him: `blender -b -P tools/rig-quadruped.py -- <source.glb> <rigged.glb> tools/caputo.rig.json`. It takes about five seconds. It prints the speed each of the walk, the trot and the run covers ground at and when each paw lands, and stops if a planted paw is asked to reach further than its leg is long. His joint places, and any numbers changed from the script's own, are in `tools/caputo.rig.json`. The gaits are the `walk`, `trot` and `run` functions of the `Quadruped` class; `step` moves one paw through one stride.
 4. Build the preview page: `node tools/preview/build.mjs <rigged.glb> <folder>`.
 5. Look at it in still frames: serve it with `npx vite preview --outDir <folder> --port 4174`, then `node tools/preview/stills.mjs <sheet.jpg> side:walk:0,0.125,0.25,0.375,0.5,0.625,0.75,0.875 "" 2` (the top of that file lists the other views). A session cannot watch him move, only look at stills.
-6. When it looks right: `node tools/compress-hero.mjs <rigged.glb> caputo` writes `assets/heroes/caputo.glb`. If the script printed new speeds, put them in `walkSpeed` and `runSpeed` for Caputo in `src/view/hero-model.ts`: metres a second from the script, times 1.0946 (his height in the game, 1.55 m, over his height in the file).
-7. Bring the hand-written text in `tools/preview/index.html` up to date, rebuild the page, and publish it over the page the owner already has, so his link stays the same: https://claude.ai/artifact/V3Z9Car7Ttfp1zRNRPLf7D . The top of `tools/preview/build.mjs` lists the files to publish.
-8. Open a pull request marked "do not merge until the owner says OK", and wait for his OK on the preview page.
+6. Measure it: with the page still served, `node tools/preview/measure.mjs` drives the game's own animation player and prints how far planted paws slide in each gait and at each change of gait, whether the three gait clips stay on one clock, and the size he is drawn at.
+7. When it looks right: `node tools/compress-hero.mjs <rigged.glb> caputo` writes `assets/heroes/caputo.glb`. If the script printed new speeds, put them in `walkSpeed`, `trotSpeed` and `runSpeed` for Caputo in `src/view/hero-model.ts`: metres a second from the script, times the size `measure.mjs` prints (1.1211 now). An older note here gave 1.0946, which was wrong for the current idle pose.
+8. Bring the hand-written text in `tools/preview/index.html` up to date, rebuild the page, and publish it over the page the owner already has, so his link stays the same: https://claude.ai/artifact/V3Z9Car7Ttfp1zRNRPLf7D . The top of `tools/preview/build.mjs` lists the files to publish.
+9. A hero change goes in a pull request marked "do not merge until the owner says OK", and waits for his OK on the preview page.
 
 Open:
 
-- **Caputo's run.** The owner wants its gait changed. Details to come from him.
-- **Caputo's walk.** It reads as a cat; the owner wants it smoother. Details to come from him.
+- **The owner's OK on the three gaits**, as above.
 - **Frame rate on the iPad and the Mac has never been checked.** The owner opens the live link with `?fps` on the address and says what frame rate and tier show.
-- **Nobody has watched Caputo's new clips inside the game on a real device.** The owner judged them on the preview page.
-- **The jump's crouch is a flash**, a tenth of a second, because the rules lift a hero the moment Jump is pressed. A crouch that can be watched needs a pause before take-off, which changes how the game plays. The owner has not asked for that.
+- **Nobody has watched Caputo's clips inside the game on a real device.** The owner judges them on the preview page.
 
 ## Where things stand
 
@@ -40,7 +42,7 @@ Milestone two (the modern look) is done apart from the open items above:
 2. Skipped: tuning from the playtest. The playtest notes in the milestone prompt were blank, so no numbers changed.
 3. Done: browser checks run in WebKit as well as Chromium.
 4. Done: the world and lighting. The grove is a lit, textured forest.
-5. Done: the hero models. Yaarbro and Caputo are both drawn from their models, and the owner has approved both.
+5. Done: the hero models. Yaarbro and Caputo are both drawn from their models. Caputo's cat skeleton and gaits wait for the owner's OK (see "Start here").
 6. Done: the textures and the forest light were fetched straight from Poly Haven and checked against the copies here.
 7. Done: the trees read as conifers, and the banks have irregular, rounded outlines with rock, roots and moss at their edges.
 
@@ -58,14 +60,17 @@ Nobody has played the new look on a real iPad or Mac yet.
 - **Heroes.** Yaarbro and Caputo, picked on the start screen. They move the same: walk, jump (hold for height), bounce on mushrooms. Both are textured models on skeletons, made by the owner in Meshy from the Caputo Mountain art.
   - **Yaarbro** was rigged and animated in Meshy. His file holds six clips: `idle`, `walk`, `run`, `jump`, `landing` and `roll`. Walk and run are mixed by how fast he is moving. In the air the jump clip is held as a pose, moved along by his upward speed, on the way up and on the way down: Meshy's falling clip is a head-first dive, so it is not used for falling. Landing plays once when he touches down, a little after a hop and in full after a long drop, and running straight on cuts it short. The roll is not used until milestone three.
   - **Yaarbro's skin** had a cleanup pass. A pose test showed two things wrong and both were reweighted: his belt skewed with his legs (it now stays with the hips), and his beard sank into his chest when his head tipped down (the lower beard now stays on the chest). He is shaded smooth, with sharp edges kept on the buckle and the boot soles. Armpits, crotch and materials were checked and left as Meshy made them.
-  - **Caputo** could not be rigged by Meshy, so `tools/rig-quadruped.py` does it in Blender: 29 bones (hips, two spine, chest, neck, head, two shoulder blades, two ears, four legs of upper, lower and paw, six in the tail), skinned with automatic weights, and six clips written by the script to move like a cat:
-    - `walk`: one paw at a time (left hind, left front, right hind, right front), each hind paw landing in the print of the front paw on its side. The shoulder blades rise in turn, the head stays level, the spine sways, and each front paw curls back at the wrist as it lifts.
-    - `run`: a bounding gallop. The hind paws push off close together, he is in the air stretched out, and his back curls as the legs gather.
+  - **Caputo, on the branch and not yet on `main`** (the live game has his first rig: 25 bones, a plain walk, a bounding run and held poses in the air). Meshy could not rig him, so `tools/rig-quadruped.py` does it in Blender: 29 bones (hips, two spine, chest, neck, head, two shoulder blades, two ears, four legs of upper, lower and paw, six in the tail), skinned with automatic weights, and seven clips written by the script to move like a cat:
+    - `walk`: one paw at a time (left hind, left front, right hind, right front), each hind paw landing in the print of the front paw on its side. The shoulder blades rise in turn, the head stays level, the spine sways, and each front paw curls back at the wrist as it lifts. Every paw eases off the ground and onto it: its speed never changes in a jump.
+    - `trot`: diagonal pairs, left hind with right front, then right hind with left front, two even beats in 0.4 seconds with a short float between. Back level, head steady, tail up.
+    - `run`: a rotary gallop. Each paw lands by itself, going round the body: left hind, right hind 13 hundredths of a stride later, right front at 57, left front at 70. He is off the ground stretched out after the hind legs push, and for a moment gathered after the front legs push. The back curls and stretches.
+    - **Gaits in the game.** He walks up to 34 hundredths of top speed, trots up to 68 and gallops above; coming down he changes at 63 and 30 (`gaits` for Caputo in `src/view/hero-model.ts`). He is in one gait at a time and fades to the next in about a tenth of a second. The three clips share one clock, set in the rig script so each paw is as near as it can be to the same point of its step in each gait, so a change carries on in mid stride. Yaarbro still mixes his walk and run by pace, as before.
+    - **Measured** (`tools/preview/measure.mjs`): in a steady gait a planted paw slides about half a centimetre for each metre travelled, at every pace tried. At a change of gait a planted paw slides about 10 cm (walk and trot) or 15 to 20 cm (trot and gallop), once, because the gaits put the paws down in different orders.
     - `idle`: 8 seconds of breathing, weight shifting, two looks around, ear flicks and tail-tip flicks.
     - `jump`: a crouch and push from the hind legs, then fully stretched. The game plays the crouch and push in a tenth of a second as he leaves the ground (the rules lift him the moment Jump is pressed), then holds the rest as a pose moved along by his upward speed.
     - `falling` (legs down and spread, tail out) and `landing` (front paws, then hind paws, the body sinks, he stands).
     - His tail follows his body late, bone by bone. Paws are placed by working each leg back from where the toes should be, and the script stops if a planted paw is asked to reach further than its leg is long. Pounce comes in milestone three.
-  - **The hero preview page** is the page the owner looks at before a hero change is merged: the hero in the game's light playing each clip, the clips mixed by the game's own animation player, and slow side views of the walk and run over ground that moves at the game's speed, each with speed buttons, pause, a slider to step through a stride, and the skeleton. Its code is in `tools/preview/`: `build.mjs` builds it, `preview.ts` is the viewer, `index.html` is the page and its hand-written notes, and `stills.mjs` takes still frames of it. It is published as a private Claude artifact, not as part of the game. The current one is https://claude.ai/artifact/V3Z9Car7Ttfp1zRNRPLf7D .
+  - **The hero preview page** is the page the owner looks at before a hero change is merged: the hero in the game's light playing each clip, the clips mixed by the game's own animation player, and slow side views of the walk, the trot and the run over ground that moves at the game's speed, each with speed buttons, pause, a slider to step through a stride, and the skeleton. Its code is in `tools/preview/`: `build.mjs` builds it, `preview.ts` is the viewer, `index.html` is the page and its hand-written notes, `stills.mjs` takes still frames of it, and `measure.mjs` measures paw slide on it. It is published as a private Claude artifact, not as part of the game. The current one is https://claude.ai/artifact/V3Z9Car7Ttfp1zRNRPLf7D .
   - Every clip happens on the spot, because the rules own where a hero is. Meshy's clips carried Yaarbro about (the dive started fourteen metres up, the roll travelled five metres, and the landing pushed his right hand 40 cm into the ground). `tools/prepare-rigged.py` takes that out.
   - A model is stood on the spot the rules use by its footprint: soles or paws on the ground, the middle of them over the spot, so the soft dark spot sits under the feet and an edge looks as safe as it is.
   - The owner's original model files are files on the `hero-models` release of this repo: six for Yaarbro, one clip each (about 29 MB each), and one for Caputo (20.9 MB, `Meshy_AI_SaberToothCatGameRead_1110213716_texture.glb`). They are not committed. To rebuild a hero, run its Blender script on the originals and then `node tools/compress-hero.mjs <out.glb> <name>`; the commands are in `CLAUDE.md`. The compressed files are `assets/heroes/yaarbro.glb` (1.1 MB) and `assets/heroes/caputo.glb` (0.9 MB), which the build copies as they are. The CC0 stand-in robot (`?standin`) still checks the loader with a library file that has its whole jump in one clip.
@@ -82,7 +87,7 @@ Nobody has played the new look on a real iPad or Mac yet.
 
 ## Checks on this state
 
-- `npm test`: 177 tests pass. 94 for the game rules (a bot plays the whole grove on Easy, Normal and Hard as each hero with no falls), 11 for the private-terms check, 16 for the quality tier rules and the animation mixing rules, 6 for finding a model's clips and how hard a landing shows, 39 that check every bank's drawn top against where the rules let a hero stand, 11 that check each hero model file holds its skeleton and clips, that no clip carries a hero away from the spot, that Caputo has the bones and clips his rig script should give him, and that none of his clips is a frozen pose.
+- `npm test`: 183 tests pass. 94 for the game rules (a bot plays the whole grove on Easy, Normal and Hard as each hero with no falls), 11 for the private-terms check, 22 for the quality tier rules and the animation mixing rules, with choosing a gait by pace and keeping the stride matched to the ground, 6 for finding a model's clips and how hard a landing shows, 39 that check every bank's drawn top against where the rules let a hero stand, 11 that check each hero model file holds its skeleton and clips, that no clip carries a hero away from the spot, that Caputo has the bones and clips his rig script should give him, and that none of his clips is a frozen pose.
 - `npm run test:browser`: 68 browser checks pass. 22 in Chromium at Mac size with the keyboard, 23 in Chromium at iPad size with touch, 23 in WebKit at iPad size with touch. They cover loading and the progress bar, a failed download, the frame counter, fixed and automatic tiers, the full lighting at medium quality (and high at Mac size), each hero's model loading with its clips and animating while it stands, runs and jumps, the stand-in model doing the same, and everything milestone one checked.
 - **Not checked:**
   - Safari itself, a real iPad, a real Mac. The test browsers have no graphics card, so most checks run on the minimal tier, which has plain shading and no shadows. The full lighting is drawn in both browsers by two checks, slowly and in a small window.
@@ -92,7 +97,7 @@ Nobody has played the new look on a real iPad or Mac yet.
 
 ## What's next
 
-1. **Caputo's run and walk**, as under "Start here".
+1. **The owner's OK on Caputo's three gaits**, as under "Start here", then merge.
 2. **The owner looks at the live link on the iPad and the Mac**, with `?fps` on the address, and says what frame rate and tier show and whether anything looks wrong.
 3. **Checking the Blender scripts on new files.** `tools/rig-quadruped.py` is meant for the milestone-three enemies too: each needs its own guide file of joint places, like `tools/caputo.rig.json`. Its path for a file that already has a skeleton (keep it, add the bones it lacks) was tried only on Caputo's earlier output, before he had shoulder blades and ears.
 4. **Playtest tuning**, when there are notes: change only `src/levels/bouncing-grove/difficulty.ts`.
@@ -105,7 +110,8 @@ Nobody has played the new look on a real iPad or Mac yet.
 - Caputo is long and the footing check is a small circle under his middle, so his head, tail and outer paws hang over narrow stumps.
 - On a phone-sized screen the start screen is taller than the screen and has to be scrolled (issue #5).
 - The minimal tier is blurry and its trees are sparse. It is only for machines that draw in software.
-- On the keyboard a hero is at full speed almost at once, so Caputo's walk is mostly seen on the iPad with a gentle push, and the game plays it faster than a stroll.
+- On the keyboard a hero is at full speed almost at once, so Caputo's walk and trot are mostly seen on the iPad with a gentle push.
+- Each of Caputo's gaits is one clip played slower or faster to match the ground, so the trot is quick-stepping at the top of its range and the gallop a little floaty at the bottom of its range.
 
 ## Added as plain scenery, not canon
 

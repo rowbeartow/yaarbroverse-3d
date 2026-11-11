@@ -27,13 +27,16 @@
 #      weights of the nearest part of the body. If the automatic weights fail
 #      on the mesh as it is, a clean copy of it is weighted and the weights
 #      are carried across.
-#   5. Writes the clips: idle, walk, run, jump, falling, landing. They are a
-#      cat's (see the Quadruped class). Paws are placed by working the leg
-#      joints back from where the toes should be, so a paw on the ground stays
-#      where it is put, and the script stops if a clip asks a planted paw to
-#      reach further than its leg is long. It prints how much ground a stride
-#      of the walk and of the run covers: the game needs those two speeds
-#      (walkSpeed and runSpeed in src/view/hero-model.ts).
+#   5. Writes the clips: idle, walk, trot, run, jump, falling, landing. They
+#      are a cat's (see the Quadruped class). Paws are placed by working the
+#      leg joints back from where the toes should be, so a paw on the ground
+#      stays where it is put, and the script stops if a clip asks a planted
+#      paw to reach further than its leg is long. The walk, the trot and the
+#      run (a gallop) share one clock, so the game can change gait in mid
+#      stride. The script prints the speed each covers ground at and when
+#      each paw lands: the game needs the three speeds (walkSpeed, trotSpeed
+#      and runSpeed in src/view/hero-model.ts, times the size he is drawn
+#      at, which tools/preview/measure.mjs prints).
 #   6. Saves the result as a GLB with one animation per clip.
 
 import json
@@ -84,6 +87,37 @@ def wave(phase, peak=0.0):
 def smoothstep(value):
     value = min(1.0, max(0.0, value))
     return value * value * (3 - 2 * value)
+
+
+def smootherstep(value):
+    """Like smoothstep, but it also starts and ends with no change of speed."""
+    value = min(1.0, max(0.0, value))
+    return value * value * value * (value * (value * 6 - 15) + 10)
+
+
+def flowing(keys, time):
+    """
+    The number at `time` from a list of (time, number) keys, on one smooth
+    curve through them all: it passes each key without stopping there, and is
+    level at the first and last. (`keyed` eases to a stop at every key, which
+    suits a held pose and not a paw in the middle of a step.)
+    """
+    if time <= keys[0][0]:
+        return keys[0][1]
+    if time >= keys[-1][0]:
+        return keys[-1][1]
+    slopes = [0.0]
+    for (t0, v0), (t1, v1), (t2, v2) in zip(keys, keys[1:], keys[2:]):
+        before, after = (v1 - v0) / (t1 - t0), (v2 - v1) / (t2 - t1)
+        # Level at a key that is a peak or a dip, so the curve never goes past it.
+        slopes.append(0.0 if before * after <= 0 else (before * (t2 - t1) + after * (t1 - t0)) / (t2 - t0))
+    slopes.append(0.0)
+    for i, ((t0, v0), (t1, v1)) in enumerate(zip(keys, keys[1:])):
+        if time <= t1:
+            span = t1 - t0
+            x = (time - t0) / span
+            return ((2 * x ** 3 - 3 * x ** 2 + 1) * v0 + (x ** 3 - 2 * x ** 2 + x) * span * slopes[i]
+                    + (-2 * x ** 3 + 3 * x ** 2) * v1 + (x ** 3 - x ** 2) * span * slopes[i + 1])
 
 
 def bump(time, start, end, ease):
@@ -514,14 +548,16 @@ class Poser:
     def rest_head(self, bone):
         return self.rest[bone].to_translation()
 
-    def reach(self, upper, lower, paw, toe, tipped=0.0, planted=True):
+    def reach(self, upper, lower, paw, toe, tipped=0.0, planted=True, soft=False):
         """
         Bends a leg so the paw's toes are at `toe`: the two leg bones are
         worked back from there. The knee bends the way it does in the model as
         it came. The paw lies as it does at rest, tipped about its toes by
         `tipped` degrees (below zero the heel comes up, above zero the toes).
         A paw in the air (`planted` false) may ask for more than the leg's
-        length: the leg just stretches right out.
+        length: the leg just stretches right out. With `soft`, a leg in the
+        air nears its full length gently and never quite gets there: in a
+        stride, a leg pulled dead straight snaps at the knee as it gets there.
         """
         paw_line = pitch(tipped).to_matrix() @ (self.rest_tail[paw] - self.rest_head(paw))
         ankle = toe - paw_line
@@ -533,6 +569,11 @@ class Poser:
             self.short = line.length - (first + second)
             self.short_where = f'{paw} at frame {self.frame}'
         distance = min(max(line.length, abs(first - second) + 1e-4), first + second - 1e-4)
+        full = first + second
+        eases_from = 0.955 * full
+        if soft and not planted and line.length > eases_from:
+            room = 0.995 * full - eases_from
+            distance = eases_from + room * (1 - math.exp(-(line.length - eases_from) / room))
         along = line.normalized()
         # The side the knee is on at rest, carried round with the body.
         carried = self.carried(upper).to_3x3() @ self.rest[upper].to_3x3().inverted()
@@ -570,8 +611,9 @@ class Quadruped:
     """
     The clips, written against the bones this script builds. They are a cat's:
     a four-beat walk in which each hind paw lands where the front paw on its
-    side just was, a bounding gallop, a standing idle that is never still, and
-    a jump, a fall and a landing.
+    side just was, a trot in diagonal pairs, a rotary gallop in which each paw
+    lands by itself, a standing idle that is never still, and a jump, a fall
+    and a landing.
     """
 
     def __init__(self, armature, guide):
@@ -637,7 +679,7 @@ class Quadruped:
             facing = turn @ facing
         p.place(head, hold=facing.to_matrix())
 
-    def paw(self, leg, at=None, forward=0.0, lift=0.0, out=0.0, toes=0.0):
+    def paw(self, leg, at=None, forward=0.0, lift=0.0, out=0.0, toes=0.0, soft=False):
         """
         Puts a paw's toes `forward`, `lift` and `out` (away from the body)
         metres from where they rest, or with `at` that far forward along the
@@ -648,7 +690,7 @@ class Quadruped:
         toe = self.toe[leg] + Vector((out if leg.endswith('_l') else -out, -forward, lift))
         if at is not None:
             toe.y = -at
-        self.poser.reach(upper, lower, paw, toe, toes, planted=lift <= 0.005)
+        self.poser.reach(upper, lower, paw, toe, toes, planted=lift <= 0.005, soft=soft)
 
     def blade(self, side, rise=0.0, tip=0.0):
         """Slides a shoulder blade up along the ribs by `rise` metres and tips it by `tip` degrees."""
@@ -689,7 +731,7 @@ class Quadruped:
             self.poser.place(bone, turn=turn)
 
     @staticmethod
-    def step(phase, on_ground, front, back, lift, heel, curl, toes_up, carry=1.0):
+    def step(phase, on_ground, front, back, lift, heel, curl, toes_up, follow=0.4, heel_from=0.6, early=0.35):
         """
         One paw through one cycle. Returns how far forward along the body its
         toes are, how high, how the paw is tipped (see `paw`), and how much
@@ -699,25 +741,43 @@ class Quadruped:
         move back at the ground's speed from `front` to `back`, and the heel
         rolls up by `heel` degrees as the paw is about to leave. Then the paw
         swings forward: it curls back by `curl` degrees as it lifts, reaches
-        forward with the toes up by `toes_up`, and sets down with no speed
-        left, so it lands softly.
+        forward with the toes up by `toes_up`, and sets down.
+
+        The whole path is one continuous movement. The paw leaves the ground
+        still moving back with it and comes down already moving back with it,
+        so it neither skids nor stabs, and its speed never changes in a jump:
+        it eases off the ground, and eases onto it. `follow` is the share of
+        the swing over which it lets go of the ground's speed at one end and
+        picks it up at the other. `early` says when in the swing the paw is
+        highest: above zero in the first half, below zero in the second.
         """
         phase %= 1.0
         stride = front - back
+        # How the paw is tipped, as one curve round the whole cycle: flat for
+        # most of its time on the ground, heel up as it leaves, curled as it
+        # lifts, toes up as it reaches, flat again as it lands.
+        air = 1 - on_ground
+        tipped = flowing([
+            (0.0, 0.0),
+            (on_ground * heel_from, 0.0),
+            (on_ground, -heel),
+            (on_ground + air * 0.3, -curl),
+            (on_ground + air * 0.8, toes_up),
+            (1.0, 0.0),
+        ], phase)
         if phase < on_ground:
             share = phase / on_ground
-            return front - stride * share, 0.0, -heel * smoothstep((share - 0.68) / 0.32), math.sin(math.pi * share)
-        swing = (phase - on_ground) / (1 - on_ground)
-        # Leave and arrive at the ground's speed, so the paw neither skids nor stabs.
-        speed = -stride * (1 - on_ground) / on_ground * carry
-        h00 = 2 * swing ** 3 - 3 * swing ** 2 + 1
-        h10 = swing ** 3 - 2 * swing ** 2 + swing
-        h01 = -2 * swing ** 3 + 3 * swing ** 2
-        h11 = swing ** 3 - swing ** 2
-        ahead = h00 * back + h10 * speed + h01 * front + h11 * speed
-        # Up quickly, down slowly.
-        height = lift * math.sin(math.pi * swing ** 0.8) ** 1.4
-        tipped = keyed([(0.0, -heel), (0.3, -curl), (0.8, toes_up), (1.0, 0.0)], swing)
+            return front - stride * share, 0.0, tipped, math.sin(math.pi * share) ** 1.5
+        swing = (phase - on_ground) / air
+        # The ground's speed, in metres for the whole swing.
+        speed = -stride * air / on_ground
+        # Across from back to front with no speed at either end, plus the
+        # ground's speed fading out after the paw leaves and in before it lands.
+        leaving = 1 - smootherstep(swing / follow)
+        arriving = smootherstep((swing - (1 - follow)) / follow)
+        ahead = back + stride * smootherstep(swing) + speed * swing * leaving + speed * (swing - 1) * arriving
+        # No upward speed at the moment it leaves or lands.
+        height = lift * math.sin(math.pi * swing * (1 + early * (1 - swing))) ** 2
         return ahead, height, tipped, 0.0
 
     # ----- The clips. Each is a function from a share of the clip (0 to 1) to a pose. -----
@@ -780,7 +840,11 @@ class Quadruped:
             paws[leg] = self.step(
                 phase - start, on_ground, middle + stride / 2, middle - stride / 2,
                 lift=self.setting('walk', 'lift', 0.13) * (1.0 if front else 0.75),
-                heel=24 if front else 34,
+                # The front paw peels off the ground early and far: without that
+                # his short front leg would be pulled straight as the paw leaves,
+                # and the elbow would snap.
+                heel=40 if front else 34,
+                heel_from=0.5 if front else 0.6,
                 curl=78 if front else 42,
                 toes_up=14 if front else 6,
             )
@@ -805,48 +869,149 @@ class Quadruped:
         self.head(follow=0.1, shift=Vector((0, 0, 0.004 * wave(phase * 2, 0.3))))
         self.tail_curve(phase, sway=lambda at: 11 * wave(at, 0.12), lift=lambda at: 4 * wave(at * 2, 0.3), lag=0.07)
         for leg, (ahead, height, tipped, _) in paws.items():
-            self.paw(leg, at=ahead, lift=height, toes=tipped)
+            self.paw(leg, at=ahead, lift=height, toes=tipped, soft=True)
 
-    def run_plan(self):
-        """Where the paws go in a gallop."""
-        on_ground = self.setting('run', 'on_ground', 0.3)
-        stride = self.setting('run', 'stride', 0.66)
-        return on_ground, stride, stride / on_ground
+    # The three gaits share one clock, so the game can switch between them in
+    # mid stride. A paw's place in its own step is set by the middle of its
+    # time on the ground, when it is under the body. The walk fixes those
+    # moments; the trot and the gallop are timed to sit as near them as their
+    # own orders allow: every paw of the trot is an eighth of a cycle from the
+    # walk's, and every paw of the gallop under a third from the trot's.
+    def walk_middles(self):
+        """When each paw is in the middle of its time on the ground in the walk (shares of the cycle)."""
+        on_ground = self.walk_plan()[0]
+        return {leg: (start + on_ground / 2) % 1 for leg, start in (('hind_l', 0.0), ('front_l', 0.25), ('hind_r', 0.5), ('front_r', 0.75))}
 
-    def run(self, phase):
-        on_ground, stride, _ = self.run_plan()
-        front_middle = self.setting('run', 'front_middle', 0.5)
-        hind_middle = self.setting('run', 'hind_middle', -0.2)
-        # A bounding gallop. The hind paws land close together and push; he is
-        # in the air stretched out; the front paws land one after the other;
-        # and the hind paws come down again as the second front paw leaves.
-        starts = {'hind_l': 0.0, 'hind_r': 0.06, 'front_l': 0.57, 'front_r': 0.67}
+    def trot_plan(self):
+        """Where and when the paws go in a trot: diagonal pairs, left hind with right front, then right hind with left front."""
+        on_ground = self.setting('trot', 'on_ground', 0.44)
+        stride = self.setting('trot', 'stride', 0.48)
+        # The left hind paw is an eighth of a cycle earlier than in the walk,
+        # and the left front an eighth later, which brings each diagonal pair together.
+        first = self.walk_middles()['hind_l'] - 0.125 - on_ground / 2
+        starts = {'hind_l': first % 1, 'front_r': first % 1, 'hind_r': (first + 0.5) % 1, 'front_l': (first + 0.5) % 1}
+        return on_ground, stride, stride / on_ground, starts
+
+    def trot(self, phase):
+        on_ground, stride, _, starts = self.trot_plan()
+        front_middle = self.setting('trot', 'front_middle', 0.46)
+        hind_middle = self.setting('trot', 'hind_middle', -0.34)
         paws = {}
         for leg, start in starts.items():
             front = leg.startswith('front')
             middle = front_middle if front else hind_middle
             paws[leg] = self.step(
                 phase - start, on_ground, middle + stride / 2, middle - stride / 2,
-                lift=self.setting('run', 'lift', 0.2) * (1.0 if front else 0.8),
-                heel=20 if front else 38,
+                lift=self.setting('trot', 'lift', 0.12) * (1.0 if front else 0.8),
+                heel=36 if front else 34,
+                curl=64 if front else 44,
+                toes_up=10 if front else 4,
+                heel_from=0.5 if front else 0.6,
+            )
+        # Time from the moment the first pair (left hind, right front) lands.
+        beat = phase - starts['hind_l']
+        # The back stays level. The body dips a little as each pair takes the
+        # weight and floats between pairs: two small bobs a cycle.
+        self.trunk(
+            rise=-0.035 + 0.011 * wave(beat * 2, 0.94),
+            # The hips turn toward the hind paw that is forward and the
+            # shoulders toward the front one. In a trot those are opposite
+            # sides, so the spine bends one way, then the other.
+            hips_yaw=-3.0 * wave(beat, 0.0),
+            chest_yaw=2.5 * wave(beat, 0.0),
+            hips_roll=1.4 * wave(beat, 0.72),
+            chest_roll=0.8 * wave(beat, 0.22),
+        )
+        for side in ('l', 'r'):
+            ahead, _, _, weight = paws[f'front_{side}']
+            self.blade(side, rise=0.05 * weight - 0.012, tip=-12 * (ahead - front_middle) / stride)
+        # The head is held where it is and does not bob with the body.
+        self.head(follow=0.08)
+        # Tail up, with a small sway and a bounce on each beat.
+        self.tail_curve(phase, sway=lambda at: 6 * wave(at - starts['hind_l'], 0.15), lift=lambda at: 14 + 4 * wave((at - starts['hind_l']) * 2, 0.1), lag=0.06)
+        for leg, (ahead, height, tipped, _) in paws.items():
+            self.paw(leg, at=ahead, lift=height, toes=tipped, soft=True)
+
+    def run_plan(self):
+        """
+        Where and when the paws go in a gallop. It is a rotary gallop: each
+        paw lands by itself, going round the body: left hind, right hind,
+        right front, left front. The hind paws land close together and so do
+        the front paws, and he is off the ground twice: stretched out after
+        the hind legs push, and for a moment gathered up after the front legs push.
+        """
+        on_ground = self.setting('run', 'on_ground', 0.24)
+        stride = self.setting('run', 'stride', 0.56)
+        between = self.setting('run', 'between', 0.13)        # from one paw of a pair landing to the other
+        to_front = self.setting('run', 'to_front', 0.57)      # from the first hind paw landing to the first front paw
+        after = {'hind_l': 0.0, 'hind_r': between, 'front_r': to_front, 'front_l': to_front + between}
+        # When the first hind paw lands: wherever puts the paws nearest their
+        # places in the trot (see `walk_middles`), counting the paw furthest from its own.
+        trot_on_ground, _, _, trot_starts = self.trot_plan()
+        def furthest(first):
+            return max(abs(((first + after[leg] + on_ground / 2) - (trot_starts[leg] + trot_on_ground / 2) + 0.5) % 1 - 0.5) for leg in after)
+        first = min((i / 200 for i in range(200)), key=furthest)
+        return on_ground, stride, stride / on_ground, {leg: (first + wait) % 1 for leg, wait in after.items()}
+
+    def run(self, phase):
+        on_ground, stride, _, starts = self.run_plan()
+        front_middle = self.setting('run', 'front_middle', 0.5)
+        hind_middle = self.setting('run', 'hind_middle', -0.2)
+        # The second paw of each pair to land is the leading one: it reaches a little further.
+        lead = self.setting('run', 'lead', 0.04)
+        paws = {}
+        for leg, start in starts.items():
+            front = leg.startswith('front')
+            middle = (front_middle if front else hind_middle) + (lead if leg in ('hind_r', 'front_l') else 0.0)
+            paws[leg] = self.step(
+                phase - start, on_ground, middle + stride / 2, middle - stride / 2,
+                lift=self.setting('run', 'lift', 0.24) * (1.0 if front else 0.85),
+                heel=30 if front else 38,
                 curl=85 if front else 55,
                 toes_up=16 if front else 4,
-                carry=0.45,
+                follow=0.3,
+                heel_from=0.4,
+                # The front paws stay up as they reach and come down late, so
+                # he is seen to be off the ground. The hind paws snatch up.
+                early=-0.45 if front else 0.35,
             )
+        # Time from the moment the first hind paw lands.
+        beat = phase - starts['hind_l']
         # The spine is a spring: curled tight as the legs gather under him
-        # (just before the hind paws land), stretched long in the air.
-        curl = wave(phase, 0.96)
+        # (just before the hind paws land), stretched long in the air after
+        # they push.
+        curl = wave(beat, 0.96)
+        # He is highest in the air after the hind legs push, and rises a
+        # little again as the front legs push.
+        high = on_ground + self.setting('run', 'between', 0.13) + (self.setting('run', 'to_front', 0.57) - on_ground - self.setting('run', 'between', 0.13)) / 2
         self.trunk(
-            rise=-0.025 - 0.075 * curl,
-            lean=5.0 * wave(phase, 0.2),
-            arch=5.0 + 21.0 * curl,
+            rise=self.setting('run', 'rise', -0.06) + self.setting('run', 'bound', 0.035) * wave(beat, high) + self.setting('run', 'bob', 0.025) * wave(beat * 2, high * 2),
+            # Nose up as the hind legs drive, nose down to meet the ground with the front paws.
+            lean=self.setting('run', 'lean', 6.5) * wave(beat, 0.16),
+            arch=5.0 + self.setting('run', 'arch', 21.0) * curl,
+            # The body rolls a little onto each paw that lands first: the
+            # left hind, then the right front.
+            hips_roll=1.6 * wave(beat, 0.08),
+            chest_roll=-1.6 * wave(beat, 0.62),
         )
         for side in ('l', 'r'):
             self.blade(side, rise=0.05 * paws[f'front_{side}'][3] - 0.01)
         self.head(follow=0.3)
-        self.tail_curve(phase, sway=lambda at: 3 * wave(at, 0.3), lift=lambda at: -52 - 16 * wave(at, 0.1), lag=0.06)
+        self.tail_curve(phase, sway=lambda at: 3 * wave(at - starts['hind_l'], 0.3), lift=lambda at: -52 - 16 * wave(at - starts['hind_l'], 0.1), lag=0.06)
         for leg, (ahead, height, tipped, _) in paws.items():
-            self.paw(leg, at=ahead, lift=height, toes=tipped)
+            self.paw(leg, at=ahead, lift=height, toes=tipped, soft=True)
+
+    @staticmethod
+    def footfalls(on_ground, starts):
+        """The order the paws land in, and the shares of a cycle with no paw on the ground."""
+        order = sorted(starts.items(), key=lambda item: item[1])
+        marks = sorted({round(edge % 1, 6) for start in starts.values() for edge in (start, start + on_ground)})
+        air = 0.0
+        for a, b in zip(marks, marks[1:] + [marks[0] + 1]):
+            middle = (a + b) / 2
+            if not any((middle - start) % 1 < on_ground for start in starts.values()):
+                air += b - a
+        return order, air
 
     def shape(self, s, time=0.0, lag=0.0, tail=None):
         """Poses the whole cat from a few numbers, for the jump, the fall and the landing."""
@@ -917,17 +1082,21 @@ class Quadruped:
         clips = [
             ('idle', self.idle, self.setting('idle', 'seconds', 8.0)),
             ('walk', self.walk, self.setting('walk', 'seconds', 0.8)),
-            ('run', self.run, self.setting('run', 'seconds', 0.5)),
+            ('trot', self.trot, self.setting('trot', 'seconds', 0.4)),
+            ('run', self.run, self.setting('run', 'seconds', 0.4667)),
             ('jump', self.jump, 0.6),
             ('falling', self.falling, 1.0),
             ('landing', self.landing, self.LANDING_SECONDS),
         ]
         armature = self.armature
         armature.animation_data_create()
+        lasts = {}
         for name, pose, seconds in clips:
             action = bpy.data.actions.new(name)
             armature.animation_data.action = action
             frames = max(1, round(seconds * FPS))
+            # A clip is a whole number of frames long.
+            seconds = lasts[name] = frames / FPS
             self.poser.short = 0.0
             for frame in range(frames + 1):
                 self.poser.frame = frame
@@ -947,9 +1116,14 @@ class Quadruped:
             if name not in ('jump', 'falling') and self.poser.short > 0.002:
                 raise SystemExit(f"In the {name} clip a paw on the ground ({self.poser.short_where}) is asked to reach {self.poser.short * 100:.1f} cm further than its leg is long. Shorten the stride or move the paws' path (see the guide's \"clips\").")
         on_ground, stride, front_middle, hind_middle, travel = self.walk_plan()
-        say(f"walk: {travel:.2f} m of ground a cycle, {travel / self.setting('walk', 'seconds', 0.8):.2f} m a second. Front paws work from {front_middle + stride / 2:.2f} to {front_middle - stride / 2:.2f} m ahead of the middle, hind paws from {hind_middle + stride / 2:.2f} to {hind_middle - stride / 2:.2f}: each hind paw lands in the print of the front paw on its side")
-        _, _, travel = self.run_plan()
-        say(f"run: {travel:.2f} m of ground a cycle, {travel / self.setting('run', 'seconds', 0.5):.2f} m a second")
+        say(f"walk: {travel:.2f} m of ground a cycle, {travel / lasts['walk']:.2f} m a second. Front paws work from {front_middle + stride / 2:.2f} to {front_middle - stride / 2:.2f} m ahead of the middle, hind paws from {hind_middle + stride / 2:.2f} to {hind_middle - stride / 2:.2f}: each hind paw lands in the print of the front paw on its side")
+        names = {'hind_l': 'left hind', 'hind_r': 'right hind', 'front_l': 'left front', 'front_r': 'right front'}
+        for name, plan in (('trot', self.trot_plan()), ('run', self.run_plan())):
+            on_ground, _, travel, starts = plan
+            seconds = lasts[name]
+            order, air = self.footfalls(on_ground, starts)
+            landings = ', '.join(f"{names[leg]} at {start:.2f}" for leg, start in order)
+            say(f"{name}: {travel:.2f} m of ground a cycle, {travel / seconds:.2f} m a second. Paws land: {landings} of the cycle, each down for {on_ground:.2f} of it. No paw is down for {air:.2f} of it")
         # Leave the skeleton at rest.
         for bone in armature.pose.bones:
             bone.location = (0, 0, 0)

@@ -1,5 +1,5 @@
 {
-  "about": "Where Caputo's joints are, for tools/rig-quadruped.py. Each point is [across, up, forward] in metres, measured on the model once it faces straight ahead and stands on the ground: across is to his left, up is from the ground, forward is toward his nose. A shoulder blade runs from the shoulder up to just under the skin beside the top of the back. An ear runs from its base to its tip. \"clips\" changes a clip's numbers from the script's own: here the middle of the front paws' path in the walk, in metres ahead of the middle of the body, which sits further back than the script's own because his front legs slope forward as he stands.",
+  "about": "Where Caputo's joints are, for tools/rig-quadruped.py. Each point is [across, up, forward] in metres, measured on the model once it faces straight ahead and stands on the ground: across is to his left, up is from the ground, forward is toward his nose. A shoulder blade runs from the shoulder up to just under the skin beside the top of the back. An ear runs from its base to its tip. \"clips\" changes a clip's numbers from the script's own: here the middle of the front paws' path in the walk and the run, in metres ahead of the middle of the body, which sits further back than the script's own because his front legs slope forward as he stands, and the middle of the hind paws' path in the run.",
   "turned_left_degrees": 21.7,
   "joints": {
     "spine": [[0.0, 0.8, -0.42], [0.0, 0.83, -0.2], [0.01, 0.86, 0.04], [0.01, 0.9, 0.26], [0.0, 0.98, 0.44]],
@@ -15,5 +15,5 @@
     "ear_left": [[0.16, 1.22, 0.72], [0.19, 1.31, 0.73]],
     "ear_right": [[-0.19, 1.25, 0.64], [-0.23, 1.35, 0.64]]
   },
-  "clips": {"walk": {"front_middle": 0.44}}
+  "clips": {"walk": {"front_middle": 0.44}, "run": {"front_middle": 0.48, "hind_middle": -0.24}}
 }

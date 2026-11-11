@@ -1,7 +1,8 @@
 // The script of the hero preview page (see build.mjs). It draws Caputo three
-// times: on a stage, where any clip can be played or the clips are mixed by
-// the game's own animation player, and in two side views that play the walk
-// and the run slowly over ground that moves at the speed the game moves him.
+// several times: on a stage, where any clip can be played or the clips are
+// mixed by the game's own animation player, and in side views that play the
+// walk, the trot and the run slowly over ground that moves at the speed the
+// game moves him.
 
 import {
   ACESFilmicToneMapping,
@@ -256,11 +257,12 @@ const CLIPS: ClipChoice[] = [
     id: 'game',
     label: 'In the game',
     kind: 'Mixed by the game',
-    note: 'The clips mixed by the game’s own animation player: he stands, walks, breaks into a run, jumps on the run, lands, stops, and jumps from a standstill. The turf moves at the speed the game moves him.',
+    note: 'The clips mixed by the game’s own animation player: he stands, walks, trots, gallops, jumps on the run, lands, drops back to a trot and a walk, stops, and jumps from a standstill. The turf moves at the speed the game moves him.',
   },
   { id: 'idle', label: 'Idle', kind: 'Loops, 8 seconds', note: 'Standing. Slow breathing, his weight easing from side to side, a look to his left and later to his right, an ear flick now and then, and the tip of his tail flicking.' },
   { id: 'walk', label: 'Walk', kind: 'Loops', note: 'One paw at a time: left hind, left front, right hind, right front. Each hind paw lands in the print of the front paw on its side. The shoulder blades rise in turn and the head stays level.' },
-  { id: 'run', label: 'Run', kind: 'Loops', note: 'A bounding gallop. The hind paws push off close together, he stretches out with all four paws off the ground, the front paws land, and his back curls as the legs gather under him.' },
+  { id: 'trot', label: 'Trot', kind: 'Loops', note: 'Diagonal pairs: left hind with right front, then right hind with left front, in a quick even rhythm. The back stays level, the head is held steady and the tail is up.' },
+  { id: 'run', label: 'Run', kind: 'Loops', note: 'A rotary gallop. Each paw lands by itself, going round the body: left hind, right hind, right front, left front. He stretches out in the air after the hind legs push, and his back curls as the legs gather under him.' },
   { id: 'jump', label: 'Jump', kind: 'Plays once', note: 'Shown here slowly, from the crouch. In the game the crouch and push take a tenth of a second, then the rest follows how fast he is rising.', once: true },
   { id: 'falling', label: 'Falling', kind: 'Loops', note: 'Legs reaching down and spread, back a little rounded, tail out behind and working for balance.' },
   { id: 'landing', label: 'Landing', kind: 'Plays once', note: 'Front paws touch first, hind paws follow, the body sinks to take the drop, then he stands.', once: true },
@@ -315,8 +317,8 @@ class Stage {
   /** What the player is asking for at each moment of the loop: how fast, and when to jump. */
   private script(): { pace: number; jumpAt: number[] } {
     const t = this.clock;
-    const pace = t < 2.5 ? 0 : t < 5.5 ? 0.25 : t < 9.2 ? 1 : 0;
-    return { pace, jumpAt: [7.2, 11.2] };
+    const pace = t < 2 ? 0 : t < 4.5 ? 0.25 : t < 7 ? 0.5 : t < 11 ? 1 : t < 12.5 ? 0.5 : t < 14 ? 0.25 : 0;
+    return { pace, jumpAt: [9.2, 16] };
   }
 
   step(dt: number): void {
@@ -325,7 +327,7 @@ class Stage {
     if (this.choice.id === 'game') {
       const step = dt * rate;
       this.clock += step;
-      if (this.clock > 14) {
+      if (this.clock > 18.5) {
         this.clock = 0;
         this.jumped = [false, false];
       }
@@ -476,6 +478,7 @@ const start = async (): Promise<void> => {
   const stage = new Stage($<HTMLCanvasElement>('view'), loaded);
   const sides = [
     new SideView($<HTMLCanvasElement>('side-walk'), loaded, 'walk', SPEC.walkSpeed),
+    new SideView($<HTMLCanvasElement>('side-trot'), loaded, 'trot', SPEC.trotSpeed ?? SPEC.walkSpeed),
     new SideView($<HTMLCanvasElement>('side-run'), loaded, 'run', SPEC.runSpeed),
   ];
 

@@ -30,10 +30,10 @@ import {
 import type { GLTF } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { clone as cloneRigged } from 'three/examples/jsm/utils/SkeletonUtils.js';
 import { MOVE, type HeroName } from '../game/hero';
-import { airPhase, approach, groundMix, landingWeight, strideRate } from './hero-motion';
+import { airPhase, approach, groundMix, landingWeight, movingShare, nextGait, strideBeat, strideRate, type Gait, type GaitBands } from './hero-motion';
 import type { HeroInfo, HeroView, Pose } from './heroes';
 
-export type ClipRole = 'idle' | 'walk' | 'run' | 'jump' | 'fall' | 'land' | 'roll';
+export type ClipRole = 'idle' | 'walk' | 'trot' | 'run' | 'jump' | 'fall' | 'land' | 'roll';
 
 export interface HeroModelSpec {
   /** File name in assets/models/. */
@@ -48,6 +48,7 @@ export interface HeroModelSpec {
    * A kind with no match is done without:
    *   no run     the walk is played faster
    *   no walk    the run is played slower
+   *   no trot    walk and run are mixed by pace, with nothing between
    *   no idle    the hero holds the first frame of its walk
    *   no jump    the hero keeps its ground pose in the air, with a stretch
    *   no fall    the late part of the jump is held on the way down
@@ -72,6 +73,14 @@ export interface HeroModelSpec {
   /** Ground speeds, in metres a second, at which the walk and run clips look right. */
   walkSpeed: number;
   runSpeed: number;
+  /**
+   * For a hero with a trot between its walk and its run: the speed the trot
+   * clip looks right at, and the paces (0 to 1 of top speed) at which it
+   * changes gait. The three clips must share one clock: a paw is at the same
+   * point of its step at the same share of each clip, as near as the gaits allow.
+   */
+  trotSpeed?: number;
+  gaits?: GaitBands;
   /** Size of the soft spot on the ground: across and along the body. */
   shadow: { across: number; along: number };
   /** Where a portrait camera should look, and from how far. */
@@ -107,9 +116,11 @@ export const HERO_MODELS: Record<HeroName, HeroModelSpec> = {
   },
   // Made by the owner in Meshy. Meshy could not give him a four-legged
   // skeleton, so tools/rig-quadruped.py rigs him and writes his clips: idle,
-  // walk, run, jump, falling and landing. The script prints the ground each
-  // stride of the walk and the run covers, which is where the two speeds
-  // below come from (times his height here over his height in the file).
+  // walk, trot, run, jump, falling and landing. The script prints the speed
+  // each of the walk, the trot and the run covers ground at, which is where
+  // the three speeds below come from (times his height here over his height
+  // in the file). He walks up to about a third of top speed, trots to two
+  // thirds, and gallops above that.
   Caputo: {
     file: 'caputo.glb',
     height: 1.55,
@@ -117,6 +128,7 @@ export const HERO_MODELS: Record<HeroName, HeroModelSpec> = {
     clips: {
       idle: ['idle'],
       walk: ['walk'],
+      trot: ['trot'],
       run: ['run'],
       jump: ['jump'],
       fall: ['falling'],
@@ -126,8 +138,10 @@ export const HERO_MODELS: Record<HeroName, HeroModelSpec> = {
     // His jump opens with a crouch and a push from the hind legs.
     airborne: [0.2, 1],
     pushOff: { share: 0.2, seconds: 0.1 },
-    walkSpeed: 1.33,
-    runSpeed: 4.82,
+    walkSpeed: 1.36,
+    trotSpeed: 3.06,
+    runSpeed: 5.61,
+    gaits: { trot: { down: 0.3, up: 0.34 }, run: { down: 0.63, up: 0.68 } },
     shadow: { across: 1.1, along: 1.8 },
     portrait: { height: 0.95, distance: 2.45 },
   },
@@ -149,6 +163,14 @@ export const STAND_IN: HeroModelSpec = {
   shadow: { across: 1.1, along: 1.1 },
   portrait: { height: 1.6, distance: 2.7 },
 };
+
+/**
+ * How fast a hero with three gaits fades from one to the next, as a rate a
+ * second: most of the way in a twentieth of a second, all of it in about a
+ * tenth. The paws slide a little while two gaits are mixed, so it is kept
+ * short (tools/preview/measure.mjs measures the slide).
+ */
+const GAIT_CHANGE = 24;
 
 export const wantsStandIn = (): boolean => new URLSearchParams(window.location.search).has('standin');
 
@@ -205,7 +227,10 @@ export class ModelHero implements HeroView {
   private air = 0;
   private landing = 0;
   private squashed = 0;
-  private mix = { idle: 1, walk: 0, run: 0 };
+  private mix = { idle: 1, walk: 0, trot: 0, run: 0 };
+  /** For a hero with three gaits: the gait it is in, and how much of each is showing (they add up to 1). */
+  private gait: Gait = 'walk';
+  private gaitShare = { walk: 1, trot: 0, run: 0 };
   /** How fast the hero was dropping when last in the air, for how hard it lands. */
   private dropping = 0;
   /** Seconds left of the push off the ground at the start of a jump. */
@@ -250,7 +275,7 @@ export class ModelHero implements HeroView {
     this.root.add(this.body);
 
     this.mixer = new AnimationMixer(model);
-    for (const role of ['idle', 'walk', 'run', 'jump', 'fall', 'land', 'roll'] as const) {
+    for (const role of ['idle', 'walk', 'trot', 'run', 'jump', 'fall', 'land', 'roll'] as const) {
       const clip = findClip(source.animations, spec.clips[role]);
       if (!clip) continue;
       const action = this.mixer.clipAction(clip);
@@ -259,7 +284,7 @@ export class ModelHero implements HeroView {
       this.actions[role] = action;
     }
     // Everything that loops plays all the time; the mixing is done by weight.
-    for (const role of ['idle', 'walk', 'run', 'fall'] as const) this.actions[role]?.setLoop(LoopRepeat, Infinity).play();
+    for (const role of ['idle', 'walk', 'trot', 'run', 'fall'] as const) this.actions[role]?.setLoop(LoopRepeat, Infinity).play();
     // The jump is never played through: its airborne part is held as a pose.
     const jump = this.actions.jump;
     if (jump) {
@@ -304,11 +329,26 @@ export class ModelHero implements HeroView {
     const run = actions.run ?? actions.walk;
 
     // On the ground: standing, walking and running, mixed by pace.
+    const trot = spec.gaits && spec.trotSpeed ? actions.trot : undefined;
     const target = groundMix(pose.pace);
-    this.mix.idle = approach(this.mix.idle, target.idle, 12, dt);
-    this.mix.walk = approach(this.mix.walk, target.walk, 12, dt);
-    this.mix.run = approach(this.mix.run, target.run, 12, dt);
-    const total = this.mix.idle + this.mix.walk + this.mix.run || 1;
+    if (trot && spec.gaits) {
+      // A hero with a trot is in one gait at a time, chosen by pace, and
+      // fades quickly from one to the next when it changes.
+      this.gait = nextGait(this.gait, pose.pace, spec.gaits);
+      for (const gait of ['walk', 'trot', 'run'] as const) {
+        this.gaitShare[gait] = approach(this.gaitShare[gait], gait === this.gait ? 1 : 0, GAIT_CHANGE, dt);
+      }
+      this.mix.idle = approach(this.mix.idle, 1 - movingShare(pose.pace), 12, dt);
+      this.mix.walk = (1 - this.mix.idle) * this.gaitShare.walk;
+      this.mix.trot = (1 - this.mix.idle) * this.gaitShare.trot;
+      this.mix.run = (1 - this.mix.idle) * this.gaitShare.run;
+      target.run = this.gait === 'run' ? 1 - target.idle : 0;
+    } else {
+      this.mix.idle = approach(this.mix.idle, target.idle, 12, dt);
+      this.mix.walk = approach(this.mix.walk, target.walk, 12, dt);
+      this.mix.run = approach(this.mix.run, target.run, 12, dt);
+    }
+    const total = this.mix.idle + this.mix.walk + this.mix.trot + this.mix.run || 1;
 
     // In the air: the airborne part of the jump, held and moved along by
     // upward speed. A falling clip, when there is one, takes over on the way down.
@@ -345,7 +385,21 @@ export class ModelHero implements HeroView {
     const speed = pose.pace * MOVE.walkSpeed;
     const rate = strideRate(speed, target, spec.walkSpeed, spec.runSpeed);
     if (actions.idle) actions.idle.setEffectiveWeight((ground * this.mix.idle) / total);
-    if (walk && run && walk !== run) {
+    if (walk && trot && run && spec.trotSpeed) {
+      // Three gaits on one clock: every clip is played at the speed that gets
+      // it through one cycle in the same time, so each is always at the same
+      // share of its cycle and a change of gait carries on in mid stride.
+      walk.setEffectiveWeight((ground * (this.mix.walk + (actions.idle ? 0 : this.mix.idle))) / total);
+      trot.setEffectiveWeight((ground * this.mix.trot) / total);
+      run.setEffectiveWeight((ground * this.mix.run) / total);
+      const gaits = [
+        { clip: walk, share: this.mix.walk, pace: spec.walkSpeed },
+        { clip: trot, share: this.mix.trot, pace: spec.trotSpeed },
+        { clip: run, share: this.mix.run, pace: spec.runSpeed },
+      ].map(({ clip, share, pace }) => ({ clip, share, seconds: clip.getClip().duration, ground: pace * clip.getClip().duration }));
+      const beat = strideBeat(speed, gaits);
+      for (const gait of gaits) gait.clip.setEffectiveTimeScale(gait.seconds * beat);
+    } else if (walk && run && walk !== run) {
       walk.setEffectiveWeight((ground * (this.mix.walk + (actions.idle ? 0 : this.mix.idle))) / total);
       run.setEffectiveWeight((ground * this.mix.run) / total);
       // Keep the two strides in step, so a mix of them does not shuffle.
