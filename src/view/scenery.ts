@@ -645,6 +645,8 @@ export const goldenLeaf = (level: Level, materials: Materials): LeafView => {
 
 export interface LevelSolids {
   group: Group;
+  /** Each solid's shapes with where they lie along the route (z, `far` the smaller), for drawing only the near ones. */
+  pieces: Array<{ shape: Object3D; near: number; far: number }>;
   mushrooms: Map<string, MushroomView>;
   leaf: LeafView;
 }
@@ -652,23 +654,28 @@ export interface LevelSolids {
 export const buildSolids = (level: Level, materials: Materials, decor: Decor, random: () => number): LevelSolids => {
   const group = new Group();
   const mushrooms = new Map<string, MushroomView>();
+  const pieces: LevelSolids['pieces'] = [];
   for (const s of level.solids) {
+    const shape = new Group();
     if (s.kind === 'mushroom') {
       const made = mushroom(s, materials);
-      group.add(made.group);
+      shape.add(made.group);
       mushrooms.set(s.id, made.view);
-    } else if (s.kind === 'bank') group.add(bank(s, materials, decor, random));
-    else if (s.kind === 'stump') group.add(stump(s, materials));
-    else if (s.kind === 'bough') group.add(bough(s, materials));
+    } else if (s.kind === 'bank') shape.add(bank(s, materials, decor, random));
+    else if (s.kind === 'stump') shape.add(stump(s, materials));
+    else if (s.kind === 'bough') shape.add(bough(s, materials));
     else {
-      group.add(log(s, materials));
+      shape.add(log(s, materials));
       // Two snags hold a raised log up; a log at bank height rests on the banks.
-      if (s.top > 2) group.add(highLogPosts(s, materials));
+      if (s.top > 2) shape.add(highLogPosts(s, materials));
     }
+    group.add(shape);
+    // A few metres to spare each way: rock swells out below a bank, and the last bough runs on into the cedar.
+    pieces.push({ shape, near: s.z + s.halfZ + 8, far: s.z - s.halfZ - 8 });
   }
   const leaf = goldenLeaf(level, materials);
   group.add(leaf.group);
-  return { group, mushrooms, leaf };
+  return { group, pieces, mushrooms, leaf };
 };
 
 /** The soft dark spot under the hero that shows where a jump will land. */

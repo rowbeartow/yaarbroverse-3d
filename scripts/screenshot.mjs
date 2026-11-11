@@ -4,7 +4,7 @@
 //
 //   quality     high, medium, low or minimal (default high)
 //   solid       the part of the level to stand the hero on, such as bank-start,
-//               log-2, bank-1, bank-2, high-log or bough (default bank-start)
+//               log-2, bank-1, stump-3, bank-2, high-log or bough (default bank-start)
 //   back        metres toward the camera from the middle of that part (default 2)
 //   hero        Yaarbro or Caputo
 //   difficulty  easy, normal or hard

@@ -42,7 +42,7 @@ describe('Bouncing Grove difficulty numbers', () => {
     for (const difficulty of DIFFICULTIES) {
       const numbers = GROVE_DIFFICULTY[difficulty];
       expect(Object.keys(numbers).sort()).toEqual(names);
-      for (const value of Object.values(numbers)) {
+      for (const value of Object.values(numbers).flat()) {
         expect(Number.isFinite(value)).toBe(true);
         expect(value).toBeGreaterThan(0);
       }
@@ -58,7 +58,7 @@ describe('Bouncing Grove difficulty numbers', () => {
   });
 
   it('gives Easy the shortest jumps and Hard the longest', () => {
-    for (const key of ['logGap', 'stumpGap', 'stumpRise', 'mushroomGap'] as const) {
+    for (const key of ['firstLogGap', 'logGap', 'stumpGap', 'stumpRise', 'mushroomGap'] as const) {
       expect(easy[key]).toBeLessThan(normal[key]);
       expect(normal[key]).toBeLessThan(hard[key]);
     }
@@ -78,8 +78,19 @@ describe('Bouncing Grove difficulty numbers', () => {
     }
   });
 
-  it('makes every bank safe on Easy and Normal, and only the first on Hard', () => {
-    expect([easy.safeBanks, normal.safeBanks, hard.safeBanks]).toEqual([3, 3, 1]);
+  it('opens with a hop shorter than the jumps that follow, on every difficulty', () => {
+    for (const difficulty of DIFFICULTIES) {
+      const numbers = GROVE_DIFFICULTY[difficulty];
+      expect(numbers.firstLogGap).toBeLessThan(numbers.logGap);
+      expect(numbers.logCount).toBeGreaterThanOrEqual(3);
+    }
+    expect(hard.logCount).toBeGreaterThan(normal.logCount);
+  });
+
+  it('makes every bank a checkpoint on Easy and Normal, and fewer on Hard', () => {
+    expect(easy.checkpoints).toEqual(normal.checkpoints);
+    expect(hard.checkpoints.length).toBeLessThan(normal.checkpoints.length);
+    for (const bank of hard.checkpoints) expect(normal.checkpoints).toContain(bank);
   });
 });
 
@@ -89,16 +100,20 @@ describe.each(DIFFICULTIES)('the grove built on %s', (difficulty) => {
 
   it('uses the numbers from the difficulty file', () => {
     expect(byId(level, 'log-1').halfX * 2).toBeCloseTo(numbers.logWidth, 5);
-    expect(airBetween(byId(level, 'log-1'), byId(level, 'log-2'))).toBeCloseTo(numbers.logGap, 5);
+    expect(count(level, 'log')).toBe(numbers.logCount + 1);
+    expect(airBetween(byId(level, 'log-1'), byId(level, 'log-2'))).toBeCloseTo(numbers.firstLogGap, 5);
+    expect(airBetween(byId(level, 'log-2'), byId(level, 'log-3'))).toBeCloseTo(numbers.logGap, 5);
     expect(count(level, 'stump')).toBe(numbers.stumpCount);
     expect(byId(level, 'stump-1').halfX).toBe(numbers.stumpRadius);
     expect(airBetween(byId(level, 'stump-1'), byId(level, 'stump-2'))).toBeCloseTo(numbers.stumpGap, 5);
     expect(byId(level, 'stump-2').top - byId(level, 'stump-1').top).toBeCloseTo(numbers.stumpRise, 5);
-    // One mushroom always grows on the second bank; the rest are the chain.
+    // One mushroom always grows in the clearing; the rest are the chain.
     expect(count(level, 'mushroom')).toBe(numbers.mushroomChain + 1);
     expect(byId(level, 'mushroom-2').halfX).toBe(numbers.mushroomRadius);
     expect(airBetween(byId(level, 'high-log'), byId(level, 'mushroom-2'))).toBeCloseTo(numbers.mushroomGap, 5);
-    expect(level.solids.filter((s) => s.safe).length).toBe(numbers.safeBanks);
+    // The first bank is always safe; the others are safe when the list names them.
+    const banks = level.solids.filter((s) => s.kind === 'bank');
+    expect(banks.map((s) => s.safe === true)).toEqual(banks.map((_, i) => i === 0 || numbers.checkpoints.includes(i)));
     expect(level.coyoteTime).toBe(numbers.coyoteTime);
     expect(level.ledgeHelp).toBe(numbers.ledgeHelp);
   });
@@ -146,7 +161,7 @@ describe.each(DIFFICULTIES)('the grove built on %s', (difficulty) => {
     }
   });
 
-  it('leaves room to walk around the mushroom on the second bank', () => {
+  it('leaves room to walk around the mushroom in the clearing', () => {
     const bank = byId(level, 'bank-2');
     const mushroom = byId(level, 'mushroom-1');
     expect(mushroom.halfX).toBeLessThan(bank.halfX - 1);

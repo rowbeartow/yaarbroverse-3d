@@ -26,6 +26,7 @@ import type { Level } from '../game/level';
 import type { Materials } from './materials';
 import { noise, rough, smooth } from './noise';
 import { canopyPicture, glowPicture, mistPicture, rayPicture, skyPicture } from './pictures';
+import { STRETCH, inDetail, inView, routeOf } from './route';
 import { MIST_BOTTOM, MIST_TOP, type Decor } from './scenery';
 import { surface } from './surface';
 
@@ -36,9 +37,10 @@ const TAU = Math.PI * 2;
 /**
  * Height of the forest floor. The route crosses a gully: deep and misty under
  * the path, rising to wooded slopes on both sides and a hillside at the far end.
+ * `centre` is the middle of the route at z, so the gully bends where the route does.
  */
-export const groundHeight = (x: number, z: number, farEnd: number): number => {
-  const wander = 2.5 * rough(z * 0.02, 3.3);
+export const groundHeight = (x: number, z: number, farEnd: number, centre = 0): number => {
+  const wander = centre + 2.5 * rough(z * 0.02, 3.3);
   const gullyHalf = 15 + 3 * rough(z * 0.03, 7.7);
   const out = Math.abs(x - wander) - gullyHalf;
   const floor = -13 + 1.2 * rough(x * 0.08, 1.3, z * 0.08);
@@ -46,7 +48,7 @@ export const groundHeight = (x: number, z: number, farEnd: number): number => {
   const beyond = Math.max(0, out - 12) * 0.18;
   const bumps = 0.7 * rough(x * 0.11, 5.1, z * 0.11) * smooth(0, 7, out);
   // Past the great cedar the ground climbs, closing the view.
-  const hill = Math.max(0, farEnd - 14 - z) * 0.3 * smooth(-4, 14, Math.abs(x) + (farEnd - 14 - z) * 0.5);
+  const hill = Math.max(0, farEnd - 14 - z) * 0.3 * smooth(-4, 14, Math.abs(x - centre) + (farEnd - 14 - z) * 0.5);
   return floor + rise + beyond + bumps + hill;
 };
 
@@ -327,48 +329,73 @@ interface Placed {
   turn: number;
 }
 
-/** Collects where ferns, grass and rocks go, then draws each kind in one go. */
+/** Which stretch of the route a place belongs to. Stretch 0 starts at z = 0 and runs away from the camera. */
+const stretchOf = (z: number): number => Math.floor(-z / STRETCH);
+
+interface ScatterStretch {
+  ferns: Placed[];
+  tufts: Placed[];
+  rocks: Placed[];
+  group: Group;
+  fernMesh: InstancedMesh | null;
+  grassMesh: InstancedMesh | null;
+}
+
+/**
+ * Collects where ferns, grass and rocks go, then draws each kind in one go for
+ * each stretch of the route, so stretches far from the hero can be left out.
+ */
 export class Scatter implements Decor {
-  private readonly ferns: Placed[] = [];
-  private readonly tufts: Placed[] = [];
-  private readonly rocks: Placed[] = [];
-  private fernMesh: InstancedMesh | null = null;
-  private grassMesh: InstancedMesh | null = null;
+  private readonly stretches = new Map<number, ScatterStretch>();
+
+  private at(z: number): ScatterStretch {
+    const index = stretchOf(z);
+    let found = this.stretches.get(index);
+    if (!found) {
+      found = { ferns: [], tufts: [], rocks: [], group: new Group(), fernMesh: null, grassMesh: null };
+      this.stretches.set(index, found);
+    }
+    return found;
+  }
 
   fern(x: number, y: number, z: number, size: number, turn: number): void {
-    this.ferns.push({ x, y, z, size, turn });
+    this.at(z).ferns.push({ x, y, z, size, turn });
   }
 
   grass(x: number, y: number, z: number, size: number, turn: number): void {
-    this.tufts.push({ x, y, z, size, turn });
+    this.at(z).tufts.push({ x, y, z, size, turn });
   }
 
   rock(x: number, y: number, z: number, size: number, turn: number): void {
-    this.rocks.push({ x, y, z, size, turn });
+    this.at(z).rocks.push({ x, y, z, size, turn });
   }
 
   build(materials: Materials): Group {
     const group = new Group();
     const place = new Object3D();
-    const make = (list: Placed[], geometry: BufferGeometry, material: Material, flat = 1): InstancedMesh => {
-      const mesh = new InstancedMesh(geometry, material, Math.max(list.length, 1));
-      list.forEach((item, i) => {
-        place.position.set(item.x, item.y, item.z);
-        place.rotation.set(0, item.turn, 0);
-        place.scale.set(item.size, item.size * flat, item.size);
-        place.updateMatrix();
-        mesh.setMatrixAt(i, place.matrix);
-      });
-      mesh.count = list.length;
-      mesh.instanceMatrix.needsUpdate = true;
-      mesh.receiveShadow = true;
-      group.add(mesh);
-      return mesh;
-    };
-    this.fernMesh = make(this.ferns, fernGeometry(), materials.fern);
-    this.grassMesh = make(this.tufts, grassGeometry(), materials.grass);
-    const rocks = make(this.rocks, rockGeometry(), materials.rock);
-    rocks.castShadow = true;
+    const shapes = { fern: fernGeometry(), grass: grassGeometry(), rock: rockGeometry() };
+    for (const stretch of this.stretches.values()) {
+      const make = (list: Placed[], geometry: BufferGeometry, material: Material): InstancedMesh | null => {
+        if (list.length === 0) return null;
+        const mesh = new InstancedMesh(geometry, material, list.length);
+        list.forEach((item, i) => {
+          place.position.set(item.x, item.y, item.z);
+          place.rotation.set(0, item.turn, 0);
+          place.scale.set(item.size, item.size, item.size);
+          place.updateMatrix();
+          mesh.setMatrixAt(i, place.matrix);
+        });
+        mesh.instanceMatrix.needsUpdate = true;
+        mesh.receiveShadow = true;
+        stretch.group.add(mesh);
+        return mesh;
+      };
+      stretch.fernMesh = make(stretch.ferns, shapes.fern, materials.fern);
+      stretch.grassMesh = make(stretch.tufts, shapes.grass, materials.grass);
+      const rocks = make(stretch.rocks, shapes.rock, materials.rock);
+      if (rocks) rocks.castShadow = true;
+      group.add(stretch.group);
+    }
     return group;
   }
 
@@ -376,8 +403,17 @@ export class Scatter implements Decor {
   setDetail(share: number): void {
     // The lists are in scattered order, so dropping the tail thins them evenly.
     const kept = share < 0.3 ? share : 0.3 + 0.7 * share;
-    if (this.fernMesh) this.fernMesh.count = Math.ceil(this.ferns.length * kept);
-    if (this.grassMesh) this.grassMesh.count = Math.ceil(this.tufts.length * kept);
+    for (const stretch of this.stretches.values()) {
+      if (stretch.fernMesh) stretch.fernMesh.count = Math.ceil(stretch.ferns.length * kept);
+      if (stretch.grassMesh) stretch.grassMesh.count = Math.ceil(stretch.tufts.length * kept);
+    }
+  }
+
+  /** Draws only the stretches near the hero: ferns and grass are too small to see through the mist. */
+  show(heroZ: number): void {
+    for (const [index, stretch] of this.stretches) {
+      stretch.group.visible = inView(-index * STRETCH, -(index + 1) * STRETCH, heroZ) && inDetail(-index * STRETCH, heroZ);
+    }
   }
 }
 
@@ -389,8 +425,11 @@ export interface Forest {
   sky: Mesh;
   /** Tree crowns, for turning their shadows on and off. */
   crowns: InstancedMesh[];
-  /** Mist sheets, dust and light, moved a little each frame. */
-  update(time: number): void;
+  /**
+   * Mist sheets, dust and light, moved a little each frame. Only the stretches
+   * of forest near the hero (at `heroZ`) are drawn.
+   */
+  update(time: number, heroZ: number): void;
   setDetail(share: number): void;
 }
 
@@ -409,9 +448,12 @@ interface Tree {
 
 export const buildForest = (level: Level, materials: Materials, decor: Decor, random: () => number): Forest => {
   const group = new Group();
-  const far = Math.min(...level.solids.map((s) => s.z - s.halfZ));
+  const route = routeOf(level);
+  const far = route.far;
   const top = Math.max(...level.solids.map((s) => s.top));
-  const height = (x: number, z: number): number => groundHeight(x, z, far);
+  const height = (x: number, z: number): number => groundHeight(x, z, far, route.centre(z));
+  /** The height the forest dresses itself to at z: the route's own, but never low enough to look bare. */
+  const canopy = (z: number): number => Math.max(route.height(z), 8);
 
   // The ground: gully floor, slopes and the far hillside, as one smooth sheet.
   const nearEdge = 44;
@@ -433,111 +475,138 @@ export const buildForest = (level: Level, materials: Materials, decor: Decor, ra
   // Trees on both sides, well clear of anything you can stand on: young firs
   // close by, with their green at the height you walk at, and tall cedars behind.
   const trees: Tree[] = [];
-  const pathHeight = (z: number): number => top * Math.min(Math.max(z / far, 0), 1);
   /** How wide a crown of a given height spreads, so every tree keeps the same shape. */
   const spreadFor = (crownHeight: number): number => Math.min(5.5, Math.max(1.5, crownHeight / CROWN_SHAPE));
   for (let z = 26; z > far - 64; z -= 2.6) {
     for (const sign of [-1, 1]) {
       const near = random() < 0.6;
       const treeZ = z + random() * 2.6;
-      // Nothing green closer than this to the middle of the path, so boughs
-      // never hide a place to stand. Wider beside the start, where the camera sits.
-      const clear = treeZ > -4 ? 12 : 7;
+      // Nothing green closer than this to anything you can stand on near here,
+      // so boughs never hide a place to stand. Wider beside the start, where
+      // the camera sits.
+      const sides = route.sides(treeZ);
+      const centre = route.centre(treeZ);
+      const room = treeZ > -4 ? 8.5 : 3.5;
+      const edge = sign > 0 ? Math.max(sides.right, centre + 3.5) + room : Math.min(sides.left, centre - 3.5) - room;
       if (near) {
-        const tip = pathHeight(treeZ) + 3 + random() * 9;
+        const tip = route.height(treeZ) + 3 + random() * 9;
         const green = MIST_TOP - 2.5;
         const spread = spreadFor(tip - green);
-        const x = sign * (clear + spread + random() * 7);
+        const x = edge + sign * (spread + random() * 7);
         trees.push({ x, z: treeZ, foot: height(x, treeZ), tip, green, girth: 0.3 + random() * 0.18, spread, near: true });
       } else {
-        const tip = top + 9 + random() * 18;
+        const tip = canopy(treeZ) + 9 + random() * 18;
         const reachOut = 5 + random() * random() * 34;
         // Stand it first, to learn how tall it is, then give it room for its boughs.
-        const roughX = sign * (clear + 5 + reachOut);
+        const roughX = edge + sign * (5 + reachOut);
         const roughFoot = height(roughX, treeZ);
         const green = roughFoot + (tip - roughFoot) * (0.28 + random() * 0.2);
         const spread = spreadFor(tip - green);
-        const x = sign * (clear + spread + reachOut);
+        const x = edge + sign * (spread + reachOut);
         trees.push({ x, z: treeZ, foot: height(x, treeZ), tip, green, girth: 0.5 + random() * 0.45, spread, near: false });
       }
     }
   }
   // More on the far hillside, to close the view.
   for (let i = 0; i < 26; i += 1) {
-    const x = (random() * 2 - 1) * 60;
     const z = far - 26 - random() * 70;
+    const x = route.centre(far) + (random() * 2 - 1) * 60;
     const foot = height(x, z);
     const tall = 16 + random() * 20;
     const green = foot + tall * (0.25 + random() * 0.2);
     trees.push({ x, z, foot, tip: foot + tall, green, girth: 0.5 + random() * 0.5, spread: spreadFor(foot + tall - green), near: false });
   }
 
+  // The trees are drawn one stretch of the route at a time, so the stretches
+  // the mist hides, or that lie behind the camera, cost nothing.
   const place = new Object3D();
   // Three crown shapes, so no two neighbours match: two full ones for trees near
   // the path and a lighter one for the many behind. A fourth, sparse one stands
   // in for all of them on the slowest machines.
   const shapes = [crownGeometry(11, 24, 10), crownGeometry(29, 22, 9), crownGeometry(47, 13, 7), crownGeometry(61, 9, 6, 2)];
-  const lists: Tree[][] = [[], [], []];
-  trees.forEach((tree, i) => lists[tree.near ? i % 2 : 2].push(tree));
-  // Far trees go in scattered order, so drawing fewer of them thins the forest evenly.
-  for (let i = lists[2].length - 1; i > 0; i -= 1) {
-    const j = Math.floor(random() * (i + 1));
-    [lists[2][i], lists[2][j]] = [lists[2][j], lists[2][i]];
-  }
   const tint = new Color();
   const greens = [0x9ccfa6, 0xb5dca4, 0xcfe6a0, 0xa6d0b0, 0xe4e88a];
   const trunkShape = trunkGeometry();
-  const trunksFor = (list: Tree[]): InstancedMesh => {
-    const mesh = new InstancedMesh(trunkShape, materials.bark, Math.max(list.length, 1));
-    list.forEach((tree, i) => {
-      place.position.set(tree.x, tree.foot - 0.6, tree.z);
-      place.rotation.set(0, random() * TAU, 0);
-      place.scale.set(tree.girth, tree.tip - tree.foot, tree.girth);
-      place.updateMatrix();
-      mesh.setMatrixAt(i, place.matrix);
+  interface TreeStretch {
+    index: number;
+    group: Group;
+    /** Trees far from the path, their trunks, and the five sets of crowns (see below). */
+    farTrees: Tree[];
+    farTrunks: InstancedMesh;
+    crowns: InstancedMesh[];
+  }
+  const byStretch = new Map<number, Tree[]>();
+  for (const tree of trees) {
+    const index = stretchOf(tree.z);
+    byStretch.set(index, [...(byStretch.get(index) ?? []), tree]);
+  }
+  const stretches: TreeStretch[] = [];
+  for (const [index, list] of byStretch) {
+    const stretchGroup = new Group();
+    const lists: Tree[][] = [[], [], []];
+    list.forEach((tree, i) => lists[tree.near ? i % 2 : 2].push(tree));
+    // Far trees go in scattered order, so drawing fewer of them thins the forest evenly.
+    for (let i = lists[2].length - 1; i > 0; i -= 1) {
+      const j = Math.floor(random() * (i + 1));
+      [lists[2][i], lists[2][j]] = [lists[2][j], lists[2][i]];
+    }
+    const trunksFor = (some: Tree[]): InstancedMesh => {
+      const mesh = new InstancedMesh(trunkShape, materials.bark, Math.max(some.length, 1));
+      some.forEach((tree, i) => {
+        place.position.set(tree.x, tree.foot - 0.6, tree.z);
+        place.rotation.set(0, random() * TAU, 0);
+        place.scale.set(tree.girth, tree.tip - tree.foot, tree.girth);
+        place.updateMatrix();
+        mesh.setMatrixAt(i, place.matrix);
+      });
+      mesh.count = some.length;
+      mesh.instanceMatrix.needsUpdate = true;
+      mesh.castShadow = true;
+      mesh.receiveShadow = true;
+      stretchGroup.add(mesh);
+      return mesh;
+    };
+    // Near trees are listed twice: with a full crown, and with the lighter one
+    // that stands in for it on the slowest machines. Only one set is drawn.
+    const nearTrees = [...lists[0], ...lists[1]];
+    trunksFor(nearTrees);
+    const farTrunks = trunksFor(lists[2]);
+    const crownSets: Array<[BufferGeometry, Tree[]]> = [
+      [shapes[0], lists[0]],
+      [shapes[1], lists[1]],
+      [shapes[2], lists[2]],
+      [shapes[3], nearTrees],
+      [shapes[3], lists[2]],
+    ];
+    const crowns = crownSets.map(([shape, some]) => {
+      const mesh = new InstancedMesh(shape, materials.foliage, Math.max(some.length, 1));
+      some.forEach((tree, i) => {
+        place.position.set(tree.x, tree.green, tree.z);
+        place.rotation.set(0, random() * TAU, 0);
+        place.scale.set(tree.spread, tree.tip - tree.green, tree.spread);
+        place.updateMatrix();
+        mesh.setMatrixAt(i, place.matrix);
+        // Mostly deep greens, with the odd young tree catching the light.
+        const pick = random();
+        mesh.setColorAt(i, tint.setHex(greens[pick < 0.08 ? 4 : Math.floor(random() * 4)]));
+      });
+      mesh.count = some.length;
+      mesh.instanceMatrix.needsUpdate = true;
+      if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
+      // Crowns take no shadows: at this size they would be dark squares, not shade.
+      stretchGroup.add(mesh);
+      return mesh;
     });
-    mesh.count = list.length;
-    mesh.instanceMatrix.needsUpdate = true;
-    mesh.castShadow = true;
-    mesh.receiveShadow = true;
-    group.add(mesh);
-    return mesh;
-  };
-  trunksFor([...lists[0], ...lists[1]]);
-  const farTrunks = trunksFor(lists[2]);
-  // Near trees are listed twice: with a full crown, and with the lighter one
-  // that stands in for it on the slowest machines. Only one set is drawn.
-  const nearTrees = [...lists[0], ...lists[1]];
-  const crownSets: Array<[BufferGeometry, Tree[]]> = [
-    [shapes[0], lists[0]],
-    [shapes[1], lists[1]],
-    [shapes[2], lists[2]],
-    [shapes[3], nearTrees],
-    [shapes[3], lists[2]],
-  ];
-  const crowns = crownSets.map(([shape, list]) => {
-    const mesh = new InstancedMesh(shape, materials.foliage, Math.max(list.length, 1));
-    list.forEach((tree, i) => {
-      place.position.set(tree.x, tree.green, tree.z);
-      place.rotation.set(0, random() * TAU, 0);
-      place.scale.set(tree.spread, tree.tip - tree.green, tree.spread);
-      place.updateMatrix();
-      mesh.setMatrixAt(i, place.matrix);
-      // Mostly deep greens, with the odd young tree catching the light.
-      const pick = random();
-      mesh.setColorAt(i, tint.setHex(greens[pick < 0.08 ? 4 : Math.floor(random() * 4)]));
-    });
-    mesh.count = list.length;
-    mesh.instanceMatrix.needsUpdate = true;
-    if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
-    // Crowns take no shadows: at this size they would be dark squares, not shade.
-    group.add(mesh);
-    return mesh;
-  });
+    group.add(stretchGroup);
+    stretches.push({ index, group: stretchGroup, farTrees: lists[2], farTrunks, crowns });
+  }
+  const crowns = stretches.flatMap((stretch) => stretch.crowns);
+  /** True on the slowest machines, where every tree wears the lighter crown. */
+  let sparse = false;
 
-  // The great cedar's crown, high above the last bough.
-  const boughSolid = level.solids.find((s) => s.kind === 'bough');
-  if (boughSolid) {
+  // The great cedar's crown, high above the bough that holds the leaf.
+  const boughSolid = level.solids.find((s) => s.id === level.route[level.route.length - 1]);
+  if (boughSolid && boughSolid.kind === 'bough') {
     const crown = new Mesh(crownGeometry(83, 12, 9), materials.foliage);
     crown.position.set(boughSolid.x, boughSolid.top + 8, boughSolid.z - boughSolid.halfZ - 3.6);
     crown.scale.set(9, 27, 9);
@@ -546,11 +615,13 @@ export const buildForest = (level: Level, materials: Materials, decor: Decor, ra
 
   // Ferns, grass and boulders on the slopes. None near enough to the path, or
   // high enough, to look like somewhere to jump to.
-  for (let i = 0; i < 900; i += 1) {
-    const x = (random() * 2 - 1) * 46;
-    const z = 30 + random() * (far - 70 - 30);
+  const slopeLength = 100 - far;
+  for (let i = 0; i < Math.round(slopeLength * 5.4); i += 1) {
+    const z = 30 - random() * slopeLength;
+    const centre = route.centre(z);
+    const x = centre + (random() * 2 - 1) * 46;
     const y = height(x, z);
-    if (y < MIST_BOTTOM + 1 || Math.abs(x) < 16) continue;
+    if (y < MIST_BOTTOM + 1 || Math.abs(x - centre) < 16) continue;
     const kind = random();
     if (kind < 0.45) decor.fern(x, y - 0.05, z, 0.8 + random() * 0.9, random() * TAU);
     else if (kind < 0.9) decor.grass(x, y - 0.03, z, 1.2 + random() * 1.4, random() * TAU);
@@ -577,10 +648,11 @@ export const buildForest = (level: Level, materials: Materials, decor: Decor, ra
   const extras: Object3D[] = [];
 
   // Mist lying in the gully: two slow sheets, one drifting each way.
-  const sheet = new PlaneGeometry(520, 520);
+  const sheetSize = Math.max(520, 300 - far);
+  const sheet = new PlaneGeometry(sheetSize, sheetSize);
   const sheets = [0, 1].map((i) => {
     const picture = mistPicture().clone();
-    picture.repeat.set(7 + i * 3, 7 + i * 3);
+    picture.repeat.set((7 + i * 3) * (sheetSize / 520), (7 + i * 3) * (sheetSize / 520));
     picture.needsUpdate = true;
     const layer = new Mesh(
       sheet,
@@ -601,36 +673,42 @@ export const buildForest = (level: Level, materials: Materials, decor: Decor, ra
   });
 
   // Warm light slanting in from the upper left, as in the forest paintings.
+  // One about every ten metres of route. Each fades out with distance, so a
+  // long row of them seen end-on does not add up to a bright haze.
   const beam = new PlaneGeometry(6, 54);
-  for (let i = 0; i < 7; i += 1) {
-    const ray = new Mesh(
-      beam,
-      new MeshBasicMaterial({
-        map: rayPicture(),
-        color: 0xfff0b8,
-        transparent: true,
-        opacity: 0.1 + random() * 0.1,
-        blending: AdditiveBlending,
-        depthWrite: false,
-        side: DoubleSide,
-        fog: false,
-      }),
-    );
-    ray.position.set(-15 - random() * 10, top + 5, 8 + (far - 10) * (i / 6) + random() * 4);
+  const rayCount = Math.max(7, Math.round(-far / 10));
+  const rays: Array<{ mesh: Mesh; material: MeshBasicMaterial; opacity: number }> = [];
+  for (let i = 0; i < rayCount; i += 1) {
+    const opacity = 0.1 + random() * 0.1;
+    const rayMaterial = new MeshBasicMaterial({
+      map: rayPicture(),
+      color: 0xfff0b8,
+      transparent: true,
+      opacity,
+      blending: AdditiveBlending,
+      depthWrite: false,
+      side: DoubleSide,
+      fog: false,
+    });
+    const ray = new Mesh(beam, rayMaterial);
+    const rayZ = 8 + (far - 10) * (i / (rayCount - 1)) + random() * 4;
+    ray.position.set(route.centre(rayZ) - 15 - random() * 10, canopy(rayZ) + 5, rayZ);
     ray.rotation.set(0, 0.35, -0.5);
     ray.scale.x = 0.7 + random() * 1.4;
     ray.renderOrder = 6;
     group.add(ray);
     extras.push(ray);
+    rays.push({ mesh: ray, material: rayMaterial, opacity });
   }
 
   // Dust and pollen hanging in the air along the route.
-  const moteCount = 220;
+  const moteCount = Math.round(220 * Math.max(1, -far / 66));
   const motePlaces = new Float32Array(moteCount * 3);
   for (let i = 0; i < moteCount; i += 1) {
-    motePlaces[i * 3] = (random() * 2 - 1) * 16;
-    motePlaces[i * 3 + 1] = -2 + random() * (top + 10);
-    motePlaces[i * 3 + 2] = 10 + random() * (far - 20);
+    const z = 10 + random() * (far - 20);
+    motePlaces[i * 3] = route.centre(z) + (random() * 2 - 1) * 16;
+    motePlaces[i * 3 + 1] = -2 + random() * (canopy(z) + 10);
+    motePlaces[i * 3 + 2] = z;
   }
   const moteShape = new BufferGeometry();
   moteShape.setAttribute('position', new Float32BufferAttribute(motePlaces, 3));
@@ -661,7 +739,22 @@ export const buildForest = (level: Level, materials: Materials, decor: Decor, ra
     group,
     sky,
     crowns,
-    update(time) {
+    update(time, heroZ) {
+      for (const stretch of stretches) {
+        const near = -stretch.index * STRETCH;
+        stretch.group.visible = inView(near, near - STRETCH, heroZ);
+        // Deep in the mist a tree wears its lighter crown.
+        const light = sparse || !inDetail(near, heroZ);
+        stretch.crowns[0].visible = !light;
+        stretch.crowns[1].visible = !light;
+        stretch.crowns[2].visible = !light;
+        stretch.crowns[3].visible = light;
+        stretch.crowns[4].visible = light;
+      }
+      // Shafts of light are at full strength up close and gone by 110 m.
+      for (const ray of rays) {
+        ray.material.opacity = ray.opacity * (1 - smooth(60, 110, heroZ - ray.mesh.position.z));
+      }
       // The shade drifts and breathes a little, like boughs moving overhead.
       shadePicture.offset.set(Math.sin(time * 0.23) * 0.012, time * 0.0015 + Math.cos(time * 0.19) * 0.008);
       sheets[0].offset.set(time * 0.006, time * 0.002);
@@ -673,15 +766,13 @@ export const buildForest = (level: Level, materials: Materials, decor: Decor, ra
       // On the slowest machines every tree wears the sparse crown, and the
       // second mist sheet and the shafts of light are left out.
       const light = share < 0.3;
-      crowns[0].visible = !light;
-      crowns[1].visible = !light;
-      crowns[2].visible = !light;
-      crowns[3].visible = light;
-      crowns[4].visible = light;
-      // Fewer far trees too: each crown goes together with its trunk.
-      const farCount = Math.ceil(lists[2].length * (light ? 0.55 : 1));
-      crowns[4].count = farCount;
-      farTrunks.count = farCount;
+      sparse = light;
+      for (const stretch of stretches) {
+        // Fewer far trees too: each crown goes together with its trunk.
+        const farCount = Math.ceil(stretch.farTrees.length * (light ? 0.55 : 1));
+        stretch.crowns[4].count = farCount;
+        stretch.farTrunks.count = farCount;
+      }
       extras.forEach((extra) => (extra.visible = !light));
     },
   };

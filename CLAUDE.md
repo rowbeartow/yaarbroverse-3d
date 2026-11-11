@@ -8,7 +8,7 @@ Read first: `docs/session-handoff.md` (what exists, what's next, open questions)
 
 ## Status
 
-In development. One playable area, the Bouncing Grove. Milestone two (the modern look) is in progress; `docs/session-handoff.md` says how far it has got.
+In development. One playable area, the Bouncing Grove. Milestone three, part one (a longer grove in six sections) is in progress; `docs/session-handoff.md` says how far it has got.
 Live at: https://rowbeartow.github.io/yaarbroverse-3d/ . Every merge to `main` publishes there, straight to the kids' devices.
 
 ## Architecture
@@ -28,6 +28,7 @@ How it fits together:
 - `src/view/`: draws the level and hero and moves the camera. Looks only.
   - `grove-view.ts`: the renderer, lighting (forest light, sun with soft shadows, filmic tone mapping, glow), camera, and switching quality tiers.
   - `scenery.ts`: the level's solids as smooth textured shapes. `forest.ts`: the gully, trees, ferns, grass, mist, light. Both build shapes with `surface.ts` and `noise.ts`.
+  - `route.ts`: where the route runs (its middle, sides and height), which the forest is laid out around, and the rule for drawing only the stretches of scenery near the hero (no 3D code, tested).
   - `bank-outline.ts`: the edge of a bank's top. It may be irregular, but never reaches past where the rules let a hero stand (no 3D code, tested).
   - `materials.ts`: surfaces, plus three additions to the standard ones: mist by height, moss blending, wind sway. `pictures.ts`: textures drawn in code.
   - `assets.ts`: downloads `media/` and reports progress. `quality.ts`: the tiers and the rules for choosing one (no 3D code, tested).
@@ -44,7 +45,7 @@ Node 22 (`.nvmrc`).
 
 - Install: `npm ci`
 - Run locally: `npm run dev`, then open the address it prints
-- Test the rules: `npm test` (fast, no browser)
+- Test the rules: `npm test` (fast, no browser). `GROVE_TIMES=1 npx vitest run tests/sections.test.ts --silent=false` prints how long the bot's perfect run takes to the end of each section.
 - Build: `npm run build` (prepares the assets, and fails if the download goes over 20 MB)
 - Pictures for the docs: `node scripts/screenshot.mjs` (see the top of that file)
 - Rebuild Yaarbro from his Meshy files: `blender -b -P tools/prepare-rigged.py -- <folder of Meshy files> <out.glb> tools/yaarbro.guide.json`, then compress `<out.glb>`.
