@@ -69,10 +69,10 @@ npm run test:browser  # keyboard, touch and look checks in Chromium and WebKit (
 
 Source textures, the forest light and models live in `assets/`. The build compresses them into `public/media/` (KTX2 textures, meshopt geometry), which is not committed.
 
-The hero models in `assets/heroes/` are kept already compressed. The owner's original files are too big for this repo. Three tools in `tools/` make the small files from them, each explained at its top: `prepare-rigged.py` (Blender) puts Yaarbro's clips on one model and cleans up his skin, `rig-quadruped.py` (Blender) gives Caputo his skeleton and clips, and `compress-hero.mjs` compresses the result.
+The hero models in `assets/heroes/` and the enemy models in `assets/enemies/` are kept already compressed. The owner's original files are too big for this repo. Three tools in `tools/` make the small files from them, each explained at its top: `prepare-rigged.py` (Blender) puts Yaarbro's clips on one model and cleans up his skin, `rig-quadruped.py` (Blender) gives Caputo his skeleton and clips, and `compress-hero.mjs` compresses the result.
 
 ## Rights and credits
 
-The Yaarbroverse, its characters and their art are all rights reserved. That includes the hero models in `assets/heroes/`, which the owner made from the Caputo Mountain art: they are not CC0 and are not free to copy or reuse.
+The Yaarbroverse, its characters and their art are all rights reserved. That includes the hero models in `assets/heroes/` and the enemy models in `assets/enemies/`, which were made from the Caputo Mountain art: they are not CC0 and are not free to copy or reuse.
 
 Every third-party file in this repo is CC0 and is listed with its source in [CREDITS.md](CREDITS.md).

@@ -1,0 +1,22 @@
+{
+  "about": "Where the giant mosquito's joints are, for tools/rig-insect.py. Each point is [across, up, forward] in metres, measured on the model as it came from Meshy, with its lowest point on the ground: across is to its left, up is from the ground, forward is toward its head. tools/joint-views.py draws the model on a grid to read these from, and draws these over it. Each leg is a list of points from where it leaves the body to its tip, with a bone between each pair. This model's two middle legs came out as one leg under the middle of the body, so it has five legs.",
+  "turned_left_degrees": 0,
+  "joints": {
+    "body": [[0.0, 0.6, -0.1], [0.0, 0.63, 0.2]],
+    "head": [[0.0, 0.63, 0.2], [0.0, 0.6, 0.42]],
+    "beak": [[0.0, 0.56, 0.42], [0.0, 0.27, 0.86]],
+    "abdomen": [[0.0, 0.58, -0.1], [0.0, 0.5, -0.35], [0.0, 0.36, -0.6], [0.0, 0.1, -0.86]],
+    "antenna_left": [[0.04, 0.72, 0.38], [0.1, 0.9, 0.8]],
+    "antenna_right": [[-0.04, 0.72, 0.38], [-0.1, 0.9, 0.8]],
+    "wing_left": [[0.15, 0.72, -0.02], [0.9, 0.93, -0.2]],
+    "wing_right": [[-0.15, 0.72, -0.02], [-0.9, 0.93, -0.2]],
+    "legs": {
+      "front_l": [[0.07, 0.5, 0.1], [0.12, 0.4, 0.26], [0.16, 0.11, 0.06]],
+      "front_r": [[-0.07, 0.5, 0.1], [-0.12, 0.4, 0.26], [-0.16, 0.11, 0.06]],
+      "mid": [[0.0, 0.45, 0.06], [0.0, 0.31, -0.02], [0.0, 0.19, -0.12]],
+      "hind_l": [[0.12, 0.52, -0.05], [0.19, 0.62, -0.14], [0.2, 0.3, -0.33], [0.18, 0.0, -0.5]],
+      "hind_r": [[-0.12, 0.52, -0.05], [-0.19, 0.62, -0.14], [-0.2, 0.3, -0.33], [-0.18, 0.0, -0.5]]
+    }
+  },
+  "wings": {"beyond_across": 0.14, "colour": [0.84, 0.93, 0.96], "see_through": 0.55}
+}

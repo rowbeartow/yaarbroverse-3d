@@ -1,0 +1,133 @@
+<title>Enemy Movement Review</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<style>
+  /* Layout: one column. Each enemy gets a window into the grove, its clip
+     buttons under it, and a card saying what the picked clip is for. Colours
+     and type are the game's own, the same as the hero preview page. */
+  :root {
+    --paper: #fff6dd;
+    --card: #fffbee;
+    --edge: #e9d7a6;
+    --ink: #1b2a24;
+    --quiet: #4d6157;
+    --moss: #2f6b3f;
+    --gold: #f2c14e;
+    --gold-deep: #b97f12;
+    --on-gold: #1b2a24;
+    --font-text: 'Avenir Next', 'Trebuchet MS', 'Segoe UI', system-ui, sans-serif;
+    --font-title: Georgia, 'Iowan Old Style', 'Times New Roman', serif;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --paper: #14261f; --card: #1d3a33; --edge: #3b5a4c; --ink: #fff6dd; --quiet: #b9c9b6;
+      --moss: #9ed49a; --gold: #f2c14e; --gold-deep: #f7d98a; --on-gold: #1b2a24; color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --paper: #14261f; --card: #1d3a33; --edge: #3b5a4c; --ink: #fff6dd; --quiet: #b9c9b6;
+    --moss: #9ed49a; --gold: #f2c14e; --gold-deep: #f7d98a; --on-gold: #1b2a24; color-scheme: dark;
+  }
+  * { box-sizing: border-box; }
+  body { background: var(--paper); color: var(--ink); font-family: var(--font-text); font-size: 16px; line-height: 1.5; }
+  .page {
+    max-width: 1080px; margin: 0 auto; padding-block: 28px 48px;
+    padding-left: max(16px, env(safe-area-inset-left, 0px));
+    padding-right: max(16px, env(safe-area-inset-right, 0px));
+    display: grid; gap: 22px;
+  }
+  .page > * { min-width: 0; }
+  .eyebrow { margin: 0; color: var(--moss); font-size: 13px; font-weight: 700; letter-spacing: 0.22em; text-transform: uppercase; }
+  h1 { margin: 2px 0 6px; font-family: var(--font-title); font-size: clamp(30px, 6vw, 44px); line-height: 1.1; text-wrap: balance; }
+  h2 { margin: 0; font-family: var(--font-title); font-size: 26px; line-height: 1.2; text-wrap: balance; }
+  h3 { margin: 0; font-family: var(--font-title); font-size: 20px; line-height: 1.2; }
+  p { margin: 0; max-width: 65ch; }
+  .lede { color: var(--quiet); font-size: 17px; }
+  .note, .made { color: var(--quiet); font-size: 14px; }
+
+  .row { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+  .row button {
+    min-height: 40px; padding: 0 14px; border: 2px solid var(--edge); border-radius: 999px;
+    background: var(--card); color: var(--ink); font: 600 14px var(--font-text); cursor: pointer;
+  }
+  .row button[aria-pressed="true"] { background: var(--gold); border-color: var(--gold-deep); color: var(--on-gold); }
+  .row button:focus-visible { outline: 3px solid var(--moss); outline-offset: 2px; }
+  #status { color: var(--moss); font-weight: 700; }
+
+  #groups { display: grid; gap: 30px; }
+  #groups section { display: grid; gap: 14px; min-width: 0; }
+  .group-head { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 12px 24px; }
+  .group-head > div { display: grid; gap: 4px; min-width: 0; flex: 1 1 280px; }
+  .reference { margin: 0; display: grid; gap: 2px; justify-items: center; flex: 0 0 auto; }
+  .reference img { width: 132px; height: 132px; object-fit: contain; display: block; }
+  .reference figcaption { color: var(--quiet); font-size: 12px; }
+
+  .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 250px), 1fr)); gap: 16px; }
+  .card { display: grid; gap: 8px; align-content: start; min-width: 0; }
+  /* A window into the grove: it keeps the game's own sky in both themes. */
+  .window {
+    position: relative; width: 100%; max-width: 100%; aspect-ratio: 1 / 1; border: 3px solid var(--edge); border-radius: 18px; overflow: hidden;
+    background: linear-gradient(#f2e4a8 0%, #d6e2b8 22%, #a8ceb8 42%, #7fb3a6 58%, #7fb3a6 100%);
+  }
+  .window canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; cursor: grab; touch-action: pan-y; }
+  .window canvas:active { cursor: grabbing; }
+
+  section.words { display: grid; gap: 12px; }
+  ul { margin: 0; padding-left: 20px; max-width: 70ch; }
+  li + li { margin-top: 6px; }
+  .rule { border: 0; border-top: 3px solid var(--edge); margin: 4px 0; }
+
+  .enemy { display: grid; gap: 12px; min-width: 0; }
+  .enemy .window { aspect-ratio: 16 / 10; }
+  @media (max-width: 560px) { .enemy .window { aspect-ratio: 4 / 5; } }
+  .row.clips button { min-height: 48px; padding: 0 18px; border-width: 3px; border-radius: 14px; font-size: 17px; font-weight: 700; }
+  .now { display: grid; gap: 6px; padding: 16px 18px; border: 3px solid var(--edge); border-radius: 18px; background: var(--card); }
+  .now-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 14px; }
+  .now h3 { font-size: 24px; }
+  .kind { color: var(--moss); font-size: 14px; font-weight: 700; letter-spacing: 0.04em; }
+</style>
+
+<main class="page">
+  <header>
+    <p class="eyebrow">Yaarbroverse 3D</p>
+    <h1>The marmot scout and the giant mosquito, moving</h1>
+    <p class="lede">Your picks, marmot B and mosquito C, each on a skeleton with a clip for everything it does in the Caputo Mountain forest. These are the files the game will load, in the grove’s light. Nothing here is in the game until you say OK, and the enemies are not placed in the level until a later step.</p>
+  </header>
+
+  <p id="status" role="status">Loading the models…</p>
+  <p class="note">Pick a clip under each picture. Drag a picture to turn it yourself. A clip that plays once rests on its last pose for a moment, then plays again.</p>
+
+  <div id="groups"></div>
+
+  <hr class="rule">
+
+  <!-- Hand-written for each change: bring it up to date before publishing. -->
+  <section class="words">
+    <h2>What to look for</h2>
+    <ul>
+      <li><b>Marmot, “Acorn ready” then “Throw”.</b> These are the two that matter most: the warning has to read at a glance as “something is about to be thrown at me”. It rears up on its hind legs with its right paw back over its shoulder, then whips the arm forward and drops onto all fours.</li>
+      <li><b>Marmot, “Winded”.</b> This is the opening to hit it or get past, so it should look plainly different from “On watch”: head hung, back rounded, panting.</li>
+      <li><b>Mosquito, “Hover”.</b> Wings beating 12 times a second, body bobbing, the abdomen and the five legs swinging late and loose.</li>
+      <li><b>Mosquito, “Dive ready” then “Dive”.</b> It draws its legs up and cocks its abdomen with the wings racing, then goes beak first with the wings swept back. The game points the whole mosquito along the line of its dive, so here it stays level.</li>
+      <li><b>The wings.</b> They are now pale and see-through on both sides. The dark green underside from the candidates page is gone.</li>
+    </ul>
+  </section>
+
+  <section class="words">
+    <h2>What is not perfect</h2>
+    <ul>
+      <li><b>The marmot’s paw is empty.</b> There is no acorn in its raised paw in “Acorn ready”. The game draws the acorn, at the paw and then in flight, when the enemies go into the level.</li>
+      <li><b>The mosquito has five legs.</b> Meshy made its two middle legs as one leg under the middle of the body. It hangs and swings like the others.</li>
+      <li><b>“Beaten” is only the start of each defeat.</b> The game moves and fades the enemy while the clip plays. Here the marmot lies on its back and the mosquito hangs upside down in the air.</li>
+      <li><b>The marmot’s harness bends with its body.</b> It is part of its skin, so it stretches a little when it rears up.</li>
+      <li><b>Both are drawn the same width here.</b> Their sizes in the level are set when they are placed.</li>
+      <li><b>I judged these from still frames in flat light.</b> I cannot watch them move. You are the first to see them in motion, so trust your eye over my description.</li>
+    </ul>
+  </section>
+
+  <section class="words">
+    <h2>Your call</h2>
+    <p>Reply OK and I will merge both enemies' files into the repository. They do not appear in the game until the enemy placement step. Or tell me what is off, in your own words, enemy by enemy and clip by clip.</p>
+  </section>
+</main>
+
+<script type="module" src="enemies.js"></script>

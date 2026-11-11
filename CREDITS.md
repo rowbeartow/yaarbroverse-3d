@@ -11,6 +11,13 @@ The Yaarbroverse, its characters and their art are not CC0. They are all rights 
 | `assets/heroes/yaarbro.glb` | Yaarbro: a textured model on a skeleton, with clips for standing, walking, running, jumping, landing and rolling. Put together and cleaned up from the owner's originals by `tools/prepare-rigged.py` and compressed by `tools/compress-hero.mjs`. | Made, rigged and animated by the owner in Meshy from the Caputo Mountain art | All rights reserved |
 | `assets/heroes/caputo.glb` | Caputo: a textured model on a skeleton, with clips for standing, walking, running, jumping, falling and landing. The model is the owner's; the skeleton and clips are made by `tools/rig-quadruped.py`, and the file is compressed by `tools/compress-hero.mjs`. | Model made by the owner in Meshy from the Caputo Mountain art. Skeleton and clips made here. | All rights reserved |
 
+## Enemy models (all rights reserved, not CC0)
+
+| File in this repo | What it is | Source | License |
+| --- | --- | --- | --- |
+| `assets/enemies/marmot.glb` | The marmot scout: a textured model on a skeleton, with clips for watching, shuffling, the acorn warning, the throw, resting, being struck, hopping away and being beaten. The skeleton and clips are made by `tools/rig-quadruped.py`, and the file is compressed by `tools/compress-hero.mjs`. | Model made with Meshy's Image to 3D (Meshy 6) on the owner's account, from the owner's Caputo Mountain art of the marmot scout. Skeleton and clips made here. | All rights reserved |
+| `assets/enemies/mosquito.glb` | The giant mosquito: a textured model on a skeleton, with clips for hovering, the dive warning, the dive, resting and being beaten. The skeleton, the see-through wings and the clips are made by `tools/rig-insect.py`, and the file is compressed by `tools/compress-hero.mjs`. | Model made with Meshy's Image to 3D (Meshy 7.1) on the owner's account, from the owner's Caputo Mountain art of the giant mosquito. Skeleton, wings and clips made here. | All rights reserved |
+
 ## Forest light
 
 | File in this repo | What it is | Source | License |

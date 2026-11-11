@@ -1,0 +1,17 @@
+{
+  "about": "Where the marmot scout's joints are, for tools/rig-quadruped.py. Each point is [across, up, forward] in metres, measured on the model as it came from Meshy, standing on the ground: across is to its left, up is from the ground, forward is toward its nose. tools/joint-views.py draws the model on a grid to read these from, and draws these over it. \"character\" picks the marmot scout's own clips in the script, in place of the cat's.",
+  "character": "marmot",
+  "turned_left_degrees": 0,
+  "joints": {
+    "spine": [[0.0, 0.48, -0.38], [0.0, 0.55, -0.12], [0.0, 0.6, 0.12], [0.0, 0.64, 0.34], [0.0, 0.72, 0.5]],
+    "head": [0.0, 0.8, 0.62],
+    "head_end": [0.0, 0.78, 0.92],
+    "tail": [[0.0, 0.42, -0.5], [0.0, 0.36, -0.6], [0.0, 0.31, -0.7], [0.0, 0.3, -0.79], [0.0, 0.34, -0.86], [0.0, 0.42, -0.92]],
+    "front_left": [[0.3, 0.5, 0.38], [0.36, 0.27, 0.48], [0.35, 0.08, 0.6], [0.35, 0.02, 0.76]],
+    "front_right": [[-0.3, 0.5, 0.38], [-0.36, 0.27, 0.48], [-0.35, 0.08, 0.6], [-0.35, 0.02, 0.76]],
+    "hind_left": [[0.22, 0.42, -0.35], [0.38, 0.25, -0.2], [0.36, 0.07, -0.38], [0.5, 0.02, -0.25]],
+    "hind_right": [[-0.22, 0.42, -0.35], [-0.38, 0.25, -0.2], [-0.36, 0.07, -0.38], [-0.5, 0.02, -0.25]],
+    "ear_left": [[0.2, 0.82, 0.52], [0.25, 0.9, 0.5]],
+    "ear_right": [[-0.2, 0.82, 0.52], [-0.25, 0.9, 0.5]]
+  }
+}
