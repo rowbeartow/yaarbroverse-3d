@@ -20,7 +20,7 @@ There are no open pull requests from this work.
 
 **Step 3 is done and merged** (pull request 25): hearts and damage. Hearts are 5, 3 and 2 with the numbers in `difficulty.ts`; a hit takes one, throws the hero and protects it for a while; a fall costs none; running out returns the hero to the last safe bank with all of them.
 
-**Step 4, the roll and the pounce, is in the pull request this text arrives with.** The owner said OK to Caputo's pounce on his preview page (https://claude.ai/artifact/V3Z9Car7Ttfp1zRNRPLf7D ).
+**Step 4 is done and merged** (pull request 26): the roll and the pounce. The owner said OK to Caputo's pounce on his preview page (https://claude.ai/artifact/V3Z9Car7Ttfp1zRNRPLf7D ).
 
 - **Yaarbro's roll**, while the move button is held: he tucks down (he is shorter while he rolls) and builds up to one and a half times walking speed, more slowly than he walks up to speed, and keeps going the way he was with the stick let go. It carries into a jump. The 2D game's roll reaches two and a half times walking speed; the lower top speed is the owner's call (see `docs/decisions.md`).
 - **Caputo's pounce**, when the move button is pressed: a flat burst at about twice walking speed for a fifth of a second, the way the stick points or the way he faces, with a small hop from the ground. One for each time in the air, and a short rest between two.
@@ -29,7 +29,14 @@ There are no open pull requests from this work.
 - **Clips.** Yaarbro's `roll` clip loops while he rolls. Caputo's new `pounce` clip is written by `tools/rig-quadruped.py` and held as a pose that follows how far through the burst he is. His other seven clips are unchanged, number for number.
 - The numbers are in `src/game/hero.ts`. Tests: `tests/moves.test.ts` and `tests/browser/moves.spec.ts`. The bot still finishes every difficulty with walk and jump alone, and the full-run test now says so (`movesUsed` is 0).
 
-**Step 5 is built and waiting its turn** on the branch `claude/part-two-step-5` (enemy behaviour and placement). It goes up as its own pull request once step 4 has merged.
+**Step 5, enemy behaviour and placement, is in the pull request this text arrives with.** When it has merged, this file is to be rewritten from top to bottom.
+
+- **Three enemies**, on every difficulty: a marmot scout in the clearing (`bank-2`), a giant mosquito over the last three high boughs, and a second scout on the bank at the foot of the climb (`bank-5`). Each notices a hero only on its own footing, so none bothers a hero in a section of diagonal jumps.
+- **Behaviour** is Caputo Mountain's (`src/game/enemy.ts`): ready, a warning during which the aim is fixed, an attack along that line, then a rest. The scout hides until a hero is near, shuffles toward or away, throws an acorn, hops back from a charge, and takes two strikes. The mosquito hovers above the hero, dives to where the hero stood, rests there low enough to reach, and takes one strike.
+- **What hurts:** touching either while it is ready or attacking, and the acorn. **What strikes:** Yaarbro rolling faster than a walk, Caputo's pounce, or either hero landing on top. A pounce or a landing bounces the hero up off it.
+- **Numbers in `difficulty.ts`:** `enemyWarning`, `enemySpeed` and `enemyRest` (Caputo Mountain's: 1.5, 0.7 and 1.4 on Easy; 0.65, 1.3 and 0.7 on Hard), and `knockback`, how far a hit throws a hero (0.5, 1.2 and 2 metres: the owner's numbers).
+- **Drawing** (`src/view/enemies.ts`): each enemy's model plays the clip for what the rules say it is doing; the acorn is drawn in the raised paw and in flight; a line shows where an attack is aimed while its warning lasts.
+- **The bot** finishes every difficulty as each hero through the enemies without losing a heart, with walk and jump alone. A perfect run that never stops is never hit, even on Hard; whether Hard is hard enough is for the playtest.
 
 What step 2 made:
 
@@ -141,7 +148,7 @@ Milestone three, part one (the longer grove) is done, in the three merged pull r
   - The owner's original model files are files on the `hero-models` release of this repo: six for Yaarbro, one clip each (about 29 MB each), and one for Caputo (20.9 MB, `Meshy_AI_SaberToothCatGameRead_1110213716_texture.glb`). They are not committed. To rebuild a hero, run its Blender script on the originals and then `node tools/compress-hero.mjs <out.glb> <name>`; the commands are in `CLAUDE.md`. The compressed files are `assets/heroes/yaarbro.glb` (1.1 MB) and `assets/heroes/caputo.glb` (0.9 MB), which the build copies as they are. The CC0 stand-in robot (`?standin`) still checks the loader with a library file that has its whole jump in one clip.
 - **Camera.** Behind and above the hero, always looking the same way. A soft dark spot under the hero shows where a jump will land.
 - **Difficulty.** Easy, Normal, Hard on the start screen. All numbers are in `src/levels/bouncing-grove/difficulty.ts`.
-- **Falls and hearts.** A fall returns the hero to the last safe mossy bank and is counted. Hearts are in the rules and on screen (5, 3 and 2); nothing in the level takes one yet.
+- **Falls and hearts.** A fall returns the hero to the last safe mossy bank and is counted. Hearts are in the rules and on screen (5, 3 and 2), and the three enemies can take them.
 - **End card.** Difficulty, hero, time, falls, hearts lost, date. "Play again" returns to the start screen.
 - **Controls.** Mac: arrows or W A S D, Space, X or Shift for the hero's own move, Esc. Touch: drag the left half to move, press the right half to jump, and a smaller round button above Jump for the hero's own move.
 - **Turn sideways.** A touch device whose page is taller than wide gets a "Turn sideways to play" card.
@@ -152,7 +159,7 @@ Milestone three, part one (the longer grove) is done, in the three merged pull r
 
 ## Checks on this state
 
-- `npm test`: 354 tests pass. Among them: seven on the enemy model files, nineteen on hearts, and twenty-two on the roll and the pounce.
+- `npm test`: 404 tests pass. Among them: seven on the enemy model files, twenty-one on hearts, twenty-two on the roll and the pounce, and forty-seven on the enemies.
 - `npm run test:browser`: 68 browser checks pass. 22 in Chromium at Mac size with the keyboard, 23 in Chromium at iPad size with touch, 23 in WebKit at iPad size with touch. They cover loading and the progress bar, a failed download, the frame counter, fixed and automatic tiers, the full lighting at medium quality (and high at Mac size), each hero's model loading with its clips and animating while it stands, runs and jumps, the stand-in model doing the same, and everything milestone one checked.
 - **Not checked:**
   - Safari itself, a real iPad, a real Mac. The test browsers have no graphics card, so most checks run on the minimal tier, which has plain shading and no shadows. The full lighting is drawn in both browsers by two checks, slowly and in a small window.
@@ -162,7 +169,7 @@ Milestone three, part one (the longer grove) is done, in the three merged pull r
 
 ## What's next
 
-1. **Merge step 4, then put up step 5**, merged on green checks (the owner's instruction).
+1. **Merge step 5** on green checks (the owner's instruction).
 2. **Then rewrite this file** and report to the owner.
 3. **Done already:** the owner and the kids played the longer level, and he looked at it in Safari on his Mac (60 frames a second, high tier).
 4. **The owner plays Caputo's three gaits in the game** and says how they look.
@@ -170,7 +177,7 @@ Milestone three, part one (the longer grove) is done, in the three merged pull r
 
 ## Known limits
 
-- One area. Nothing in it can hurt a hero yet.
+- One area.
 - The high boughs are logs on tall snags. They read clearly as footing, but they do not look like living boughs growing from trees.
 - A hero who falls from high up drops a long way before the fall is counted (the rule is a fixed height, 6 m below the start), and the camera follows it down.
 - The test bot is the only thing that has played the whole level. It measures whether each difficulty can be finished and how long a perfect run takes, not whether a jump reads well or feels fair.
