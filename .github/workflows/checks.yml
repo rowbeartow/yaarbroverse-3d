@@ -52,7 +52,7 @@ jobs:
   checks:
     name: Tests, build and browser checks
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -65,14 +65,22 @@ jobs:
       - name: Build and check the download size
         run: npm run build
       - name: Install the test browser
-        run: npx playwright install --with-deps chromium
+        # The install fetches system packages from the Ubuntu servers. When the
+        # machine cannot reach them, wait and try again before giving up.
+        run: |
+          for attempt in 1 2 3; do
+            npx playwright install --with-deps chromium && exit 0
+            echo "Install failed (attempt $attempt of 3). Waiting a minute."
+            sleep 60
+          done
+          exit 1
       - name: Browser checks in Chromium (keyboard, touch and the look)
         run: npx playwright test --project=mac --project=ipad
 
   webkit:
     name: Browser checks in WebKit (iPad)
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -81,6 +89,14 @@ jobs:
           cache: npm
       - run: npm ci
       - name: Install WebKit
-        run: npx playwright install --with-deps webkit
+        # The install fetches system packages from the Ubuntu servers. When the
+        # machine cannot reach them, wait and try again before giving up.
+        run: |
+          for attempt in 1 2 3; do
+            npx playwright install --with-deps webkit && exit 0
+            echo "Install failed (attempt $attempt of 3). Waiting a minute."
+            sleep 60
+          done
+          exit 1
       - name: Browser checks in WebKit (touch and the look, iPad size)
         run: npx playwright test --project=ipad-webkit
