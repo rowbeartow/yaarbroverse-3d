@@ -90,8 +90,8 @@
 <main class="page">
   <header>
     <p class="eyebrow">Yaarbroverse 3D</p>
-    <h1>Caputo walks, trots and gallops</h1>
-    <p class="lede">Three gaits now: a smoother walk, a new trot, and a run that is a gallop with four separate footfalls. Idle, jump, falling and landing are the clips you approved, unchanged to the last number. This is the file the game will load, in the grove’s light. Nothing here is in the game until you say OK.</p>
+    <h1>Caputo’s pounce</h1>
+    <p class="lede">One new clip: his pounce, for the move button. Everything else in his file is unchanged to the last number: idle, walk, trot, run, jump, falling and landing are the clips you approved. This is the file the game will load, in the grove’s light. Nothing here is in the game until you say OK.</p>
   </header>
 
   <div class="window" id="stage">
@@ -168,22 +168,19 @@
   <section>
     <h2>What you asked for, and where it stands</h2>
     <ul class="asked">
-      <li><b>Trot</b><span>New. Diagonal pairs land together, left hind with right front, then right hind with left front, two even beats to a stride of 0.4 seconds. Each paw is down for 44 hundredths of the stride, so there is a short float between beats. The back stays level and only bobs about a centimetre, the head takes under a tenth of the body’s movement, and the tail is carried up with a small sway.</span></li>
-      <li><b>Run</b><span>Rewritten as a rotary gallop. Counting from the left hind paw landing, the right hind lands 13 hundredths of a stride later, the right front at 57 and the left front at 70. That is about 60 thousandths of a second between the two paws of a pair, and each paw is down for about a quarter of the stride. He is off the ground twice: for a fifth of the stride, stretched long, after the hind legs push, and for a moment, gathered, after the front legs push. The spine still curls and stretches. These times are what the script writes into the clip, and I stepped through a stride in still frames to check them. I have not watched it at speed.</span></li>
-      <li><b>Walk</b><span>The same walk, with three causes of roughness removed. One: each paw’s upward speed jumped from nothing to over a metre a second in the instant it left the ground. Two: each paw was braking at its hardest in the instant it touched down, then stopped dead. Three: the front legs were 99 hundredths straight as the paw left, where the smallest change snaps the elbow. Now every paw eases off the ground and onto it, the paw’s tilt is one flowing curve where it used to stop and start four times a stride, and the front paw peels off earlier so the leg is never pulled straight. The sudden change in how fast the elbow turns is about a seventh of what it was. The loop restarts on exactly the same pose it ends on, and the left hind paw that lands there now lands softly, which was the hitch.</span></li>
-      <li><b>Changing gait</b><span>He walks up to 34 hundredths of top speed (about 2 metres a second), trots up to 68 hundredths (about 4 metres a second), and gallops above that. Coming down he changes a little later, at 63 and 30, so a thumb held near a change does not flick him between two gaits. All three clips run on one clock and never drift apart, so a change carries on from the same point of the stride. The change itself takes about a tenth of a second.</span></li>
-      <li><b>Jump</b><span>Unchanged. No pause before take-off: he leaves the ground the instant Jump is pressed.</span></li>
+      <li><b>Pounce</b><span>New. Pick “Pounce” under the picture, and turn on Slow motion. He gathers low, drives off his hind legs, goes out long and flat with his front paws reaching ahead and the claws up, and ends with the front paws coming down. It is built from the same parts as his jump, so the two belong together: the same crouch, the same stretch, the tail streaming the same way.</span></li>
+      <li><b>In the game</b><span>The whole of it passes in a fifth of a second, while he covers nearly three metres, so in play it is a flash of a long cat. When the burst ends he is in the air, and his jump and falling clips take over as they do now.</span></li>
+      <li><b>Everything else</b><span>Unchanged. I rigged him again with the changed script and compared every other clip with the file that is live: all seven are the same, number for number.</span></li>
     </ul>
   </section>
 
   <section>
-    <h2>What I measured, and what is not perfect</h2>
+    <h2>What is not perfect</h2>
     <ul>
-      <li><b>In a steady gait the paws hold the ground.</b> At every speed I tried, in all three gaits, a paw that is down moves about half a centimetre against the ground for each metre he travels.</li>
-      <li><b>At a change of gait the paws do slide a little, once.</b> The gaits put the paws down in different orders, so for the tenth of a second that two are mixed a planted paw moves about 10 centimetres at walk to trot, and about 15 to 20 at trot to gallop, while he covers a metre or more. Real cats also scramble for a stride there. If it shows when you watch “In the game”, tell me.</li>
-      <li><b>On the keyboard you will mostly see the gallop.</b> He is at top speed almost at once. The walk and the trot show on the iPad with a gentle push of the thumb.</li>
-      <li><b>One clip per gait.</b> A real cat lengthens its stride as it speeds up. Here each gait is one clip played slower or faster, so the trot is quick-stepping at the top of its range and the gallop is a little floaty at the bottom of its range.</li>
-      <li><b>I judged this from still frames and numbers.</b> I cannot watch it move at speed. You are the first to see it in motion.</li>
+      <li><b>It is one pose sequence for every direction.</b> He pounces the way the stick points, and the game turns him to face that way first.</li>
+      <li><b>The side views below still show the walk, the trot and the run.</b> They have not changed. The pounce is only on the picture at the top.</li>
+      <li><b>“In the game” at the top does not pounce.</b> That loop shows walking, trotting, galloping and jumping, as before.</li>
+      <li><b>I judged this from still frames.</b> I cannot watch it move at speed. You are the first to see it in motion.</li>
     </ul>
   </section>
 
@@ -191,7 +188,7 @@
 
   <section>
     <h2>Your call</h2>
-    <p>Reply OK and I will merge this into the game. Or tell me what is off, in your own words. If the run still looks like a rocking horse to you, say so plainly and I will stop here so you can bring in an animator.</p>
+    <p>Reply OK and I will merge the pounce into the game with the roll. Or tell me what is off, in your own words.</p>
   </section>
 </main>
 

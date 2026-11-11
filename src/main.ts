@@ -7,7 +7,7 @@
 
 import './style.css';
 import { Game, IDLE, type GameEvent } from './game/game';
-import { STEP } from './game/hero';
+import { MOVE_NAME, STEP } from './game/hero';
 import type { Level } from './game/level';
 import { Controls } from './input/controls';
 import { GROVE_BLURB } from './levels/bouncing-grove/difficulty';
@@ -36,6 +36,7 @@ const boot = (): void => {
     document.querySelector<HTMLElement>('#stick-base')!,
     document.querySelector<HTMLElement>('#stick-knob')!,
     document.querySelector<HTMLElement>('#jump-zone')!,
+    document.querySelector<HTMLElement>('#move-button')!,
   );
 
   /** Builds the level and hero for the current choice and stands the hero at the start. */
@@ -72,9 +73,13 @@ const boot = (): void => {
     screens.setPlace(level.name, choice.difficulty);
     screens.setHearts(game.hearts, level.hearts);
     setMode('playing');
+    const moveName = MOVE_NAME[choice.hero];
+    screens.setMove(moveName);
     screens.say(
-      isTouchDevice() ? 'Left thumb moves. Right thumb jumps.' : 'Arrow keys or W A S D to move. Space to jump.',
-      5,
+      isTouchDevice()
+        ? `Left thumb moves. Right thumb jumps. The ${moveName} button is above Jump.`
+        : `Arrow keys or W A S D to move. Space to jump. X or Shift to ${moveName.toLowerCase()}.`,
+      6,
     );
   };
 

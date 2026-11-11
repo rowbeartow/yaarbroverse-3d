@@ -33,6 +33,9 @@ import { MOVE, type HeroName } from '../game/hero';
 import { airPhase, approach, groundMix, landingWeight, movingShare, nextGait, strideBeat, strideRate, type Gait, type GaitBands } from './hero-motion';
 import type { HeroInfo, HeroView, Pose } from './heroes';
 
+/** How fast a roll clip turns at full rolling speed, against how it was made. */
+const ROLL_RATE = 1.6;
+
 export type ClipRole = 'idle' | 'walk' | 'trot' | 'run' | 'jump' | 'fall' | 'land' | 'roll';
 
 export interface HeroModelSpec {
@@ -227,6 +230,8 @@ export class ModelHero implements HeroView {
   private air = 0;
   private landing = 0;
   private squashed = 0;
+  /** How much of the hero's own move (a roll, a pounce) shows, 0 to 1. */
+  private moving = 0;
   private mix = { idle: 1, walk: 0, trot: 0, run: 0 };
   /** For a hero with three gaits: the gait it is in, and how much of each is showing (they add up to 1). */
   private gait: Gait = 'walk';
@@ -296,6 +301,9 @@ export class ModelHero implements HeroView {
       land.setLoop(LoopOnce, 1);
       land.clampWhenFinished = true;
     }
+    // The hero's own move: a roll loops for as long as it is held, and a
+    // pounce is held as a pose that follows how far through the burst he is.
+    this.actions.roll?.setLoop(LoopRepeat, Infinity).play();
     this.animate({ pace: 0, grounded: true, rise: 0 }, 0);
 
     // Stand the model on the spot the rules use, as it stands at rest: scaled
@@ -414,6 +422,27 @@ export class ModelHero implements HeroView {
       walk.setEffectiveWeight((ground * (this.mix.walk + this.mix.run + (actions.idle ? 0 : this.mix.idle))) / total);
       const natural = actions.walk ? spec.walkSpeed : spec.runSpeed;
       walk.setEffectiveTimeScale(speed > 0.05 ? Math.min(2.6, Math.max(0.4, speed / natural)) : actions.idle ? 1 : 0);
+    }
+    // The hero's own move takes over from everything else while it lasts.
+    const move = actions.roll;
+    if (move) {
+      const pouncing = pose.pounce !== null && pose.pounce !== undefined;
+      const on = Boolean(pose.rolling) || pouncing;
+      this.moving = approach(this.moving, on ? 1 : 0, on ? 40 : 12, dt);
+      if (pouncing) {
+        move.paused = true;
+        move.time = move.getClip().duration * Math.min(1, Math.max(0, pose.pounce ?? 0));
+      } else if (pose.rolling) {
+        move.paused = false;
+        // One turn of the roll for each stretch of ground it looks right over.
+        move.setEffectiveTimeScale(Math.max(0.5, (pose.pace * MOVE.walkSpeed) / MOVE.rollSpeed) * ROLL_RATE);
+      }
+      if (this.moving > 0.001) {
+        for (const other of Object.values(actions)) {
+          if (other && other !== move) other.setEffectiveWeight(other.getEffectiveWeight() * (1 - this.moving));
+        }
+      }
+      move.setEffectiveWeight(this.moving);
     }
     this.mixer.update(dt);
 
