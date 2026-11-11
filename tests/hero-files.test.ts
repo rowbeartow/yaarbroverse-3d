@@ -1,6 +1,6 @@
 // The hero model files in assets/heroes/: each holds a skeleton and the clips
 // its entry in src/view/hero-model.ts asks for, and stays small. This catches
-// a file compressed from the wrong original, or a rig script that lost a clip.
+// a file compressed from the wrong original, or a script that lost a clip.
 
 import { readFileSync, statSync } from 'node:fs';
 import { NodeIO, type Document } from '@gltf-transform/core';
@@ -83,6 +83,46 @@ describe('the hero model files', () => {
         // A turn can be written two ways round (all four numbers negated), which is not a difference.
         expect(last.length === 4 ? Math.min(same, flipped) : same, clip.getName()).toBeLessThan(0.01);
       }
+    }
+  });
+
+  it('Caputo: holds every clip the rig script writes', () => {
+    expect(clipNames('caputo.glb').sort()).toEqual(['falling', 'idle', 'jump', 'landing', 'run', 'walk']);
+  });
+
+  it('Caputo: has a spine, neck and head, four legs of three bones, and a tail of at least five', () => {
+    const bones = boneNames('caputo.glb');
+    expect(bones).toEqual(expect.arrayContaining(['hips', 'spine1', 'spine2', 'chest', 'neck', 'head']));
+    for (const leg of ['front', 'hind']) {
+      for (const side of ['l', 'r']) {
+        expect(bones).toEqual(expect.arrayContaining([`${leg}_upper_${side}`, `${leg}_lower_${side}`, `${leg}_paw_${side}`]));
+      }
+    }
+    expect(bones.filter((name) => /^tail\d+$/.test(name)).length).toBeGreaterThanOrEqual(5);
+  });
+
+  it('Caputo: his moving clips loop, and his held poses do not move', () => {
+    const root = files.get('caputo.glb')!.getRoot();
+    for (const clip of root.listAnimations()) {
+      const held = ['jump', 'falling', 'landing'].includes(clip.getName());
+      let moves = false;
+      for (const sampler of clip.listSamplers()) {
+        const output = sampler.getOutput()!;
+        const first = output.getElement(0, []);
+        // How far a later key is from the first. A turn can be written two
+        // ways round (all four numbers negated), which is not a difference.
+        const apart = (value: number[]): number => {
+          const same = Math.max(...value.map((part, k) => Math.abs(part - first[k])));
+          const flipped = Math.max(...value.map((part, k) => Math.abs(part + first[k])));
+          return value.length === 4 ? Math.min(same, flipped) : same;
+        };
+        // A looping clip ends where it began, so it can repeat without a jump.
+        expect(apart(output.getElement(output.getCount() - 1, []))).toBeLessThan(0.002);
+        for (let i = 1; i < output.getCount(); i += 1) {
+          if (apart(output.getElement(i, [])) > 0.002) moves = true;
+        }
+      }
+      expect(moves, clip.getName()).toBe(!held);
     }
   });
 });

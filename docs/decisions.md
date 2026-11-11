@@ -140,3 +140,7 @@ Supersedes: none
 ## 2026-11-10 Yaarbro is built from Meshy's one-clip files, and falls in his jump pose
 Reason: Meshy exports one file per clip, each with the whole model in it: walk, run, idle, jump, a dive that ends in a landing, and a run, jump and roll. `tools/prepare-rigged.py` takes the model from one and puts every clip on it, cut to the part the game uses (`tools/yaarbro.guide.json` says which). The dive is head-first, which looks wrong as an ordinary fall, so by the owner's rule for that case falling uses the airborne part of the jump and only the landing is kept from the dive. Only the roll itself is kept from the last file, for milestone three.
 Supersedes: none
+
+## 2026-11-10 A character's skin is only changed where a pose test shows it is wrong
+Reason: The owner's rule for Yaarbro's cleanup pass: pose-test before changing anything, and fix only what can be seen to be wrong. `tools/pose-test.py` puts a model in the poses that show up bad weighting (arms raised, a wide stride, head up and down, a deep squat). For Yaarbro that showed the belt skewing with the legs and the beard sinking into the chest, and those were reweighted. His armpits, crotch and the head under raised shoulders held up and were left as Meshy made them. His metallic-roughness map already had the leather rough and non-metallic and the buckle metallic and shinier, so no material value was changed. The fixes are written in `tools/yaarbro.guide.json` and done by `tools/prepare-rigged.py`, so they can be rerun on a new export.
+Supersedes: none

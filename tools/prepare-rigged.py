@@ -11,6 +11,7 @@
 #                next, and commit only what that makes.
 #   guide.json   which file holds which clip, and what to do to each
 #                (see tools/yaarbro.guide.json)
+#   --as-it-came leaves the skin untouched (no cleanup), for a before picture
 #
 # Needs Blender 4 with its glTF add-on and numpy. On Ubuntu:
 #   apt-get install -y blender python3-numpy
@@ -24,8 +25,22 @@
 #     body in the air is brought down to stand on the ground, and a body
 #     pushed into the ground is lifted out of it.
 #   - Lifts a hand that a clip pushes below the ground back onto it.
-# The skeleton, the skin weights and the pictures are passed through as they
-# came.
+#
+# What it does to the skin, when the guide has a "cleanup" part. Each fix is
+# for something seen to be wrong in a pose test (tools/pose-test.py), and
+# nothing else is touched:
+#   - Belt: Meshy weights the belt mostly to the legs, so it skews and
+#     stretches when they move. The belt and buckle are given to the hips, the
+#     cloth above loses its leg weights, and the cloth just below eases from
+#     the hips into the legs.
+#   - Beard: it follows the head and so sinks into the chest when the head
+#     tips down. The lower beard is given to the chest and eases into
+#     following the head toward the chin. The cloth in front of the chest is
+#     taken off the head, so it does not stretch when the head lifts.
+#   - Shading: the model comes faceted. Its doubled points are merged and it is
+#     shaded smooth, with edges left sharp where the guide says (the buckle,
+#     the boot soles) and wherever a fold is sharper than the guide allows.
+# The skeleton and the pictures are passed through as they came.
 
 import json
 import math
@@ -81,6 +96,220 @@ def borrow_clip(path, armature):
             if item.users == 0:
                 block.remove(item)
     return action
+
+
+# ---------- The skin: regions, weights and shading ----------
+
+def weld(mesh):
+    """Merges points that sit in the same place, so shading can run smoothly across them."""
+    import bmesh
+    before = len(mesh.data.vertices)
+    bm = bmesh.new()
+    bm.from_mesh(mesh.data)
+    bmesh.ops.remove_doubles(bm, verts=bm.verts, dist=1e-6)
+    bm.to_mesh(mesh.data)
+    bm.free()
+    mesh.data.update()
+    say(f"merged doubled points: {before} -> {len(mesh.data.vertices)}")
+
+
+class Skin:
+    """Each point of the model at rest: where it is, what colour its picture is there, and which bones move it."""
+
+    def __init__(self, armature, mesh):
+        self.armature = armature
+        self.mesh = mesh
+        data = mesh.data
+        count = len(data.vertices)
+        world = np.array(mesh.matrix_world)
+        local = np.empty(count * 3)
+        data.vertices.foreach_get('co', local)
+        self.at = local.reshape(count, 3) @ world[:3, :3].T + world[:3, 3]
+        # Across (to his left), up from the ground, and forward. He faces -y in Blender.
+        self.across = self.at[:, 0]
+        self.forward = -self.at[:, 1]
+        self.up = self.at[:, 2] - self.at[:, 2].min()
+
+        # The colour of the picture at each point: read a small copy of it at the point's place on it.
+        material = data.materials[0]
+        image = next(node.image for node in material.node_tree.nodes if node.type == 'TEX_IMAGE' and node.image and node.image.colorspace_settings.name == 'sRGB')
+        small = image.copy()
+        small.scale(1024, 1024)
+        pixels = np.empty(1024 * 1024 * 4, dtype=np.float32)
+        small.pixels.foreach_get(pixels)
+        bpy.data.images.remove(small)
+        pixels = pixels.reshape(1024, 1024, 4)
+        uv = np.empty(len(data.loops) * 2)
+        data.uv_layers.active.data.foreach_get('uv', uv)
+        uv = uv.reshape(-1, 2)
+        loop_vertex = np.empty(len(data.loops), dtype=np.int64)
+        data.loops.foreach_get('vertex_index', loop_vertex)
+        first = np.full(count, -1)
+        first[loop_vertex[::-1]] = np.arange(len(loop_vertex))[::-1]
+        x = np.clip((uv[first, 0] * 1024).astype(int), 0, 1023)
+        y = np.clip((uv[first, 1] * 1024).astype(int), 0, 1023)
+        rgb = pixels[y, x, :3]
+        high = rgb.max(axis=1)
+        low = rgb.min(axis=1)
+        spread = high - low
+        hue = np.zeros(count)
+        nonzero = spread > 1e-6
+        r, g, b = rgb[:, 0], rgb[:, 1], rgb[:, 2]
+        is_r = nonzero & (high == r)
+        is_g = nonzero & (high == g) & ~is_r
+        is_b = nonzero & ~is_r & ~is_g
+        hue[is_r] = ((g[is_r] - b[is_r]) / spread[is_r]) % 6
+        hue[is_g] = (b[is_g] - r[is_g]) / spread[is_g] + 2
+        hue[is_b] = (r[is_b] - g[is_b]) / spread[is_b] + 4
+        self.hue = hue * 60
+        self.saturation = np.where(high > 0, spread / np.maximum(high, 1e-6), 0)
+        # The picture is stored for a screen; this is how bright it looks on one.
+        self.value = high ** (1 / 2.2)
+
+        self.names = [group.name for group in mesh.vertex_groups]
+        index = {name: i for i, name in enumerate(self.names)}
+        self.weights = np.zeros((count, len(self.names)))
+        for vertex in data.vertices:
+            for group in vertex.groups:
+                self.weights[vertex.index, group.group] = group.weight
+        self.column = index
+
+    def coloured(self, look):
+        """Points whose picture colour is inside the ranges a guide entry gives."""
+        inside = np.ones(len(self.hue), dtype=bool)
+        if 'hue' in look:
+            inside &= (self.hue >= look['hue'][0]) & (self.hue <= look['hue'][1])
+        if 'saturation' in look:
+            inside &= (self.saturation >= look['saturation'][0]) & (self.saturation <= look['saturation'][1])
+        if 'value' in look:
+            inside &= (self.value >= look['value'][0]) & (self.value <= look['value'][1])
+        return inside
+
+    def give(self, points, takers, share, to):
+        """Takes `share` (0 to 1, per point) of what the `takers` bones hold at the points and gives it to bone `to`."""
+        columns = [self.column[name] for name in takers if name in self.column]
+        share = np.broadcast_to(share, (len(self.up),))[points]
+        taken = self.weights[np.ix_(points, columns)] * share[:, None]
+        self.weights[np.ix_(points, columns)] -= taken
+        self.weights[points, self.column[to]] += taken.sum(axis=1)
+
+    def write(self):
+        """Stores the weights back on the mesh: at most four bones a point, adding up to one."""
+        mesh = self.mesh
+        order = np.argsort(-self.weights, axis=1)[:, :4]
+        for group in list(mesh.vertex_groups):
+            mesh.vertex_groups.remove(group)
+        groups = [mesh.vertex_groups.new(name=name) for name in self.names]
+        for vertex in range(len(self.weights)):
+            kept = [(c, self.weights[vertex, c]) for c in order[vertex] if self.weights[vertex, c] > 1e-4]
+            total = sum(weight for _, weight in kept)
+            for column, weight in kept:
+                groups[column].add([vertex], weight / total, 'REPLACE')
+
+
+def smoothstep(value):
+    value = np.clip(value, 0, 1)
+    return value * value * (3 - 2 * value)
+
+
+def clean_belt(skin, spec):
+    """Gives the belt to the hips, and eases the cloth round it."""
+    torso = np.abs(skin.across) < spec['within']
+    band = (skin.up >= spec['between'][0]) & (skin.up <= spec['between'][1])
+    belt = torso & band & np.any([skin.coloured(look) for look in spec['looks']], axis=0)
+    if not belt.any():
+        raise SystemExit('The guide\'s belt was not found on the model. Check its height and colours.')
+    low = skin.up[belt].min()
+    high = skin.up[belt].max()
+    legs = spec['legs']
+    hips = spec['stays_with']
+    others = [name for name in skin.names if name != hips]
+    # The belt itself: all of it with the hips.
+    skin.give(np.where(belt)[0], others, 1.0, hips)
+    # Above the belt nothing on the body should follow a leg.
+    above = torso & ~belt & (skin.up > low)
+    skin.give(np.where(above)[0], legs, 1.0, hips)
+    # Just below it the cloth eases from the hips into the legs.
+    reach = spec['eases_below']
+    below = torso & ~belt & (skin.up <= low) & (skin.up > low - reach)
+    skin.give(np.where(below)[0], legs, 1 - smoothstep((low - skin.up) / reach), hips)
+    say(f"belt: {int(belt.sum())} points from {low:.2f} to {high:.2f} m given to {hips}; {int(above.sum())} points above freed from the legs, {int(below.sum())} below eased")
+
+
+def clean_beard(skin, spec):
+    """Keeps the lower beard on the chest, and the chest's cloth off the head."""
+    front = skin.forward > spec['in_front_of']
+    middle = np.abs(skin.across) < spec['within']
+    band = (skin.up >= spec['between'][0]) & (skin.up <= spec['between'][1])
+    beard = front & middle & band & skin.coloured(spec['look'])
+    if not beard.any():
+        raise SystemExit('The guide\'s beard was not found on the model. Check its height and colour.')
+    chest = spec['stays_on']
+    head = spec['head']
+    # Whatever else holds the beard (Meshy gives much of it to the shoulders) goes to the chest.
+    others = [name for name in skin.names if name not in head and name != chest]
+    skin.give(np.where(beard)[0], others, 1.0, chest)
+    # The tip stays on the chest; toward the chin it follows the head as it came.
+    free, full = spec['follows_head_from']
+    skin.give(np.where(beard)[0], head, 1 - smoothstep((skin.up - free) / (full - free)), chest)
+    # The cloth in front of the chest does not follow the head at all.
+    cloth = front & middle & (skin.up < spec['cloth_below']) & np.any([skin.coloured(look) for look in spec['cloth_looks']], axis=0)
+    skin.give(np.where(cloth)[0], head, 1.0, chest)
+    say(f"beard: {int(beard.sum())} points, the lower ones given to {chest}; {int(cloth.sum())} points of cloth in front of the chest taken off the head")
+
+
+def shade(skin, spec):
+    """Smooth shading everywhere, with edges kept sharp where the guide asks and at sharp folds."""
+    import bmesh
+    mesh = skin.mesh
+    data = mesh.data
+    for polygon in data.polygons:
+        polygon.use_smooth = True
+    # Which points are in a part that keeps its edges.
+    crisp = np.zeros(len(skin.up), dtype=bool)
+    for part in spec['sharp']:
+        inside = (skin.up >= part['between'][0]) & (skin.up <= part['between'][1])
+        if 'within' in part:
+            inside &= np.abs(skin.across) < part['within']
+        if 'looks' in part:
+            inside &= np.any([skin.coloured(look) for look in part['looks']], axis=0)
+        crisp |= inside
+        say(f"shading: {part['name']} keeps its edges ({int(inside.sum())} points)")
+    fold = math.radians(spec['smooth_up_to'])
+    crisp_fold = math.radians(spec['sharp_from'])
+    bm = bmesh.new()
+    bm.from_mesh(data)
+    bm.verts.ensure_lookup_table()
+    sharp = 0
+    for edge in bm.edges:
+        if len(edge.link_faces) != 2:
+            continue
+        angle = edge.calc_face_angle(0.0)
+        in_part = crisp[edge.verts[0].index] and crisp[edge.verts[1].index]
+        edge.smooth = not (angle > (crisp_fold if in_part else fold))
+        sharp += 0 if edge.smooth else 1
+    bm.to_mesh(data)
+    bm.free()
+    data.use_auto_smooth = True
+    data.auto_smooth_angle = math.pi
+    # The file came with a facing direction stored for every corner of every
+    # face, which is what made it faceted. Setting them all to nothing makes
+    # Blender work them out again from the smooth and sharp edges above.
+    data.normals_split_custom_set([(0.0, 0.0, 0.0)] * len(data.loops))
+    data.update()
+    say(f"shading: smooth, with {sharp} edges kept sharp")
+
+
+def clean_up(armature, mesh, spec):
+    weld(mesh)
+    skin = Skin(armature, mesh)
+    if 'belt' in spec:
+        clean_belt(skin, spec['belt'])
+    if 'beard' in spec:
+        clean_beard(skin, spec['beard'])
+    skin.write()
+    if 'shading' in spec:
+        shade(skin, spec['shading'])
 
 
 # ---------- Reading a pose ----------
@@ -263,9 +492,9 @@ def save(path):
 
 
 def main():
-    arguments = sys.argv[sys.argv.index('--') + 1:] if '--' in sys.argv else []
+    arguments = [a for a in sys.argv[sys.argv.index('--') + 1:] if a != '--as-it-came'] if '--' in sys.argv else []
     if len(arguments) != 3:
-        raise SystemExit('Usage: blender -b -P tools/prepare-rigged.py -- <folder> <out.glb> <guide.json>')
+        raise SystemExit('Usage: blender -b -P tools/prepare-rigged.py -- <folder> <out.glb> <guide.json> [--as-it-came]')
     folder, out, guide_path = arguments
     with open(guide_path, encoding='utf8') as file:
         guide = json.load(file)
@@ -278,6 +507,9 @@ def main():
             sources[spec['file']] = borrow_clip(os.path.join(folder, spec['file']), armature)
     for action in sources.values():
         action.use_fake_user = True
+
+    if guide.get('cleanup') and '--as-it-came' not in sys.argv:
+        clean_up(armature, mesh, guide['cleanup'])
 
     body = Body(armature, mesh, guide['hips'])
     # The spot the hips stay over: where they are, on average, standing still.

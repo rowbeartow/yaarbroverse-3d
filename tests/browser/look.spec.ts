@@ -17,7 +17,7 @@ const stats = (page: import('@playwright/test').Page): Promise<Stats | null> =>
   page.evaluate(() => (window as unknown as { __grove: { stats: Stats | null } }).__grove.stats);
 
 interface HeroInfo {
-  model: string | null;
+  model: string;
   clips: string[];
   clock: number;
 }
@@ -171,10 +171,24 @@ test.describe('hero models', () => {
     expect(problems).toEqual([]);
   });
 
-  test('without a model file, a hero is still drawn from shapes', async ({ page }) => {
-    // Caputo's model is not in yet.
-    await open(page);
+  test('Caputo is drawn from his own model, with a clip for standing, walking, running and each part of a jump', async ({ page }) => {
+    const problems = await open(page);
+    await expect(page.locator('[data-hero="Caputo"] img')).toHaveAttribute('src', /^data:image\/png/);
     await play(page, 'Caputo');
-    expect(await hero(page)).toMatchObject({ model: null, clips: [] });
+    const start = await hero(page);
+    expect(start?.model).toBe('caputo.glb');
+    // The clips the rig script writes (tools/rig-quadruped.py).
+    expect(start?.clips.slice().sort()).toEqual(['falling', 'idle', 'jump', 'landing', 'run', 'walk']);
+
+    await expect.poll(async () => (await hero(page))?.clock ?? 0).toBeGreaterThan((start?.clock ?? 0) + 0.3);
+    const before = await snapshot(page);
+    await page.keyboard.down('ArrowUp');
+    await expect.poll(async () => (await snapshot(page)).z).toBeLessThan(before.z - 1);
+    await page.keyboard.down('Space');
+    await expect.poll(async () => (await snapshot(page)).y, { intervals: [30] }).toBeGreaterThan(0.3);
+    await page.keyboard.up('Space');
+    await page.keyboard.up('ArrowUp');
+    expect((await hero(page))?.clock ?? 0).toBeGreaterThan((start?.clock ?? 0) + 0.5);
+    expect(problems).toEqual([]);
   });
 });

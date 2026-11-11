@@ -1,7 +1,10 @@
 {
-  "about": "Which of Yaarbro's Meshy files holds which clip, for tools/prepare-rigged.py. Times are seconds into the file's own clip. stay: the hips are held over one spot. airborne: a body in the air is brought down to stand on the ground. lift: a body pushed into the ground is lifted out. hands_on_ground: these arms are raised until their hands are not below the ground. parts: two pieces of the clip joined together.",
+  "about": "How Yaarbro is put together from his Meshy files, for tools/prepare-rigged.py and tools/pose-test.py. Times are seconds into a file's own clip. Heights are metres up from the ground on the model as it comes (he is 2.87 m tall there), 'within' is metres either side of his middle, and colours are the hue (0 to 360), saturation and value (0 to 1) of his picture.",
+
   "body": "Meshy_AI_Animation_Idle_11_withSkin.glb",
   "hips": "Hips",
+
+  "clips_about": "stay: the hips are held over one spot. airborne: a body in the air is brought down to stand on the ground. lift: a body pushed into the ground is lifted out. hands_on_ground: these arms are raised until their hands are not below the ground. parts: two pieces of the clip joined together.",
   "clips": [
     { "name": "idle", "file": "Meshy_AI_Animation_Idle_11_withSkin.glb", "loop": true },
     { "name": "walk", "file": "Meshy_AI_Animation_Walking_withSkin.glb", "loop": true },
@@ -9,5 +12,55 @@
     { "name": "jump", "file": "Meshy_AI_Animation_Regular_Jump_withSkin.glb", "from": 0.57, "to": 1.07, "stay": true, "airborne": true },
     { "name": "landing", "file": "Meshy_AI_Animation_Dive_Down_and_Land_2_withSkin.glb", "parts": [[0.47, 0.67], [1.6, 2.4]], "stay": true, "hands_on_ground": ["RightArm", "LeftArm"] },
     { "name": "roll", "file": "Meshy_AI_Animation_Run_Jump_and_Roll_withSkin.glb", "from": 1.85, "to": 2.85, "stay": true, "lift": true }
+  ],
+
+  "cleanup_about": "Each part fixes something seen to be wrong in a pose test. belt: the belt and buckle stay with the hips. beard: the lower beard stays on the chest, and the cloth in front of the chest stays off the head. shading: smooth, with edges kept sharp on the buckle and the boot soles, and at any fold sharper than smooth_up_to degrees.",
+  "cleanup": {
+    "belt": {
+      "between": [1.4, 1.7],
+      "within": 0.5,
+      "looks": [
+        { "hue": [5, 42], "saturation": [0.3, 1], "value": [0, 0.82] },
+        { "hue": [25, 55], "saturation": [0.45, 1], "value": [0.8, 1] }
+      ],
+      "stays_with": "Hips",
+      "legs": ["LeftUpLeg", "RightUpLeg", "LeftLeg", "RightLeg"],
+      "eases_below": 0.28
+    },
+    "beard": {
+      "between": [1.8, 2.45],
+      "within": 0.42,
+      "in_front_of": 0.0,
+      "look": { "hue": [10, 36], "saturation": [0.6, 1], "value": [0.8, 1] },
+      "stays_on": "Spine",
+      "head": ["neck", "Head", "head_end", "headfront"],
+      "follows_head_from": [2.02, 2.32],
+      "cloth_below": 2.3,
+      "cloth_looks": [
+        { "hue": [200, 250], "saturation": [0.45, 1] },
+        { "saturation": [0, 0.3], "value": [0.75, 1] }
+      ]
+    },
+    "shading": {
+      "smooth_up_to": 75,
+      "sharp_from": 30,
+      "sharp": [
+        { "name": "buckle", "between": [1.4, 1.7], "within": 0.5, "looks": [{ "hue": [25, 55], "saturation": [0.45, 1], "value": [0.8, 1] }] },
+        { "name": "boot soles", "between": [0, 0.1] }
+      ]
+    }
+  },
+
+  "pose_test_about": "The poses tools/pose-test.py puts the model in. forward swings a limb toward the front (for the head, tips it back), out lifts it away from the body to its own side. Degrees.",
+  "pose_test": [
+    { "name": "rest", "bones": {} },
+    { "name": "arms raised", "bones": { "LeftArm": { "out": 105 }, "RightArm": { "out": 105 } } },
+    { "name": "wide stride", "bones": { "LeftUpLeg": { "forward": 55 }, "RightUpLeg": { "forward": -40 }, "LeftArm": { "out": -40 }, "RightArm": { "out": -40 } } },
+    { "name": "head up", "bones": { "neck": { "forward": 12 }, "Head": { "forward": 24 }, "LeftArm": { "out": -40 }, "RightArm": { "out": -40 } } },
+    { "name": "head down", "bones": { "neck": { "forward": -12 }, "Head": { "forward": -26 }, "LeftArm": { "out": -40 }, "RightArm": { "out": -40 } } },
+    { "name": "deep squat", "bones": { "LeftUpLeg": { "forward": 85 }, "RightUpLeg": { "forward": 85 }, "LeftLeg": { "forward": -95 }, "RightLeg": { "forward": -95 }, "LeftArm": { "out": -20, "forward": 50 }, "RightArm": { "out": -20, "forward": 50 } } },
+    { "name": "arms down", "bones": { "LeftArm": { "out": -40 }, "RightArm": { "out": -40 } } },
+    { "name": "legs apart", "bones": { "LeftUpLeg": { "out": 35 }, "RightUpLeg": { "out": 35 }, "LeftArm": { "out": -40 }, "RightArm": { "out": -40 } } },
+    { "name": "shoulders up", "bones": { "LeftShoulder": { "out": 28 }, "RightShoulder": { "out": 28 }, "LeftArm": { "out": 70 }, "RightArm": { "out": 70 } } }
   ]
 }

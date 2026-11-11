@@ -15,7 +15,7 @@ Live at: https://rowbeartow.github.io/yaarbroverse-3d/ . Every merge to `main` p
 
 - Framework: Three.js, TypeScript, Vite. No physics library.
 - Assets: source textures, the forest light (HDRI) and models in `assets/`. `scripts/build-assets.mjs` compresses them into `public/media/` (KTX2 textures, meshopt geometry, a smaller HDR) before every build and before `npm run dev`. `public/media/` is not committed. Third-party files are CC0 and listed in `CREDITS.md`; the build fails over 20 MB.
-- Hero models: `assets/heroes/` holds them already compressed, and the build copies them as they are. The owner's originals (20 to 30 MB each, files on the `hero-models` release) are never committed. Meshy gives one file per clip: `tools/prepare-rigged.py` (Blender, no window) puts every clip on one model and makes each happen on the spot, and `tools/compress-hero.mjs` makes the small file from that and lists its clips.
+- Hero models: `assets/heroes/` holds them already compressed, and the build copies them as they are. The owner's originals (20 to 30 MB each, files on the `hero-models` release) are never committed. Blender scripts in `tools/`, run with no window, make each model from its originals: `prepare-rigged.py` for a character Meshy rigged (Yaarbro: puts his one-clip files on one model, makes each clip happen on the spot, cleans up the skin), `rig-quadruped.py` for one Meshy could not rig (Caputo: builds the skeleton, skins it, writes the clips), and `pose-test.py` to look at a skin in test poses. `tools/compress-hero.mjs` then makes the small file and lists its clips.
 - Deploy target: GitHub Pages, static files only. `.github/workflows/publish.yml` builds and publishes on every merge to main.
 - Data layer: none. The browser remembers the last hero and difficulty.
 - Auth: none.
@@ -31,12 +31,12 @@ How it fits together:
   - `bank-outline.ts`: the edge of a bank's top. It may be irregular, but never reaches past where the rules let a hero stand (no 3D code, tested).
   - `materials.ts`: surfaces, plus three additions to the standard ones: mist by height, moss blending, wind sway. `pictures.ts`: textures drawn in code.
   - `assets.ts`: downloads `media/` and reports progress. `quality.ts`: the tiers and the rules for choosing one (no 3D code, tested).
-  - `heroes.ts`: builds a hero from its model when it has one (`hero-model.ts`, mixing rules in `hero-motion.ts`), otherwise from shapes (`shapes.ts`). Yaarbro has a model; Caputo does not yet. To give a hero a model, see the top of `hero-model.ts`.
+  - `heroes.ts`: builds a hero from its model (`hero-model.ts`, mixing rules in `hero-motion.ts`). To give a character a model, see the top of `hero-model.ts`.
 - `src/input/controls.ts`: keyboard and touch, turned into "which way" and "is Jump held".
 - `src/ui/screens.ts` and `index.html`: start screen, pause, end card, "turn sideways" card, messages.
 - `src/main.ts`: the loop that connects them. The start screen shows first; the 3D code and files load behind it with a progress bar.
 
-Address-bar switches: `?fps` shows the frame rate and tier, `?quality=high|medium|low|minimal` fixes the tier, `?standin` plays both heroes as the CC0 stand-in model (for checking the loader and animation player).
+Address-bar switches: `?fps` shows the frame rate and tier, `?quality=high|medium|low|minimal` fixes the tier, `?standin` plays both heroes as the CC0 stand-in model (for checking the loader and animation player against a library file).
 
 ## Run and deploy
 
@@ -47,7 +47,9 @@ Node 22 (`.nvmrc`).
 - Test the rules: `npm test` (fast, no browser)
 - Build: `npm run build` (prepares the assets, and fails if the download goes over 20 MB)
 - Pictures for the docs: `node scripts/screenshot.mjs` (see the top of that file)
-- Rebuild Yaarbro from his Meshy files: `blender -b -P tools/prepare-rigged.py -- <folder of Meshy files> <out.glb> tools/yaarbro.guide.json`, then compress the result (see the top of that file). A cloud session has Blender; it also needs `apt-get install -y python3-numpy` once.
+- Rebuild Yaarbro from his Meshy files: `blender -b -P tools/prepare-rigged.py -- <folder of Meshy files> <out.glb> tools/yaarbro.guide.json`, then compress `<out.glb>`.
+- Rig Caputo from his Meshy file: `blender -b -P tools/rig-quadruped.py -- <caputo original.glb> <out.glb> tools/caputo.rig.json`, then compress `<out.glb>`.
+- Both need Blender 4 with numpy. A cloud session has Blender; run `apt-get install -y python3-numpy` once. The steps are at the top of each script.
 - Compress a hero model: `node tools/compress-hero.mjs <model.glb> <name>` (see the top of that file)
 - Browser checks: `npm run test:browser` (builds, serves, then drives the game with keyboard and touch, in Chromium and in WebKit). In a cloud session Chromium is already installed: do not install it again. WebKit is not: run `npx playwright install --with-deps webkit` once per session. To run one browser: `npx playwright test --project=ipad-webkit` (or `mac`, `ipad`).
 - Everything: `npm run check`, then `npm run test:browser`
