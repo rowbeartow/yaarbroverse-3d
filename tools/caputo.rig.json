@@ -1,14 +1,19 @@
 {
-  "about": "Where Caputo's joints are, for tools/rig-quadruped.py. Each point is [across, up, forward] in metres, measured on the model once it faces straight ahead and stands on the ground: across is to his left, up is from the ground, forward is toward his nose.",
+  "about": "Where Caputo's joints are, for tools/rig-quadruped.py. Each point is [across, up, forward] in metres, measured on the model once it faces straight ahead and stands on the ground: across is to his left, up is from the ground, forward is toward his nose. A shoulder blade runs from the shoulder up to just under the skin beside the top of the back. An ear runs from its base to its tip. \"clips\" changes a clip's numbers from the script's own: here the middle of the front paws' path in the walk, in metres ahead of the middle of the body, which sits further back than the script's own because his front legs slope forward as he stands.",
   "turned_left_degrees": 21.7,
   "joints": {
-    "spine": [[0.0, 0.80, -0.42], [0.0, 0.83, -0.20], [0.01, 0.86, 0.04], [0.01, 0.90, 0.26], [0.0, 0.98, 0.44]],
+    "spine": [[0.0, 0.8, -0.42], [0.0, 0.83, -0.2], [0.01, 0.86, 0.04], [0.01, 0.9, 0.26], [0.0, 0.98, 0.44]],
     "head": [-0.01, 1.05, 0.58],
     "head_end": [-0.03, 1.08, 0.95],
-    "tail": [[-0.03, 0.84, -0.52], [-0.09, 0.84, -0.72], [-0.16, 0.93, -0.90], [-0.20, 1.05, -0.97], [-0.15, 1.17, -0.93], [-0.09, 1.28, -0.88], [-0.04, 1.41, -0.86]],
-    "front_left": [[0.20, 0.80, 0.40], [0.25, 0.47, 0.43], [0.28, 0.17, 0.59], [0.30, 0.03, 0.80]],
-    "front_right": [[-0.20, 0.80, 0.40], [-0.25, 0.47, 0.45], [-0.28, 0.17, 0.61], [-0.31, 0.03, 0.82]],
-    "hind_left": [[0.17, 0.78, -0.42], [0.22, 0.47, -0.28], [0.28, 0.20, -0.50], [0.33, 0.03, -0.30]],
-    "hind_right": [[-0.17, 0.78, -0.44], [-0.21, 0.47, -0.32], [-0.27, 0.20, -0.56], [-0.33, 0.03, -0.37]]
-  }
+    "tail": [[-0.03, 0.84, -0.52], [-0.09, 0.84, -0.72], [-0.16, 0.93, -0.9], [-0.2, 1.05, -0.97], [-0.15, 1.17, -0.93], [-0.09, 1.28, -0.88], [-0.04, 1.41, -0.86]],
+    "front_left": [[0.2, 0.8, 0.4], [0.25, 0.47, 0.43], [0.28, 0.17, 0.59], [0.3, 0.03, 0.8]],
+    "front_right": [[-0.2, 0.8, 0.4], [-0.25, 0.47, 0.45], [-0.28, 0.17, 0.61], [-0.31, 0.03, 0.82]],
+    "hind_left": [[0.17, 0.78, -0.42], [0.22, 0.47, -0.28], [0.28, 0.2, -0.5], [0.33, 0.03, -0.3]],
+    "hind_right": [[-0.17, 0.78, -0.44], [-0.21, 0.47, -0.32], [-0.27, 0.2, -0.56], [-0.33, 0.03, -0.37]],
+    "blade_left": [[0.15, 0.9, 0.38], [0.13, 1.07, 0.33]],
+    "blade_right": [[-0.15, 0.9, 0.38], [-0.13, 1.07, 0.33]],
+    "ear_left": [[0.16, 1.22, 0.72], [0.19, 1.31, 0.73]],
+    "ear_right": [[-0.19, 1.25, 0.64], [-0.23, 1.35, 0.64]]
+  },
+  "clips": {"walk": {"front_middle": 0.44}}
 }

@@ -1,0 +1,185 @@
+<title>Caputo Movement Review</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<style>
+  /* Layout: one column. The stage (the game's sky and light) on top with the
+     clip picker under it, then the two slow side views, then what changed.
+     Colours and type are the game's own. */
+  :root {
+    --paper: #fff6dd;
+    --card: #fffbee;
+    --edge: #e9d7a6;
+    --ink: #1b2a24;
+    --quiet: #4d6157;
+    --moss: #2f6b3f;
+    --gold: #f2c14e;
+    --gold-deep: #b97f12;
+    --on-gold: #1b2a24;
+    --font-text: 'Avenir Next', 'Trebuchet MS', 'Segoe UI', system-ui, sans-serif;
+    --font-title: Georgia, 'Iowan Old Style', 'Times New Roman', serif;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --paper: #14261f; --card: #1d3a33; --edge: #3b5a4c; --ink: #fff6dd; --quiet: #b9c9b6;
+      --moss: #9ed49a; --gold: #f2c14e; --gold-deep: #f7d98a; --on-gold: #1b2a24; color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --paper: #14261f; --card: #1d3a33; --edge: #3b5a4c; --ink: #fff6dd; --quiet: #b9c9b6;
+    --moss: #9ed49a; --gold: #f2c14e; --gold-deep: #f7d98a; --on-gold: #1b2a24; color-scheme: dark;
+  }
+  * { box-sizing: border-box; }
+  body { background: var(--paper); color: var(--ink); font-family: var(--font-text); font-size: 16px; line-height: 1.5; }
+  .page {
+    max-width: 960px; margin: 0 auto; padding-block: 28px 48px;
+    padding-left: max(16px, env(safe-area-inset-left, 0px));
+    padding-right: max(16px, env(safe-area-inset-right, 0px));
+    display: grid; gap: 20px;
+  }
+  .page > * { min-width: 0; }
+  .eyebrow { margin: 0; color: var(--moss); font-size: 13px; font-weight: 700; letter-spacing: 0.22em; text-transform: uppercase; }
+  h1 { margin: 2px 0 6px; font-family: var(--font-title); font-size: clamp(30px, 6vw, 44px); line-height: 1.1; text-wrap: balance; }
+  h2 { margin: 0; font-family: var(--font-title); font-size: 22px; line-height: 1.2; text-wrap: balance; }
+  p { margin: 0; max-width: 65ch; }
+  .lede { color: var(--quiet); font-size: 17px; }
+
+  /* A window into the grove: it keeps the game's own sky in both themes. */
+  .window {
+    position: relative; width: 100%; max-width: 100%; border: 3px solid var(--edge); border-radius: 18px; overflow: hidden;
+    background: linear-gradient(#f2e4a8 0%, #d6e2b8 22%, #a8ceb8 42%, #7fb3a6 58%, #7fb3a6 100%);
+  }
+  .window canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+  #stage { aspect-ratio: 16 / 10; }
+  #view { cursor: grab; touch-action: pan-y; }
+  #view:active { cursor: grabbing; }
+  .side { aspect-ratio: 16 / 9; }
+  #status {
+    position: absolute; inset: auto 0 0 0; margin: 0; padding: 12px 16px; max-width: none;
+    background: rgba(16, 32, 28, 0.72); color: #fff6dd; font-weight: 600; text-align: center;
+  }
+  #stage.failed #status { inset: 0; display: grid; place-items: center; padding: 24px; }
+  @media (max-width: 560px) { #stage { aspect-ratio: 4 / 5; } .side { aspect-ratio: 4 / 3; } }
+
+  .row { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+  .row button {
+    min-height: 48px; padding: 0 18px; border: 3px solid var(--edge); border-radius: 14px;
+    background: var(--card); color: var(--ink); font: 700 17px var(--font-text); cursor: pointer;
+  }
+  .row button[aria-pressed="true"] { background: var(--gold); border-color: var(--gold-deep); color: var(--on-gold); }
+  .row button:focus-visible, input[type="range"]:focus-visible { outline: 3px solid var(--moss); outline-offset: 2px; }
+  .row.small button { min-height: 40px; padding: 0 14px; border-width: 2px; border-radius: 999px; font-size: 14px; font-weight: 600; }
+  .row .gap { flex: 1 1 12px; }
+  .scrub { display: grid; grid-template-columns: auto 1fr; gap: 12px; align-items: center; color: var(--quiet); font-size: 14px; font-weight: 600; }
+  .scrub input { width: 100%; min-width: 0; accent-color: var(--moss); height: 32px; }
+
+  .now { display: grid; gap: 6px; padding: 16px 18px; border: 3px solid var(--edge); border-radius: 18px; background: var(--card); }
+  .now-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 14px; }
+  #clip-name { font-size: 26px; line-height: 1.15; }
+  #clip-kind { color: var(--moss); font-size: 14px; font-weight: 700; letter-spacing: 0.04em; }
+
+  section { display: grid; gap: 12px; }
+  section > * { min-width: 0; }
+  ul { margin: 0; padding-left: 20px; max-width: 65ch; }
+  li + li { margin-top: 4px; }
+  .asked { display: grid; gap: 10px; margin: 0; padding: 0; list-style: none; max-width: 72ch; }
+  .asked li { display: grid; grid-template-columns: 6.5em 1fr; gap: 4px 14px; margin: 0; }
+  .asked b { color: var(--moss); }
+  @media (max-width: 480px) { .asked li { grid-template-columns: 1fr; } }
+  .rule { border: 0; border-top: 3px solid var(--edge); margin: 8px 0; }
+</style>
+
+<main class="page">
+  <header>
+    <p class="eyebrow">Yaarbroverse 3D</p>
+    <h1>Caputo moves like a cat. Does he?</h1>
+    <p class="lede">His model is unchanged. His skeleton gained shoulder blades and ears, and every clip was rewritten. This is the file the game will load, in the grove’s light. Nothing here is in the game until you say OK.</p>
+  </header>
+
+  <div class="window" id="stage">
+    <canvas id="view" aria-label="Caputo on a patch of turf, playing the chosen clip while the view turns slowly"></canvas>
+    <p id="status" role="status">Loading Caputo…</p>
+  </div>
+
+  <div class="row" id="clips" role="group" aria-label="Clip"></div>
+
+  <div class="now" aria-live="polite">
+    <div class="now-head">
+      <h2 id="clip-name">In the game</h2>
+      <span id="clip-kind">Mixed by the game</span>
+    </div>
+    <p id="clip-note"></p>
+  </div>
+
+  <div class="row small" role="group" aria-label="Stage view">
+    <button type="button" id="turn" aria-pressed="true">Turn slowly</button>
+    <button type="button" id="slow" aria-pressed="false">Slow motion</button>
+    <button type="button" id="bones" aria-pressed="false">Show skeleton</button>
+  </div>
+  <p class="lede">Drag the picture to turn him yourself. The skeleton shows on single clips, not on “In the game”.</p>
+
+  <hr class="rule">
+
+  <section>
+    <h2>The walk, from the side, slowed down</h2>
+    <p>The pale stones are set in the ground, which moves at the speed the game moves him. A paw that is down should stay beside its stone. Watch a front paw leave its spot, then the hind paw on the same side come down on it.</p>
+    <div class="window side"><canvas id="side-walk" aria-label="Caputo walking, seen from his right side, in slow motion"></canvas></div>
+    <div class="row small" role="group" aria-label="Walk side view">
+      <button type="button" data-side="walk" data-rate="0.1" aria-pressed="false">Tenth speed</button>
+      <button type="button" data-side="walk" data-rate="0.25" aria-pressed="true">Quarter speed</button>
+      <button type="button" data-side="walk" data-rate="1" aria-pressed="false">Full speed</button>
+      <span class="gap"></span>
+      <button type="button" id="pause-walk" aria-pressed="false">Pause</button>
+      <button type="button" id="bones-walk" aria-pressed="false">Show skeleton</button>
+    </div>
+    <label class="scrub" for="scrub-walk">Step through one stride <input type="range" id="scrub-walk" min="0" max="1000" value="0"></label>
+  </section>
+
+  <section>
+    <h2>The run, from the side, slowed down</h2>
+    <p>Hind paws land together and push. He is off the ground, stretched long. Front paws land one after the other. His back curls as the legs gather, and the hind paws come down again.</p>
+    <div class="window side"><canvas id="side-run" aria-label="Caputo galloping, seen from his right side, in slow motion"></canvas></div>
+    <div class="row small" role="group" aria-label="Run side view">
+      <button type="button" data-side="run" data-rate="0.1" aria-pressed="false">Tenth speed</button>
+      <button type="button" data-side="run" data-rate="0.25" aria-pressed="true">Quarter speed</button>
+      <button type="button" data-side="run" data-rate="1" aria-pressed="false">Full speed</button>
+      <span class="gap"></span>
+      <button type="button" id="pause-run" aria-pressed="false">Pause</button>
+      <button type="button" id="bones-run" aria-pressed="false">Show skeleton</button>
+    </div>
+    <label class="scrub" for="scrub-run">Step through one stride <input type="range" id="scrub-run" min="0" max="1000" value="0"></label>
+  </section>
+
+  <hr class="rule">
+
+  <section>
+    <h2>What you asked for, and where it stands</h2>
+    <ul class="asked">
+      <li><b>Walk</b><span>One paw at a time: left hind, left front, right hind, right front. The script works out the hind paws’ path from the front paws’, so each hind paw comes down in the print the front paw on its side has just left. Two new shoulder-blade bones lift the skin over each shoulder by about 6 cm while that leg carries weight. The head is held level and takes a tenth of the chest’s movement. The hips swing 5 degrees and the shoulders 4, so the spine bends from side to side. Each front paw curls back at the wrist as it lifts, reaches with the toes up, and has no downward speed left when it touches.</span></li>
+      <li><b>Run</b><span>A bounding gallop. The hind paws land a sixteenth of a stride apart and push, he is in the air stretched long for a fifth of the stride, the front paws land one after the other, and the back curls as the legs gather. The head takes under a third of the body’s movement.</span></li>
+      <li><b>Idle</b><span>An 8 second loop: two slow breaths, weight easing left then right, a look to his left and a shorter look to his right, three ear flicks on two new ear bones, and four flicks of the tail tip.</span></li>
+      <li><b>Jump</b><span>Crouch with the hind legs gathered, push from the hind legs with the front paws reaching, then fully stretched. See the first limit below.</span></li>
+      <li><b>Falling</b><span>Legs down and spread, back a little rounded, tail out behind and swinging. It moves, where before it was a held pose.</span></li>
+      <li><b>Landing</b><span>Front paws first, hind paws next, the body sinks about 25 cm, then he stands.</span></li>
+      <li><b>Tail</b><span>Each tail bone copies the one before it a moment late, so a movement of the hips runs down the tail and the tip swings widest. It uncurls and streams out in the run, the jump and the fall.</span></li>
+    </ul>
+  </section>
+
+  <section>
+    <h2>Where a script falls short</h2>
+    <ul>
+      <li><b>The jump’s crouch is a flash.</b> The rules lift him the moment Jump is pressed, so the crouch and push play in a tenth of a second. A crouch you can really see needs a short pause before he leaves the ground. That is a change to how the game plays, not to how he looks, so I left it for you to decide.</li>
+      <li><b>You will rarely see the stroll.</b> On the keyboard he is at full speed almost at once, which is the gallop. The walk shows on the iPad with a gentle push, and the game plays it up to twice as fast as the side view above before the run takes over.</li>
+      <li><b>The shoulder blades are subtle on him.</b> He has a thick ruff and short legs. They show best from behind and a little above, on the stage, with Walk and Slow motion on.</li>
+      <li><b>I judged this from still frames.</b> I cannot watch it move at speed. You are the first to see it in motion.</li>
+      <li><b>What a script does not give you:</b> skin sliding over muscle, toes spreading under weight, and the small timing choices an animator makes by eye. If the walk on this page still does not read as a cat to you, more script rounds are unlikely to close that gap, and an animator is the right next step.</li>
+    </ul>
+  </section>
+
+  <hr class="rule">
+
+  <section>
+    <h2>Your call</h2>
+    <p>Reply OK and I will merge this into the game. Or tell me what is off, in your own words: too bouncy, too stiff, head moves too much, tail too busy. If the walk does not read as a cat, say that and I will stop here.</p>
+  </section>
+</main>
+
+<script type="module" src="preview.js"></script>

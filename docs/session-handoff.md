@@ -1,6 +1,6 @@
 # Session handoff
 
-Last updated: 2026-11-10
+Last updated: 2026-11-11
 
 ## Where things stand
 
@@ -30,7 +30,14 @@ Nobody has played the new look on a real iPad or Mac yet.
 - **Heroes.** Yaarbro and Caputo, picked on the start screen. They move the same: walk, jump (hold for height), bounce on mushrooms. Both are textured models on skeletons, made by the owner in Meshy from the Caputo Mountain art.
   - **Yaarbro** was rigged and animated in Meshy. His file holds six clips: `idle`, `walk`, `run`, `jump`, `landing` and `roll`. Walk and run are mixed by how fast he is moving. In the air the jump clip is held as a pose, moved along by his upward speed, on the way up and on the way down: Meshy's falling clip is a head-first dive, so it is not used for falling. Landing plays once when he touches down, a little after a hop and in full after a long drop, and running straight on cuts it short. The roll is not used until milestone three.
   - **Yaarbro's skin** had a cleanup pass. A pose test showed two things wrong and both were reweighted: his belt skewed with his legs (it now stays with the hips), and his beard sank into his chest when his head tipped down (the lower beard now stays on the chest). He is shaded smooth, with sharp edges kept on the buckle and the boot soles. Armpits, crotch and materials were checked and left as Meshy made them.
-  - **Caputo** could not be rigged by Meshy, so `tools/rig-quadruped.py` does it in Blender: 25 bones (hips, two spine, chest, neck, head, four legs of upper, lower and paw, six in the tail), skinned with automatic weights, and six clips written by the script: `idle` (he breathes and his tail sways), `walk` (a four-beat walk), `run` (a gallop), and held poses for `jump`, `falling` and `landing`. His paws are placed by working each leg back from where the paw should be, so a paw on the ground stays put. Pounce comes in milestone three.
+  - **Caputo** could not be rigged by Meshy, so `tools/rig-quadruped.py` does it in Blender: 29 bones (hips, two spine, chest, neck, head, two shoulder blades, two ears, four legs of upper, lower and paw, six in the tail), skinned with automatic weights, and six clips written by the script to move like a cat:
+    - `walk`: one paw at a time (left hind, left front, right hind, right front), each hind paw landing in the print of the front paw on its side. The shoulder blades rise in turn, the head stays level, the spine sways, and each front paw curls back at the wrist as it lifts.
+    - `run`: a bounding gallop. The hind paws push off close together, he is in the air stretched out, and his back curls as the legs gather.
+    - `idle`: 8 seconds of breathing, weight shifting, two looks around, ear flicks and tail-tip flicks.
+    - `jump`: a crouch and push from the hind legs, then fully stretched. The game plays the crouch and push in a tenth of a second as he leaves the ground (the rules lift him the moment Jump is pressed), then holds the rest as a pose moved along by his upward speed.
+    - `falling` (legs down and spread, tail out) and `landing` (front paws, then hind paws, the body sinks, he stands).
+    - His tail follows his body late, bone by bone. Paws are placed by working each leg back from where the toes should be, and the script stops if a planted paw is asked to reach further than its leg is long. Pounce comes in milestone three.
+  - **The hero preview page.** `node tools/preview/build.mjs <rigged.glb> <folder>` builds the page the owner looks at before a hero change is merged: the hero in the game's light playing each clip, the clips mixed by the game's own animation player, and slow side views of the walk and run over ground that moves at the game's speed. It is published as a private Claude artifact, not as part of the game.
   - Every clip happens on the spot, because the rules own where a hero is. Meshy's clips carried Yaarbro about (the dive started fourteen metres up, the roll travelled five metres, and the landing pushed his right hand 40 cm into the ground). `tools/prepare-rigged.py` takes that out.
   - A model is stood on the spot the rules use by its footprint: soles or paws on the ground, the middle of them over the spot, so the soft dark spot sits under the feet and an edge looks as safe as it is.
   - The owner's original model files are files on the `hero-models` release of this repo: six for Yaarbro, one clip each (about 29 MB each), and one for Caputo (19.9 MB). They are not committed. To rebuild a hero, run its Blender script on the originals and then `node tools/compress-hero.mjs <out.glb> <name>`; the commands are in `CLAUDE.md`. The compressed files are `assets/heroes/yaarbro.glb` (1.1 MB) and `assets/heroes/caputo.glb` (0.9 MB), which the build copies as they are. The CC0 stand-in robot (`?standin`) still checks the loader with a library file that has its whole jump in one clip.
@@ -47,7 +54,7 @@ Nobody has played the new look on a real iPad or Mac yet.
 
 ## Checks on this state
 
-- `npm test`: 176 tests pass. 94 for the game rules (a bot plays the whole grove on Easy, Normal and Hard as each hero with no falls), 11 for the private-terms check, 16 for the quality tier rules and the animation mixing rules, 6 for finding a model's clips and how hard a landing shows, 39 that check every bank's drawn top against where the rules let a hero stand, 10 that check each hero model file holds its skeleton and clips, that Yaarbro's clips happen on the spot, and that Caputo has the bones and clips his rig script should give him.
+- `npm test`: 177 tests pass. 94 for the game rules (a bot plays the whole grove on Easy, Normal and Hard as each hero with no falls), 11 for the private-terms check, 16 for the quality tier rules and the animation mixing rules, 6 for finding a model's clips and how hard a landing shows, 39 that check every bank's drawn top against where the rules let a hero stand, 11 that check each hero model file holds its skeleton and clips, that no clip carries a hero away from the spot, that Caputo has the bones and clips his rig script should give him, and that none of his clips is a frozen pose.
 - `npm run test:browser`: 68 browser checks pass. 22 in Chromium at Mac size with the keyboard, 23 in Chromium at iPad size with touch, 23 in WebKit at iPad size with touch. They cover loading and the progress bar, a failed download, the frame counter, fixed and automatic tiers, the full lighting at medium quality (and high at Mac size), each hero's model loading with its clips and animating while it stands, runs and jumps, the stand-in model doing the same, and everything milestone one checked.
 - **Not checked:**
   - Safari itself, a real iPad, a real Mac. The test browsers have no graphics card, so most checks run on the minimal tier, which has plain shading and no shadows. The full lighting is drawn in both browsers by two checks, slowly and in a small window.
@@ -59,8 +66,9 @@ Nobody has played the new look on a real iPad or Mac yet.
 
 1. **The owner looks at the live link on the iPad and the Mac**, with `?fps` on the address, and says what frame rate and tier show and whether anything looks wrong.
 2. **Checking the Blender scripts on new files.** `tools/rig-quadruped.py` is meant for the milestone-three enemies too: each needs its own guide file of joint places, like `tools/caputo.rig.json`. Its path for a file that already has a skeleton (keep it, add the bones it lacks) was tried only on Caputo's own output, whole and with four tail bones removed. On that second file Blender's automatic weights failed on the mesh as it was, and the script's answer to that (weight a clean rebuilt copy, carry the weights across) worked.
-3. **Playtest tuning**, when there are notes: change only `src/levels/bouncing-grove/difficulty.ts`.
-4. **Milestone three** makes the grove a full level: the marmot scout and giant mosquito, hearts, a longer route with checkpoints, Yaarbro's roll and Caputo's pounce. Each move must beat or get past both enemies. Easy stays finishable with walk and jump alone. See `docs/decisions.md`.
+3. **Caputo's movement on real devices.** His clips were judged from still frames and then by the owner on the preview page. Nobody has watched him on the iPad yet. If the walk does not read as a cat there, the owner brings in an animator and no further script rounds are made.
+4. **Playtest tuning**, when there are notes: change only `src/levels/bouncing-grove/difficulty.ts`.
+5. **Milestone three** makes the grove a full level: the marmot scout and giant mosquito, hearts, a longer route with checkpoints, Yaarbro's roll and Caputo's pounce. Each move must beat or get past both enemies. Easy stays finishable with walk and jump alone. See `docs/decisions.md`.
 
 ## Known limits
 

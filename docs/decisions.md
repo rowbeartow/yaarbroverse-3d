@@ -144,3 +144,11 @@ Supersedes: none
 ## 2026-11-10 A character's skin is only changed where a pose test shows it is wrong
 Reason: The owner's rule for Yaarbro's cleanup pass: pose-test before changing anything, and fix only what can be seen to be wrong. `tools/pose-test.py` puts a model in the poses that show up bad weighting (arms raised, a wide stride, head up and down, a deep squat). For Yaarbro that showed the belt skewing with the legs and the beard sinking into the chest, and those were reweighted. His armpits, crotch and the head under raised shoulders held up and were left as Meshy made them. His metallic-roughness map already had the leather rough and non-metallic and the buckle metallic and shinier, so no material value was changed. The fixes are written in `tools/yaarbro.guide.json` and done by `tools/prepare-rigged.py`, so they can be rerun on a new export.
 Supersedes: none
+
+## 2026-11-11 Caputo moves like a cat, and the owner judges that on a preview page before it merges
+Reason: The owner's rule, with what a cat does written out: a four-beat walk (left hind, left front, right hind, right front) in which each hind paw lands where the front paw on its side just was, shoulder blades that rise in turn, a level head, a bounding gallop with one moment off the ground, an idle that is never still, a jump from a crouch, a fall with the legs down and spread, a landing on the front paws first, and a tail that lags. Stylized and easy to read for a young player, not realistic detail. `tools/rig-quadruped.py` writes the clips, and `tools/preview/build.mjs` builds the page the owner reviews, with slow side views of the walk and run. If a script cannot make the walk read as a cat, the owner brings in an animator and no more script rounds are made.
+Supersedes: none
+
+## 2026-11-11 A jump's crouch plays as he leaves the ground, and does not delay the jump
+Reason: The rules lift a hero the moment Jump is pressed, and changing that would change how the game plays. So a jump clip that opens with a crouch and push plays that part in a tenth of a second as the hero takes off (`pushOff` in `src/view/hero-model.ts`), and the rest follows his upward speed as before. A crouch that can be watched needs a pause before take-off, which is the owner's call.
+Supersedes: none
