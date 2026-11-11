@@ -4,12 +4,13 @@
 //
 //   quality     high, medium, low or minimal (default high)
 //   solid       the part of the level to stand the hero on, such as bank-start,
-//               log-2, bank-1, stump-3, bank-2, ravine-log-1, bank-3, high-log, bank-4
-//               or bough (default bank-start)
+//               log-2, bank-1, stump-3, bank-2, ravine-log-1, bank-3, high-log, bank-4,
+//               bough-3, bank-5, snag-1 or bough (default bank-start)
 //   back        metres toward the camera from the middle of that part (default 2)
 //   hero        Yaarbro or Caputo
 //   difficulty  easy, normal or hard
-//   frames      how many frames to let the camera settle for (default 6)
+//   frames      how many frames to let the camera settle for (default 6; use 16
+//               far along the route, where the camera has a long way to travel)
 //
 // Builds nothing: run `npm run build` first, then `npx vite preview --port 4173`
 // in another terminal. Set W and H for a window size other than 1280 by 800,

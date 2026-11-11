@@ -51,21 +51,21 @@ describe('Bouncing Grove difficulty numbers', () => {
   });
 
   it('gives Easy the widest footing and Hard the narrowest', () => {
-    for (const key of ['logWidth', 'stumpRadius', 'shelfSize', 'mushroomRadius'] as const) {
+    for (const key of ['logWidth', 'stumpRadius', 'shelfSize', 'mushroomRadius', 'boughWidth'] as const) {
       expect(easy[key]).toBeGreaterThan(normal[key]);
       expect(normal[key]).toBeGreaterThan(hard[key]);
     }
   });
 
   it('gives Easy the shortest jumps and Hard the longest', () => {
-    for (const key of ['firstLogGap', 'logGap', 'stumpGap', 'stumpRise', 'shelfGap', 'shelfStep', 'mushroomGap'] as const) {
+    for (const key of ['firstLogGap', 'logGap', 'stumpGap', 'stumpRise', 'shelfGap', 'shelfStep', 'mushroomGap', 'boughGap'] as const) {
       expect(easy[key]).toBeLessThan(normal[key]);
       expect(normal[key]).toBeLessThan(hard[key]);
     }
   });
 
   it('gives Easy the fewest stumps and mushrooms to cross and Hard the most', () => {
-    for (const key of ['stumpCount', 'mushroomChain'] as const) {
+    for (const key of ['stumpCount', 'mushroomChain', 'snagCount', 'climbMushrooms'] as const) {
       expect(easy[key]).toBeLessThan(normal[key]);
       expect(normal[key]).toBeLessThan(hard[key]);
     }
@@ -100,11 +100,13 @@ describe.each(DIFFICULTIES)('the grove built on %s', (difficulty) => {
 
   it('uses the numbers from the difficulty file', () => {
     expect(byId(level, 'log-1').halfX * 2).toBeCloseTo(numbers.logWidth, 5);
-    // The opening logs, two along the bottom of the ravine, and the high log.
-    expect(count(level, 'log')).toBe(numbers.logCount + 3);
+    // The opening logs, two along the bottom of the ravine, and the two high logs.
+    expect(count(level, 'log')).toBe(numbers.logCount + 4);
     expect(airBetween(byId(level, 'log-1'), byId(level, 'log-2'))).toBeCloseTo(numbers.firstLogGap, 5);
     expect(airBetween(byId(level, 'log-2'), byId(level, 'log-3'))).toBeCloseTo(numbers.logGap, 5);
-    expect(count(level, 'stump')).toBe(numbers.stumpCount);
+    // Stumps low down, and tall snags on the last climb.
+    expect(count(level, 'stump')).toBe(numbers.stumpCount + numbers.snagCount);
+    expect(byId(level, 'snag-1').halfX).toBe(numbers.stumpRadius);
     expect(byId(level, 'stump-1').halfX).toBe(numbers.stumpRadius);
     expect(airBetween(byId(level, 'stump-1'), byId(level, 'stump-2'))).toBeCloseTo(numbers.stumpGap, 5);
     expect(byId(level, 'stump-2').top - byId(level, 'stump-1').top).toBeCloseTo(numbers.stumpRise, 5);
@@ -118,7 +120,7 @@ describe.each(DIFFICULTIES)('the grove built on %s', (difficulty) => {
     expect(clearing.top - firstShelf.top).toBeCloseTo(numbers.shelfStep, 5);
     expect(byId(level, 'bank-3').top).toBeCloseTo(clearing.top, 5);
     // One mushroom always grows on the bank after the ravine; the rest are the chain.
-    expect(count(level, 'mushroom')).toBe(numbers.mushroomChain + 1);
+    expect(count(level, 'mushroom')).toBe(numbers.mushroomChain + 1 + numbers.climbMushrooms + 1);
     expect(byId(level, 'mushroom-2').halfX).toBe(numbers.mushroomRadius);
     expect(airBetween(byId(level, 'high-log'), byId(level, 'mushroom-2'))).toBeCloseTo(numbers.mushroomGap, 5);
     // The first bank is always safe; the others are safe when the list names them.
@@ -147,6 +149,36 @@ describe.each(DIFFICULTIES)('the grove built on %s', (difficulty) => {
       expect(numbers.shelfGap).toBeLessThan(0.6);
       expect(numbers.shelfStep).toBeLessThanOrEqual(numbers.ledgeHelp);
     }
+  });
+
+  it('lays the high boughs level, as wide as the numbers say, with a gap at as many corners as they say', () => {
+    const boughs = [1, 2, 3, 4, 5].map((i) => byId(level, `bough-${i}`));
+    const ledge = byId(level, 'bank-4');
+    for (const bough of boughs) {
+      expect(bough.top).toBeCloseTo(ledge.top, 5);
+      expect(Math.min(bough.halfX, bough.halfZ) * 2).toBeCloseTo(numbers.boughWidth, 5);
+    }
+    // Forward, across, forward, across, forward.
+    expect(boughs.map((b) => b.halfZ > b.halfX)).toEqual([true, false, true, false, true]);
+    const gaps = [0, 1, 2, 3].map((i) => airBetween(boughs[i], boughs[i + 1]));
+    gaps.forEach((gap, corner) => expect(gap).toBeCloseTo(corner < numbers.boughGapCount ? numbers.boughGap : 0, 5));
+    // The first bough runs on from the ledge and the last onto the next bank.
+    expect(airBetween(ledge, boughs[0])).toBeCloseTo(0, 5);
+    expect(airBetween(boughs[4], byId(level, 'bank-5'))).toBeCloseTo(0, 5);
+    // Two corners are jumped away from the camera and two across the screen.
+    expect(boughs[1].z + boughs[1].halfZ).toBeLessThanOrEqual(boughs[0].z - boughs[0].halfZ + 1e-9);
+    expect(boughs[2].x + boughs[2].halfX).toBeLessThanOrEqual(boughs[1].x - boughs[1].halfX + 1e-9);
+    expect(boughs[3].z + boughs[3].halfZ).toBeLessThanOrEqual(boughs[2].z - boughs[2].halfZ + 1e-9);
+    expect(boughs[4].x + boughs[4].halfX).toBeLessThanOrEqual(boughs[3].x - boughs[3].halfX + 1e-9);
+  });
+
+  it('ends with a climb from the last bank to the bough with the leaf', () => {
+    const bank = byId(level, 'bank-5');
+    const bough = byId(level, 'bough');
+    expect(byId(level, 'climb-log').top).toBeGreaterThan(bank.top + fullJumpHeight());
+    expect(byId(level, `snag-${numbers.snagCount}`).top).toBeGreaterThan(byId(level, 'climb-log').top);
+    expect(bough.top).toBeGreaterThan(byId(level, `snag-${numbers.snagCount}`).top);
+    expect(level.solids.filter((s) => s.kind === 'bank').length).toBe(6);
   });
 
   it('lists every solid once in the route', () => {

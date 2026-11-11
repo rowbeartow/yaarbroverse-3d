@@ -35,9 +35,9 @@ const cleanRun = (difficulty: Difficulty): { level: Level; reached: Map<string, 
 
 /** How long a perfect run of the whole grove should take on each difficulty, in seconds. */
 const RUN_TIME: Record<Difficulty, [number, number]> = {
-  easy: [20, 50],
-  normal: [25, 60],
-  hard: [28, 70],
+  easy: [35, 55],
+  normal: [52, 68],
+  hard: [55, 80],
 };
 
 describe.each(DIFFICULTIES)('the sections of the grove on %s', (difficulty) => {
@@ -91,6 +91,32 @@ describe.each(DIFFICULTIES)('the sections of the grove on %s', (difficulty) => {
         expect(game.groundId, `${section.name} on ${difficulty}`).toBe(lastSafe);
       }
       for (const id of section.solids) if (byId(level, id).safe) lastSafe = id;
+    }
+  });
+});
+
+describe('the six sections', () => {
+  it('are the ones in the route plan, on every difficulty', () => {
+    for (const difficulty of DIFFICULTIES) {
+      expect((buildGrove(difficulty).sections ?? []).map((s) => s.name)).toEqual([
+        'The Broken Logs',
+        'The Stump Steps',
+        'The Ravine',
+        'The Mushroom Springs',
+        'The High Boughs',
+        'The Climb',
+      ]);
+    }
+  });
+
+  it('get harder along the route on Normal: no section is shorter than 5 seconds or longer than 15', () => {
+    const { level, reached, seconds } = cleanRun('normal');
+    let last = 0;
+    for (const section of level.sections ?? []) {
+      const end = section === level.sections?.[level.sections.length - 1] ? seconds : (reached.get(section.solids[section.solids.length - 1]) ?? 0);
+      expect(end - last, section.name).toBeGreaterThan(5);
+      expect(end - last, section.name).toBeLessThan(15);
+      last = end;
     }
   });
 });

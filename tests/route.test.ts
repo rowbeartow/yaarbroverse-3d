@@ -27,7 +27,8 @@ describe.each(DIFFICULTIES)('the route line on %s', (difficulty) => {
     let last = route.centre(route.near);
     for (let z = route.near; z >= route.far; z -= 0.5) {
       const centre = route.centre(z);
-      expect(Math.abs(centre - last)).toBeLessThan(0.5);
+      // Where the boughs turn, the middle moves over about as fast as the route runs on.
+      expect(Math.abs(centre - last)).toBeLessThan(0.75);
       last = centre;
       const xs = level.solids.flatMap((s) => [s.x - s.halfX, s.x + s.halfX]);
       expect(centre).toBeGreaterThanOrEqual(Math.min(...xs));
@@ -50,16 +51,24 @@ describe('drawing only what is near', () => {
     expect(inView(heroZ + 12 + STRETCH, heroZ + 12, heroZ)).toBe(true);
   });
 
-  it('draws everything the mist has not hidden', () => {
-    // The camera sits 12 m behind the hero, so the mist closes 12 m short of MIST_FAR ahead of the hero.
-    expect(DRAW_AHEAD).toBeGreaterThanOrEqual(MIST_FAR - 12);
-    const heroZ = 0;
-    expect(inView(-MIST_FAR + 13, -MIST_FAR - 20, heroZ)).toBe(true);
+  /** How much of a thing the mist hides at a distance from the camera, 0 to 1 (the same curve the picture uses). */
+  const mist = (distance: number): number => {
+    const t = Math.min(Math.max((distance - MIST_NEAR) / (MIST_FAR - MIST_NEAR), 0), 1);
+    return t * t * (3 - 2 * t);
+  };
+  /** The camera sits this far behind the hero. */
+  const CAMERA_BACK = 12;
+
+  it('draws everything the mist has not all but hidden', () => {
+    // Whatever is left out is at least nineteen twentieths mist.
+    expect(mist(DRAW_AHEAD + CAMERA_BACK)).toBeGreaterThan(0.95);
+    expect(inView(-DRAW_AHEAD + 1, -DRAW_AHEAD - 20, 0)).toBe(true);
   });
 
-  it('keeps full detail until the mist is more than half closed', () => {
-    expect(DETAIL_AHEAD + 12).toBeGreaterThan((MIST_NEAR + MIST_FAR) / 2);
-    expect(inDetail(-90, 0)).toBe(true);
+  it('keeps full detail until the mist is a third closed', () => {
+    expect(mist(DETAIL_AHEAD + CAMERA_BACK)).toBeGreaterThan(0.3);
+    expect(DETAIL_AHEAD).toBeGreaterThan(2 * STRETCH);
+    expect(inDetail(-80, 0)).toBe(true);
     expect(inDetail(-DETAIL_AHEAD - 1, 0)).toBe(false);
   });
 

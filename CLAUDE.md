@@ -8,7 +8,7 @@ Read first: `docs/session-handoff.md` (what exists, what's next, open questions)
 
 ## Status
 
-In development. One playable area, the Bouncing Grove. Milestone three, part one (a longer grove in six sections) is in progress; `docs/session-handoff.md` says how far it has got.
+In development. One playable area, the Bouncing Grove: a full level in six sections (milestone three, part one). Part two (enemies, hearts, the roll and the pounce) is next; `docs/session-handoff.md` says what is ready for it.
 Live at: https://rowbeartow.github.io/yaarbroverse-3d/ . Every merge to `main` publishes there, straight to the kids' devices.
 
 ## Architecture

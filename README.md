@@ -2,7 +2,7 @@
 
 A 3D browser game set in the Yaarbroverse, the sibling of the 2D game Caputo Mountain. Made for two kids: one who finds games too easy and one who finds them too hard, so every level has Easy, Normal and Hard.
 
-**The first area: the Bouncing Grove.** Cross the fallen log, hop the stumps, bounce on the mushrooms and find the golden leaf, tucked in the canopy. Play as Yaarbro or Caputo.
+**The first area: the Bouncing Grove.** Six sections, about a minute for a perfect run: cross the broken logs, hop the stumps, climb down into the ravine and out, bounce up the mushrooms, walk the high boughs, and climb to the golden leaf, tucked in the canopy. Play as Yaarbro or Caputo.
 
 ![Yaarbro on a mossy bank above a misty gully of fir trees, with a fallen log, tree stumps and a mushroom ahead](docs/bouncing-grove.jpg)
 

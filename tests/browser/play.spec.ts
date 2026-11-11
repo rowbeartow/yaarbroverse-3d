@@ -51,7 +51,8 @@ test.describe('start screen', () => {
           ).length,
       );
     };
-    expect([await stumps('easy'), await stumps('normal'), await stumps('hard')]).toEqual([4, 6, 7]);
+    // Stumps low down plus tall snags on the last climb: 4 + 2, 7 + 4 and 8 + 5.
+    expect([await stumps('easy'), await stumps('normal'), await stumps('hard')]).toEqual([6, 11, 13]);
   });
 });
 

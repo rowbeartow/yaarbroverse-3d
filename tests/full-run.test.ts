@@ -17,7 +17,7 @@ describe.each(DIFFICULTIES)('a full run of the Bouncing Grove on %s', (difficult
     expect(summary.complete).toBe(true);
     expect(summary.falls).toBe(0);
     expect(summary).toMatchObject({ level: 'The Bouncing Grove', difficulty, hero });
-    expect(summary.seconds).toBeGreaterThan(15);
+    expect(summary.seconds).toBeGreaterThan(30);
     expect(summary.seconds).toBeLessThan(90);
   });
 
@@ -81,6 +81,16 @@ describe('falling in the Bouncing Grove', () => {
     expect(fallFrom('easy', 'high-log').groundId).toBe('bank-3');
     expect(fallFrom('normal', 'high-log').groundId).toBe('bank-3');
     expect(fallFrom('hard', 'high-log').groundId).toBe('bank-2');
+  });
+
+  it('a fall from the high boughs returns to the ledge before them', () => {
+    for (const difficulty of DIFFICULTIES) expect(fallFrom(difficulty, 'bough-3').groundId).toBe('bank-4');
+  });
+
+  it('a fall on the last climb returns to the bank below it on Easy and Normal, and to the ledge on Hard', () => {
+    expect(fallFrom('easy', 'snag-1').groundId).toBe('bank-5');
+    expect(fallFrom('normal', 'snag-2').groundId).toBe('bank-5');
+    expect(fallFrom('hard', 'snag-2').groundId).toBe('bank-4');
   });
 
   it('a fall in the ravine returns to the clearing', () => {

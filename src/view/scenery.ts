@@ -201,6 +201,7 @@ const bank = (s: Solid, materials: Materials, decor: Decor, random: () => number
   rocks.instanceMatrix.needsUpdate = true;
   rocks.castShadow = true;
   rocks.receiveShadow = true;
+  rocks.userData.fine = true;
   group.add(rocks);
 
   // Roots: they come out from under the turf and grip their way down the rock.
@@ -237,7 +238,9 @@ const bank = (s: Solid, materials: Materials, decor: Decor, random: () => number
   }
   // All of a bank's roots are drawn as one shape.
   if (roots.length > 0) {
-    group.add(solid(mergeGeometries(roots), materials.bark));
+    const rootMesh = solid(mergeGeometries(roots), materials.bark);
+    rootMesh.userData.fine = true;
+    group.add(rootMesh);
     for (const root of roots) root.dispose();
   }
 
@@ -408,16 +411,38 @@ const endRests = (s: Solid, end: number, level: Level): boolean => {
   );
 };
 
-/** Snags that hold a log up, under each end that rests on nothing else. */
-const logPosts = (s: Solid, materials: Materials, level: Level): Group => {
+/** Snags that hold a log up, under each end that rests on nothing else (`rests` says which do). */
+const logPosts = (s: Solid, materials: Materials, rests: (end: number) => boolean): Group => {
   const group = new Group();
   for (const end of [-1, 1]) {
-    if (endRests(s, end, level)) continue;
+    if (rests(end)) continue;
     const post = trunk(materials, 0.4, 0.62, UNDER, s.bottom + 0.25, s.z + end, { mossAtTop: 0.8, lean: end * 0.012 });
     post.position.z = end * (s.halfZ - 0.8);
     group.add(post);
   }
   group.position.set(s.x, 0, s.z);
+  return group;
+};
+
+/**
+ * A high bough that is walked along: a thick limb, mossy all over, on snags.
+ * One that lies across the route is the same shape turned a quarter turn.
+ */
+const limb = (s: Solid, materials: Materials, level: Level): Group => {
+  const group = new Group();
+  const across = s.halfX > s.halfZ;
+  // Built running away from the camera, then turned if it lies across.
+  const along: Solid = across ? { ...s, halfX: s.halfZ, halfZ: s.halfX } : s;
+  const turned = new Group();
+  const wood = log(along, materials, { mossiness: 1 });
+  const posts = logPosts(along, materials, (end) => !across && endRests(s, end, level));
+  for (const part of [wood, posts]) {
+    part.position.set(0, 0, 0);
+    turned.add(part);
+  }
+  if (across) turned.rotation.y = Math.PI / 2;
+  turned.position.set(s.x, 0, s.z);
+  group.add(turned);
   return group;
 };
 
@@ -719,8 +744,12 @@ export const goldenLeaf = (level: Level, materials: Materials): LeafView => {
 
 export interface LevelSolids {
   group: Group;
-  /** Each solid's shapes with where they lie along the route (z, `far` the smaller), for drawing only the near ones. */
-  pieces: Array<{ shape: Object3D; near: number; far: number }>;
+  /**
+   * Each solid's shapes with where they lie along the route (z, `far` the
+   * smaller), for drawing only the near ones, and the parts of it that are
+   * fine detail, drawn only close by.
+   */
+  pieces: Array<{ shape: Object3D; near: number; far: number; fine: Object3D[] }>;
   mushrooms: Map<string, MushroomView>;
   leaf: LeafView;
 }
@@ -738,15 +767,23 @@ export const buildSolids = (level: Level, materials: Materials, decor: Decor, ra
     } else if (s.kind === 'bank') shape.add(bank(s, materials, decor, random));
     else if (s.kind === 'stump') shape.add(stump(s, materials));
     else if (s.kind === 'shelf') shape.add(shelf(s, materials));
-    else if (s.kind === 'bough') shape.add(bough(s, materials));
+    else if (s.kind === 'bough') {
+      // The last bough is the great cedar's, with the leaf. The others are limbs to walk along.
+      shape.add(s.id === level.route[level.route.length - 1] ? bough(s, materials) : limb(s, materials, level));
+    }
     else {
       shape.add(log(s, materials));
       // A snag holds up each end that does not rest on a bank or a root shelf.
-      shape.add(logPosts(s, materials, level));
+      shape.add(logPosts(s, materials, (end) => endRests(s, end, level)));
     }
     group.add(shape);
     // A few metres to spare each way: rock swells out below a bank, and the last bough runs on into the cedar.
-    pieces.push({ shape, near: s.z + s.halfZ + 8, far: s.z - s.halfZ - 8 });
+    // Fine detail (the boulders and roots on a bank's sides) is only drawn close by.
+    const fine: Object3D[] = [];
+    shape.traverse((part) => {
+      if (part.userData.fine) fine.push(part);
+    });
+    pieces.push({ shape, near: s.z + s.halfZ + 8, far: s.z - s.halfZ - 8, fine });
   }
   const leaf = goldenLeaf(level, materials);
   group.add(leaf.group);

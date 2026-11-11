@@ -36,7 +36,7 @@ import { HERO_MODEL_FILES, buildHero, type HeroView } from './heroes';
 import { Materials, WIND, installMist } from './materials';
 import { seeded } from './noise';
 import { MIST_COLOR } from './pictures';
-import { MIST_FAR, MIST_NEAR, inView } from './route';
+import { MIST_FAR, MIST_NEAR, inDetail, inView } from './route';
 import { TIERS, TierChooser, frameRateGoal, isTierName, startingTier, type Tier, type TierName } from './quality';
 import { MIST_BOTTOM, MIST_TOP, animateMushroom, blobShadow, buildSolids, type LevelSolids } from './scenery';
 
@@ -306,7 +306,11 @@ export class GroveView {
     // Only the stretch of the grove near the camera is drawn: the mist hides the rest.
     levelView.forest.update(WIND.time.value, this.follow.z);
     levelView.scatter.show(this.follow.z);
-    for (const piece of levelView.pieces) piece.shape.visible = inView(piece.near, piece.far, this.follow.z);
+    for (const piece of levelView.pieces) {
+      piece.shape.visible = inView(piece.near, piece.far, this.follow.z);
+      const close = inDetail(piece.near, this.follow.z);
+      for (const part of piece.fine) part.visible = close;
+    }
     levelView.forest.sky.position.copy(this.camera.position);
 
     if (this.composer) this.composer.render();
