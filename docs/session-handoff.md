@@ -4,64 +4,42 @@ Last updated: 2026-11-11
 
 ## Start here
 
-**Milestone three, part one is done: the Bouncing Grove is a full level.** Six sections, a checkpoint bank between each, and a perfect run of about a minute on Normal. The owner approved the route on a plan page (https://claude.ai/artifact/MdPwsE2Hg43pBYEjPevSmn ) before it was built. It went in as three pull requests, all merged on 2026-11-11 with their checks green:
+**Milestone three is done: the Bouncing Grove is a full level with enemies, hearts, and a move for each hero.** Everything below is merged and live at https://rowbeartow.github.io/yaarbroverse-3d/ . There are no open pull requests from this work.
 
-1. Pull request 18: sections 1 and 2, the checkpoint list, drawing only the stretch of forest near the hero, and the browser checks moved into Playwright's container image.
-2. Pull request 19: sections 3 and 4.
-3. Pull request 20: sections 5 and 6.
+Part one, the longer route (merged 2026-11-11): pull requests 18, 19 and 20. The owner approved the route on a plan page (https://claude.ai/artifact/MdPwsE2Hg43pBYEjPevSmn ).
 
-There are no open pull requests from this work.
+Part two, in the order the owner set, one pull request each (all merged 2026-11-11, each with its checks green):
 
-**Milestone three, part two is under way: enemies, hearts, the roll and the pounce.** The owner gave the go-ahead on 2026-11-11 and set the order, one pull request each: (1) enemy models through Meshy's API, (2) rig and animate his picks in Blender, (3) hearts and damage, (4) Yaarbro's roll and Caputo's pounce, (5) enemy placement and behaviour. His answers to the open questions: everything about the enemies, the hearts and the two moves follows the 2D game (`docs/forest.md` and `src/forest/` in the private repo); anything not found there becomes an issue labeled `needs-decision`, not an invention.
+1. **Pull request 23: enemy models through Meshy's API.** Six candidates, three for each enemy, from the approved Caputo Mountain studies. The owner picked marmot B and mosquito C on the candidates page (https://claude.ai/artifact/1HMoWtxB1vsAtWLJtH1Ryt ). 180 Meshy credits were spent (1,200 before, 1,020 after), all in this step.
+2. **Pull request 24: both enemies rigged and animated.** The owner said OK on the enemies preview page (https://claude.ai/artifact/2FxC5kvQXVD3Hq4MifuRKo ): "both move well".
+3. **Pull request 25: hearts and damage.**
+4. **Pull request 26: Yaarbro's roll and Caputo's pounce.** The owner said OK to the pounce on Caputo's preview page (https://claude.ai/artifact/V3Z9Car7Ttfp1zRNRPLf7D ).
+5. **Pull request 27: enemy behaviour and placement.**
 
-**Step 1 is done and merged** (pull request 23, 2026-11-11): the Meshy tool, the candidates page and its builder. The owner picked **marmot B and mosquito C** on the candidates page (https://claude.ai/artifact/1HMoWtxB1vsAtWLJtH1Ryt ). Credits: 1,200 before, 1,020 after, 180 spent, so 120 are left under his limit of 300 without asking.
+The branches `claude/part-two-step-3`, `-4` and `-5` were safety copies made while the pull requests waited. Everything on them is merged; they can be deleted.
 
-**Step 2 is done and merged** (pull request 24, 2026-11-11): both enemies rigged and animated. The owner said OK on the enemies preview page: "both move well".
+**What the owner decided along the way** (all in `docs/decisions.md`): the roll tops out at one and a half times walking speed, not the 2D game's two and a half, because footing is narrower in 3D; how far a hit throws a hero is a number for each difficulty (0.5, 1.2 and 2 metres); Hard's enemy numbers stay at Caputo Mountain's until the kids have played; landing on an enemy strikes it on every difficulty; and no enemy may bother a hero in a section of diagonal jumps, which is where the kids fell most.
 
-**Step 3 is done and merged** (pull request 25): hearts and damage. Hearts are 5, 3 and 2 with the numbers in `difficulty.ts`; a hit takes one, throws the hero and protects it for a while; a fall costs none; running out returns the hero to the last safe bank with all of them.
+**What nobody has checked yet, and the owner is the one who can:**
 
-**Step 4 is done and merged** (pull request 26): the roll and the pounce. The owner said OK to Caputo's pounce on his preview page (https://claude.ai/artifact/V3Z9Car7Ttfp1zRNRPLf7D ).
+1. **The frame rate on the Mac with enemies on screen.** Open the live link in Safari with `?fps` on the end of the address, play to the clearing after the stumps, and say what frame rate and tier show while the scout is out. The target is 60 on the high tier. Before the enemies it was 60, with 121 draw calls and 226 thousand triangles at the end of the level. At most two enemies are drawn at once, about 14 thousand triangles each.
+2. **Whether Hard makes the older player work for it.** A perfect run that never stops gets past every enemy untouched, even on Hard. A player who hesitates is hit. If Hard is too gentle, change `enemyWarning`, `enemySpeed` and `enemyRest` for `hard` in `src/levels/bouncing-grove/difficulty.ts`, then run `npm test`.
+3. **Whether the roll and the pounce feel right to the kids**, and whether the touch button is where a thumb finds it.
+4. **The two picked enemy originals on the `hero-models` release.** They were sent to the owner in the chat as `marmot-b.glb` and `mosquito-c.glb`, with steps to attach them. If they are not on the release, the enemies cannot be rebuilt from the same models: Meshy kept them for about three days from 2026-11-11 (marmot B is task `01a1cb90-5110-76bb-aff5-cb9c9f384842`, mosquito C is task `01a1cb90-6bc4-7196-84e5-86177f2d9020`, at `GET https://api.meshy.ai/openapi/v1/image-to-3d/<task>`), and a new one costs 30 credits and needs new joint places in its guide file.
 
-- **Yaarbro's roll**, while the move button is held: he tucks down (he is shorter while he rolls) and builds up to one and a half times walking speed, more slowly than he walks up to speed, and keeps going the way he was with the stick let go. It carries into a jump. The 2D game's roll reaches two and a half times walking speed; the lower top speed is the owner's call (see `docs/decisions.md`).
-- **Caputo's pounce**, when the move button is pressed: a flat burst at about twice walking speed for a fifth of a second, the way the stick points or the way he faces, with a small hop from the ground. One for each time in the air, and a short rest between two.
-- **A strike** is a roll faster than a walk, or a pounce (`striking` in `src/game/game.ts`). Nothing in the level can be struck yet: the enemies arrive in step 5.
-- **Buttons.** Keyboard: X or Shift, as in the 2D game. Touch: a round button above Jump and smaller than it, named Roll or Pounce for the hero; everywhere else on the right half is still Jump. The controls remember a tap that starts and ends between two frames, so a quick press counts on a slow device.
-- **Clips.** Yaarbro's `roll` clip loops while he rolls. Caputo's new `pounce` clip is written by `tools/rig-quadruped.py` and held as a pose that follows how far through the burst he is. His other seven clips are unchanged, number for number.
-- The numbers are in `src/game/hero.ts`. Tests: `tests/moves.test.ts` and `tests/browser/moves.spec.ts`. The bot still finishes every difficulty with walk and jump alone, and the full-run test now says so (`movesUsed` is 0).
+How the enemies were made, for the next time one is changed or added:
 
-**Step 5, enemy behaviour and placement, is in the pull request this text arrives with.** When it has merged, this file is to be rewritten from top to bottom.
-
-- **Three enemies**, on every difficulty: a marmot scout in the clearing (`bank-2`), a giant mosquito over the last three high boughs, and a second scout on the bank at the foot of the climb (`bank-5`). Each notices a hero only on its own footing, so none bothers a hero in a section of diagonal jumps.
-- **Behaviour** is Caputo Mountain's (`src/game/enemy.ts`): ready, a warning during which the aim is fixed, an attack along that line, then a rest. The scout hides until a hero is near, shuffles toward or away, throws an acorn, hops back from a charge, and takes two strikes. The mosquito hovers above the hero, dives to where the hero stood, rests there low enough to reach, and takes one strike.
-- **What hurts:** touching either while it is ready or attacking, and the acorn. **What strikes:** Yaarbro rolling faster than a walk, Caputo's pounce, or either hero landing on top. A pounce or a landing bounces the hero up off it.
-- **Numbers in `difficulty.ts`:** `enemyWarning`, `enemySpeed` and `enemyRest` (Caputo Mountain's: 1.5, 0.7 and 1.4 on Easy; 0.65, 1.3 and 0.7 on Hard), and `knockback`, how far a hit throws a hero (0.5, 1.2 and 2 metres: the owner's numbers).
-- **Drawing** (`src/view/enemies.ts`): each enemy's model plays the clip for what the rules say it is doing; the acorn is drawn in the raised paw and in flight; a line shows where an attack is aimed while its warning lasts.
-- **The bot** finishes every difficulty as each hero through the enemies without losing a heart, with walk and jump alone. A perfect run that never stops is never hit, even on Hard; whether Hard is hard enough is for the playtest.
-
-What step 2 made:
-
-- The preview page: https://claude.ai/artifact/2FxC5kvQXVD3Hq4MifuRKo . Both enemies in the game's light, a button for each clip, slow motion and the skeleton. He replies OK, or says what is off.
-- `assets/enemies/marmot.glb` (0.7 MB) and `assets/enemies/mosquito.glb` (0.6 MB), which the build copies to `media/models/` as it does the heroes. Nothing in the game loads them yet: that is step 5.
+- The reference pictures were the "Alert" marmot and the "Hover" mosquito from the approved studies (`docs/art-direction/b02a/marmot-scout-study.png` and `giant-mosquito-study.png` on the private repo's `codex/forest-f01` branch), each cut out of its sheet with the background and ground dust removed. `tools/meshy-image-to-3d.mjs` asks Meshy for candidates and reports the credits spent; `tools/preview/candidates.mjs` builds the page the owner picks on. The owner's limit was 300 credits without asking.
 - **The marmot scout** is rigged by `tools/rig-quadruped.py` with `tools/marmot.rig.json`, whose `"character": "marmot"` picks the `MarmotScout` class's clips in place of the cat's: 26 bones, automatic weights worked on the mesh as it came. Clips, one for each phase of its behaviour in the 2D forest: `idle` (on watch), `walk` (a low shuffle), `warning` (rears up with its right paw back over its shoulder and holds), `throw` (the acorn leaves the paw a fifth of the way in, then it drops to all fours), `winded` (the rest after a throw), `hit` (the first strike), `hop` (its dodge) and `defeated` (over onto its back).
 - **The giant mosquito** is rigged by `tools/rig-insect.py` with `tools/mosquito.rig.json`: 23 bones (body, head, beak, two antennae, three abdomen parts, two wings, five legs of two or three bones). The script borrows the opening, skinning and saving steps from `rig-quadruped.py`. Each wing is a separate piece of the model, tied whole to its wing bone. The wings get their own see-through material and their part of the colour picture is repainted pale, keeping the veins. Clips: `hover` (12 wingbeats a second, legs swinging late), `warning` (legs drawn up, wings racing), `dive` (wings swept back, legs trailing), `winded` (slow heavy beats) and `defeated` (curls and rolls over). The game is to point the whole mosquito along its dive; the clips stay level.
 - Both meshes are thinned by the rig scripts from Meshy's 31 thousand triangles to 14 thousand (`"triangles"` in each guide file), about what a hero has, because the skeleton moves every one of them on every frame. Still frames of the thinned models look the same as the full ones.
 - Meshy made the mosquito's two middle legs as one leg under the middle of its body, so it has five.
-- The marmot's raised paw is empty: the game is to draw the acorn, at the paw and in flight.
 - `tools/joint-views.py` draws a model from the side, from above and from behind on a grid in metres, with a guide's joints over it. Both guide files were written from its pictures.
 - Caputo was rigged again with the changed `rig-quadruped.py` and with the old one: the two files are the same, byte for byte.
-- **The two picked originals may not be saved anywhere lasting yet.** Check the `hero-models` release first. They are in this session's scratch folder, and were sent to the owner in the chat with a request to add them to the `hero-models` release as `marmot-b.glb` (4.9 MB) and `mosquito-c.glb` (5.1 MB). Until they are there, they can be downloaded again from Meshy for about three days from 2026-11-11 (`GET https://api.meshy.ai/openapi/v1/image-to-3d/<task>`, then the `glb` address in the reply): marmot B is task `01a1cb90-5110-76bb-aff5-cb9c9f384842`, mosquito C is task `01a1cb90-6bc4-7196-84e5-86177f2d9020`. After that, remaking one costs 30 credits and will not be the same model, so its guide file would need new joint places.
 - To rebuild an enemy: `blender -b -P tools/rig-quadruped.py -- <marmot-b.glb> <out.glb> tools/marmot.rig.json` or `blender -b -P tools/rig-insect.py -- <mosquito-c.glb> <out.glb> tools/mosquito.rig.json`, then `node tools/compress-hero.mjs <out.glb> <marmot or mosquito> 1024 enemies`. To rebuild the page: `node tools/preview/enemies.mjs <folder> marmot=<rigged.glb> mosquito=<rigged.glb>`, and publish it over the address above. `node tools/preview/enemy-stills.mjs` takes still frames of it.
+- The marmot's raised paw is empty in its clips: the game draws the acorn, in the paw and in flight.
+- A change to an enemy's model or clips goes on the enemies preview page for the owner's OK before it merges, the same as a hero.
 
-What part one left ready, and what the owner has settled for the later steps:
-
-- **Room for three enemies, with nothing placed.** The clearing at the end of section 2 (`bank-2`, 10 m wide and 12 m long) for the marmot scout. The open air beside the high boughs of section 5 for the giant mosquito. The bank at the foot of the last climb (`bank-5`) for a second scout. Enemies go only there: never in a diagonal-jump section, which is where the kids fell most.
-- **The difficulty numbers stay as they are.** The kids found the longer grove fun and the right difficulty.
-- **Hearts** follow the 2D game's rules (5, 3 and 2 there), with the numbers in `difficulty.ts` and shown on screen. Running out returns the hero to the last checkpoint on Easy and Normal; on Hard a setback never costs more than about 30 seconds of a perfect run.
-- **The roll and the pounce.** Yaarbro's file already holds a `roll` clip, unused. Caputo's pounce is written in `tools/rig-quadruped.py`. Each move must beat or get past both enemies. On touch, Jump stays the largest target.
-- **Easy stays finishable with walk and jump alone**, and on Hard the enemies should make the older player work for it.
-- **Done means** the bot finishes every difficulty as each hero through the enemies without losing a heart, and on Easy without using the move.
-
-The playtest that led to part one (the owner, 2026-11-11): the kids loved it and want more to play. The older player said Normal was about the right difficulty. The first set of jumps was hard for them to figure out, which is why the level now opens with a short hop. The owner and the kids have since played the longer level: fun, and the right difficulty. They fell most on the diagonal jumps. On his Mac in Safari it ran at 60 frames a second on the high tier, with 121 draw calls and 226 thousand triangles at the end of the level.
 
 What the owner has approved:
 
@@ -110,6 +88,8 @@ Milestone three, part one (the longer grove) is done, in the three merged pull r
 2. Sections 3 and 4 (the Ravine, the Mushroom Springs), with root shelves as a new kind of platform.
 3. Sections 5 and 6 (the High Boughs, the Climb).
 
+Milestone three, part two (enemies, hearts, the roll and the pounce) is done, in the five merged pull requests listed under "Start here".
+
 ## What exists now
 
 - **The level.** Six sections, each built around one idea and ending on a mossy bank. About 235 m of route on Normal (164 on Easy, 278 on Hard), climbing about 15 m. It runs away from the camera and never comes back toward it; sections 3 and 5 move it sideways.
@@ -146,38 +126,52 @@ Milestone three, part one (the longer grove) is done, in the three merged pull r
   - Every clip happens on the spot, because the rules own where a hero is. Meshy's clips carried Yaarbro about (the dive started fourteen metres up, the roll travelled five metres, and the landing pushed his right hand 40 cm into the ground). `tools/prepare-rigged.py` takes that out.
   - A model is stood on the spot the rules use by its footprint: soles or paws on the ground, the middle of them over the spot, so the soft dark spot sits under the feet and an edge looks as safe as it is.
   - The owner's original model files are files on the `hero-models` release of this repo: six for Yaarbro, one clip each (about 29 MB each), and one for Caputo (20.9 MB, `Meshy_AI_SaberToothCatGameRead_1110213716_texture.glb`). They are not committed. To rebuild a hero, run its Blender script on the originals and then `node tools/compress-hero.mjs <out.glb> <name>`; the commands are in `CLAUDE.md`. The compressed files are `assets/heroes/yaarbro.glb` (1.1 MB) and `assets/heroes/caputo.glb` (0.9 MB), which the build copies as they are. The CC0 stand-in robot (`?standin`) still checks the loader with a library file that has its whole jump in one clip.
+- **Each hero's own move.** Yaarbro rolls while the move button is held: he tucks down and builds up to one and a half times walking speed, more slowly than he walks up to speed, keeps going with the stick let go, and carries the speed into a jump. Caputo pounces when it is pressed: a flat burst at about twice walking speed for a fifth of a second, the way the stick points or the way he faces, once for each time in the air. A roll faster than a walk, or a pounce, is a strike. The numbers are in `src/game/hero.ts`.
+- **Enemies.** Three, on every difficulty: a marmot scout in the clearing after the stumps (`bank-2`), a giant mosquito over the last three high boughs, and a second scout on the bank at the foot of the last climb (`bank-5`). Each notices a hero only on its own footing and never aims outside it. Their behaviour is Caputo Mountain's (`src/game/enemy.ts`):
+  - Both get ready, give a warning during which the aim is fixed on where the hero stood, attack along that line, then rest. A line on screen shows where the attack will go for as long as the warning lasts.
+  - **The marmot scout** hides until a hero is near, shuffles toward a hero who is far off and away from one who is close, rears up with an acorn, throws it, and rests. It hops back from a hero charging it along the ground. Two strikes beat it.
+  - **The giant mosquito** hovers above the hero, dives to where the hero stood, and rests there, low enough to reach. One strike beats it.
+  - **What hurts:** touching either while it is ready or attacking, and the acorn. Touching one while it warns, hops or rests does nothing.
+  - **What strikes:** a roll faster than a walk, a pounce, or either hero landing on top. A pounce or a landing bounces the hero up off it. A strike wins over a touch that would hurt.
+  - After a fall, or after running out of hearts, an enemy that is not beaten goes home and starts over, keeping the strikes it has taken. A beaten one stays beaten for the run.
+  - They are drawn by `src/view/enemies.ts` from `assets/enemies/marmot.glb` and `mosquito.glb`, each playing the clip for what the rules say it is doing. Enemies far from the hero are neither moved nor drawn.
+- **Hearts.** 5 on Easy, 3 on Normal, 2 on Hard, shown under the level's name; a lost heart stays in place as a dark outline. A hit takes one, throws the hero away from what hurt it (0.5, 1.2 or 2 metres, by difficulty), takes the controls for a moment, and then nothing can hurt the hero for a while (1.3 seconds, times 1.5 on Easy and 0.6 on Hard), during which the hero flickers. A fall costs no heart. Losing the last one returns the hero to the last safe bank with all of them again. That is the same bank a fall returns to, so on Hard the cost stays under about 30 seconds of a perfect run.
 - **Camera.** Behind and above the hero, always looking the same way. A soft dark spot under the hero shows where a jump will land.
-- **Difficulty.** Easy, Normal, Hard on the start screen. All numbers are in `src/levels/bouncing-grove/difficulty.ts`.
-- **Falls and hearts.** A fall returns the hero to the last safe mossy bank and is counted. Hearts are in the rules and on screen (5, 3 and 2), and the three enemies can take them.
+- **Difficulty.** Easy, Normal, Hard on the start screen. All numbers are in `src/levels/bouncing-grove/difficulty.ts`: the route's sizes and gaps, the checkpoints, hearts, how long a hit protects, how far it throws, and the enemies' warning, speed and rest.
+- **Falls.** A fall returns the hero to the last safe mossy bank and is counted. It costs no heart.
 - **End card.** Difficulty, hero, time, falls, hearts lost, date. "Play again" returns to the start screen.
 - **Controls.** Mac: arrows or W A S D, Space, X or Shift for the hero's own move, Esc. Touch: drag the left half to move, press the right half to jump, and a smaller round button above Jump for the hero's own move.
 - **Turn sideways.** A touch device whose page is taller than wide gets a "Turn sideways to play" card.
 - **This device remembers** the last hero and difficulty.
-- **Size.** The whole download is 8.19 MB (budget 20 MB, checked on every build). 1.3 MB of that is the two enemy models, which nothing loads until the enemies are placed. The build compresses textures to KTX2 and models with meshopt.
+- **Size.** The whole download is 8.23 MB (budget 20 MB, checked on every build). 1.3 MB of that is the two enemy models.
 - **Credits.** `CREDITS.md` lists every third-party file. All are CC0. It also lists the hero models, which are not: the README says the characters, their art and the hero models are all rights reserved.
 - **Checks on every pull request.** `.github/workflows/checks.yml`, three jobs: the private-terms check; rule tests, build with size check and browser checks in Chromium; browser checks in WebKit. The two browser jobs run inside Playwright's container image, pinned to the Playwright version in `package.json` (1.63.0), so a run installs nothing from Ubuntu's servers. Before this, on 2026-11-11, four runs in a row failed before any test because GitHub's machines could not reach those servers.
 
 ## Checks on this state
 
 - `npm test`: 404 tests pass. Among them: seven on the enemy model files, twenty-one on hearts, twenty-two on the roll and the pounce, and forty-seven on the enemies.
-- `npm run test:browser`: 68 browser checks pass. 22 in Chromium at Mac size with the keyboard, 23 in Chromium at iPad size with touch, 23 in WebKit at iPad size with touch. They cover loading and the progress bar, a failed download, the frame counter, fixed and automatic tiers, the full lighting at medium quality (and high at Mac size), each hero's model loading with its clips and animating while it stands, runs and jumps, the stand-in model doing the same, and everything milestone one checked.
+- `npm run test:browser`: 94 browser checks pass, in Chromium at Mac size with the keyboard, in Chromium at iPad size with touch, and in WebKit at iPad size with touch. They cover loading and the progress bar, a failed download, the frame counter, fixed and automatic tiers, the full lighting at medium quality (and high at Mac size), each hero's model and clips, the stand-in model, hearts on screen and what a hit and the last heart do, the roll and the pounce from the keyboard and from the touch button, the scout coming out of hiding and its acorn costing a heart, the mosquito over the boughs, each move striking the scout, and everything milestone one checked.
 - **Not checked:**
   - Safari itself, a real iPad, a real Mac. The test browsers have no graphics card, so most checks run on the minimal tier, which has plain shading and no shadows. The full lighting is drawn in both browsers by two checks, slowly and in a small window.
   - Frame rate on real devices. The only numbers so far are from the test machine, which has no graphics card: about 15 frames a second in Chromium and 9 in WebKit on the minimal tier, and several seconds a frame on the tiers above. A real device has to be looked at with `?fps`.
   - In WebKit the test tools cannot hold or drag a real finger, so held and dragged touches are simulated at the page; taps on buttons are real.
+  - The frame rate with enemies on screen, on any real device.
+  - Any clip in motion, other than by the owner on the preview pages: a cloud session can only look at still frames.
   - Whether it is fun, and whether Easy is easy enough and Hard hard enough for the kids.
 
 ## What's next
 
-1. **Merge step 5** on green checks (the owner's instruction).
-2. **Then rewrite this file** and report to the owner.
-3. **Done already:** the owner and the kids played the longer level, and he looked at it in Safari on his Mac (60 frames a second, high tier).
+1. **The owner and the kids play the level with its enemies**, and he says how each difficulty feels, how the two moves feel, and what the frame rate is on the Mac (see "Start here"). Tuning is a change to `src/levels/bouncing-grove/difficulty.ts` only; run `npm test` after.
+2. **Nothing else is planned.** The next milestone is the owner's to set. Ideas that came up and were not asked for are not in the code: sound, a second level, and the rest of the 2D forest's enemies.
 4. **The owner plays Caputo's three gaits in the game** and says how they look.
 5. **Checking the Blender scripts on new files.** `tools/rig-quadruped.py` is meant for the enemies too: each needs its own guide file of joint places, like `tools/caputo.rig.json`. Its path for a file that already has a skeleton (keep it, add the bones it lacks) was tried only on Caputo's earlier output, before he had shoulder blades and ears.
 
 ## Known limits
 
-- One area.
+- One area, with three enemies in it.
+- A perfect run that never stops is never hit by an enemy, on any difficulty. The enemies punish stopping, not speed.
+- The mosquito has five legs: Meshy made its two middle legs as one.
+- A scout's dodge and the mosquito's resting place are easy to miss at speed: nothing on screen explains that a resting enemy is the one to strike.
 - The high boughs are logs on tall snags. They read clearly as footing, but they do not look like living boughs growing from trees.
 - A hero who falls from high up drops a long way before the fall is counted (the rule is a fixed height, 6 m below the start), and the camera follows it down.
 - The test bot is the only thing that has played the whole level. It measures whether each difficulty can be finished and how long a perfect run takes, not whether a jump reads well or feels fair.
@@ -190,4 +184,4 @@ Milestone three, part one (the longer grove) is done, in the three merged pull r
 
 ## Added as plain scenery, not canon
 
-Tree stumps to hop on, the tall snags of the last climb, the snags that hold logs and boughs up, the great cedar that holds the last bough, and the misty gully the route crosses with its slopes, ferns and boulders. The Caputo Mountain docs do not say what lies below the grove; its forest painting shows a misty valley of firs, which this follows. Everything else comes from Caputo Mountain: the Bouncing Grove, mossy banks as safe places, mushroom springs, logs with breaks, root shelves, a ravine, high boughs, a climb that starts with a spring, the golden leaf tucked in the canopy, both heroes' looks, and the end card. Nothing in the level moves, because nothing in the Caputo Mountain forest does.
+Tree stumps to hop on, the tall snags of the last climb, the snags that hold logs and boughs up, the great cedar that holds the last bough, and the misty gully the route crosses with its slopes, ferns and boulders. The Caputo Mountain docs do not say what lies below the grove; its forest painting shows a misty valley of firs, which this follows. Everything else comes from Caputo Mountain: the Bouncing Grove, mossy banks as safe places, mushroom springs, logs with breaks, root shelves, a ravine, high boughs, a climb that starts with a spring, the golden leaf tucked in the canopy, both heroes' looks, and the end card. No platform in the level moves, because none in the Caputo Mountain forest does. The enemies, the hearts and the two moves are Caputo Mountain's too.
