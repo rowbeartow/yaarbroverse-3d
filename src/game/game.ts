@@ -3,7 +3,8 @@
 // tests (and later a server, for two-device play) can run it as is.
 
 import type { Difficulty } from './difficulty';
-import { MOVE, STEP, type HeroName } from './hero';
+import { ENEMY, newEnemy, sendHome, stepEnemy, type Enemy, type EnemyPhase, type EnemyTuning } from './enemy';
+import { MOVE, STEP, knockSpeed, type HeroName } from './hero';
 import { pushOutside, surfaceBelow, touchesFromAbove, type Level, type Solid } from './level';
 
 /** What the player is asking for during one step. */
@@ -28,6 +29,10 @@ export type GameEvent =
   | { type: 'fall' }
   /** Caputo's pounce began. */
   | { type: 'pounce' }
+  /** An enemy began something: woke, warned, attacked, dodged, rested, or was beaten. */
+  | { type: 'enemy'; id: string; kind: Enemy['kind']; phase: EnemyPhase }
+  /** The hero's move, or a landing, struck an enemy. `left` is how many more strikes it takes. */
+  | { type: 'strike'; id: string; kind: Enemy['kind']; how: 'roll' | 'pounce' | 'stomp'; left: number }
   /** Lost a heart. `left` is how many remain. */
   | { type: 'hurt'; left: number }
   /** Went back to the last safe bank with every heart again, after losing the last one. */
@@ -45,6 +50,8 @@ export interface Summary {
   falls: number;
   /** Hearts lost over the whole run. */
   heartsLost: number;
+  /** Enemies beaten. */
+  beaten: number;
   complete: boolean;
 }
 
@@ -80,6 +87,10 @@ export class Game {
   pouncing = 0;
   /** How many times the hero's own move has been used: rolls begun and pounces made. */
   movesUsed = 0;
+  /** The level's enemies, as they are now. */
+  readonly enemies: Enemy[];
+  /** Enemies beaten so far. */
+  beaten = 0;
   /** Hearts left, and hearts lost over the whole run. */
   hearts: number;
   heartsLost = 0;
@@ -94,7 +105,10 @@ export class Game {
 
   private safeSpot: { x: number; y: number; z: number; id: string | null };
   private pending: GameEvent[] = [];
+  private readonly tuning: EnemyTuning;
   private moveWasHeld = false;
+  /** Thrown by a hit and still in the air: the throw carries until the hero lands or steers. */
+  private knocked = false;
   private pounceReady = true;
   private pounceRest = 0;
   private coyote = 0;
@@ -110,6 +124,8 @@ export class Game {
     this.y = level.spawn.y;
     this.z = level.spawn.z;
     this.hearts = level.hearts;
+    this.enemies = (level.enemies ?? []).map(newEnemy);
+    this.tuning = level.enemyTuning ?? { warning: 1, speed: 1, rest: 1 };
     const under = surfaceBelow(level, this.x, this.z, this.y, MOVE.footRadius);
     this.groundId = under ? under.id : null;
     this.safeSpot = { ...level.spawn, id: under?.safe ? under.id : null };
@@ -139,6 +155,7 @@ export class Game {
       seconds: this.seconds,
       falls: this.falls,
       heartsLost: this.heartsLost,
+      beaten: this.beaten,
       complete: this.complete,
     };
   }
@@ -164,8 +181,9 @@ export class Game {
       awayX /= distance;
       awayZ /= distance;
     }
-    this.vx = awayX * MOVE.hurtKnockSpeed;
-    this.vz = awayZ * MOVE.hurtKnockSpeed;
+    const thrown = knockSpeed(this.level.knockback);
+    this.vx = awayX * thrown;
+    this.vz = awayZ * thrown;
     this.vy = MOVE.hurtKnockUp;
     this.grounded = false;
     this.groundId = null;
@@ -173,6 +191,7 @@ export class Game {
     this.buffer = 0;
     this.canCutJump = false;
     this.stunned = MOVE.hurtLock;
+    this.knocked = true;
     this.rolling = false;
     this.pouncing = 0;
     this.protectedFor = MOVE.hurtProtection * this.level.protection;
@@ -197,6 +216,8 @@ export class Game {
     this.stunned = 0;
     this.rolling = false;
     this.pouncing = 0;
+    // Whatever was mid-attack near the safe bank starts over; strikes already landed still count.
+    for (const enemy of this.enemies) sendHome(enemy);
     // No hearts left: start again from here with all of them, protected for a moment.
     if (this.hearts <= 0) {
       this.hearts = this.level.hearts;
@@ -243,7 +264,10 @@ export class Game {
     this.rolling = this.hero === 'Yaarbro' && moveHeld;
     if (this.rolling && !wasRolling) this.movesUsed += 1;
     this.pounceRest = Math.max(0, this.pounceRest - dt);
-    if (this.grounded) this.pounceReady = true;
+    if (this.grounded) {
+      this.pounceReady = true;
+      this.knocked = false;
+    }
     const stickLength = Math.hypot(moveX, moveZ);
     if (this.hero === 'Caputo' && movePressed && this.pounceReady && this.pounceRest <= 0) {
       // The way the stick points, or the way he faces.
@@ -275,6 +299,9 @@ export class Game {
         }
         this.vy = Math.min(this.vy, MOVE.pounceExitRise);
       }
+    } else if (this.knocked && !this.grounded && stickLength < 0.01) {
+      // Thrown by a hit, with the stick let go: nothing slows the throw until
+      // the hero lands, so it carries clear of whatever did the hurting.
     } else {
       // Speed up or slow down toward the speed the stick asks for.
       const speed = Math.hypot(this.vx, this.vz);
@@ -392,6 +419,40 @@ export class Game {
     this.z = nextZ;
 
     if (this.complete) return;
+
+    // The enemies move, and anything they touch is settled.
+    for (const enemy of this.enemies) {
+      const canBeHurt = this.protectedFor <= 0 && this.hearts > 0;
+      const outcome = stepEnemy(enemy, this, MOVE.bodyRadius, previousY, this.tuning, canBeHurt, dt);
+      for (const phase of outcome.entered) this.events.push({ type: 'enemy', id: enemy.spot.id, kind: enemy.kind, phase });
+      if (outcome.struck) {
+        if (enemy.phase === 'defeated') this.beaten += 1;
+        this.events.push({ type: 'strike', id: enemy.spot.id, kind: enemy.kind, how: outcome.struck, left: enemy.hits });
+        // A pounce or a landing bounces the hero up off it, ready to pounce again.
+        if (outcome.struck !== 'roll') {
+          if (this.pouncing > 0) {
+            const speed = Math.hypot(this.vx, this.vz);
+            if (speed > MOVE.pounceExitSpeed) {
+              this.vx *= MOVE.pounceExitSpeed / speed;
+              this.vz *= MOVE.pounceExitSpeed / speed;
+            }
+          }
+          this.vy = ENEMY.rebound;
+          this.pouncing = 0;
+          this.pounceReady = true;
+          this.pounceRest = 0.12;
+          this.grounded = false;
+          this.groundId = null;
+          this.coyote = 0;
+          this.canCutJump = false;
+        }
+        this.protectedFor = Math.max(this.protectedFor, ENEMY.strikeProtection);
+      } else if (outcome.hurt && this.hurt(enemy.x, enemy.z)) {
+        // `hurt` reports itself next step; say it now too, so nothing waits a step.
+        this.events.push(...this.pending);
+        this.pending = [];
+      }
+    }
 
     // The goal: touch the golden leaf.
     const { leaf } = level;

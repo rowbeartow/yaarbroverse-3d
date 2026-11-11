@@ -24,6 +24,7 @@ Live at: https://rowbeartow.github.io/yaarbroverse-3d/ . Every merge to `main` p
 How it fits together:
 
 - `src/game/`: the rules. One hero in one level, advanced in fixed steps of 1/60 second. No browser or 3D code, so tests run it without a screen.
+  - `enemy.ts`: the marmot scout and the giant mosquito: what each does, what hurts a hero and what strikes an enemy. `game.ts` steps them with the hero.
 - `src/levels/<level>/difficulty.ts`: every Easy, Normal and Hard number for that level, in one file. `layout.ts` next to it builds the level from those numbers.
 - `src/view/`: draws the level and hero and moves the camera. Looks only.
   - `grove-view.ts`: the renderer, lighting (forest light, sun with soft shadows, filmic tone mapping, glow), camera, and switching quality tiers.
@@ -32,6 +33,7 @@ How it fits together:
   - `bank-outline.ts`: the edge of a bank's top. It may be irregular, but never reaches past where the rules let a hero stand (no 3D code, tested).
   - `materials.ts`: surfaces, plus three additions to the standard ones: mist by height, moss blending, wind sway. `pictures.ts`: textures drawn in code.
   - `assets.ts`: downloads `media/` and reports progress. `quality.ts`: the tiers and the rules for choosing one (no 3D code, tested).
+  - `enemies.ts`: draws each enemy from its model, the acorn, and the line an attack is aimed along.
   - `heroes.ts`: builds a hero from its model (`hero-model.ts`, mixing rules in `hero-motion.ts`). To give a character a model, see the top of `hero-model.ts`.
 - `src/input/controls.ts`: keyboard and touch, turned into "which way", "is Jump held" and "is the move button held" (Yaarbro's roll, Caputo's pounce).
 - `src/ui/screens.ts` and `index.html`: start screen, pause, end card, "turn sideways" card, messages.

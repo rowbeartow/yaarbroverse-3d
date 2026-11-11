@@ -68,6 +68,7 @@ describe('the run record', () => {
       seconds: game.seconds,
       falls: 1,
       heartsLost: 1,
+      beaten: 0,
       complete: true,
     });
     expect(summary.seconds).toBeGreaterThan(1);
