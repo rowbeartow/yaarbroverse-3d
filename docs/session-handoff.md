@@ -13,7 +13,7 @@ Milestone two (the modern look) is part way through:
 3. Done: browser checks run in WebKit as well as Chromium.
 4. Done: the world and lighting. The grove is a lit, textured forest.
 5. Half done: the hero models. Yaarbro is drawn from his model. Caputo is still drawn from shapes: Meshy could not give him a four-legged skeleton, so he is to be rigged and animated in Blender by a script in `tools/` (see `docs/decisions.md`).
-6. Not started: fetch the textures and the forest light straight from Poly Haven, compare them with the copies here, and replace any that differ.
+6. Done: the textures and the forest light were fetched straight from Poly Haven and compared with the copies here. The forest light was the same file, byte for byte. All ten texture files differed, because the copies here had been re-saved from a mirror's PNG files, so they were replaced with Poly Haven's own 1K JPG files.
 7. Not started: trees that read as conifers, and banks with irregular, rounded outlines.
 
 Nobody has played the new look on a real iPad or Mac yet.
@@ -49,14 +49,13 @@ Nobody has played the new look on a real iPad or Mac yet.
   - Safari itself, a real iPad, a real Mac. The test browsers have no graphics card, so most checks run on the minimal tier, which has plain shading and no shadows. The full lighting is drawn in both browsers by two checks, slowly and in a small window.
   - Frame rate on real devices. The only numbers so far are from the test machine, which has no graphics card: about 15 frames a second in Chromium and 9 in WebKit on the minimal tier, and several seconds a frame on the tiers above. A real device has to be looked at with `?fps`.
   - In WebKit the test tools cannot hold or drag a real finger, so held and dragged touches are simulated at the page; taps on buttons are real.
-  - The CC0 files came from public GitHub copies, not from polyhaven.com (unreachable from a cloud session). See `CREDITS.md`.
   - Whether it is fun, and whether Easy is easy enough and Hard hard enough for the kids.
 
 ## What's next
 
 1. **The owner looks at the live link on the iPad and the Mac**, with `?fps` on the address, and says what frame rate and tier show and whether anything looks wrong.
 2. **Yaarbro's missing clips.** If the owner exports idle, jump, falling, landing and roll clips for him from Meshy, compress the new file the same way and set `airborne` for the jump clip.
-3. **Texture sources** (item 6 above), then **trees and banks** (item 7), each as its own pull request. Trees and banks need before-and-after pictures in the pull request, and the walkable area in the rules must not change.
+3. **Trees and banks** (item 7 above), as its own pull request. It needs before-and-after pictures in the pull request, and the walkable area in the rules must not change.
 4. **Caputo.** Write the Blender script in `tools/` that takes his original file and gives back a rigged, animated one: a spine, neck, head, four legs with upper, lower and paw bones, a tail of at least five bones, and clips named idle, walk, run, jump, falling and landing. Compress it, add him to `HERO_MODELS`, match his soft spot and framing. Before merging, publish a private preview page of him playing each clip in the game's lighting and wait for the owner's OK. Then add a picture of him to the README.
 5. **Playtest tuning**, when there are notes: change only `src/levels/bouncing-grove/difficulty.ts`.
 6. **Milestone three** makes the grove a full level: the marmot scout and giant mosquito, hearts, a longer route with checkpoints, Yaarbro's roll and Caputo's pounce. Each move must beat or get past both enemies. Easy stays finishable with walk and jump alone. See `docs/decisions.md`.
