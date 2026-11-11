@@ -89,6 +89,7 @@ test.describe('playing', () => {
     await expect(page.locator('#end-hero')).toHaveText('Caputo');
     await expect(page.locator('#end-time')).toHaveText(/^\d+:\d\d\.\d$/);
     await expect(page.locator('#end-falls')).toHaveText('0');
+    await expect(page.locator('#end-hearts')).toHaveText('0');
     await expect(page.locator('#end-date')).toContainText(String(new Date().getFullYear()));
 
     await page.locator('#again').click();

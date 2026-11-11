@@ -30,6 +30,8 @@ export const yard = (extra: Solid[] = [], overrides: Partial<Level> = {}): Level
   fallY: -6,
   coyoteTime: 0.12,
   ledgeHelp: 0.3,
+  hearts: 3,
+  protection: 1,
   route: ['floor'],
   ...overrides,
 });
