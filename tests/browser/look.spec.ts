@@ -156,9 +156,8 @@ test.describe('hero models', () => {
     await play(page, 'Yaarbro');
     const start = await hero(page);
     expect(start?.model).toBe('yaarbro.glb');
-    // The clips in his file. It has no idle or jump yet: he stands in a pose
-    // made from the walk and holds a stride of the run in the air.
-    expect(start?.clips).toEqual(expect.arrayContaining(['Walking', 'Running']));
+    // One clip from each of his Meshy files (tools/yaarbro.guide.json).
+    expect(start?.clips.slice().sort()).toEqual(['idle', 'jump', 'landing', 'roll', 'run', 'walk']);
 
     await expect.poll(async () => (await hero(page))?.clock ?? 0).toBeGreaterThan((start?.clock ?? 0) + 0.3);
     const before = await snapshot(page);
