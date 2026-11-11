@@ -11,8 +11,10 @@ Milestone two (the modern look) is part way through:
 1. Done: a check that fails any pull request holding a private term.
 2. Skipped: tuning from the playtest. The playtest notes in the milestone prompt were blank, so no numbers changed.
 3. Done: browser checks run in WebKit as well as Chromium.
-4. Done: the world and lighting. The grove is a lit, textured forest. The heroes are still drawn from shapes.
-5. Not started: the hero models. The owner makes them in Meshy's web app and uploads `yaarbro.glb`, and `caputo.glb` when ready, to the repo root on the branch `hero-models`. That branch did not exist when this was written.
+4. Done: the world and lighting. The grove is a lit, textured forest.
+5. Half done: the hero models. Yaarbro is drawn from his model. Caputo is still drawn from shapes: Meshy could not give him a four-legged skeleton, so he is to be rigged and animated in Blender by a script in `tools/` (see `docs/decisions.md`).
+6. Not started: fetch the textures and the forest light straight from Poly Haven, compare them with the copies here, and replace any that differ.
+7. Not started: trees that read as conifers, and banks with irregular, rounded outlines.
 
 Nobody has played the new look on a real iPad or Mac yet.
 
@@ -23,7 +25,11 @@ Nobody has played the new look on a real iPad or Mac yet.
 - **Lighting.** A forest photograph lights everything (image-based lighting), a warm sun casts soft shadows, leaf shade drifts over the route, a filmic curve maps light to the screen, mist thickens with distance and with depth, and bright things glow.
 - **Quality tiers.** High, medium, low and minimal, chosen automatically: a computer starts on high, an iPad on medium, a machine with no graphics card on minimal. The game watches the frame rate and steps down (never up) if it cannot hold 60 on a computer or a steady 30 on touch. `?fps` on the address shows the frame rate and tier. `?quality=` fixes the tier.
 - **Loading.** The start screen shows at once. The 3D code and files load behind it with a progress bar, and Play switches on when they are ready. A file that fails to arrive shows a card with a "Try again" button.
-- **Heroes.** Yaarbro and Caputo, picked on the start screen, still built from shapes. They look different and move the same: walk, jump (hold for height), bounce on mushrooms. The model loader and animation player are built and checked against a CC0 stand-in robot (`?standin`). Giving a hero its model is a file in `assets/models/` and an entry in `src/view/hero-model.ts`.
+- **Heroes.** Yaarbro and Caputo, picked on the start screen. They move the same: walk, jump (hold for height), bounce on mushrooms.
+  - **Yaarbro** is a textured model on a skeleton, made by the owner in Meshy. His file holds two clips, `Walking` and `Running`, mixed by how fast he is moving. It has no idle, jump, falling, landing or roll clip. Until it does: standing still he holds the middle pose of his walk and breathes; in the air he holds the part of his run where both feet are off the ground; landing is a quick squash; the roll is not used until milestone three. When the file gains clips named Idle, Jump, Falling, Landing or Roll they are used with no code change, except that `airborne` in `src/view/hero-model.ts` must then be set for the jump clip.
+  - **Caputo** is still built from shapes.
+  - A model is stood on the spot the rules use by its footprint: soles on the ground, the middle of its feet over the spot, so the soft dark spot sits under the feet and an edge looks as safe as it is.
+  - The owner's original model files are files on the `hero-models` release of this repo (28.5 MB and 19.9 MB). They are not committed. `node tools/compress-hero.mjs <original.glb> yaarbro` makes `assets/heroes/yaarbro.glb` (1 MB), which is committed and which the build copies as it is. The CC0 stand-in robot (`?standin`) still checks the loader with a file that has idle and jump clips.
 - **Camera.** Behind and above the hero, always looking the same way. A soft dark spot under the hero shows where a jump will land.
 - **Difficulty.** Easy, Normal, Hard on the start screen. All numbers are in `src/levels/bouncing-grove/difficulty.ts`.
 - **Falls.** A fall returns the hero to the last safe mossy bank and is counted. No hearts and nothing that hurts.
@@ -31,14 +37,14 @@ Nobody has played the new look on a real iPad or Mac yet.
 - **Controls.** Mac: arrows or W A S D, Space, Esc. Touch: drag the left half to move, press the right half to jump.
 - **Turn sideways.** A touch device whose page is taller than wide gets a "Turn sideways to play" card.
 - **This device remembers** the last hero and difficulty.
-- **Size.** The whole download is about 4.8 MB (budget 20 MB, checked on every build). The build compresses textures to KTX2 and models with meshopt.
-- **Credits.** `CREDITS.md` lists every third-party file. All are CC0. The README says the characters and art are all rights reserved.
+- **Size.** The whole download is about 5.8 MB (budget 20 MB, checked on every build). The build compresses textures to KTX2 and models with meshopt.
+- **Credits.** `CREDITS.md` lists every third-party file. All are CC0. It also lists the hero models, which are not: the README says the characters, their art and the hero models are all rights reserved.
 - **Checks on every pull request.** `.github/workflows/checks.yml`, three jobs: the private-terms check; rule tests, build with size check and browser checks in Chromium; browser checks in WebKit.
 
 ## Checks on this state
 
-- `npm test`: 121 tests pass. 94 for the game rules (a bot plays the whole grove on Easy, Normal and Hard as each hero with no falls), 11 for the private-terms check, 16 for the quality tier rules and the animation mixing rules.
-- `npm run test:browser`: 65 browser checks pass. 21 in Chromium at Mac size with the keyboard, 22 in Chromium at iPad size with touch, 22 in WebKit at iPad size with touch. They cover loading and the progress bar, a failed download, the frame counter, fixed and automatic tiers, the full lighting at medium quality (and high at Mac size), the stand-in model loading and animating, and everything milestone one checked.
+- `npm test`: 128 tests pass. 94 for the game rules (a bot plays the whole grove on Easy, Normal and Hard as each hero with no falls), 11 for the private-terms check, 16 for the quality tier rules and the animation mixing rules, 7 for finding a model's clips and doing without the ones it lacks.
+- `npm run test:browser`: 68 browser checks pass. 22 in Chromium at Mac size with the keyboard, 23 in Chromium at iPad size with touch, 23 in WebKit at iPad size with touch. They cover loading and the progress bar, a failed download, the frame counter, fixed and automatic tiers, the full lighting at medium quality (and high at Mac size), Yaarbro's model loading and animating while he stands, runs and jumps, the stand-in model doing the same, Caputo still drawn from shapes, and everything milestone one checked.
 - **Not checked:**
   - Safari itself, a real iPad, a real Mac. The test browsers have no graphics card, so most checks run on the minimal tier, which has plain shading and no shadows. The full lighting is drawn in both browsers by two checks, slowly and in a small window.
   - Frame rate on real devices. The only numbers so far are from the test machine, which has no graphics card: about 15 frames a second in Chromium and 9 in WebKit on the minimal tier, and several seconds a frame on the tiers above. A real device has to be looked at with `?fps`.
@@ -49,9 +55,11 @@ Nobody has played the new look on a real iPad or Mac yet.
 ## What's next
 
 1. **The owner looks at the live link on the iPad and the Mac**, with `?fps` on the address, and says what frame rate and tier show and whether anything looks wrong.
-2. **Hero models**, once `yaarbro.glb` (and `caputo.glb`) are on the `hero-models` branch: move them to `assets/models/`, add each to `HERO_MODELS` in `src/view/hero-model.ts`, match the soft spot and camera framing, list the clips each file holds. Yaarbro is rigged as a humanoid with walk, run, idle, jump, falling, landing and roll clips. Caputo is rigged as a quadruped with only a walk clip and no tail bones: his idle, run, jump, fall and landing are to be posed in code. Then retake `docs/bouncing-grove.jpg` and add a second picture for the other hero.
-3. **Playtest tuning**, when there are notes: change only `src/levels/bouncing-grove/difficulty.ts`.
-4. **Milestone three** makes the grove a full level: the marmot scout and giant mosquito, hearts, a longer route with checkpoints, Yaarbro's roll and Caputo's pounce. Each move must beat or get past both enemies. Easy stays finishable with walk and jump alone. See `docs/decisions.md`.
+2. **Yaarbro's missing clips.** If the owner exports idle, jump, falling, landing and roll clips for him from Meshy, compress the new file the same way and set `airborne` for the jump clip.
+3. **Texture sources** (item 6 above), then **trees and banks** (item 7), each as its own pull request. Trees and banks need before-and-after pictures in the pull request, and the walkable area in the rules must not change.
+4. **Caputo.** Write the Blender script in `tools/` that takes his original file and gives back a rigged, animated one: a spine, neck, head, four legs with upper, lower and paw bones, a tail of at least five bones, and clips named idle, walk, run, jump, falling and landing. Compress it, add him to `HERO_MODELS`, match his soft spot and framing. Before merging, publish a private preview page of him playing each clip in the game's lighting and wait for the owner's OK. Then add a picture of him to the README.
+5. **Playtest tuning**, when there are notes: change only `src/levels/bouncing-grove/difficulty.ts`.
+6. **Milestone three** makes the grove a full level: the marmot scout and giant mosquito, hearts, a longer route with checkpoints, Yaarbro's roll and Caputo's pounce. Each move must beat or get past both enemies. Easy stays finishable with walk and jump alone. See `docs/decisions.md`.
 
 ## Known limits
 

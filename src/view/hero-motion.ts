@@ -45,3 +45,9 @@ export const strideRate = (speed: number, mix: GroundMix, walkSpeed: number, run
 /** Eases a value toward a target, by `rate` per second. */
 export const approach = (value: number, target: number, rate: number, dt: number): number =>
   value + (target - value) * (1 - Math.exp(-rate * dt));
+
+/**
+ * A slow breath for a hero standing still with no idle clip: how much taller
+ * than normal the body is, as a share of its height, `seconds` into standing.
+ */
+export const breath = (seconds: number): number => 0.012 * Math.sin(seconds * 2.1);

@@ -15,6 +15,7 @@ Live at: https://rowbeartow.github.io/yaarbroverse-3d/ . Every merge to `main` p
 
 - Framework: Three.js, TypeScript, Vite. No physics library.
 - Assets: source textures, the forest light (HDRI) and models in `assets/`. `scripts/build-assets.mjs` compresses them into `public/media/` (KTX2 textures, meshopt geometry, a smaller HDR) before every build and before `npm run dev`. `public/media/` is not committed. Third-party files are CC0 and listed in `CREDITS.md`; the build fails over 20 MB.
+- Hero models: `assets/heroes/` holds them already compressed, and the build copies them as they are. The owner's originals (20 to 30 MB each, files on the `hero-models` release) are never committed. `tools/compress-hero.mjs` makes the small file from an original and lists its clips.
 - Deploy target: GitHub Pages, static files only. `.github/workflows/publish.yml` builds and publishes on every merge to main.
 - Data layer: none. The browser remembers the last hero and difficulty.
 - Auth: none.
@@ -29,7 +30,7 @@ How it fits together:
   - `scenery.ts`: the level's solids as smooth textured shapes. `forest.ts`: the gully, trees, ferns, grass, mist, light. Both build shapes with `surface.ts` and `noise.ts`.
   - `materials.ts`: surfaces, plus three additions to the standard ones: mist by height, moss blending, wind sway. `pictures.ts`: textures drawn in code.
   - `assets.ts`: downloads `media/` and reports progress. `quality.ts`: the tiers and the rules for choosing one (no 3D code, tested).
-  - `heroes.ts`: builds a hero from its model when it has one (`hero-model.ts`, mixing rules in `hero-motion.ts`), otherwise from shapes (`shapes.ts`). To give a hero a model, see the top of `hero-model.ts`.
+  - `heroes.ts`: builds a hero from its model when it has one (`hero-model.ts`, mixing rules in `hero-motion.ts`), otherwise from shapes (`shapes.ts`). Yaarbro has a model; Caputo does not yet. To give a hero a model, see the top of `hero-model.ts`.
 - `src/input/controls.ts`: keyboard and touch, turned into "which way" and "is Jump held".
 - `src/ui/screens.ts` and `index.html`: start screen, pause, end card, "turn sideways" card, messages.
 - `src/main.ts`: the loop that connects them. The start screen shows first; the 3D code and files load behind it with a progress bar.
@@ -45,6 +46,7 @@ Node 22 (`.nvmrc`).
 - Test the rules: `npm test` (fast, no browser)
 - Build: `npm run build` (prepares the assets, and fails if the download goes over 20 MB)
 - Pictures for the docs: `node scripts/screenshot.mjs` (see the top of that file)
+- Compress a hero model: `node tools/compress-hero.mjs <original.glb> <name>` (see the top of that file)
 - Browser checks: `npm run test:browser` (builds, serves, then drives the game with keyboard and touch, in Chromium and in WebKit). In a cloud session Chromium is already installed: do not install it again. WebKit is not: run `npx playwright install --with-deps webkit` once per session. To run one browser: `npx playwright test --project=ipad-webkit` (or `mac`, `ipad`).
 - Everything: `npm run check`, then `npm run test:browser`
 - Deploy: merging to `main` publishes automatically. Do not deploy by hand. The same checks run on every pull request (`.github/workflows/checks.yml`). So does the private-terms check (`scripts/check-private-terms.mjs`); to try it locally: `PRIVATE_TERMS="one,two" node scripts/check-private-terms.mjs`.
@@ -52,7 +54,7 @@ Node 22 (`.nvmrc`).
 ## Conventions
 
 - World, characters and tone come from Caputo Mountain (the owner's private `digglesworth` repo: its `docs/` folder and art). Read only; never change that repo. Do not invent canon. If something is needed that is not there, ask the owner.
-- This repo is public. No family names, no files copied from the private repo.
+- This repo is public. No family names, no files copied from the private repo. The one exception is the hero models the owner made from that art (`assets/heroes/`, compressed, all rights reserved; see `docs/decisions.md`).
 - A check on every pull request fails if a private term (the repository secret `PRIVATE_TERMS`) appears in a tracked file, the pull request's title or description, or a commit message. The kids are "the younger player" and "the older player" everywhere. If a flagged line is an ordinary word, reword it; never add an allowlist.
 - Every level has Easy, Normal and Hard, with all its numbers in that level's `difficulty.ts`. After changing numbers run `npm test`: a bot plays each difficulty start to finish.
 - Keep rules out of `src/view` and drawing out of `src/game`.

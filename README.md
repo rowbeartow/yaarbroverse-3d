@@ -6,7 +6,7 @@ A 3D browser game set in the Yaarbroverse, the sibling of the 2D game Caputo Mou
 
 ![Yaarbro on a mossy bank above a misty gully of fir trees, with a fallen log, tree stumps and a mushroom ahead](docs/bouncing-grove.jpg)
 
-The grove is a lit, textured forest: mossy banks of rock, fallen logs, stumps with cut rings, mushroom springs, firs with real boughs, grass that sways, mist in the gully below and sunlight through the leaves. The heroes are still drawn from simple shapes; their models come next.
+The grove is a lit, textured forest: mossy banks of rock, fallen logs, stumps with cut rings, mushroom springs, firs with real boughs, grass that sways, mist in the gully below and sunlight through the leaves. Yaarbro is a rigged, textured model. Caputo is still drawn from simple shapes; his model comes next.
 
 ## Play
 
@@ -14,7 +14,7 @@ The grove is a lit, textured forest: mossy banks of rock, fallen logs, stumps wi
 
 The link is live. Every change merged to `main` is published there within a few minutes.
 
-The start screen shows straight away, with a progress bar while the grove loads (about 5 MB).
+The start screen shows straight away, with a progress bar while the grove loads (about 6 MB).
 
 - **Mac:** arrow keys or W A S D to move, Space to jump (hold for a higher jump), Esc to pause.
 - **iPad:** hold it sideways. Left thumb moves, right thumb jumps.
@@ -67,6 +67,10 @@ npm run test:browser  # keyboard, touch and look checks in Chromium and WebKit (
 
 Source textures, the forest light and models live in `assets/`. The build compresses them into `public/media/` (KTX2 textures, meshopt geometry), which is not committed.
 
+The hero models in `assets/heroes/` are kept already compressed. The owner's original files are too big for this repo; `tools/compress-hero.mjs` makes the small file from an original (see the top of that file).
+
 ## Rights and credits
 
-The Yaarbroverse, its characters and their art are all rights reserved. Every third-party file in this repo is CC0 and is listed with its source in [CREDITS.md](CREDITS.md).
+The Yaarbroverse, its characters and their art are all rights reserved. That includes the hero models in `assets/heroes/`, which the owner made from the Caputo Mountain art: they are not CC0 and are not free to copy or reuse.
+
+Every third-party file in this repo is CC0 and is listed with its source in [CREDITS.md](CREDITS.md).

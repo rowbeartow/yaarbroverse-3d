@@ -3,6 +3,7 @@
 //
 //   textures  JPG or PNG  ->  KTX2 (stays compressed on the graphics card)
 //   models    GLB         ->  GLB with meshopt geometry and KTX2 textures
+//   heroes    GLB         ->  copied (they are committed already compressed)
 //   sky light HDR         ->  a smaller HDR (lighting only needs a small one)
 //
 // Runs before every build and before `npm run dev`. A file is only redone when
@@ -14,13 +15,8 @@
 import { createHash } from 'node:crypto';
 import { existsSync, mkdirSync, readFileSync, readdirSync, rmdirSync, statSync, unlinkSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
-import { NodeIO } from '@gltf-transform/core';
-import { ALL_EXTENSIONS } from '@gltf-transform/extensions';
-import { dedup, meshopt, prune, resample, textureCompress } from '@gltf-transform/functions';
 import { encodeToKTX2 } from 'ktx2-encoder';
-import { ktx2 } from 'ktx2-encoder/gltf-transform';
-import { MeshoptDecoder, MeshoptEncoder } from 'meshoptimizer';
-import sharp from 'sharp';
+import { compressModel, decoderAt, ktx2Options, modelIO } from './lib/compress-model.mjs';
 
 const SOURCE = 'assets';
 const OUT = 'public/media';
@@ -52,6 +48,15 @@ for (const folder of existsSync(join(SOURCE, 'textures')) ? readdirSync(join(SOU
 const MODELS = [];
 for (const file of existsSync(join(SOURCE, 'models')) ? readdirSync(join(SOURCE, 'models')).sort() : []) {
   if (file.endsWith('.glb')) MODELS.push({ from: `models/${file}`, to: `models/${file}`, textureSize: 1024 });
+}
+
+/**
+ * Hero models. These are already compressed: tools/compress-hero.mjs makes
+ * them from the owner's original files, which are too big to keep here.
+ */
+const HEROES = [];
+for (const file of existsSync(join(SOURCE, 'heroes')) ? readdirSync(join(SOURCE, 'heroes')).sort() : []) {
+  if (file.endsWith('.glb')) HEROES.push({ from: `heroes/${file}`, to: `models/${file}` });
 }
 
 const HDR = [{ from: 'hdri/forest_slope_1k.hdr', to: 'hdri/forest.hdr', width: 512 }];
@@ -93,34 +98,6 @@ const make = async (to, key, build) => {
   cache[to] = key;
   console.log(`  ${to}  ${kilobytes(bytes.length)}  (${((Date.now() - started) / 1000).toFixed(1)} s)`);
 };
-
-/** Turns a JPG or PNG into raw pixels at the wanted size, for the KTX2 encoder. */
-const decoderAt = (size) => async (buffer) => {
-  let image = sharp(buffer);
-  const meta = await image.metadata();
-  if (size && (meta.width > size || meta.height > size)) image = image.resize(size, size, { fit: 'inside' });
-  const { data, info } = await image.ensureAlpha().raw().toBuffer({ resolveWithObject: true });
-  return { data: new Uint8Array(data), width: info.width, height: info.height };
-};
-
-/** Settings for the KTX2 encoder, by what the picture holds. */
-const ktx2Options = (kind) => ({
-  isKTX2File: true,
-  enableDebug: false,
-  generateMipmap: true,
-  // ETC1S is the small format. Normals get the sharper UASTC format, squeezed
-  // with Zstandard, because blocky normals show up as blocky light.
-  isUASTC: kind === 'normal',
-  needSupercompression: kind === 'normal',
-  enableRDO: kind === 'normal',
-  rdoQualityLevel: 2,
-  uastcLDRQualityLevel: 2,
-  qualityLevel: 190,
-  compressionLevel: 2,
-  isNormalMap: kind === 'normal',
-  isPerceptual: kind === 'color',
-  isSetKTX2SRGBTransferFunc: kind === 'color',
-});
 
 // ---------- Sky light (HDR) ----------
 
@@ -227,30 +204,20 @@ for (const item of TEXTURES) {
 }
 
 if (MODELS.length > 0) {
-  await MeshoptEncoder.ready;
-  await MeshoptDecoder.ready;
-  const io = new NodeIO()
-    .registerExtensions(ALL_EXTENSIONS)
-    .registerDependencies({ 'meshopt.encoder': MeshoptEncoder, 'meshopt.decoder': MeshoptDecoder });
+  const io = await modelIO();
   for (const item of MODELS) {
     const source = readFileSync(join(SOURCE, item.from));
     await make(item.to, hash(source, JSON.stringify([item.textureSize, RECIPE])), async () => {
-      const document = await io.readBinary(new Uint8Array(source));
-      document.setLogger({ debug() {}, info() {}, warn() {}, error: console.error });
-      await document.transform(
-        dedup(),
-        prune(),
-        resample(),
-        textureCompress({ encoder: sharp, resize: [item.textureSize, item.textureSize] }),
-        // Normal maps keep the sharper format; everything else takes the small one.
-        ktx2({ ...ktx2Options('normal'), slots: /^normalTexture$/, imageDecoder: decoderAt(0) }),
-        ktx2({ ...ktx2Options('color'), slots: /^(baseColorTexture|emissiveTexture)$/, imageDecoder: decoderAt(0) }),
-        ktx2({ ...ktx2Options('data'), imageDecoder: decoderAt(0) }),
-        meshopt({ encoder: MeshoptEncoder, level: 'medium' }),
-      );
+      const document = await compressModel(await io.readBinary(new Uint8Array(source)), { textureSize: item.textureSize });
       return Buffer.from(await io.writeBinary(document));
     });
   }
+}
+
+// Hero models are committed already compressed, so they are copied as they are.
+for (const item of HEROES) {
+  const source = readFileSync(join(SOURCE, item.from));
+  await make(item.to, hash(source, 'copied'), async () => source);
 }
 
 for (const item of HDR) {

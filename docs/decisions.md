@@ -120,3 +120,11 @@ Supersedes: none
 ## 2026-11-10 Confirmed: the link stays public, and Claude keeps merging its own pull requests once checks pass
 Reason: The owner confirmed both at the start of milestone two.
 Supersedes: none
+
+## 2026-11-10 Hero model files are kept here in compressed form only
+Reason: The owner's originals are 20 to 30 MB each, over GitHub's 25 MB web upload limit and several times the rest of the game's download. `tools/compress-hero.mjs` turns an original into the small file the game loads (about 1 MB), and only that is committed, in `assets/heroes/`. The owner keeps the originals as files on the `hero-models` release of this repo. The characters and art stay all rights reserved, and README.md says so.
+Supersedes: "Hero models are made by the owner in Meshy and live in this repo", for how the files are kept. The rest of that entry stands.
+
+## 2026-11-10 Characters Meshy cannot rig are rigged and animated in Blender by a script in tools/, run headless
+Reason: Meshy rigs only humanoids reliably and could not rig Caputo. A script makes the rig repeatable, and reusable for the milestone-three enemies.
+Supersedes: none

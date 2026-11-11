@@ -4,6 +4,12 @@ Everything in the game that this project did not make itself is listed here, wit
 
 The Yaarbroverse, its characters and their art are not CC0. They are all rights reserved (see README.md).
 
+## Hero models (all rights reserved, not CC0)
+
+| File in this repo | What it is | Source | License |
+| --- | --- | --- | --- |
+| `assets/heroes/yaarbro.glb` | Yaarbro: a textured model on a skeleton, with a walking and a running clip. Compressed from the owner's original by `tools/compress-hero.mjs`. | Made by the owner in Meshy from the Caputo Mountain art | All rights reserved |
+
 ## Forest light
 
 | File in this repo | What it is | Source | License |

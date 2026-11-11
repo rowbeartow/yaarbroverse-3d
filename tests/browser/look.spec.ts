@@ -150,9 +150,32 @@ test.describe('hero models', () => {
     expect(problems).toEqual([]);
   });
 
+  test('Yaarbro is drawn from his own model, and it moves when he stands, runs and jumps', async ({ page }) => {
+    const problems = await open(page);
+    await expect(page.locator('[data-hero="Yaarbro"] img')).toHaveAttribute('src', /^data:image\/png/);
+    await play(page, 'Yaarbro');
+    const start = await hero(page);
+    expect(start?.model).toBe('yaarbro.glb');
+    // The clips in his file. It has no idle or jump yet: he stands in a pose
+    // made from the walk and holds a stride of the run in the air.
+    expect(start?.clips).toEqual(expect.arrayContaining(['Walking', 'Running']));
+
+    await expect.poll(async () => (await hero(page))?.clock ?? 0).toBeGreaterThan((start?.clock ?? 0) + 0.3);
+    const before = await snapshot(page);
+    await page.keyboard.down('ArrowUp');
+    await expect.poll(async () => (await snapshot(page)).z).toBeLessThan(before.z - 1);
+    await page.keyboard.down('Space');
+    await expect.poll(async () => (await snapshot(page)).y, { intervals: [30] }).toBeGreaterThan(0.3);
+    await page.keyboard.up('Space');
+    await page.keyboard.up('ArrowUp');
+    expect((await hero(page))?.clock ?? 0).toBeGreaterThan((start?.clock ?? 0) + 0.5);
+    expect(problems).toEqual([]);
+  });
+
   test('without a model file, a hero is still drawn from shapes', async ({ page }) => {
+    // Caputo's model is not in yet.
     await open(page);
-    await play(page);
+    await play(page, 'Caputo');
     expect(await hero(page)).toMatchObject({ model: null, clips: [] });
   });
 });
