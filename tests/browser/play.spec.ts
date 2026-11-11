@@ -51,7 +51,7 @@ test.describe('start screen', () => {
           ).length,
       );
     };
-    expect([await stumps('easy'), await stumps('normal'), await stumps('hard')]).toEqual([3, 4, 5]);
+    expect([await stumps('easy'), await stumps('normal'), await stumps('hard')]).toEqual([4, 6, 7]);
   });
 });
 

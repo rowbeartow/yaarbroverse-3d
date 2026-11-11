@@ -8,7 +8,7 @@ Read first: `docs/session-handoff.md` (what exists, what's next, open questions)
 
 ## Status
 
-In development. One playable area, the Bouncing Grove. Milestone two (the modern look) is in progress; `docs/session-handoff.md` says how far it has got.
+In development. One playable area, the Bouncing Grove. Milestone three, part one (a longer grove in six sections) is in progress; `docs/session-handoff.md` says how far it has got.
 Live at: https://rowbeartow.github.io/yaarbroverse-3d/ . Every merge to `main` publishes there, straight to the kids' devices.
 
 ## Architecture
@@ -28,6 +28,7 @@ How it fits together:
 - `src/view/`: draws the level and hero and moves the camera. Looks only.
   - `grove-view.ts`: the renderer, lighting (forest light, sun with soft shadows, filmic tone mapping, glow), camera, and switching quality tiers.
   - `scenery.ts`: the level's solids as smooth textured shapes. `forest.ts`: the gully, trees, ferns, grass, mist, light. Both build shapes with `surface.ts` and `noise.ts`.
+  - `route.ts`: where the route runs (its middle, sides and height), which the forest is laid out around, and the rule for drawing only the stretches of scenery near the hero (no 3D code, tested).
   - `bank-outline.ts`: the edge of a bank's top. It may be irregular, but never reaches past where the rules let a hero stand (no 3D code, tested).
   - `materials.ts`: surfaces, plus three additions to the standard ones: mist by height, moss blending, wind sway. `pictures.ts`: textures drawn in code.
   - `assets.ts`: downloads `media/` and reports progress. `quality.ts`: the tiers and the rules for choosing one (no 3D code, tested).
@@ -44,7 +45,7 @@ Node 22 (`.nvmrc`).
 
 - Install: `npm ci`
 - Run locally: `npm run dev`, then open the address it prints
-- Test the rules: `npm test` (fast, no browser)
+- Test the rules: `npm test` (fast, no browser). `GROVE_TIMES=1 npx vitest run tests/sections.test.ts --silent=false` prints how long the bot's perfect run takes to the end of each section.
 - Build: `npm run build` (prepares the assets, and fails if the download goes over 20 MB)
 - Pictures for the docs: `node scripts/screenshot.mjs` (see the top of that file)
 - Rebuild Yaarbro from his Meshy files: `blender -b -P tools/prepare-rigged.py -- <folder of Meshy files> <out.glb> tools/yaarbro.guide.json`, then compress `<out.glb>`.
@@ -76,5 +77,5 @@ Never modify or commit a file unrelated to the current task, including to produc
 - Browser checks must not wait on the clock for the game to do something. A slow machine draws few frames, and the game only moves forward a tenth of a second per frame. Wait on the game's own state (`expectAtRest` and `frames` in `tests/browser/helpers.ts`).
 - Pictures drawn in code (`pictures.ts`) ask for `willReadFrequently`, which keeps the drawing on the processor. Without it a browser with no graphics card takes about 7 seconds to start.
 - The Poly Haven files come straight from Poly Haven (`CREDITS.md` gives the addresses and checksums). A cloud session can only fetch them if its environment's network settings allow `polyhaven.com`, `api.polyhaven.com` and `dl.polyhaven.org`.
-- Browser checks run in Chromium (Mac-sized with a keyboard, iPad-sized with touch) and in WebKit (iPad-sized with touch), each as its own job in `checks.yml`. WebKit is Safari's engine built for Linux, not Safari itself: Safari on a real iPad is only checked by hand.
+- Browser checks run in Chromium (Mac-sized with a keyboard, iPad-sized with touch) and in WebKit (iPad-sized with touch), each as its own job in `checks.yml`. On GitHub both jobs run inside Playwright's container image (`mcr.microsoft.com/playwright`), pinned to the exact Playwright version in `package.json`, so no run installs anything from Ubuntu's servers. To upgrade Playwright, change `package.json`, `package-lock.json` and the two image lines in `checks.yml` together; `scripts/check-playwright-image.mjs` fails the checks if they differ. WebKit is Safari's engine built for Linux, not Safari itself: Safari on a real iPad is only checked by hand.
 - The test tools can tap in WebKit but cannot hold a finger down or drag one. In WebKit, held and dragged fingers are touch pointer events handed to the element under the finger (see `tests/browser/touch.spec.ts`); in Chromium they are real touches.

@@ -36,6 +36,7 @@ import { HERO_MODEL_FILES, buildHero, type HeroView } from './heroes';
 import { Materials, WIND, installMist } from './materials';
 import { seeded } from './noise';
 import { MIST_COLOR } from './pictures';
+import { MIST_FAR, MIST_NEAR, inView } from './route';
 import { TIERS, TierChooser, frameRateGoal, isTierName, startingTier, type Tier, type TierName } from './quality';
 import { MIST_BOTTOM, MIST_TOP, animateMushroom, blobShadow, buildSolids, type LevelSolids } from './scenery';
 
@@ -158,7 +159,7 @@ export class GroveView {
     assets.setAnisotropy(this.tier.anisotropy);
 
     this.scene.environmentIntensity = 0.85;
-    this.scene.fog = new Fog(MIST_COLOR, 42, 165);
+    this.scene.fog = new Fog(MIST_COLOR, MIST_NEAR, MIST_FAR);
     this.sun.shadow.camera.left = -SHADOW_REACH;
     this.sun.shadow.camera.right = SHADOW_REACH;
     this.sun.shadow.camera.top = SHADOW_REACH;
@@ -293,7 +294,6 @@ export class GroveView {
       leaf.blade.scale.setScalar(1.25);
       leaf.halo.scale.setScalar(3.6 + Math.sin(WIND.time.value * 3) * 0.3);
     }
-    levelView.forest.update(WIND.time.value);
 
     // Camera: follow smoothly, slower up and down so jumps do not shake the view,
     // and never chase a falling hero into the mist.
@@ -303,6 +303,10 @@ export class GroveView {
     this.follow.y = ease(this.follow.y, followY, game.grounded ? 5 : 2.6, dt);
     this.aimCamera();
     this.aimSun();
+    // Only the stretch of the grove near the camera is drawn: the mist hides the rest.
+    levelView.forest.update(WIND.time.value, this.follow.z);
+    levelView.scatter.show(this.follow.z);
+    for (const piece of levelView.pieces) piece.shape.visible = inView(piece.near, piece.far, this.follow.z);
     levelView.forest.sky.position.copy(this.camera.position);
 
     if (this.composer) this.composer.render();

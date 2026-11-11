@@ -17,9 +17,8 @@ describe.each(DIFFICULTIES)('a full run of the Bouncing Grove on %s', (difficult
     expect(summary.complete).toBe(true);
     expect(summary.falls).toBe(0);
     expect(summary).toMatchObject({ level: 'The Bouncing Grove', difficulty, hero });
-    // A clean run is short: this is one small area.
-    expect(summary.seconds).toBeGreaterThan(8);
-    expect(summary.seconds).toBeLessThan(60);
+    expect(summary.seconds).toBeGreaterThan(15);
+    expect(summary.seconds).toBeLessThan(90);
   });
 
   it('crosses every part of the route in order', () => {
@@ -74,13 +73,12 @@ describe('falling in the Bouncing Grove', () => {
   });
 
   it('on Hard a fall from the stumps returns all the way to the first bank', () => {
-    expect(GROVE_DIFFICULTY.hard.safeBanks).toBe(1);
+    expect(GROVE_DIFFICULTY.hard.checkpoints).not.toContain(1);
     expect(fallFrom('hard', 'stump-2').groundId).toBe('bank-start');
   });
 
-  it('a fall near the end returns to the second bank on Easy, and the first on Hard', () => {
-    expect(fallFrom('easy', 'high-log').groundId).toBe('bank-2');
-    expect(fallFrom('hard', 'high-log').groundId).toBe('bank-start');
+  it('a fall from the high log returns to the clearing on every difficulty', () => {
+    for (const difficulty of DIFFICULTIES) expect(fallFrom(difficulty, 'high-log').groundId).toBe('bank-2');
   });
 
   it('a hero can finish after falling', () => {

@@ -35,6 +35,12 @@ export interface Leaf {
   radius: number;
 }
 
+/** One stretch of a level built around one idea, ending on a bank. */
+export interface Section {
+  name: string;
+  solids: string[];
+}
+
 export interface Level {
   name: string;
   solids: Solid[];
@@ -50,6 +56,8 @@ export interface Level {
   ledgeHelp: number;
   /** Ids of the solids in the order a run crosses them, start to goal. */
   route: string[];
+  /** The level's sections in order, each with the ids of its solids in route order. */
+  sections?: Section[];
   /** Short prompts, each shown the first time the hero stands on that solid. */
   hints?: Record<string, string>;
   /** The line shown when the leaf is reached. */

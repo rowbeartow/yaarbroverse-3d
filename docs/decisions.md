@@ -160,3 +160,27 @@ Supersedes: none
 ## 2026-11-11 A hero with three gaits is in one at a time, chosen by pace, and all three share one clock
 Reason: A four-legged hero's gaits put the paws down in different orders, so a steady mix of two would shuffle and slide. Caputo walks up to 0.34 of top speed, trots up to 0.68 and gallops above, and changes back at 0.63 and 0.30, so a pace held near a change does not flick between gaits. The change is a fade of about a tenth of a second. The rig script times the three clips so each paw is as near as it can be to the same point of its step at the same share of each clip, and the game plays them all on one clock, so a change of gait carries on in mid stride. Yaarbro, with two gaits, still mixes walk and run by pace.
 Supersedes: none
+
+## 2026-11-11 Milestone three comes in two parts, and part one is the longer route alone
+Reason: The owner's call after the first playtest: the kids loved it and want more to play. Part one makes the grove a full level with what the heroes can already do (walk, jump, mushroom bounce). Enemies, hearts, the roll and the pounce are part two, in a later session.
+Supersedes: none
+
+## 2026-11-11 The longer grove is six sections, each built around one idea and ending on a mossy bank
+Reason: The owner approved the route plan: The Broken Logs, The Stump Steps, The Ravine, The Mushroom Springs, The High Boughs, The Climb. A perfect run on Normal takes about a minute. Every piece comes from the Caputo Mountain forest (logs with breaks, mossy banks, mushroom springs, root shelves, a ravine, high boughs, a climb that starts with a spring, the golden leaf), apart from plain scenery (stumps, tall snags, the great cedar). Nothing moves, because the forest has no moving platform. The clearing after the stumps, the air beside the high boughs and the bank at the foot of the climb are kept clear for an enemy each in part two.
+Supersedes: none
+
+## 2026-11-11 Which banks are checkpoints is a list per difficulty
+Reason: The owner's rule: on Easy and Normal a fall returns the hero to the last bank; on Hard a fall never costs more than about 30 seconds of a perfect run. `checkpoints` in the level's `difficulty.ts` lists the safe banks, and `tests/sections.test.ts` measures the cost of a fall with the bot.
+Supersedes: "A fall returns the hero to the last safe mossy bank. No hearts yet.", for the line that only the first bank is safe on Hard. The rest of that entry stands.
+
+## 2026-11-11 The level opens with a short hop before its first real jump
+Reason: The playtest: the first set of jumps was hard for the kids to figure out. The first break in the logs is short on every difficulty (`firstLogGap`), and the breaks after it are the real jumps.
+Supersedes: none
+
+## 2026-11-11 Scenery is built in stretches of route, and only the stretches near the hero are drawn
+Reason: The owner's rule for the longer level: draw only what is near enough to matter, and hold the frame-rate targets. Mist hides everything past 165 m, so stretches beyond it, or behind the camera, are left out, and deep in the mist trees wear lighter crowns. `src/view/route.ts` holds the distances and the rule, with tests.
+Supersedes: none
+
+## 2026-11-11 The browser checks on GitHub run inside Playwright's container image, pinned to the version in package.json
+Reason: The owner's call. The jobs used to install the test browser and its system packages from Ubuntu's servers on every run, and four runs in a row failed before any test because GitHub's machines could not reach those servers. The container image already holds the browsers and packages. `scripts/check-playwright-image.mjs` fails the checks if the image is not for the Playwright version `package.json` installs.
+Supersedes: none

@@ -13,7 +13,11 @@ import type { Difficulty } from '../../game/difficulty';
 export interface GroveNumbers {
   /** How wide the fallen logs are. Wider is easier to stay on. */
   logWidth: number;
-  /** The break in the first log that you jump across. */
+  /** How many logs lie end to end at the start. There is a break between each pair. */
+  logCount: number;
+  /** The first break: a short hop, so the first jump of the level is a gentle one. */
+  firstLogGap: number;
+  /** Every break after the first. */
   logGap: number;
   /** How many tree stumps to hop across. */
   stumpCount: number;
@@ -30,10 +34,11 @@ export interface GroveNumbers {
   /** How many mushrooms in a row you bounce across to reach the leaf (1 to 3). */
   mushroomChain: number;
   /**
-   * How many of the three mossy banks are safe. A fall returns you to the last
-   * safe bank you stood on. 3 means every bank; 1 means only the first.
+   * Which mossy banks are checkpoints, counting the banks after the first one
+   * (which is always safe). A fall returns you to the last safe bank you stood
+   * on. A bank left out of the list is bare stone.
    */
-  safeBanks: number;
+  checkpoints: readonly number[];
   /** After walking off an edge, Jump still works for this long. */
   coyoteTime: number;
   /** Feet this far below a ledge still get lifted onto it. */
@@ -43,43 +48,49 @@ export interface GroveNumbers {
 export const GROVE_DIFFICULTY: Record<Difficulty, GroveNumbers> = {
   easy: {
     logWidth: 2.6,
+    logCount: 3,
+    firstLogGap: 0.8,
     logGap: 1.4,
-    stumpCount: 3,
+    stumpCount: 4,
     stumpRadius: 1.5,
     stumpGap: 1.2,
     stumpRise: 0.25,
     mushroomRadius: 1.5,
     mushroomGap: 0.8,
     mushroomChain: 1,
-    safeBanks: 3,
+    checkpoints: [1, 2],
     coyoteTime: 0.2,
     ledgeHelp: 0.5,
   },
   normal: {
     logWidth: 1.6,
+    logCount: 4,
+    firstLogGap: 1.2,
     logGap: 2.4,
-    stumpCount: 4,
+    stumpCount: 6,
     stumpRadius: 1.1,
     stumpGap: 2.0,
     stumpRise: 0.4,
     mushroomRadius: 1.15,
     mushroomGap: 1.6,
     mushroomChain: 2,
-    safeBanks: 3,
+    checkpoints: [1, 2],
     coyoteTime: 0.12,
     ledgeHelp: 0.3,
   },
   hard: {
     logWidth: 1.0,
+    logCount: 5,
+    firstLogGap: 1.8,
     logGap: 3.6,
-    stumpCount: 5,
+    stumpCount: 7,
     stumpRadius: 0.75,
     stumpGap: 3.0,
     stumpRise: 0.5,
     mushroomRadius: 0.8,
     mushroomGap: 2.6,
     mushroomChain: 3,
-    safeBanks: 1,
+    checkpoints: [2],
     coyoteTime: 0.06,
     ledgeHelp: 0.15,
   },
@@ -89,5 +100,5 @@ export const GROVE_DIFFICULTY: Record<Difficulty, GroveNumbers> = {
 export const GROVE_BLURB: Record<Difficulty, string> = {
   easy: 'Wide logs, short hops, every mossy bank is safe',
   normal: 'The grove as it comes',
-  hard: 'Thin logs, long jumps, only the first bank is safe',
+  hard: 'Thin logs, long jumps, few safe banks',
 };
