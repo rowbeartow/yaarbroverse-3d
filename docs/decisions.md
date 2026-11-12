@@ -256,3 +256,7 @@ Supersedes: the loudness order in "Sound starts on the first tap or key press, a
 ## 2026-11-12 A landing sounds like the surface, and a jump is a quiet push-off
 Reason: The owner's call: the jump and landing recordings sounded clanky. A landing is now two soft footsteps of what the hero lands on (moss or wood), a moment apart, with a low soft thump made in code under them. A jump is one quiet footstep of what the hero leaves. Neither has a recording of its own any more.
 Supersedes: the jump and landing recordings in "Sounds are recordings; a sound is made in code only where it holds up beside one". The rest of that entry stands.
+
+## 2026-11-12 The mix is the owner's six numbers, set by ear
+Reason: His settings from the mixer page: master -12, music -14, warnings and hits -17, jumps and landings -22, footsteps -9, menu -12, in decibels. They are `MIX` in `src/audio/sounds.ts`. Measured, normal play comes out at about -34.4 LUFS with the music 5.9 decibels under the effects and no peak over -11.7 dB: quieter than the -23 LUFS he first aimed for, and with less than 10 decibels between music and effects. His ears outrank the numbers. Warnings and hits now sit 8 decibels under footsteps as groups; he was told, and the levels stand unless he changes them.
+Supersedes: the two numbers (-23 LUFS, music at least 10 decibels under the effects) in "The mix is quiet and soft: about -23 LUFS in normal play, music at least 10 decibels under the effects". The rest of that entry stands.

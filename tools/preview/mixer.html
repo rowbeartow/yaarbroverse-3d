@@ -78,13 +78,13 @@
   <header>
     <p class="eyebrow">Yaarbroverse 3D</p>
     <h1>Set how loud each kind of sound is</h1>
-    <p class="lede">The game's real sounds, through the game's real wiring. Play the sample, move the sliders until it sounds right, then send me the line at the bottom.</p>
+    <p class="lede">The game's real sounds, through the game's real wiring. Play the sample, move the sliders until it sounds right, then send me the line at the bottom. The sliders start at the levels the game has now.</p>
   </header>
 
   <div class="row">
     <button type="button" id="sample">Play the sample run</button>
     <button type="button" id="click">Play a menu click</button>
-    <button type="button" id="reset">Back to my starting levels</button>
+    <button type="button" id="reset">Back to the game's levels</button>
   </div>
   <p id="status" role="status">Loading…</p>
   <p class="hint">The sample, about 13 seconds: music under footsteps on moss, a jump and a landing on moss, footsteps on wood, a jump and a landing on wood, a mushroom bounce, a marmot warning, a hit, a checkpoint. It repeats until you stop it.</p>
@@ -93,7 +93,7 @@
 
   <section class="settings">
     <h2>Your settings</h2>
-    <p class="hint">In decibels. 0 is the loudest a slider goes; every 6 down is about half as loud. Copy this line and send it to me, or just say OK to keep my starting levels.</p>
+    <p class="hint">In decibels. 0 is the loudest a slider goes; every 6 down is about half as loud. Copy this line and send it to me.</p>
     <textarea id="line" readonly rows="2" aria-label="Your settings, to copy"></textarea>
     <div class="row"><button type="button" id="copy">Copy</button></div>
   </section>
@@ -104,7 +104,7 @@
   <section class="words">
     <h2>What changed since you played</h2>
     <ul>
-      <li><b>Everything is much quieter.</b> At my starting levels, normal play (music, footsteps, jumps and landings together) measures -23.5 LUFS, the level you asked for. The music alone sits 11.7 dB under the effects, and is about 6 dB quieter than it was.</li>
+      <li><b>Everything is much quieter.</b> The sliders start at the levels now in the game, which are the ones you set: master -12, music -14, warnings -17, jumps -22, footsteps -9, menu -12. Normal play (music, footsteps, jumps and landings together) measures -34.4 LUFS at those levels, with the music 5.9 dB under the effects.</li>
       <li><b>Everything is softer.</b> The top end above 6,000 hertz is turned down by 9 decibels, every sound now fades in over a few thousandths of a second instead of starting at full, and a soft limiter on the master eases down anything over a third of full and lets nothing past seven tenths.</li>
       <li><b>The clanky jump and landing are gone.</b> A landing is now two soft footsteps of the surface (moss or wood) with a low, soft thump under them. A jump is one quiet footstep of the surface as a push-off. There is no separate jump sound.</li>
       <li><b>Footsteps and menu clicks</b> sit well under everything else. Warnings, hits and checkpoints are still the clearest, and the music dips under them.</li>
@@ -114,7 +114,8 @@
   <section class="words">
     <h2>What you should know</h2>
     <ul>
-      <li><b>I cannot hear this.</b> The starting levels come from measurement, not from listening. That is why the sliders are here.</li>
+      <li><b>I cannot hear this.</b> The levels are yours, set by ear.</li>
+      <li><b>Warnings and hits now sit 8 dB under footsteps.</b> If the kids miss a marmot warning in play, raise that slider and send me the new line.</li>
       <li><b>Set your Mac's own volume where the kids usually have it</b> before you start, then leave it alone.</li>
       <li><b>If something is harsh or clanky and no slider fixes it</b>, tell me which sound. That is a different recording or more softening, not a level.</li>
       <li><b>Not in the sample:</b> the roll, the pounce, falling, out of hearts, the mosquito and the leaf tune. They follow their group's slider. The leaf tune follows Music.</li>
@@ -123,7 +124,7 @@
 
   <section class="words">
     <h2>Your call</h2>
-    <p>Send me the settings line, or reply OK to keep the starting levels. I will put them in the game, check the live site, and merge.</p>
+    <p>To change the mix again, send me a new settings line and I will put it in the game.</p>
   </section>
 </main>
 

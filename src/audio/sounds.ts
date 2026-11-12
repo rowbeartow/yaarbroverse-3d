@@ -25,15 +25,17 @@ export type Group = 'cue' | 'action' | 'step' | 'menu' | 'music';
  * loudness every short sound is brought to when it loads; minus 6 is about
  * half as loud. These are the numbers the owner sets on the mixer page.
  *
- * As they stand, normal play (music, footsteps, jumps and landings together)
- * measures about -23.5 LUFS, with the music 11.7 decibels under the effects.
+ * These are the owner's own settings, made by ear on the mixer page on
+ * 2026-11-12. They measure about -34.4 LUFS in normal play (music, footsteps,
+ * jumps and landings together), with the music 5.9 decibels under the effects
+ * and no peak over -11.7 dB. His ears outrank the earlier aim of -23 LUFS.
  * After changing them, measure again: tools/preview/mix-measure.mjs.
  */
 export const MIX: Record<Group | 'master', number> = {
-  master: -3,
+  master: -12,
   music: -14,
-  cue: -2,
-  action: -5,
+  cue: -17,
+  action: -22,
   step: -9,
   menu: -12,
 };

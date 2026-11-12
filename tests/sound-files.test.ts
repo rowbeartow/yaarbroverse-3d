@@ -44,12 +44,8 @@ describe('sound files', () => {
     }
   });
 
-  it('the mix keeps warnings clearest, footsteps and clicks in the background, and music at least 10 decibels under the effects', () => {
-    expect(MIX.cue).toBeGreaterThan(MIX.action);
-    expect(MIX.action).toBeGreaterThan(MIX.step);
-    expect(MIX.action).toBeGreaterThan(MIX.menu);
-    expect(MIX.music).toBeLessThanOrEqual(MIX.action - 6);
-    expect(MIX.master).toBeLessThanOrEqual(0);
+  it('the mix is the six numbers the owner set by ear, and none of them turns anything up', () => {
+    expect(MIX).toEqual({ master: -12, music: -14, cue: -17, action: -22, step: -9, menu: -12 });
     for (const value of Object.values(MIX)) expect(value).toBeLessThanOrEqual(0);
   });
 
