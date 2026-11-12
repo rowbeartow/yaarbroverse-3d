@@ -1,0 +1,119 @@
+<title>Grove Sound Board</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<style>
+  /* Layout: one column of groups. Each sound is a row: a round play button,
+     its name, when it plays, and where it comes from. Colours and type are
+     the game's own, the same as the other preview pages. */
+  :root {
+    --paper: #fff6dd;
+    --card: #fffbee;
+    --edge: #e9d7a6;
+    --ink: #1b2a24;
+    --quiet: #4d6157;
+    --moss: #2f6b3f;
+    --gold: #f2c14e;
+    --gold-deep: #b97f12;
+    --on-gold: #1b2a24;
+    --font-text: 'Avenir Next', 'Trebuchet MS', 'Segoe UI', system-ui, sans-serif;
+    --font-title: Georgia, 'Iowan Old Style', 'Times New Roman', serif;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --paper: #14261f; --card: #1d3a33; --edge: #3b5a4c; --ink: #fff6dd; --quiet: #b9c9b6;
+      --moss: #9ed49a; --gold: #f2c14e; --gold-deep: #f7d98a; --on-gold: #1b2a24; color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --paper: #14261f; --card: #1d3a33; --edge: #3b5a4c; --ink: #fff6dd; --quiet: #b9c9b6;
+    --moss: #9ed49a; --gold: #f2c14e; --gold-deep: #f7d98a; --on-gold: #1b2a24; color-scheme: dark;
+  }
+  * { box-sizing: border-box; }
+  body { background: var(--paper); color: var(--ink); font-family: var(--font-text); font-size: 16px; line-height: 1.5; }
+  body { background: var(--paper); color: var(--ink); font-family: var(--font-text); font-size: 16px; line-height: 1.5; }
+  .page {
+    max-width: 860px; margin: 0 auto; padding-block: 28px 48px;
+    padding-left: max(16px, env(safe-area-inset-left, 0px));
+    padding-right: max(16px, env(safe-area-inset-right, 0px));
+    display: grid; gap: 22px;
+  }
+  .page > * { min-width: 0; }
+  .eyebrow { margin: 0; color: var(--moss); font-size: 13px; font-weight: 700; letter-spacing: 0.22em; text-transform: uppercase; }
+  h1 { margin: 2px 0 6px; font-family: var(--font-title); font-size: clamp(30px, 6vw, 44px); line-height: 1.1; text-wrap: balance; }
+  h2 { margin: 0; font-family: var(--font-title); font-size: 26px; line-height: 1.2; text-wrap: balance; }
+  h3 { margin: 0; font-family: var(--font-title); font-size: 19px; line-height: 1.25; display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 10px; }
+  p { margin: 0; max-width: 65ch; }
+  .lede { color: var(--quiet); font-size: 17px; }
+  .note { color: var(--quiet); font-size: 14px; }
+  #status { color: var(--moss); font-weight: 700; }
+
+  #groups { display: grid; gap: 34px; }
+  .group { display: grid; gap: 4px; min-width: 0; }
+  .group > h2 { padding-bottom: 6px; border-bottom: 3px solid var(--edge); }
+  .group > .note { padding-top: 8px; }
+  .sound { display: grid; grid-template-columns: 56px minmax(0, 1fr); gap: 16px; align-items: start; padding: 14px 0; border-bottom: 1px solid var(--edge); }
+  .about { display: grid; gap: 3px; min-width: 0; }
+  .what { font-size: 15px; }
+  .credit { color: var(--quiet); font-size: 13px; }
+  .tag { color: var(--moss); font: 700 12px var(--font-text); letter-spacing: 0.04em; }
+  .play {
+    width: 56px; height: 56px; border-radius: 50%; border: 3px solid var(--gold-deep); background: var(--gold);
+    display: grid; place-items: center; cursor: pointer; padding: 0;
+  }
+  .play:focus-visible { outline: 3px solid var(--moss); outline-offset: 3px; }
+  .play:active { transform: scale(0.94); }
+  .tri { width: 0; height: 0; margin-left: 5px; border-left: 18px solid var(--on-gold); border-top: 11px solid transparent; border-bottom: 11px solid transparent; }
+  /* Playing: the triangle becomes a square, as on any player. */
+  .play.on { background: var(--card); }
+  .play.on .tri { margin-left: 0; width: 18px; height: 18px; border: 0; background: var(--gold-deep); border-radius: 3px; }
+  @media (prefers-reduced-motion: reduce) { .play:active { transform: none; } }
+
+  section.words { display: grid; gap: 12px; }
+  ul { margin: 0; padding-left: 20px; max-width: 70ch; }
+  li + li { margin-top: 6px; }
+  .rule { border: 0; border-top: 3px solid var(--edge); margin: 4px 0; }
+</style>
+
+<main class="page">
+  <header>
+    <p class="eyebrow">Yaarbroverse 3D</p>
+    <h1>Sounds and music for the Bouncing Grove</h1>
+    <p class="lede">Every sound the game will make, and its music, each with a play button. Nothing here is in the game until you say OK.</p>
+  </header>
+
+  <p id="status" role="status">Loading the sounds…</p>
+
+  <div id="groups"></div>
+
+  <hr class="rule">
+
+  <!-- Hand-written for each change: bring it up to date before publishing. -->
+  <section class="words">
+    <h2>What to listen for</h2>
+    <ul>
+      <li><b>Anything harsh, sharp or startling.</b> The players are kids. The two I would check first are the marmot scout's whistle (the highest sound here) and the mosquito's whine.</li>
+      <li><b>Anything that jumps out as louder than the rest.</b> Start the grove music, then go down the page pressing play. Every sound was brought to one loudness by measurement and then set against the others by its job: warnings, hits and checkpoints on top, what the hero does under them, footsteps under that, music under everything.</li>
+      <li><b>Whether the two warnings are easy to tell apart</b>, from each other and from everything else. They are what make the enemies fair to dodge.</li>
+      <li><b>The grove music.</b> Is it calm enough to hear for ten minutes, and does it sound like this forest? "Peaceful Forest" under Other choices is ready if not.</li>
+      <li><b>The golden leaf tune.</b> I wrote it in code: seven bell notes climbing a bright chord. If it sounds thin beside the music, the short steel-drum "ta-da" under Other choices is the fallback, or tell me what it should feel like.</li>
+    </ul>
+  </section>
+
+  <section class="words">
+    <h2>What you should know</h2>
+    <ul>
+      <li><b>I cannot hear any of this.</b> I chose recordings by their descriptions, licenses and measurements (length, loudness, how bright, which key), and built the made-in-code sounds from pitches and shapes that are gentle by design. You are the first to hear them. Trust your ears over my descriptions.</li>
+      <li><b>Nothing came from the 2D game.</b> Caputo Mountain has no sound or music files, only placeholder beeps in its fishing code.</li>
+      <li><b>Recorded: seven footsteps and the grove music</b>, all CC0 from OpenGameArt. <b>Made in code: everything else</b>, so those add nothing to the download.</li>
+      <li><b>The mosquito's hovering whine is an extra</b>, not on your list. It is how the mosquito gets heard before it is on screen. Say no and it goes.</li>
+      <li><b>Caputo's footsteps are Yaarbro's</b>, made quieter, lighter and softer. There is no separate cat recording.</li>
+      <li><b>Size:</b> 1.27 MB of sound files, against the 4 MB allowed.</li>
+    </ul>
+  </section>
+
+  <section class="words">
+    <h2>Your call</h2>
+    <p>Reply OK and I will put all of it into the game. Or name what to change, sound by sound, in your own words: "the jump is too squeaky", "the whistle hurts", "use Peaceful Forest".</p>
+  </section>
+</main>
+
+<script type="module" src="sounds.js"></script>

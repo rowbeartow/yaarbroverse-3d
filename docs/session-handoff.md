@@ -27,6 +27,17 @@ The branches `claude/part-two-step-3`, `-4` and `-5` were safety copies made whi
 - Why: GitHub's outage on 2026-11-11 left three runs stuck in the queue, and they are still there: publish run 20 for pull request 24 (https://github.com/rowbeartow/yaarbroverse-3d/actions/runs/43097921897 ), and two runs of the checks (43097921924 and 43098011488).
 - **The guard does not cover that stuck publish run.** A run uses the workflow file of its own commit, and run 20's commit is from before the guard. If GitHub ever starts it, it would publish pull request 24's version, and the live site would stay on that until the next merge to main (or until someone runs "Publish the game" by hand from main: Actions, Publish the game, Run workflow). Cancelling it was tried on 2026-11-12 and GitHub refused ("Cannot cancel a workflow run that has not been queued yet"). The owner can try Cancel or Delete on the run's page.
 
+**Milestone four is sound and music, in three pull requests.** The first (pull request 30, the publish guard) is merged. The second is sourcing and the sound board. The third, wiring sound into the game, waits for the owner's OK on the board.
+
+- **The sound board** is at https://claude.ai/artifact/RTKmtRe5ttBzn6Rg7zYL9c : every sound and the music, each with a play button. The owner has not answered yet. Nothing is wired into the game.
+- **What is recorded** (`assets/audio/`, 1.27 MB, all CC0 from OpenGameArt, credited in `CREDITS.md`): four footsteps on moss, three on wood, and the grove music ("Forest Whisper Theme" by Cleyton Kauffman, 1 minute 22 seconds).
+- **What is made in code** (`src/audio/synth.ts`): everything else, and the golden leaf tune. Each is a recipe of tones and filtered hiss, drawn once into a buffer and brought to one common loudness. `src/audio/sounds.ts` lists every sound with its job and its level against the others.
+- **Nothing came from the 2D game.** It has no sound or music files, only placeholder beeps in its fishing code.
+- **Offered beside the picks, and not in the repo:** "Peaceful Forest" by Samza (CC0, https://opengameart.org/content/peaceful-forest ) as a second choice of music, and `jingles_STEEL00` from Kenney's "85 Short music jingles" (CC0, https://opengameart.org/content/85-short-music-jingles ) as a second choice of leaf tune.
+- **An extra the owner did not ask for:** the mosquito's hovering whine, so it is heard before it is on screen. The board says he can refuse it.
+- **A cloud session cannot hear.** The recordings were chosen by description, license and measurement; the recipes are gentle by design (nothing pure above 1,600 hertz, soft starts, a limiter). Only the owner has ears on this.
+- To rebuild the board: `node tools/preview/sounds.mjs <folder> [<extras folder>]`, and publish it over the address above. kenney.nl refuses downloads from a script, so Kenney's packs were taken from his OpenGameArt pages.
+
 **What nobody has checked yet, and the owner is the one who can:**
 
 1. **Whether the roll and the pounce feel right to the kids**, and whether the touch button is where a thumb finds it.
