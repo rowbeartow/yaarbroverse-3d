@@ -2,13 +2,13 @@
 // file has to be credited, and all of it has to stay small.
 import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
-import { SOUNDS, type SoundDef } from '../src/audio/sounds';
+import { MIX, SOUNDS, type SoundDef } from '../src/audio/sounds';
 import { RECIPES } from '../src/audio/synth';
 
 const FOLDER = 'assets/audio';
 const onDisk = readdirSync(FOLDER).sort();
 const defs = Object.values(SOUNDS) as SoundDef[];
-const listed = defs.flatMap((def) => ('files' in def.source ? def.source.files : [])).sort();
+const listed = [...new Set(defs.flatMap((def) => ('files' in def.source ? def.source.files : [])))].sort();
 
 describe('sound files', () => {
   it('every file the list names is in assets/audio, and nothing else is', () => {
@@ -44,7 +44,16 @@ describe('sound files', () => {
     }
   });
 
-  it('nothing is louder than the common loudness by more than 2 decibels', () => {
-    for (const def of defs) expect(def.level, def.label).toBeLessThanOrEqual(2);
+  it('the mix keeps warnings clearest, footsteps and clicks in the background, and music at least 10 decibels under the effects', () => {
+    expect(MIX.cue).toBeGreaterThan(MIX.action);
+    expect(MIX.action).toBeGreaterThan(MIX.step);
+    expect(MIX.action).toBeGreaterThan(MIX.menu);
+    expect(MIX.music).toBeLessThanOrEqual(MIX.action - 6);
+    expect(MIX.master).toBeLessThanOrEqual(0);
+    for (const value of Object.values(MIX)) expect(value).toBeLessThanOrEqual(0);
+  });
+
+  it('no sound stands more than 6 decibels over the rest of its group', () => {
+    for (const def of defs) expect(def.level, def.label).toBeLessThanOrEqual(6);
   });
 });

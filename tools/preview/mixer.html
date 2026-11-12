@@ -1,0 +1,130 @@
+<title>Grove Sound Mixer</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<style>
+  /* Layout: one column. A big play button, then one slider for each group of
+     sounds, then the line of settings to copy back. Colours and type are
+     the game's own, the same as the other preview pages. */
+  :root {
+    --paper: #fff6dd;
+    --card: #fffbee;
+    --edge: #e9d7a6;
+    --ink: #1b2a24;
+    --quiet: #4d6157;
+    --moss: #2f6b3f;
+    --gold: #f2c14e;
+    --gold-deep: #b97f12;
+    --on-gold: #1b2a24;
+    --font-text: 'Avenir Next', 'Trebuchet MS', 'Segoe UI', system-ui, sans-serif;
+    --font-title: Georgia, 'Iowan Old Style', 'Times New Roman', serif;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --paper: #14261f; --card: #1d3a33; --edge: #3b5a4c; --ink: #fff6dd; --quiet: #b9c9b6;
+      --moss: #9ed49a; --gold: #f2c14e; --gold-deep: #f7d98a; --on-gold: #1b2a24; color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --paper: #14261f; --card: #1d3a33; --edge: #3b5a4c; --ink: #fff6dd; --quiet: #b9c9b6;
+    --moss: #9ed49a; --gold: #f2c14e; --gold-deep: #f7d98a; --on-gold: #1b2a24; color-scheme: dark;
+  }
+  * { box-sizing: border-box; }
+  body { background: var(--paper); color: var(--ink); font-family: var(--font-text); font-size: 16px; line-height: 1.5; }
+  .page {
+    max-width: 720px; margin: 0 auto; padding-block: 28px 48px;
+    padding-left: max(16px, env(safe-area-inset-left, 0px));
+    padding-right: max(16px, env(safe-area-inset-right, 0px));
+    display: grid; gap: 22px;
+  }
+  .page > * { min-width: 0; }
+  .eyebrow { margin: 0; color: var(--moss); font-size: 13px; font-weight: 700; letter-spacing: 0.22em; text-transform: uppercase; }
+  h1 { margin: 2px 0 6px; font-family: var(--font-title); font-size: clamp(30px, 6vw, 44px); line-height: 1.1; text-wrap: balance; }
+  h2 { margin: 0; font-family: var(--font-title); font-size: 24px; line-height: 1.2; text-wrap: balance; }
+  p { margin: 0; max-width: 65ch; }
+  .lede { color: var(--quiet); font-size: 17px; }
+  #status { color: var(--moss); font-weight: 700; min-height: 1.5em; }
+
+  .row { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+  button {
+    min-height: 44px; padding: 0 18px; border: 2px solid var(--edge); border-radius: 999px;
+    background: var(--card); color: var(--ink); font: 700 15px var(--font-text); cursor: pointer;
+  }
+  button:focus-visible, input:focus-visible, textarea:focus-visible { outline: 3px solid var(--moss); outline-offset: 2px; }
+  #sample { min-height: 56px; padding: 0 28px; border: 3px solid var(--gold-deep); background: var(--gold); color: var(--on-gold); font-size: 18px; }
+  #sample.on { background: var(--card); color: var(--ink); }
+
+  #sliders { display: grid; gap: 4px; }
+  .slider {
+    display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 2px 12px; align-items: baseline;
+    padding: 12px 0; border-bottom: 1px solid var(--edge);
+  }
+  .slider.master { padding: 14px 16px; border: 3px solid var(--edge); border-radius: 16px; background: var(--card); margin-bottom: 8px; }
+  .slider label { font: 700 18px var(--font-title); }
+  .slider output { font: 700 17px var(--font-text); font-variant-numeric: tabular-nums; color: var(--moss); }
+  .slider input { grid-column: 1 / -1; width: 100%; height: 36px; accent-color: var(--gold-deep); }
+  .hint { grid-column: 1 / -1; color: var(--quiet); font-size: 13px; }
+
+  .settings { display: grid; gap: 8px; padding: 16px 18px; border: 3px solid var(--edge); border-radius: 16px; background: var(--card); }
+  #line {
+    width: 100%; min-height: 3.2em; padding: 10px 12px; border: 2px solid var(--edge); border-radius: 10px; resize: none;
+    background: var(--paper); color: var(--ink); font: 600 15px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  }
+  section.words { display: grid; gap: 12px; }
+  ul { margin: 0; padding-left: 20px; max-width: 70ch; }
+  li + li { margin-top: 6px; }
+  .rule { border: 0; border-top: 3px solid var(--edge); margin: 4px 0; }
+</style>
+
+<main class="page">
+  <header>
+    <p class="eyebrow">Yaarbroverse 3D</p>
+    <h1>Set how loud each kind of sound is</h1>
+    <p class="lede">The game's real sounds, through the game's real wiring. Play the sample, move the sliders until it sounds right, then send me the line at the bottom.</p>
+  </header>
+
+  <div class="row">
+    <button type="button" id="sample">Play the sample run</button>
+    <button type="button" id="click">Play a menu click</button>
+    <button type="button" id="reset">Back to my starting levels</button>
+  </div>
+  <p id="status" role="status">Loading…</p>
+  <p class="hint">The sample, about 13 seconds: music under footsteps on moss, a jump and a landing on moss, footsteps on wood, a jump and a landing on wood, a mushroom bounce, a marmot warning, a hit, a checkpoint. It repeats until you stop it.</p>
+
+  <div id="sliders"></div>
+
+  <section class="settings">
+    <h2>Your settings</h2>
+    <p class="hint">In decibels. 0 is the loudest a slider goes; every 6 down is about half as loud. Copy this line and send it to me, or just say OK to keep my starting levels.</p>
+    <textarea id="line" readonly rows="2" aria-label="Your settings, to copy"></textarea>
+    <div class="row"><button type="button" id="copy">Copy</button></div>
+  </section>
+
+  <hr class="rule">
+
+  <!-- Hand-written for each change: bring it up to date before publishing. -->
+  <section class="words">
+    <h2>What changed since you played</h2>
+    <ul>
+      <li><b>Everything is much quieter.</b> At my starting levels, normal play (music, footsteps, jumps and landings together) measures -23.5 LUFS, the level you asked for. The music alone sits 11.7 dB under the effects, and is about 6 dB quieter than it was.</li>
+      <li><b>Everything is softer.</b> The top end above 6,000 hertz is turned down by 9 decibels, every sound now fades in over a few thousandths of a second instead of starting at full, and a soft limiter on the master eases down anything over a third of full and lets nothing past seven tenths.</li>
+      <li><b>The clanky jump and landing are gone.</b> A landing is now two soft footsteps of the surface (moss or wood) with a low, soft thump under them. A jump is one quiet footstep of the surface as a push-off. There is no separate jump sound.</li>
+      <li><b>Footsteps and menu clicks</b> sit well under everything else. Warnings, hits and checkpoints are still the clearest, and the music dips under them.</li>
+    </ul>
+  </section>
+
+  <section class="words">
+    <h2>What you should know</h2>
+    <ul>
+      <li><b>I cannot hear this.</b> The starting levels come from measurement, not from listening. That is why the sliders are here.</li>
+      <li><b>Set your Mac's own volume where the kids usually have it</b> before you start, then leave it alone.</li>
+      <li><b>If something is harsh or clanky and no slider fixes it</b>, tell me which sound. That is a different recording or more softening, not a level.</li>
+      <li><b>Not in the sample:</b> the roll, the pounce, falling, out of hearts, the mosquito and the leaf tune. They follow their group's slider. The leaf tune follows Music.</li>
+    </ul>
+  </section>
+
+  <section class="words">
+    <h2>Your call</h2>
+    <p>Send me the settings line, or reply OK to keep the starting levels. I will put them in the game, check the live site, and merge.</p>
+  </section>
+</main>
+
+<script type="module" src="mixer.js"></script>

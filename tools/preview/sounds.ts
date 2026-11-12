@@ -4,20 +4,21 @@
 // (src/audio/sounds.ts) and played through the game's own recipes
 // (src/audio/synth.ts), so what is heard here is what the game will play.
 
-import { SOUNDS, STEP_VOICE, gainOf, type SoundDef, type SoundName } from '../../src/audio/sounds';
-import { evenOut, renderSynth } from '../../src/audio/synth';
+import { LIST, Turns, buildMix, loadBuffers, strike, type Buffers, type MixGraph } from '../../src/audio/graph';
+import { STEP_VOICE, gainOf, type Group, type SoundDef, type SoundName } from '../../src/audio/sounds';
+import { evenOut } from '../../src/audio/synth';
 
 interface Extra { label: string; what: string; file: string; credit: string; loop: boolean; level: number }
 interface Board { credits: Record<string, string>; extras: Extra[] }
 
 const board = (await (await fetch('media/board.json')).json()) as Board;
-const list = SOUNDS as Record<SoundName, SoundDef>;
+const list = LIST;
 
 let ctx: AudioContext | null = null;
-let master: GainNode;
-let musicBus: GainNode;
-const buffers = new Map<string, AudioBuffer>();
-const turn = new Map<string, number>();
+let graph: MixGraph;
+let buffers: Buffers;
+let turns: Turns;
+const problems: string[] = [];
 
 const bytesOf = async (file: string): Promise<ArrayBuffer> => {
   const text = await (await fetch(`media/${file}.txt`)).text();
@@ -27,8 +28,21 @@ const bytesOf = async (file: string): Promise<ArrayBuffer> => {
   return bytes.buffer;
 };
 
-/** A recorded file, decoded. Short ones are brought to the common loudness, as the game does. */
-const fileBuffer = async (file: string, even: boolean): Promise<AudioBuffer> => {
+/** The game's own wiring and levels (src/audio/graph.ts), so this page sounds as the game does. */
+const start = async (): Promise<AudioContext> => {
+  if (!ctx) {
+    const Maker = window.AudioContext ?? (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
+    ctx = new Maker();
+    graph = buildMix(ctx);
+    buffers = await loadBuffers(ctx, bytesOf, problems);
+    turns = new Turns(buffers);
+  }
+  if (ctx.state !== 'running') await ctx.resume();
+  return ctx;
+};
+
+/** A sound that is not in the game: one of the other choices. */
+const extraBuffer = async (file: string, even: boolean): Promise<AudioBuffer> => {
   const had = buffers.get(file);
   if (had) return had;
   const buffer = await ctx!.decodeAudioData(await bytesOf(file));
@@ -37,49 +51,12 @@ const fileBuffer = async (file: string, even: boolean): Promise<AudioBuffer> => 
   return buffer;
 };
 
-const synthBuffer = async (name: Parameters<typeof renderSynth>[0]): Promise<AudioBuffer> => {
-  const key = `synth:${name}`;
-  const had = buffers.get(key);
-  if (had) return had;
-  const buffer = await renderSynth(name);
-  buffers.set(key, buffer);
-  return buffer;
-};
-
-const start = async (): Promise<AudioContext> => {
-  if (!ctx) {
-    const Maker = window.AudioContext ?? (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
-    ctx = new Maker();
-    // The same safety net the game has: anything that adds up too loud is held down.
-    const limiter = ctx.createDynamicsCompressor();
-    limiter.threshold.value = -10;
-    limiter.knee.value = 8;
-    limiter.ratio.value = 12;
-    limiter.attack.value = 0.003;
-    limiter.release.value = 0.2;
-    master = ctx.createGain();
-    master.gain.value = 1.5;
-    master.connect(limiter).connect(ctx.destination);
-    musicBus = ctx.createGain();
-    musicBus.connect(master);
-  }
-  if (ctx.state !== 'running') await ctx.resume();
-  return ctx;
-};
-
-interface Voice { level: number; rate: number; soften: number }
-const PLAIN: Voice = { level: 0, rate: 1, soften: 0 };
+type Voice = keyof typeof STEP_VOICE;
+/** What a row plays: a sound from the game's list, or another choice with its own file. */
+type Item = { name: SoundName } | { file: string; mix: Group; level: number; loop: boolean };
 const playing = new Map<string, { source: AudioBufferSourceNode; gain: GainNode }>();
 
-/** The music dips while a cue plays, so the cue stays clear. */
-const dip = (seconds: number): void => {
-  const now = ctx!.currentTime;
-  musicBus.gain.cancelScheduledValues(now);
-  musicBus.gain.setTargetAtTime(0.45, now, 0.03);
-  musicBus.gain.setTargetAtTime(1, now + seconds + 0.1, 0.25);
-};
-
-const play = async (key: string, def: Pick<SoundDef, 'source' | 'bus' | 'level' | 'loop' | 'vary'>, voice: Voice, button: HTMLButtonElement): Promise<void> => {
+const play = async (key: string, item: Item, voice: Voice, button: HTMLButtonElement): Promise<void> => {
   const audio = await start();
   const going = playing.get(key);
   if (going) {
@@ -89,38 +66,29 @@ const play = async (key: string, def: Pick<SoundDef, 'source' | 'bus' | 'level' 
     button.classList.remove('on');
     return;
   }
-  let buffer: AudioBuffer;
-  if ('synth' in def.source) {
-    buffer = await synthBuffer(def.source.synth);
-  } else {
-    const n = turn.get(key) ?? 0;
-    turn.set(key, n + 1);
-    buffer = await fileBuffer(def.source.files[n % def.source.files.length]!, def.bus !== 'music');
+  const def = 'name' in item ? list[item.name] : null;
+  const loop = def ? def.loop ?? false : (item as { loop: boolean }).loop;
+  const long = def ? def.mix === 'music' : true;
+  if (def && 'name' in item && !loop && !long) {
+    // A single sound, played exactly as the game plays it.
+    strike(graph, turns, item.name, { voice });
+    return;
   }
+  const buffer = 'name' in item ? turns.next(item.name) : await extraBuffer(item.file, item.mix !== 'music');
+  if (!buffer) return;
   const source = audio.createBufferSource();
   source.buffer = buffer;
-  source.loop = def.loop ?? false;
-  source.playbackRate.value = voice.rate * (1 + (Math.random() * 2 - 1) * (def.vary ?? 0));
+  source.loop = loop;
   const gain = audio.createGain();
-  gain.gain.value = gainOf(def.level + voice.level);
-  let node: AudioNode = source;
-  if (voice.soften) {
-    const filter = audio.createBiquadFilter();
-    filter.type = 'lowpass';
-    filter.frequency.value = voice.soften;
-    node = source.connect(filter);
-  }
-  node.connect(gain).connect(def.bus === 'music' ? musicBus : master);
-  if (def.bus === 'cue' && !def.loop) dip(buffer.duration);
+  gain.gain.value = gainOf(def ? def.level : (item as { level: number }).level);
+  source.connect(gain).connect(graph.groups[def ? def.mix : (item as { mix: Group }).mix]);
   source.start();
-  if (def.loop || buffer.duration > 2) {
-    playing.set(key, { source, gain });
-    button.classList.add('on');
-    source.onended = () => {
-      if (playing.get(key)?.source === source) playing.delete(key);
-      button.classList.remove('on');
-    };
-  }
+  playing.set(key, { source, gain });
+  button.classList.add('on');
+  source.onended = () => {
+    if (playing.get(key)?.source === source) playing.delete(key);
+    button.classList.remove('on');
+  };
 };
 
 const el = <K extends keyof HTMLElementTagNameMap>(tag: K, cls: string, text = ''): HTMLElementTagNameMap[K] => {
@@ -133,7 +101,7 @@ const el = <K extends keyof HTMLElementTagNameMap>(tag: K, cls: string, text = '
 const creditOf = (source: SoundDef['source']): string =>
   'synth' in source ? 'Made in code for this game (Web Audio). No file.' : board.credits[source.files[0]!] ?? '';
 
-const row = (key: string, label: string, what: string, credit: string, def: Pick<SoundDef, 'source' | 'bus' | 'level' | 'loop' | 'vary'>, voice: Voice): HTMLElement => {
+const row = (key: string, label: string, what: string, credit: string, what_: Item, voice: Voice, loops: boolean): HTMLElement => {
   const item = el('div', 'sound');
   const button = el('button', 'play');
   button.type = 'button';
@@ -141,13 +109,13 @@ const row = (key: string, label: string, what: string, credit: string, def: Pick
   button.setAttribute('aria-label', `Play ${label}`);
   button.append(el('span', 'tri'));
   button.addEventListener('click', () => {
-    play(key, def, voice, button).catch((error: unknown) => {
+    play(key, what_, voice, button).catch((error: unknown) => {
       status.textContent = `That sound could not be played: ${String(error)}`;
     });
   });
   const text = el('div', 'about');
   const title = el('h3', '', label);
-  if (def.loop) title.append(el('span', 'tag', 'press again to stop'));
+  if (loops) title.append(el('span', 'tag', 'press again to stop'));
   text.append(title, el('p', 'what', what), el('p', 'credit', credit));
   item.append(button, text);
   return item;
@@ -159,7 +127,7 @@ const ORDER: SoundDef['group'][] = ['Footsteps', 'Hero', 'Enemies', 'World', 'Me
 const NOTE: Partial<Record<SoundDef['group'], string>> = {
   Footsteps: "Each press plays the next recording, a little higher or lower each time. Caputo's are the same steps made quieter, lighter and softer.",
   Enemies: 'In the game these fade with distance. Here they play at their closest.',
-  Music: 'Start the grove music, then play other sounds over it to hear how they sit together. It dips a little under a warning, a hit or a checkpoint.',
+  Music: 'Start the grove music, then play other sounds over it. For setting how loud each group is, use the mixer page.',
 };
 for (const group of ORDER) {
   const section = el('section', 'group');
@@ -168,10 +136,10 @@ for (const group of ORDER) {
   for (const [name, def] of Object.entries(list) as [SoundName, SoundDef][]) {
     if (def.group !== group) continue;
     if (group === 'Footsteps') {
-      section.append(row(`${name}-yaarbro`, `Yaarbro: ${def.label.toLowerCase()}`, def.what, creditOf(def.source), def, STEP_VOICE.yaarbro));
-      section.append(row(`${name}-caputo`, `Caputo: ${def.label.toLowerCase()}`, def.what, creditOf(def.source), def, STEP_VOICE.caputo));
+      section.append(row(`${name}-yaarbro`, `Yaarbro: ${def.label.toLowerCase()}`, def.what, creditOf(def.source), { name }, 'yaarbro', false));
+      section.append(row(`${name}-caputo`, `Caputo: ${def.label.toLowerCase()}`, def.what, creditOf(def.source), { name }, 'caputo', false));
     } else {
-      section.append(row(name, def.label, def.what, creditOf(def.source), def, PLAIN));
+      section.append(row(name, def.label, def.what, creditOf(def.source), { name }, 'yaarbro', Boolean(def.loop) || def.mix === 'music'));
     }
   }
   groups.append(section);
@@ -181,7 +149,7 @@ if (board.extras.length) {
   section.append(el('h2', '', 'Other choices'));
   section.append(el('p', 'note', 'Not picked, but ready if you like one better. Say its name and it replaces the pick above.'));
   for (const extra of board.extras) {
-    section.append(row(`extra-${extra.file}`, extra.label, extra.what, extra.credit, { source: { files: [extra.file] }, bus: extra.file.endsWith('.mp3') ? 'music' : 'effect', level: extra.level, loop: extra.loop }, PLAIN));
+    section.append(row(`extra-${extra.file}`, extra.label, extra.what, extra.credit, { file: extra.file, mix: extra.file.endsWith('.mp3') ? 'music' : 'action', level: extra.level, loop: extra.loop }, 'yaarbro', true));
   }
   groups.append(section);
 }
@@ -192,8 +160,7 @@ status.textContent = 'Press any play button. The first press takes a moment whil
   names: Object.keys(list),
   async samples(name: SoundName): Promise<{ rate: number; data: number[] }> {
     await start();
-    const def = list[name];
-    const buffer = 'synth' in def.source ? await synthBuffer(def.source.synth) : await fileBuffer(def.source.files[0]!, def.bus !== 'music');
+    const buffer = turns.next(name)!;
     return { rate: buffer.sampleRate, data: Array.from(buffer.getChannelData(0)) };
   },
 };

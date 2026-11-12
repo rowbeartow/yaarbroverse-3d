@@ -55,7 +55,7 @@ test('sound starts with the first tap, the music plays, and the game makes its s
   await soundIsOn(page);
   await expect.poll(async () => (await sound(page)).music).toBe('groveMusic');
   await drop(page);
-  await expect.poll(async () => (await sound(page)).played).toContain('land');
+  await expect.poll(async () => (await sound(page)).played).toContain('landMoss');
   // Pausing is a button like any other: it clicks.
   await page.locator('#pause').click();
   await expect.poll(async () => (await sound(page)).played).toContain('button');
@@ -124,7 +124,7 @@ test('mute is remembered between visits, and a muted visit plays through cleanly
 test.describe('on the keyboard', () => {
   test.skip(({ hasTouch }) => Boolean(hasTouch), 'Keyboard checks run on the Mac-sized screen');
 
-  test('a key press is enough to start sound, and Space is heard as a jump', async ({ page }) => {
+  test('a key press is enough to start sound, and Space is heard as a push-off', async ({ page }) => {
     const problems = await open(page);
     await page.keyboard.press('ArrowRight');
     expect((await sound(page)).unlocked).toBe(true);
@@ -135,7 +135,7 @@ test.describe('on the keyboard', () => {
     await expect.poll(() => page.evaluate(() => (window as unknown as { __grove: { mode: string } }).__grove.mode)).toBe('playing');
     await soundIsOn(page);
     await page.keyboard.down('Space');
-    await expect.poll(async () => (await sound(page)).played).toContain('jump');
+    await expect.poll(async () => (await sound(page)).played).toContain('pushMoss');
     await page.keyboard.up('Space');
     expect(problems).toEqual([]);
   });

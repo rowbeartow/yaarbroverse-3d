@@ -56,7 +56,7 @@ describe('before the first tap or key press', () => {
     const speaker = new Notebook();
     const sound = new Sound(speaker, shelf());
     sound.setMusic('groveMusic');
-    sound.play('jump');
+    sound.play('bounce');
     sound.play('button');
     sound.playTune('leafTune');
     sound.setLoop('roll', 1);
@@ -88,8 +88,8 @@ describe('before the first tap or key press', () => {
     expect(speaker.woken).toBe(1);
     expect(speaker.music).toBe('groveMusic');
     expect(speaker.loops.get('mosquitoHover')).toBe(0.5);
-    sound.play('jump');
-    expect(speaker.names()).toEqual(['jump']);
+    sound.play('bounce');
+    expect(speaker.names()).toEqual(['bounce']);
   });
 
   it('later taps wake the speaker again without starting the music twice', () => {
@@ -117,14 +117,14 @@ describe('mute', () => {
     sound.toggleMute();
     expect(sound.muted).toBe(true);
     expect(speaker.muted).toBe(true);
-    sound.play('jump');
+    sound.play('bounce');
     sound.playTune('leafTune');
     expect(speaker.played).toEqual([]);
     expect(speaker.tunes).toEqual([]);
     sound.toggleMute();
     expect(speaker.muted).toBe(false);
-    sound.play('jump');
-    expect(speaker.names()).toEqual(['jump']);
+    sound.play('bounce');
+    expect(speaker.names()).toEqual(['bounce']);
   });
 
   it('keeps the music going underneath, so it is there when sound comes back', () => {
@@ -146,7 +146,7 @@ describe('mute', () => {
     expect(second.muted).toBe(true);
     second.unlock();
     expect(speaker.muted).toBe(true);
-    second.play('jump');
+    second.play('bounce');
     expect(speaker.played).toEqual([]);
     second.setMuted(false);
     expect(new Sound(new Notebook(), memory).muted).toBe(false);
@@ -221,13 +221,29 @@ const listening = (game: Game): { speaker: Notebook; sound: Sound; sounds: GameS
 };
 
 describe('what the game sounds like', () => {
-  it('a jump and its landing', () => {
-    const game = new Game(yard(), 'normal', 'Yaarbro');
+  it('a jump is a quiet push-off and a landing a soft double step, both in the sound of the surface', () => {
+    const idle = { moveX: 0, moveZ: 0, jump: false };
+    for (const [kind, push, land] of [['bank', 'pushMoss', 'landMoss'], ['log', 'pushWood', 'landWood'], ['stump', 'pushWood', 'landWood']] as const) {
+      const level = yard();
+      for (const piece of level.solids) piece.kind = kind;
+      const game = new Game(level, 'normal', 'Yaarbro');
+      const { speaker, run } = listening(game);
+      run(idle, 0.1);
+      run(JUMP, 0.1);
+      expect(speaker.names(), kind).toContain(push);
+      run(idle, 2);
+      expect(speaker.names(), kind).toContain(land);
+    }
+  });
+
+  it("Caputo's jump and landing are in his softer voice", () => {
+    const game = new Game(yard(), 'normal', 'Caputo');
     const { speaker, run } = listening(game);
     run(JUMP, 0.1);
-    expect(speaker.names()).toContain('jump');
     run({ moveX: 0, moveZ: 0, jump: false }, 2);
-    expect(speaker.names()).toContain('land');
+    const heard = speaker.played.filter((entry) => entry.name.startsWith('push') || entry.name.startsWith('land'));
+    expect(heard.length).toBe(2);
+    expect(heard.every((entry) => entry.options.voice === 'caputo')).toBe(true);
   });
 
   it('footsteps on moss for a bank and on wood for a log, a stride apart', () => {
@@ -237,6 +253,7 @@ describe('what the game sounds like', () => {
     const { speaker, run } = listening(game);
     run(RIGHT, 2);
     const steps = speaker.played.filter((entry) => entry.name === 'stepMoss');
+    expect(speaker.names()).not.toContain('landMoss');
     // About 12 metres at walking speed, a step every metre and a quarter.
     expect(steps.length).toBeGreaterThanOrEqual(8);
     expect(steps.length).toBeLessThanOrEqual(10);

@@ -1,6 +1,7 @@
 // The sounds that are made in code, with Web Audio, instead of being recorded.
-// Only the giant mosquito's three are: no recording of a mosquito that could
-// be used was found, and a whine is the one sound a made tone does well. The
+// Only the giant mosquito's three are, and the low thump under a landing: no
+// recording of a mosquito that could be used was found, and a whine is the
+// one sound a made tone does well. The
 // owner found the other made sounds read as beeps beside the recordings, so
 // they were replaced with recordings (see docs/decisions.md).
 //
@@ -141,6 +142,14 @@ export interface Recipe {
  * and every loop is one second long.
  */
 export const RECIPES = {
+  /** The low soft thump under a landing. Low, slow to start, and over in a moment. */
+  thump: {
+    length: 0.22,
+    draw: (ctx, out) => {
+      tone(ctx, out, { from: 120, to: 70, for: 0.2, level: 0.6, attack: 0.02 });
+      breath(ctx, out, { kind: 'low', from: 300, to: 150, for: 0.12, level: 0.15, attack: 0.02 });
+    },
+  },
   /** The giant mosquito hovering: a thin steady whine, round and round while it is about. */
   mosquitoHover: {
     length: 1,
@@ -189,7 +198,7 @@ export const RECIPES = {
 export type SynthName = keyof typeof RECIPES;
 
 /** How loud every made sound is brought to, measured over its loudest part. 1 is full. */
-const TARGET = 0.1;
+const TARGET = 0.2;
 
 /**
  * Brings a sound to the common loudness: finds the loudest fifth of a second

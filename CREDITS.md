@@ -44,8 +44,8 @@ Recorded files, in `assets/audio/`. All are CC0, from OpenGameArt, downloaded on
 | --- | --- | --- | --- |
 | `step-moss-1.wav` to `step-moss-4.wav` | Footsteps on moss. The pack's `SandL1`, `SandR1`, `SandL2` and `SandR2` (its grass and sand steps), softened above 2,600 hertz. | "Fantozzi's Footsteps (Grass/Sand & Stone)" by Fantozzi (submitted by qubodup): https://opengameart.org/content/fantozzis-footsteps-grasssand-stone | CC0 |
 | `step-wood-1.wav` to `step-wood-3.wav` | Footsteps on wood (the pack's `wood01` to `wood03`, with the deep bass under 160 hertz taken down so small speakers carry them). | "Different steps on wood, stone, leaves, gravel and mud" by TinyWorlds: https://opengameart.org/content/different-steps-on-wood-stone-leaves-gravel-and-mud | CC0 |
-| `jump.wav`, `pounce.wav`, `marmot-throw.wav` | The jump (`swish-10`), Caputo's pounce (`swish-9`) and the marmot scout's throw (`swish-13`). | "Swishes Sound Pack" by artisticdude: https://opengameart.org/content/swishes-sound-pack | CC0 |
-| `land.wav`, `strike.wav` | Landing (`thwack-06`) and landing on an enemy (`thwack-02`). | "Thwack Sounds" by AntumDeluge: https://opengameart.org/content/thwack-sounds | CC0 |
+| `pounce.wav`, `marmot-throw.wav` | Caputo's pounce (`swish-9`) and the marmot scout's throw (`swish-13`). | "Swishes Sound Pack" by artisticdude: https://opengameart.org/content/swishes-sound-pack | CC0 |
+| `strike.wav` | Landing on an enemy (`thwack-02`). | "Thwack Sounds" by AntumDeluge: https://opengameart.org/content/thwack-sounds | CC0 |
 | `bounce.wav`, `step-mushroom.wav` | The mushroom bounce (the first 0.7 seconds of `boing.flac`) and a footstep on a mushroom cap (its first moment, played higher and shorter). | "Boing" by Aeva: https://opengameart.org/content/boing | CC0 |
 | `hit.wav` | The hero is hit (`qubodupPunch05`). | "Punch" by qubodup: https://opengameart.org/content/punch | CC0 |
 | `roll.wav` | Yaarbro's roll: two seconds of a ball rolling, joined end to start so it loops. | "Bowling Ball Rolling" by qubodup: https://opengameart.org/content/bowling-ball-rolling | CC0 |
@@ -56,7 +56,7 @@ Recorded files, in `assets/audio/`. All are CC0, from OpenGameArt, downloaded on
 | `leaf-tune.mp3` | The tune for finding the golden leaf (`Heavy_ConceptB.wav`), evened to a steady loudness and saved as MP3. | "Victory Fanfare Short" by cynicmusic (pixelsphere.org): https://opengameart.org/content/victory-fanfare-short | CC0 |
 | `grove-music.mp3` | The grove's music: a calm track of 1 minute 22 seconds that loops (`Forest Whisper.wav`), evened to a steady loudness and saved as MP3. | "Forest Whisper Theme" by Cleyton Kauffman (https://soundcloud.com/cleytonkauffman): https://opengameart.org/content/forest-whisper-theme | CC0 |
 
-The giant mosquito's three sounds are made in code by this project (`src/audio/synth.ts`): there is no file, and nothing to credit.
+The giant mosquito's three sounds and the low thump under a landing are made in code by this project (`src/audio/synth.ts`): there is no file, and nothing to credit. A jump and a landing have no files of their own: they play the moss and wood footsteps above.
 
 SHA-256 of each download, as OpenGameArt served it:
 
