@@ -181,7 +181,7 @@ if (board.extras.length) {
   section.append(el('h2', '', 'Other choices'));
   section.append(el('p', 'note', 'Not picked, but ready if you like one better. Say its name and it replaces the pick above.'));
   for (const extra of board.extras) {
-    section.append(row(`extra-${extra.file}`, extra.label, extra.what, extra.credit, { source: { files: [extra.file] }, bus: 'music', level: extra.level, loop: extra.loop }, PLAIN));
+    section.append(row(`extra-${extra.file}`, extra.label, extra.what, extra.credit, { source: { files: [extra.file] }, bus: extra.file.endsWith('.mp3') ? 'music' : 'effect', level: extra.level, loop: extra.loop }, PLAIN));
   }
   groups.append(section);
 }
@@ -189,6 +189,7 @@ status.textContent = 'Press any play button. The first press takes a moment whil
 
 // For measuring loudness from a test browser (see sounds.mjs).
 (window as unknown as { soundBoard: unknown }).soundBoard = {
+  names: Object.keys(list),
   async samples(name: SoundName): Promise<{ rate: number; data: number[] }> {
     await start();
     const def = list[name];

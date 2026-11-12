@@ -38,15 +38,25 @@ Each texture is a colour picture (`_diff_`) and a picture of fine bumps (`_nor_g
 
 ## Sound and music
 
-Recorded files, in `assets/audio/`. All are CC0, from OpenGameArt, downloaded on 2026-11-12. Nothing came from the 2D game, which has no sound files, and no recording here is of a voice.
+Recorded files, in `assets/audio/`. All are CC0, from OpenGameArt, downloaded on 2026-11-12. Nothing came from the 2D game, which has no sound files, and no recording here is of a voice. Each short sound was made mono, cut to its sounding part and given a clean start and end; nothing else was changed unless the table says so.
 
 | File in this repo | What it is | Source | License |
 | --- | --- | --- | --- |
-| `step-moss-1.wav` to `step-moss-4.wav` | Footsteps on moss. The pack's `SandL1`, `SandR1`, `SandL2` and `SandR2` (its grass and sand steps), made mono, cut to 0.3 seconds and softened above 2,600 hertz. | "Fantozzi's Footsteps (Grass/Sand & Stone)" by Fantozzi (submitted by qubodup): https://opengameart.org/content/fantozzis-footsteps-grasssand-stone | CC0 |
-| `step-wood-1.wav` to `step-wood-3.wav` | Footsteps on wood. The pack's `wood01`, `wood02` and `wood03`, made mono and cut to a quarter of a second. | "Different steps on wood, stone, leaves, gravel and mud" by TinyWorlds: https://opengameart.org/content/different-steps-on-wood-stone-leaves-gravel-and-mud | CC0 |
-| `grove-music.mp3` | The grove's music: a calm track of 1 minute 22 seconds that loops. The pack's `Forest Whisper.wav`, evened to a steady loudness and saved as MP3. | "Forest Whisper Theme" by Cleyton Kauffman (https://soundcloud.com/cleytonkauffman): https://opengameart.org/content/forest-whisper-theme | CC0 |
+| `step-moss-1.wav` to `step-moss-4.wav` | Footsteps on moss. The pack's `SandL1`, `SandR1`, `SandL2` and `SandR2` (its grass and sand steps), softened above 2,600 hertz. | "Fantozzi's Footsteps (Grass/Sand & Stone)" by Fantozzi (submitted by qubodup): https://opengameart.org/content/fantozzis-footsteps-grasssand-stone | CC0 |
+| `step-wood-1.wav` to `step-wood-3.wav`, `step-mushroom.wav` | Footsteps on wood (the pack's `wood01` to `wood03`, with the deep bass under 160 hertz taken down so small speakers carry them) and on a mushroom cap (its `mud02`). | "Different steps on wood, stone, leaves, gravel and mud" by TinyWorlds: https://opengameart.org/content/different-steps-on-wood-stone-leaves-gravel-and-mud | CC0 |
+| `jump.wav`, `pounce.wav`, `marmot-throw.wav` | The jump (`swish-10`), Caputo's pounce (`swish-9`) and the marmot scout's throw (`swish-13`). | "Swishes Sound Pack" by artisticdude: https://opengameart.org/content/swishes-sound-pack | CC0 |
+| `land.wav`, `strike.wav` | Landing (`thwack-06`) and landing on an enemy (`thwack-02`). | "Thwack Sounds" by AntumDeluge: https://opengameart.org/content/thwack-sounds | CC0 |
+| `bounce.wav` | The mushroom bounce: a door spring twanging (`door spring - Region #5`). | "Spring Sounds" by bart: https://opengameart.org/content/spring-sounds | CC0 |
+| `hit.wav` | The hero is hit (`qubodupPunch05`). | "Punch" by qubodup: https://opengameart.org/content/punch | CC0 |
+| `roll.wav` | Yaarbro's roll: two seconds of a ball rolling, joined end to start so it loops. | "Bowling Ball Rolling" by qubodup: https://opengameart.org/content/bowling-ball-rolling | CC0 |
+| `checkpoint.wav`, `hearts-out.wav` | Reaching a checkpoint (`Chime_Confirm`) and running out of hearts (`Chime_Exit`). | "Chimey UI Sounds" by MouseBYTE: https://opengameart.org/content/chimey-ui-sounds | CC0 |
+| `fall.wav` | Falling: the first second of the wind. | "Short wind sound" by remaxim: https://opengameart.org/content/short-wind-sound | CC0 |
+| `marmot-warning.wav` | The marmot scout's warning: a squeaky toy (`squeak2`), played a fifth lower. | "Squeak Toy Sounds" by bart: https://opengameart.org/content/squeak-toy-sounds | CC0 |
+| `button.wav` | Menu buttons (`select_002`). | "Interface Sounds" by Kenney (www.kenney.nl): https://opengameart.org/content/interface-sounds | CC0 |
+| `leaf-tune.mp3` | The tune for finding the golden leaf (`Heavy_ConceptB.wav`), evened to a steady loudness and saved as MP3. | "Victory Fanfare Short" by cynicmusic (pixelsphere.org): https://opengameart.org/content/victory-fanfare-short | CC0 |
+| `grove-music.mp3` | The grove's music: a calm track of 1 minute 22 seconds that loops (`Forest Whisper.wav`), evened to a steady loudness and saved as MP3. | "Forest Whisper Theme" by Cleyton Kauffman (https://soundcloud.com/cleytonkauffman): https://opengameart.org/content/forest-whisper-theme | CC0 |
 
-Every other sound, and the golden leaf tune, is made in code by this project (`src/audio/synth.ts`): there is no file, and nothing to credit.
+The giant mosquito's three sounds are made in code by this project (`src/audio/synth.ts`): there is no file, and nothing to credit.
 
 SHA-256 of each download, as OpenGameArt served it:
 
@@ -54,6 +64,16 @@ SHA-256 of each download, as OpenGameArt served it:
 | --- | --- |
 | `Fantozzi-footsteps.7z` | `415d360e0911c1c1c5355ee94023b772e6f4044f59b9b580610e7dbffd1840fd` |
 | `[kdd]DifferentSteps_0.zip` | `987d072b7deaa65177e005ddd8185f2351be7c9a76cd7575dea560549c39b33b` |
+| `swishes.zip` | `7980215241b739a787dcf26f660ce510bb237900968789395a86911619795693` |
+| `thwack-1.0.zip` | `8edb002735a01369ef4d6259573be4885f9fe32c9a9efa89dfbbb14067c8c8e5` |
+| `door_springs.7z` | `4606976829e679f85790303650fa70da522ed20c5058a0346531c72a7f24ffd3` |
+| `qubodupPunch.7z` | `757795e8778acc377abacea902052c2dc707583c69d00b8baa2e76b670a02398` |
+| `qubodup-bowling-roll.7z` | `3c99cfe42ecf8a87ab13f66f0f4c16d0a2bdbf75f825eb2e959baab581091af8` |
+| `mousebyte_chimeyui.7z` | `6272bac49c8f3e9aa251a8c9e974a2e7f5756119657d0414197baeb129b0c549` |
+| `short wind sound.wav` | `4435f5ad1baf171f21f876f778d0a8a7447becea0c4955bb2566e0c63ab20f41` |
+| `squeak_toy.zip` | `3ba6419b05ebf8e0b7dd4395b3c10f26811c037e357143f10a159acdb2dabfb8` |
+| `kenney_interfaceSounds.zip` | `f2193d072726d6758a5f7871b2dcc54dcce0d5c35c6f0a62f92549b327c81232` |
+| `Heavy_ConceptB.wav` | `cf7aca1193530c804f41a22cfd9a2813c25d3c244fa96ad88c88c6206daa033d` |
 | `forest_whisper_theme.zip` | `11516801f38f4b004fa9e3641ff287fa39cb998fc805d376b372cc03db4d573f` |
 
 ## Stand-in model

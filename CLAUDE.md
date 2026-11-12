@@ -35,7 +35,7 @@ How it fits together:
   - `assets.ts`: downloads `media/` and reports progress. `quality.ts`: the tiers and the rules for choosing one (no 3D code, tested).
   - `enemies.ts`: draws each enemy from its model, the acorn, and the line an attack is aimed along.
   - `heroes.ts`: builds a hero from its model (`hero-model.ts`, mixing rules in `hero-motion.ts`). To give a character a model, see the top of `hero-model.ts`.
-- `src/audio/`: sound. `sounds.ts` lists every sound and the music: what it is for, its file in `assets/audio/` or its recipe, and how loud it is against the others. `synth.ts` holds the recipes for the sounds made in code with Web Audio. Not wired into the game yet: the owner is listening on the sound board first.
+- `src/audio/`: sound. `sounds.ts` lists every sound and the music: what it is for, its file in `assets/audio/` or its recipe, and how loud it is against the others. `synth.ts` holds the recipes for the few sounds made in code with Web Audio (the giant mosquito's) and brings short sounds to one loudness. Not wired into the game yet: the owner is listening on the sound board first.
 - `src/input/controls.ts`: keyboard and touch, turned into "which way", "is Jump held" and "is the move button held" (Yaarbro's roll, Caputo's pounce).
 - `src/ui/screens.ts` and `index.html`: start screen, pause, end card, "turn sideways" card, messages.
 - `src/main.ts`: the loop that connects them. The start screen shows first; the 3D code and files load behind it with a progress bar.
