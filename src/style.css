@@ -132,6 +132,36 @@ body {
   cursor: pointer;
 }
 
+/* Sound on or off. It sits beside Pause, and stays there over every screen. */
+#mute {
+  position: fixed;
+  z-index: 30;
+  top: max(12px, env(safe-area-inset-top));
+  right: calc(max(16px, env(safe-area-inset-right)) + 100px);
+  min-width: 112px;
+  min-height: 48px;
+  padding: 0 16px;
+  border: 2px solid rgba(255, 246, 221, 0.7);
+  border-radius: 999px;
+  background: var(--shade);
+  color: #fff6dd;
+  font: inherit;
+  font-size: 16px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+#mute[aria-pressed='true'] {
+  border-style: dashed;
+  color: rgba(255, 246, 221, 0.75);
+}
+
+#mute:focus-visible {
+  outline: 3px solid #f2c14e;
+  outline-offset: 2px;
+}
+
+
 #message {
   position: absolute;
   bottom: max(18px, env(safe-area-inset-bottom));

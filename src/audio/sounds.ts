@@ -49,7 +49,7 @@ export const SOUNDS = {
   },
   stepMushroom: {
     group: 'Footsteps', label: 'Step on a mushroom', bus: 'step', level: -9, vary: 0.1,
-    what: 'A soft, damp step on a mushroom cap. A recording of a step in mud.',
+    what: 'A small, quick boing on a mushroom cap: the same boing as the bounce, shorter and higher.',
     source: { files: ['step-mushroom.wav'] },
   },
   jump: {
@@ -64,7 +64,7 @@ export const SOUNDS = {
   },
   bounce: {
     group: 'Hero', label: 'Mushroom bounce', bus: 'effect', level: -2, vary: 0.05,
-    what: 'A real spring twanging: a short "boing" off a mushroom.',
+    what: 'A big springy "boing" off a mushroom.',
     source: { files: ['bounce.wav'] },
   },
   roll: {

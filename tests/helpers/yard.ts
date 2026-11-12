@@ -42,9 +42,12 @@ export const solid = box;
 export const start = (level: Level = yard()): Game => new Game(level, 'normal', 'Yaarbro');
 
 /** Runs the game for a number of seconds with the same input held. */
-export const hold = (game: Game, input: Partial<Input>, seconds: number): Game => {
+export const hold = (game: Game, input: Partial<Input>, seconds: number, afterEach?: () => void): Game => {
   const steps = Math.round(seconds / STEP);
-  for (let i = 0; i < steps; i += 1) game.step({ ...IDLE, ...input });
+  for (let i = 0; i < steps; i += 1) {
+    game.step({ ...IDLE, ...input });
+    afterEach?.();
+  }
   return game;
 };
 

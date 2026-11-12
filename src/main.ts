@@ -4,8 +4,15 @@
 //
 // The start screen shows straight away. The 3D code and its files download
 // behind it, with a progress bar, and Play switches on when they are ready.
+//
+// Sound (src/audio) starts on the first tap or key press, because browsers
+// block it before that. The Sound button and the M key mute it, and the
+// choice is remembered.
 
 import './style.css';
+import { GameSounds } from './audio/game-sounds';
+import { Sound } from './audio/mix';
+import { Player } from './audio/player';
 import { Game, IDLE, type GameEvent } from './game/game';
 import { MOVE_NAME, STEP } from './game/hero';
 import type { Level } from './game/level';
@@ -35,6 +42,42 @@ const boot = (): void => {
   /** Game time until which a line about hearts or enemies keeps the screen. */
   let newsUntil = 0;
 
+  // Sound. The files are fetched now; nothing plays until the first tap or key press.
+  const player = new Player();
+  const memory = ((): Storage | null => {
+    try {
+      return window.localStorage;
+    } catch {
+      return null;
+    }
+  })();
+  const sound = new Sound(player, memory);
+  const gameSounds = new GameSounds(sound);
+  void player.preload();
+  sound.setMusic('groveMusic');
+  // Any of these counts as the player's say-so. They are caught before anything
+  // else sees them, so the very tap that starts the game can also be heard.
+  for (const kind of ['pointerdown', 'pointerup', 'touchend', 'click', 'keydown'] as const) {
+    window.addEventListener(kind, () => sound.unlock(), { capture: true, passive: true });
+  }
+  const muteButton = document.querySelector<HTMLButtonElement>('#mute')!;
+  const showMute = (muted: boolean): void => {
+    muteButton.textContent = muted ? 'Sound off' : 'Sound on';
+    muteButton.setAttribute('aria-pressed', String(muted));
+    muteButton.setAttribute('aria-label', muted ? 'Sound is off. Turn sound on.' : 'Sound is on. Turn sound off.');
+  };
+  sound.onMute = showMute;
+  showMute(sound.muted);
+  muteButton.addEventListener('click', () => {
+    sound.toggleMute();
+    // A key press on the page should not land on this button afterwards.
+    muteButton.blur();
+  });
+  // Every button gives a soft click.
+  document.addEventListener('click', (event) => {
+    if (event.target instanceof Element && event.target.closest('button')) sound.play('button');
+  });
+
   const controls = new Controls(
     document.querySelector<HTMLElement>('#stick-zone')!,
     document.querySelector<HTMLElement>('#stick-base')!,
@@ -53,6 +96,7 @@ const boot = (): void => {
     seen.clear();
     met.clear();
     newsUntil = 0;
+    gameSounds.reset();
     view?.show(level, choice.hero);
     view?.snapCamera(game);
   };
@@ -68,6 +112,8 @@ const boot = (): void => {
     mode = next;
     controls.enabled = next === 'playing';
     controls.release();
+    // The roll and the mosquito's whine stop with the game.
+    if (next !== 'playing') sound.stopLoops();
     if (next === 'start') screens.show('start');
     else if (next === 'paused') screens.show('paused');
     else if (next === 'playing') screens.show('none');
@@ -107,6 +153,7 @@ const boot = (): void => {
   });
   document.querySelector('#reload')!.addEventListener('click', () => window.location.reload());
   window.addEventListener('keydown', (event) => {
+    if (event.code === 'KeyM' && !event.repeat && !event.metaKey && !event.ctrlKey && !event.altKey) sound.toggleMute();
     if (event.code !== 'Escape' && event.code !== 'KeyP') return;
     if (mode === 'playing') pause();
     else if (mode === 'paused') setMode('playing');
@@ -181,6 +228,7 @@ const boot = (): void => {
         if (game.events.some((event) => event.type === 'fall' || event.type === 'restored')) before = { x: game.x, y: game.y, z: game.z };
         view.handle(game.events);
         narrate(game.events);
+        gameSounds.step(game);
         owed -= STEP;
         steps += 1;
       }
@@ -188,6 +236,7 @@ const boot = (): void => {
       screens.setHearts(game.hearts, level.hearts);
       if (game.complete && mode === 'playing') {
         mode = 'ended';
+        sound.stopLoops();
         controls.enabled = false;
         controls.release();
         sinceGoal = 0;
@@ -232,6 +281,10 @@ const boot = (): void => {
       },
       get enemies() {
         return view ? view.enemyInfo() : [];
+      },
+      /** What the sound is doing: whether it has been unlocked, muted, and what has played. */
+      get sound() {
+        return { unlocked: sound.unlocked, muted: sound.muted, ...player.info() };
       },
       /** The picture itself, for looking into when something draws wrong or slowly. */
       get view() {

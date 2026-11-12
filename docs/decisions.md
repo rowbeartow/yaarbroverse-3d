@@ -240,3 +240,11 @@ Supersedes: none
 ## 2026-11-12 Sounds are recordings; a sound is made in code only where it holds up beside one
 Reason: The owner's call after the first sound board: the sounds made in code sounded like beeps next to the recorded ones. Jump, landing, mushroom bounce, the hero hit and the golden leaf tune are CC0 recordings, and so is every other sound a fitting CC0 recording could be found for. Only the giant mosquito's three sounds are still made in code, because no usable recording was found; the owner judges them on the board. A changed set of sounds goes back on the sound board for his OK before it is wired into the game.
 Supersedes: none
+
+## 2026-11-12 The owner approved the sounds, and both mushroom sounds are boings
+Reason: His verdict on the second sound board: the mosquito's made sounds are perfect; the jump, the marmot scout's warning, the golden leaf tune, the music and everything else are OK; and the mushroom bounce and the mushroom footstep should be boings, not springs. Both now come from the "Boing" recording by Aeva (CC0) that was a choice on the board: the bounce is its first 0.7 seconds, and the footstep is its first moment played higher and shorter. He said to wire the sounds in.
+Supersedes: none
+
+## 2026-11-12 Sound starts on the first tap or key press, and mute is a button, the M key, and remembered
+Reason: The owner's rules for sound in the game. Browsers block sound until the player does something, so the game asks for none before the first tap or key press, and wakes the sound again on every later one (Safari puts it to sleep). A Sound button sits beside Pause on every screen and the M key does the same; the choice is kept in the browser with the hero and difficulty. Sounds that tell the player something (an enemy's warning, a hit, a checkpoint, a fall) are the loudest and the music dips under them; what the hero does sits under those, footsteps under that, music under everything; every short sound is brought to one loudness when it loads, and one limiter holds down whatever piles up. Enemy sounds fade with distance and are heard out to 48 metres, well past the edge of the screen. The grove music plays from the first tap, on the start screen too, and makes way for the golden leaf tune.
+Supersedes: none

@@ -6,6 +6,7 @@
 //   heroes    GLB         ->  copied (they are committed already compressed)
 //   enemies   GLB         ->  copied, the same way
 //   sky light HDR         ->  a smaller HDR (lighting only needs a small one)
+//   sound     WAV, MP3    ->  copied (they are committed ready to play)
 //
 // Runs before every build and before `npm run dev`. A file is only redone when
 // its source or its settings change, so the second run takes a moment.
@@ -60,6 +61,12 @@ for (const folder of ['heroes', 'enemies']) {
   for (const file of existsSync(join(SOURCE, folder)) ? readdirSync(join(SOURCE, folder)).sort() : []) {
     if (file.endsWith('.glb')) HEROES.push({ from: `${folder}/${file}`, to: `models/${file}` });
   }
+}
+
+/** Sounds and music: committed ready to play, so copied as they are. */
+const AUDIO = [];
+for (const file of existsSync(join(SOURCE, 'audio')) ? readdirSync(join(SOURCE, 'audio')).sort() : []) {
+  if (file.endsWith('.wav') || file.endsWith('.mp3')) AUDIO.push({ from: `audio/${file}`, to: `audio/${file}` });
 }
 
 const HDR = [{ from: 'hdri/forest_slope_1k.hdr', to: 'hdri/forest.hdr', width: 512 }];
@@ -219,6 +226,11 @@ if (MODELS.length > 0) {
 
 // Hero models are committed already compressed, so they are copied as they are.
 for (const item of HEROES) {
+  const source = readFileSync(join(SOURCE, item.from));
+  await make(item.to, hash(source, 'copied'), async () => source);
+}
+
+for (const item of AUDIO) {
   const source = readFileSync(join(SOURCE, item.from));
   await make(item.to, hash(source, 'copied'), async () => source);
 }
