@@ -248,3 +248,23 @@ Supersedes: none
 ## 2026-11-12 Sound starts on the first tap or key press, and mute is a button, the M key, and remembered
 Reason: The owner's rules for sound in the game. Browsers block sound until the player does something, so the game asks for none before the first tap or key press, and wakes the sound again on every later one (Safari puts it to sleep). A Sound button sits beside Pause on every screen and the M key does the same; the choice is kept in the browser with the hero and difficulty. Sounds that tell the player something (an enemy's warning, a hit, a checkpoint, a fall) are the loudest and the music dips under them; what the hero does sits under those, footsteps under that, music under everything; every short sound is brought to one loudness when it loads, and one limiter holds down whatever piles up. Enemy sounds fade with distance and are heard out to 48 metres, well past the edge of the screen. The grove music plays from the first tap, on the start screen too, and makes way for the golden leaf tune.
 Supersedes: none
+
+## 2026-11-12 The mix is quiet and soft: about -23 LUFS in normal play, music at least 10 decibels under the effects
+Reason: The owner's verdict after playing with the kids: everything was far too loud, the music most of all, and the sounds were harsh and overstated. His rules: normal play (footsteps, jumps and music together) aims for about -23 LUFS; the music bed sits at least 10 decibels under the effects; a soft limiter on the master lets nothing peak; the top end above about 6,000 hertz is turned down; every sound starts softly; footsteps and menu clicks sit well in the background; warnings, hits and checkpoints stay the clearest but are not loud. How loud each group is (music, warnings and hits, jumps and landings, footsteps, menu) and the master are six numbers, `MIX` in `src/audio/sounds.ts`, which he sets by ear on a mixer page. `tools/preview/mix-measure.mjs` measures the result.
+Supersedes: the loudness order in "Sound starts on the first tap or key press, and mute is a button, the M key, and remembered" only where it said cues are "the loudest". The rest of that entry stands.
+
+## 2026-11-12 A landing sounds like the surface, and a jump is a quiet push-off
+Reason: The owner's call: the jump and landing recordings sounded clanky. A landing is now two soft footsteps of what the hero lands on (moss or wood), a moment apart, with a low soft thump made in code under them. A jump is one quiet footstep of what the hero leaves. Neither has a recording of its own any more.
+Supersedes: the jump and landing recordings in "Sounds are recordings; a sound is made in code only where it holds up beside one". The rest of that entry stands.
+
+## 2026-11-12 The mix is the owner's six numbers, set by ear
+Reason: His settings from the mixer page: master -12, music -14, warnings and hits -17, jumps and landings -22, footsteps -9, menu -12, in decibels. They are `MIX` in `src/audio/sounds.ts`. Measured, normal play comes out at about -34.4 LUFS with the music 5.9 decibels under the effects and no peak over -11.7 dB: quieter than the -23 LUFS he first aimed for, and with less than 10 decibels between music and effects. His ears outrank the numbers. Warnings and hits now sit 8 decibels under footsteps as groups; he was told, and the levels stand unless he changes them.
+Supersedes: the two numbers (-23 LUFS, music at least 10 decibels under the effects) in "The mix is quiet and soft: about -23 LUFS in normal play, music at least 10 decibels under the effects". The rest of that entry stands.
+
+## 2026-11-12 The owner's second set of mix levels
+Reason: After the first set he sent a second from the mixer page, before anything merged: master -8, music -21, warnings and hits -15, jumps and landings -26, footsteps -24, menu -12. Warnings and hits are again the clearest group, 9 decibels over footsteps and 11 over jumps and landings. Measured, normal play is about -41.6 LUFS, the music sits 4.2 decibels under the effects, and no peak is over -19.2 dB. These are the numbers in `MIX`.
+Supersedes: the six numbers and the measurements in "The mix is the owner's six numbers, set by ear", and its note that warnings sat under footsteps. The rest of that entry stands.
+
+## 2026-11-12 Menu clicks sit under the warnings: menu is -20
+Reason: The owner's call, on being told that at -12 menu clicks were the loudest group, 3 decibels over warnings and hits. Menu is now -20, 5 under them. The other five numbers are unchanged, and menu clicks are not in the sample run, so the measurements stand.
+Supersedes: the menu number in "The owner's second set of mix levels". The rest of that entry stands.

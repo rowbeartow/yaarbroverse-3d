@@ -48,29 +48,42 @@ const distanceTo = (game: Game, enemy: Enemy): number => Math.hypot(enemy.x - ga
 
 export class GameSounds {
   private walked = 0;
+  /** What the hero last stood on: a jump pushes off from it. */
+  private underfoot: SolidKind = 'bank';
 
   constructor(private readonly sound: Sound) {}
 
   /** A new run: forget how far the last hero had walked, and quiet anything that lasts. */
   reset(): void {
     this.walked = 0;
+    this.underfoot = 'bank';
     this.sound.stopLoops();
     this.sound.endTune();
+  }
+
+  private kindOf(game: Game): SolidKind | null {
+    if (game.groundId === null) return null;
+    return game.level.solids.find((solid) => solid.id === game.groundId)?.kind ?? null;
   }
 
   /** Call once after every step of the game. */
   step(game: Game): void {
     this.events(game, game.events);
+    this.underfoot = this.kindOf(game) ?? this.underfoot;
     this.footsteps(game);
     this.lasting(game);
   }
 
   private events(game: Game, events: GameEvent[]): void {
     const { sound } = this;
+    const voice = game.hero === 'Caputo' ? 'caputo' : 'yaarbro';
     for (const event of events) {
-      if (event.type === 'jump') sound.play('jump');
-      else if (event.type === 'land') {
-        sound.play('land');
+      if (event.type === 'jump') {
+        // A quiet push-off from whatever the hero was standing on. There is no jump sound of its own.
+        sound.play(this.underfoot === 'bank' ? 'pushMoss' : 'pushWood', { voice });
+      } else if (event.type === 'land') {
+        // A landing sounds like the surface: two soft footsteps with a low thump under them.
+        sound.play(this.kindOf(game) === 'bank' ? 'landMoss' : 'landWood', { voice });
         // The landing is the step: the next footstep is a full stride away.
         this.walked = 0;
       } else if (event.type === 'bounce') sound.play('bounce');
