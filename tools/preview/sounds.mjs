@@ -44,10 +44,10 @@ const files = ['sounds.js', 'media/board.json'];
 const og = (title, by) => `Recorded: "${title}" by ${by}, from OpenGameArt. CC0.`;
 const CREDIT = [
   [/^step-moss-/, og("Fantozzi's Footsteps (Grass/Sand & Stone)", 'Fantozzi')],
-  [/^step-(wood|mushroom)/, og('Different steps on wood, stone, leaves, gravel and mud', 'TinyWorlds')],
+  [/^step-wood/, og('Different steps on wood, stone, leaves, gravel and mud', 'TinyWorlds')],
+  [/^(bounce|step-mushroom)\./, og('Boing', 'Aeva')],
   [/^(jump|pounce|marmot-throw)\./, og('Swishes Sound Pack', 'artisticdude')],
   [/^(land|strike)\./, og('Thwack Sounds', 'AntumDeluge')],
-  [/^bounce\./, og('Spring Sounds', 'bart')],
   [/^hit\./, og('Punch', 'qubodup')],
   [/^roll\./, og('Bowling Ball Rolling', 'qubodup')],
   [/^(checkpoint|hearts-out)\./, og('Chimey UI Sounds', 'MouseBYTE')],

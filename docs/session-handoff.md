@@ -1,48 +1,41 @@
 # Session handoff
 
-Last updated: 2026-11-12
+Last updated: 2026-11-12 (milestone four)
 
 ## Start here
 
-**Milestone three is done: the Bouncing Grove is a full level with enemies, hearts, and a move for each hero.** Everything below is merged and live at https://rowbeartow.github.io/yaarbroverse-3d/ . There are no open pull requests from this work.
+**Milestone four is done: the Bouncing Grove has sound and music.** The game is live at https://rowbeartow.github.io/yaarbroverse-3d/ . The likely next milestone is a second area (see "What's next"); the owner has not set it yet.
 
-Part one, the longer route (merged 2026-11-11): pull requests 18, 19 and 20. The owner approved the route on a plan page (https://claude.ai/artifact/MdPwsE2Hg43pBYEjPevSmn ).
+Milestone four, in the order the owner set:
 
-Part two, in the order the owner set, one pull request each (all merged 2026-11-11, each with its checks green):
-
-1. **Pull request 23: enemy models through Meshy's API.** Six candidates, three for each enemy, from the approved Caputo Mountain studies. The owner picked marmot B and mosquito C on the candidates page (https://claude.ai/artifact/1HMoWtxB1vsAtWLJtH1Ryt ). 180 Meshy credits were spent (1,200 before, 1,020 after), all in this step.
-2. **Pull request 24: both enemies rigged and animated.** The owner said OK on the enemies preview page (https://claude.ai/artifact/2FxC5kvQXVD3Hq4MifuRKo ): "both move well".
-3. **Pull request 25: hearts and damage.**
-4. **Pull request 26: Yaarbro's roll and Caputo's pounce.** The owner said OK to the pounce on Caputo's preview page (https://claude.ai/artifact/V3Z9Car7Ttfp1zRNRPLf7D ).
-5. **Pull request 27: enemy behaviour and placement.**
-
-The branches `claude/part-two-step-3`, `-4` and `-5` were safety copies made while the pull requests waited. Everything on them is merged; they can be deleted.
-
-**What the owner decided along the way** (all in `docs/decisions.md`): the roll tops out at one and a half times walking speed, not the 2D game's two and a half, because footing is narrower in 3D; how far a hit throws a hero is a number for each difficulty (0.5, 1.2 and 2 metres); Hard's enemy numbers stay at Caputo Mountain's until the kids have played; landing on an enemy strikes it on every difficulty; and no enemy may bother a hero in a section of diagonal jumps, which is where the kids fell most.
+1. **Pull request 30, merged 2026-11-12: the publish guard.** Only the newest commit on main is ever published (see "The publish guard" below).
+2. **Pull requests 31 and 32, merged 2026-11-12: the sounds and the sound board.** The owner listened twice on the board (https://claude.ai/artifact/RTKmtRe5ttBzn6Rg7zYL9c ). After the first he asked for recordings in place of the sounds made in code, which read as beeps. After the second he said OK to everything except the two mushroom sounds, which he wanted as boings.
+3. **Sound in the game: the pull request this version of the handoff arrived in.** It also makes the two mushroom sounds boings. If you are reading this on `main`, it has merged.
 
 **The owner's playtest of milestone three (2026-11-12, in `docs/decisions.md`):** Hard is properly hard and the older player loved it, so every difficulty number stays. The enemies' tells make them fair to dodge, so they stay on every difficulty. On his Mac in Safari, on Normal with the scout on screen: 120 frames a second on the high tier, 310 draw calls, 407 thousand triangles.
 
-**The publish guard.** The publish workflow (`.github/workflows/publish.yml`) only publishes the newest commit on main. It compares its own commit with the head of main before the build and again just before the files go up, and finishes with a notice and no publish if they differ. So an old run that is started again cannot put an older version on the live site.
-
-- Why: GitHub's outage on 2026-11-11 left three runs stuck in the queue, and they are still there: publish run 20 for pull request 24 (https://github.com/rowbeartow/yaarbroverse-3d/actions/runs/43097921897 ), and two runs of the checks (43097921924 and 43098011488).
-- **The guard does not cover that stuck publish run.** A run uses the workflow file of its own commit, and run 20's commit is from before the guard. If GitHub ever starts it, it would publish pull request 24's version, and the live site would stay on that until the next merge to main (or until someone runs "Publish the game" by hand from main: Actions, Publish the game, Run workflow). Cancelling it was tried on 2026-11-12 and GitHub refused ("Cannot cancel a workflow run that has not been queued yet"). The owner can try Cancel or Delete on the run's page.
-
-**Milestone four is sound and music, in three pull requests.** The first (pull request 30, the publish guard) is merged. The second (pull request 31, sourcing and the first sound board) is merged, and a follow-up to it swaps the made sounds for recordings. The third, wiring sound into the game, waits for the owner's OK on the board.
-
-- **The sound board** is at https://claude.ai/artifact/RTKmtRe5ttBzn6Rg7zYL9c : every sound and the music, each with a play button. Nothing is wired into the game.
-- **The owner's answer to the first board (2026-11-12):** the sounds made in code sounded like beeps beside the recordings. He asked for CC0 recordings in place of the jump, landing, mushroom bounce, hero hit and golden leaf tune, for made sounds to stay only where they hold up beside a recording, and to see the board again before anything is wired in. The second board is published at the same address. He has not answered it yet.
-- **What is recorded now** (`assets/audio/`, 1.88 MB, all CC0 from OpenGameArt, each credited in `CREDITS.md` with the checksum of its download): every sound except the mosquito's. Footsteps on moss, wood and mushroom, jump, landing, bounce (a real door spring), roll (a rolling ball, looped), pounce, hit, out of hearts, falling (wind), the marmot scout's warning (a squeaky toy, lowered) and throw, landing on an enemy, checkpoint, menu button, the golden leaf tune ("Victory Fanfare Short" by cynicmusic, ten seconds) and the grove music ("Forest Whisper Theme" by Cleyton Kauffman, 1 minute 22 seconds).
-- **What is still made in code** (`src/audio/synth.ts`): the giant mosquito's hover, warning and dive. No usable CC0 recording of a mosquito was found: the insect recordings on OpenGameArt are a thin harsh hiss. The board says so and asks him to judge them.
-- `src/audio/sounds.ts` lists every sound with its job and its level against the others. Short sounds are brought to one common loudness in code when they load (`evenOut` in `synth.ts`).
-- **Nothing came from the 2D game.** It has no sound or music files, only placeholder beeps in its fishing code.
-- **Offered beside the picks, and not in the repo** (all CC0, OpenGameArt): "Peaceful Forest" by Samza for the music; `Chime_LevelUp` from "Chimey UI Sounds" by MouseBYTE and "Just a random fanfare" by Spring Spring for the leaf tune; `spring_01` from "100 CC0 SFX" by rubberduck and "Boing" by Aeva for the bounce.
-- **An extra the owner did not ask for:** the mosquito's hovering whine, so it is heard before it is on screen. The board says he can refuse it.
-- **A cloud session cannot hear.** Recordings were chosen by description, license and measurement (length, loudness, how bright, how much deep bass a small speaker would lose). Only the owner has ears on this.
-- To rebuild the board: `node tools/preview/sounds.mjs <folder> [<extras folder>]`, and publish it over the address above. kenney.nl refuses downloads from a script, so Kenney's pack was taken from his OpenGameArt page. Sites a cloud session could not reach for sounds: freesound.org, pixabay.com, archive.org.
-
 **What nobody has checked yet, and the owner is the one who can:**
 
-1. **Whether the roll and the pounce feel right to the kids**, and whether the touch button is where a thumb finds it.
+1. **How the game sounds, played.** He has heard every sound on the board, one at a time. Nobody has heard them together in the game: whether footsteps are too many or too loud, whether the music sits under the effects, whether a warning is clear over it, whether anything startles. A cloud session cannot hear.
+2. **Sound in Safari on the Mac.** Open the live link, click Play, and listen. Then press M (sound off), M again (on), close the tab, open it again and check the Sound button still says what it said.
+3. **Sound on a real iPad.** He has none to test on right now. The checks pass in WebKit, Safari's engine built for Linux, which is not Safari. On an iPad the ring switch and the volume buttons also matter, and nothing here can check them.
+4. **The mushroom footstep.** It is the bounce's boing, shorter and higher, and he has not heard it. In the grove every mushroom bounces the hero, so it never plays there; it is on the sound board.
+5. **Whether the roll and the pounce feel right to the kids**, and whether the touch button is where a thumb finds it.
+
+**The publish guard.** The publish workflow (`.github/workflows/publish.yml`) only publishes the newest commit on main. It compares its own commit with the head of main before the build and again just before the files go up, and finishes with a notice and no publish if they differ. Both paths were tried on 2026-11-12: the merge of pull request 30 published, and a run started by hand from an older commit skipped its "Build and publish" job.
+
+- Why: GitHub's outage on 2026-11-11 left three runs stuck in the queue: publish run 20 for pull request 24 (https://github.com/rowbeartow/yaarbroverse-3d/actions/runs/43097921897 ), and two runs of the checks (43097921924 and 43098011488). They were still there on 2026-11-12.
+- **The guard does not cover that stuck publish run.** A run uses the workflow file of its own commit, and run 20's commit is from before the guard. If GitHub ever starts it, it would publish pull request 24's version, and the live site would stay on that until the next merge to main (or until someone runs "Publish the game" by hand from main: Actions, Publish the game, Run workflow). Cancelling it was tried on 2026-11-12 and GitHub refused ("Cannot cancel a workflow run that has not been queued yet"). The owner was asked to try Cancel or Delete on the run's page.
+
+**Sound, for the next time one is changed or added:**
+
+- Every sound is in one list, `src/audio/sounds.ts`: its job, its file or recipe, its level in decibels against the others, and which group it is mixed with (cue, effect, step or music). To change how loud one is, change `level` there.
+- Recorded files are in `assets/audio/` (1.81 MB): WAV for short sounds, MP3 for the grove music and the leaf tune. All are CC0 from OpenGameArt. `CREDITS.md` lists each file's source, author and license, what was done to it, and the checksum of the download. A new file needs a line there and in the list, or `tests/sound-files.test.ts` fails.
+- The giant mosquito's hover, warning and dive are made in code (`src/audio/synth.ts`). The owner called them perfect. Everything else made in code was replaced with a recording at his request.
+- To make a short sound from a download: mono, cut to the sounding part, a few thousandths of a second of fade in and a longer fade out, 32,000 samples a second, 16 bit. Take deep bass out if most of the sound is under 150 hertz, because small speakers lose it. The game brings every short sound to one loudness when it loads, so the file's own level does not matter.
+- A changed sound goes on the sound board for the owner's OK first: `node tools/preview/sounds.mjs <folder> [<extras folder>]`, published over the address above. The words at the bottom of the page are written by hand in `tools/preview/sounds.html`.
+- Sites a cloud session could not reach for sounds: freesound.org, pixabay.com, archive.org. kenney.nl refuses downloads from a script, so Kenney's pack was taken from his OpenGameArt page.
+- Nothing came from the 2D game: it has no sound or music files, only placeholder beeps in its fishing code.
 
 How the enemies were made, for the next time one is changed or added:
 
@@ -104,13 +97,15 @@ Milestone two (the modern look) is done apart from the open items above:
 
 Nobody has played the new look on a real iPad or Mac yet.
 
-Milestone three, part one (the longer grove) is done, in the three merged pull requests listed under "Start here":
+Milestone three, part one (the longer grove) is done, in three merged pull requests (18, 19 and 20):
 
 1. Sections 1 and 2 (the Broken Logs, the Stump Steps), the checkpoint list, and drawing only the stretch of forest near the hero.
 2. Sections 3 and 4 (the Ravine, the Mushroom Springs), with root shelves as a new kind of platform.
 3. Sections 5 and 6 (the High Boughs, the Climb).
 
-Milestone three, part two (enemies, hearts, the roll and the pounce) is done, in the five merged pull requests listed under "Start here".
+Milestone three, part two (enemies, hearts, the roll and the pounce) is done, in five merged pull requests (23 to 27).
+
+Milestone four (sound and music) is done, in the pull requests listed under "Start here".
 
 ## What exists now
 
@@ -157,36 +152,45 @@ Milestone three, part two (enemies, hearts, the roll and the pounce) is done, in
   - **What strikes:** a roll faster than a walk, a pounce, or either hero landing on top. A pounce or a landing bounces the hero up off it. A strike wins over a touch that would hurt.
   - After a fall, or after running out of hearts, an enemy that is not beaten goes home and starts over, keeping the strikes it has taken. A beaten one stays beaten for the run.
   - They are drawn by `src/view/enemies.ts` from `assets/enemies/marmot.glb` and `mosquito.glb`, each playing the clip for what the rules say it is doing. Enemies far from the hero are neither moved nor drawn.
+- **Sound.** Nothing plays until the first tap or key press, because browsers block it before that; the files are fetched while the start screen is up.
+  - **Music.** A calm forest track loops from the first tap on, on the start screen too. Finding the golden leaf plays a ten-second fanfare; the grove music makes way for it and drifts back after.
+  - **What the hero does:** a swish for a jump, a thud for a landing, a boing off a mushroom, a rolling rumble for as long as Yaarbro rolls (louder the faster he goes), a heavier swish for Caputo's pounce.
+  - **Footsteps** by what is underfoot: moss on banks, wood on logs, stumps, shelves and boughs. A step every 1.25 metres for Yaarbro and every 0.8 for Caputo, whose steps are the same recordings made quieter, lighter and softer. A gentle walk is quieter than a run. Each step is a little higher or lower than the last.
+  - **What tells the player something:** a hit, running out of hearts, a fall, a checkpoint (the first time a safe bank is reached), landing on or striking an enemy, the marmot scout's warning squeak and its throw, the mosquito's warning and its dive. These are the loudest, and the music dips under them.
+  - **Distance.** Enemy sounds are full within 6 metres and fade to nothing at 48, well past the edge of the screen. The mosquito whines for as long as it is about, so it is heard before it is seen.
+  - **Mute.** A Sound button beside Pause, on every screen, and the M key. The choice is remembered in the browser. Muted, the music keeps its place silently, so it is there when sound comes back.
+  - **Loudness.** Every short sound is brought to one loudness when it loads, then set by its job. One limiter holds down whatever piles up.
+  - Pausing, the end of the level and starting again stop the roll and the whine. Every button gives a soft click.
 - **Hearts.** 5 on Easy, 3 on Normal, 2 on Hard, shown under the level's name; a lost heart stays in place as a dark outline. A hit takes one, throws the hero away from what hurt it (0.5, 1.2 or 2 metres, by difficulty), takes the controls for a moment, and then nothing can hurt the hero for a while (1.3 seconds, times 1.5 on Easy and 0.6 on Hard), during which the hero flickers. A fall costs no heart. Losing the last one returns the hero to the last safe bank with all of them again. That is the same bank a fall returns to, so on Hard the cost stays under about 30 seconds of a perfect run.
 - **Camera.** Behind and above the hero, always looking the same way. A soft dark spot under the hero shows where a jump will land.
 - **Difficulty.** Easy, Normal, Hard on the start screen. All numbers are in `src/levels/bouncing-grove/difficulty.ts`: the route's sizes and gaps, the checkpoints, hearts, how long a hit protects, how far it throws, and the enemies' warning, speed and rest.
 - **Falls.** A fall returns the hero to the last safe mossy bank and is counted. It costs no heart.
 - **End card.** Difficulty, hero, time, falls, hearts lost, date. "Play again" returns to the start screen.
-- **Controls.** Mac: arrows or W A S D, Space, X or Shift for the hero's own move, Esc. Touch: drag the left half to move, press the right half to jump, and a smaller round button above Jump for the hero's own move.
+- **Controls.** Mac: arrows or W A S D, Space, X or Shift for the hero's own move, Esc, M for sound off and on. Touch: drag the left half to move, press the right half to jump, and a smaller round button above Jump for the hero's own move.
 - **Turn sideways.** A touch device whose page is taller than wide gets a "Turn sideways to play" card.
-- **This device remembers** the last hero and difficulty.
-- **Size.** The whole download is 8.23 MB (budget 20 MB, checked on every build). 1.3 MB of that is the two enemy models.
-- **Credits.** `CREDITS.md` lists every third-party file. All are CC0. It also lists the hero models, which are not: the README says the characters, their art and the hero models are all rights reserved.
+- **This device remembers** the last hero and difficulty, and whether sound is off.
+- **Size.** The whole download is 10.06 MB (budget 20 MB), of which sound and music are 1.81 MB (budget 4 MB). Both are checked on every build.
+- **Credits.** `CREDITS.md` lists every third-party file. All are CC0, the sounds and music included. It also lists the hero and enemy models, which are not: the README says the characters, their art and the models are all rights reserved.
 - **Checks on every pull request.** `.github/workflows/checks.yml`, three jobs: the private-terms check; rule tests, build with size check and browser checks in Chromium; browser checks in WebKit. The two browser jobs run inside Playwright's container image, pinned to the Playwright version in `package.json` (1.63.0), so a run installs nothing from Ubuntu's servers. Before this, on 2026-11-11, four runs in a row failed before any test because GitHub's machines could not reach those servers.
 
 ## Checks on this state
 
-- `npm test`: 404 tests pass. Among them: seven on the enemy model files, twenty-one on hearts, twenty-two on the roll and the pounce, and forty-seven on the enemies.
-- `npm run test:browser`: 94 browser checks pass, in Chromium at Mac size with the keyboard, in Chromium at iPad size with touch, and in WebKit at iPad size with touch. They cover loading and the progress bar, a failed download, the frame counter, fixed and automatic tiers, the full lighting at medium quality (and high at Mac size), each hero's model and clips, the stand-in model, hearts on screen and what a hit and the last heart do, the roll and the pounce from the keyboard and from the touch button, the scout coming out of hiding and its acorn costing a heart, the mosquito over the boughs, each move striking the scout, and everything milestone one checked.
+- `npm test`: 437 tests pass. New in milestone four: seven on the sound files (the list and the folder agree, every file is credited, WAV and MP3 only, under 4 MB) and twenty-six on sound itself (nothing before the first tap or key press, mute and its memory, footsteps by surface and hero, each event's sound, fading with distance, the mosquito's whine).
+- `npm run test:browser`: 110 browser checks pass, in Chromium at Mac size with the keyboard, in Chromium at iPad size with touch, and in WebKit at iPad size with touch. New in milestone four (`tests/browser/sound.spec.ts`): no sound before the first tap or key press; sound starts with the first tap and the music plays; a landing and a button click are heard; the Sound button and the M key mute and unmute; mute is remembered across a reload; a muted visit plays through with nothing played. Every one also checks the browser's console stays clean. All the older checks now run with sound on, since they click Play.
 - **Not checked:**
+  - How anything sounds. Nobody can hear a test browser, and a cloud session cannot hear. The checks prove sound is asked for at the right moments and raises no error.
   - Safari itself, a real iPad, a real Mac. The test browsers have no graphics card, so most checks run on the minimal tier, which has plain shading and no shadows. The full lighting is drawn in both browsers by two checks, slowly and in a small window.
-  - Frame rate on real devices. The only numbers so far are from the test machine, which has no graphics card: about 15 frames a second in Chromium and 9 in WebKit on the minimal tier, and several seconds a frame on the tiers above. A real device has to be looked at with `?fps`.
+  - Frame rate on an iPad. On the owner's Mac in Safari it was 120 a second on the high tier with a scout on screen (before sound). Whether sound costs frames on any device has not been measured; it should not, since sounds are decoded once and played by the browser.
   - In WebKit the test tools cannot hold or drag a real finger, so held and dragged touches are simulated at the page; taps on buttons are real.
-  - The frame rate with enemies on screen, on any real device.
   - Any clip in motion, other than by the owner on the preview pages: a cloud session can only look at still frames.
-  - Whether it is fun, and whether Easy is easy enough and Hard hard enough for the kids.
+  - Whether Easy is easy enough for the younger player. Hard is settled: the older player loved it.
 
 ## What's next
 
-1. **The owner and the kids play the level with its enemies**, and he says how each difficulty feels, how the two moves feel, and what the frame rate is on the Mac (see "Start here"). Tuning is a change to `src/levels/bouncing-grove/difficulty.ts` only; run `npm test` after.
-2. **Nothing else is planned.** The next milestone is the owner's to set. Ideas that came up and were not asked for are not in the code: sound, a second level, and the rest of the 2D forest's enemies.
-4. **The owner plays Caputo's three gaits in the game** and says how they look.
-5. **Checking the Blender scripts on new files.** `tools/rig-quadruped.py` is meant for the enemies too: each needs its own guide file of joint places, like `tools/caputo.rig.json`. Its path for a file that already has a skeleton (keep it, add the bones it lacks) was tried only on Caputo's earlier output, before he had shoulder blades and ears.
+1. **The owner and the kids play with sound** and he says what is too loud, too quiet, too often or wrong (see "Start here"). A level is one number in `src/audio/sounds.ts`; a different recording goes on the sound board first.
+2. **A second area is the likely next milestone.** The owner has not set it. What it would need from him before any work: which part of the Caputo Mountain forest it is (the docs and art in the private repo are the only source, and nothing new is canon), and whether it brings new enemies, which are made as the marmot and mosquito were. What is ready for it: a level is plain data built by a `layout.ts` from the numbers in a `difficulty.ts`, both in `src/levels/<level>/`; the rules, enemies, hearts, moves, sound and drawing take any level. What is not: the game knows one level (`main.ts` builds the grove directly, and the start screen has no level picker), the forest scenery is laid out for the grove's route, there is no saved progress between levels, and the music is one track.
+3. **Ideas that came up and were not asked for** are not in the code: saved progress, the rest of the 2D forest's enemies, sound that moves left and right with what makes it.
+4. **Checking the Blender scripts on new files.** `tools/rig-quadruped.py` is meant for new enemies too: each needs its own guide file of joint places, like `tools/caputo.rig.json`.
 
 ## Known limits
 
@@ -197,7 +201,10 @@ Milestone three, part two (enemies, hearts, the roll and the pounce) is done, in
 - The high boughs are logs on tall snags. They read clearly as footing, but they do not look like living boughs growing from trees.
 - A hero who falls from high up drops a long way before the fall is counted (the rule is a fixed height, 6 m below the start), and the camera follows it down.
 - The test bot is the only thing that has played the whole level. It measures whether each difficulty can be finished and how long a perfect run takes, not whether a jump reads well or feels fair.
-- No sound, no saved progress, one player.
+- No saved progress, one player.
+- Sound is the same in both ears: an enemy on the left does not sound from the left.
+- Footsteps are counted from distance walked, not from the hero's feet touching down, so a step can sound a moment off the animation.
+- The golden leaf tune is ten seconds long, and the end card appears under two seconds into it.
 - Caputo is long and the footing check is a small circle under his middle, so his head, tail and outer paws hang over narrow stumps.
 - On a phone-sized screen the start screen is taller than the screen and has to be scrolled (issue #5).
 - The minimal tier is blurry and its trees are sparse. It is only for machines that draw in software.

@@ -43,10 +43,10 @@ Recorded files, in `assets/audio/`. All are CC0, from OpenGameArt, downloaded on
 | File in this repo | What it is | Source | License |
 | --- | --- | --- | --- |
 | `step-moss-1.wav` to `step-moss-4.wav` | Footsteps on moss. The pack's `SandL1`, `SandR1`, `SandL2` and `SandR2` (its grass and sand steps), softened above 2,600 hertz. | "Fantozzi's Footsteps (Grass/Sand & Stone)" by Fantozzi (submitted by qubodup): https://opengameart.org/content/fantozzis-footsteps-grasssand-stone | CC0 |
-| `step-wood-1.wav` to `step-wood-3.wav`, `step-mushroom.wav` | Footsteps on wood (the pack's `wood01` to `wood03`, with the deep bass under 160 hertz taken down so small speakers carry them) and on a mushroom cap (its `mud02`). | "Different steps on wood, stone, leaves, gravel and mud" by TinyWorlds: https://opengameart.org/content/different-steps-on-wood-stone-leaves-gravel-and-mud | CC0 |
+| `step-wood-1.wav` to `step-wood-3.wav` | Footsteps on wood (the pack's `wood01` to `wood03`, with the deep bass under 160 hertz taken down so small speakers carry them). | "Different steps on wood, stone, leaves, gravel and mud" by TinyWorlds: https://opengameart.org/content/different-steps-on-wood-stone-leaves-gravel-and-mud | CC0 |
 | `jump.wav`, `pounce.wav`, `marmot-throw.wav` | The jump (`swish-10`), Caputo's pounce (`swish-9`) and the marmot scout's throw (`swish-13`). | "Swishes Sound Pack" by artisticdude: https://opengameart.org/content/swishes-sound-pack | CC0 |
 | `land.wav`, `strike.wav` | Landing (`thwack-06`) and landing on an enemy (`thwack-02`). | "Thwack Sounds" by AntumDeluge: https://opengameart.org/content/thwack-sounds | CC0 |
-| `bounce.wav` | The mushroom bounce: a door spring twanging (`door spring - Region #5`). | "Spring Sounds" by bart: https://opengameart.org/content/spring-sounds | CC0 |
+| `bounce.wav`, `step-mushroom.wav` | The mushroom bounce (the first 0.7 seconds of `boing.flac`) and a footstep on a mushroom cap (its first moment, played higher and shorter). | "Boing" by Aeva: https://opengameart.org/content/boing | CC0 |
 | `hit.wav` | The hero is hit (`qubodupPunch05`). | "Punch" by qubodup: https://opengameart.org/content/punch | CC0 |
 | `roll.wav` | Yaarbro's roll: two seconds of a ball rolling, joined end to start so it loops. | "Bowling Ball Rolling" by qubodup: https://opengameart.org/content/bowling-ball-rolling | CC0 |
 | `checkpoint.wav`, `hearts-out.wav` | Reaching a checkpoint (`Chime_Confirm`) and running out of hearts (`Chime_Exit`). | "Chimey UI Sounds" by MouseBYTE: https://opengameart.org/content/chimey-ui-sounds | CC0 |
@@ -66,7 +66,7 @@ SHA-256 of each download, as OpenGameArt served it:
 | `[kdd]DifferentSteps_0.zip` | `987d072b7deaa65177e005ddd8185f2351be7c9a76cd7575dea560549c39b33b` |
 | `swishes.zip` | `7980215241b739a787dcf26f660ce510bb237900968789395a86911619795693` |
 | `thwack-1.0.zip` | `8edb002735a01369ef4d6259573be4885f9fe32c9a9efa89dfbbb14067c8c8e5` |
-| `door_springs.7z` | `4606976829e679f85790303650fa70da522ed20c5058a0346531c72a7f24ffd3` |
+| `boing.flac` | `9c6af38ca79332ad3fa66ad1229179d2a91655c1157d3620e21ef676f54d9fdd` |
 | `qubodupPunch.7z` | `757795e8778acc377abacea902052c2dc707583c69d00b8baa2e76b670a02398` |
 | `qubodup-bowling-roll.7z` | `3c99cfe42ecf8a87ab13f66f0f4c16d0a2bdbf75f825eb2e959baab581091af8` |
 | `mousebyte_chimeyui.7z` | `6272bac49c8f3e9aa251a8c9e974a2e7f5756119657d0414197baeb129b0c549` |

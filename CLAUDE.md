@@ -8,7 +8,7 @@ Read first: `docs/session-handoff.md` (what exists, what's next, open questions)
 
 ## Status
 
-In development. One playable area, the Bouncing Grove: a full level in six sections, with three enemies, hearts, and a move for each hero (milestone three, done). `docs/session-handoff.md` says what the owner has still to check on a real device.
+In development. One playable area, the Bouncing Grove: a full level in six sections, with three enemies, hearts, a move for each hero, and sound and music (milestone four, done). `docs/session-handoff.md` says what the owner has still to check on a real device.
 Live at: https://rowbeartow.github.io/yaarbroverse-3d/ . Every merge to `main` publishes there, straight to the kids' devices.
 
 ## Architecture
@@ -17,7 +17,7 @@ Live at: https://rowbeartow.github.io/yaarbroverse-3d/ . Every merge to `main` p
 - Assets: source textures, the forest light (HDRI) and models in `assets/`. `scripts/build-assets.mjs` compresses them into `public/media/` (KTX2 textures, meshopt geometry, a smaller HDR) before every build and before `npm run dev`. `public/media/` is not committed. Third-party files are CC0 and listed in `CREDITS.md`; the build fails over 20 MB. Recorded sounds and music are in `assets/audio/` (WAV and MP3, which Safari plays; under 4 MB in total, checked by `tests/sound-files.test.ts`).
 - Hero models: `assets/heroes/` holds them already compressed, and the build copies them as they are. The owner's originals (20 to 30 MB each, files on the `hero-models` release) are never committed. Blender scripts in `tools/`, run with no window, make each model from its originals: `prepare-rigged.py` for a character Meshy rigged (Yaarbro: puts his one-clip files on one model, makes each clip happen on the spot, cleans up the skin), `rig-quadruped.py` for one Meshy could not rig (Caputo: builds the skeleton, skins it, writes the clips), and `pose-test.py` to look at a skin in test poses. `tools/compress-hero.mjs` then makes the small file and lists its clips. `tools/preview/` builds the page the owner reviews a hero on before a change to it is merged. Enemy models are kept the same way in `assets/enemies/`: `rig-quadruped.py` rigs the marmot scout (its guide file picks the marmot's own clips), `rig-insect.py` rigs the giant mosquito, `joint-views.py` draws a model on a grid to find its joints, and `tools/preview/enemies.mjs` builds the page the owner reviews them on. `tools/meshy-image-to-3d.mjs` makes enemy model candidates from a picture through Meshy's API, and `tools/preview/candidates.mjs` builds the page the owner picks one on.
 - Deploy target: GitHub Pages, static files only. `.github/workflows/publish.yml` builds and publishes on every merge to main.
-- Data layer: none. The browser remembers the last hero and difficulty.
+- Data layer: none. The browser remembers the last hero and difficulty, and whether sound is muted.
 - Auth: none.
 - External services: none, and none are allowed inside the game (no accounts, payments, online services or AI calls).
 
@@ -35,10 +35,14 @@ How it fits together:
   - `assets.ts`: downloads `media/` and reports progress. `quality.ts`: the tiers and the rules for choosing one (no 3D code, tested).
   - `enemies.ts`: draws each enemy from its model, the acorn, and the line an attack is aimed along.
   - `heroes.ts`: builds a hero from its model (`hero-model.ts`, mixing rules in `hero-motion.ts`). To give a character a model, see the top of `hero-model.ts`.
-- `src/audio/`: sound. `sounds.ts` lists every sound and the music: what it is for, its file in `assets/audio/` or its recipe, and how loud it is against the others. `synth.ts` holds the recipes for the few sounds made in code with Web Audio (the giant mosquito's) and brings short sounds to one loudness. Not wired into the game yet: the owner is listening on the sound board first.
+- `src/audio/`: sound. Nothing plays before the first tap or key press.
+  - `sounds.ts`: every sound and the music in one list: what it is for, its file in `assets/audio/` (or its recipe, for the giant mosquito), and how loud it is against the others.
+  - `mix.ts`: whether sound may play yet, mute and its memory (no browser code, tested). `game-sounds.ts`: turns what the rules report into sounds: events, footsteps by surface and hero, the roll, the mosquito's whine, and fading with distance (no browser code, tested).
+  - `player.ts`: makes the noise with Web Audio: fetches and decodes the files, mixes cues over effects over footsteps over music, dips the music under a cue, and limits the total.
+  - `synth.ts`: the recipes for the few sounds made in code, and the step that brings short sounds to one loudness.
 - `src/input/controls.ts`: keyboard and touch, turned into "which way", "is Jump held" and "is the move button held" (Yaarbro's roll, Caputo's pounce).
 - `src/ui/screens.ts` and `index.html`: start screen, pause, end card, "turn sideways" card, messages.
-- `src/main.ts`: the loop that connects them. The start screen shows first; the 3D code and files load behind it with a progress bar.
+- `src/main.ts`: the loop that connects them, the Sound button and the M key. The start screen shows first; the 3D code and files load behind it with a progress bar.
 
 Address-bar switches: `?fps` shows the frame rate and tier, `?quality=high|medium|low|minimal` fixes the tier, `?standin` plays both heroes as the CC0 stand-in model (for checking the loader and animation player against a library file).
 
@@ -49,7 +53,7 @@ Node 22 (`.nvmrc`).
 - Install: `npm ci`
 - Run locally: `npm run dev`, then open the address it prints
 - Test the rules: `npm test` (fast, no browser). `GROVE_TIMES=1 npx vitest run tests/sections.test.ts --silent=false` prints how long the bot's perfect run takes to the end of each section.
-- Build: `npm run build` (prepares the assets, and fails if the download goes over 20 MB)
+- Build: `npm run build` (prepares the assets, and fails if the download goes over 20 MB or the sound and music in it go over 4 MB)
 - Pictures for the docs: `node scripts/screenshot.mjs` (see the top of that file)
 - Rebuild Yaarbro from his Meshy files: `blender -b -P tools/prepare-rigged.py -- <folder of Meshy files> <out.glb> tools/yaarbro.guide.json`, then compress `<out.glb>`.
 - Rig Caputo from his Meshy file: `blender -b -P tools/rig-quadruped.py -- <caputo original.glb> <out.glb> tools/caputo.rig.json`, then compress `<out.glb>`.
@@ -86,4 +90,6 @@ Never modify or commit a file unrelated to the current task, including to produc
 - Pictures drawn in code (`pictures.ts`) ask for `willReadFrequently`, which keeps the drawing on the processor. Without it a browser with no graphics card takes about 7 seconds to start.
 - The Poly Haven files come straight from Poly Haven (`CREDITS.md` gives the addresses and checksums). A cloud session can only fetch them if its environment's network settings allow `polyhaven.com`, `api.polyhaven.com` and `dl.polyhaven.org`.
 - Browser checks run in Chromium (Mac-sized with a keyboard, iPad-sized with touch) and in WebKit (iPad-sized with touch), each as its own job in `checks.yml`. On GitHub both jobs run inside Playwright's container image (`mcr.microsoft.com/playwright`), pinned to the exact Playwright version in `package.json`, so no run installs anything from Ubuntu's servers. To upgrade Playwright, change `package.json`, `package-lock.json` and the two image lines in `checks.yml` together; `scripts/check-playwright-image.mjs` fails the checks if they differ. WebKit is Safari's engine built for Linux, not Safari itself: Safari on a real iPad is only checked by hand.
+- Nobody can hear a test browser, and a cloud session cannot hear at all. The checks prove sound is asked for at the right moments, is silent before the first tap and when muted, and raises no error (`tests/sound.test.ts`, `tests/browser/sound.spec.ts`, and `__grove.sound` on the page). How it sounds is judged by the owner, on the sound board and in the game.
+- Sound must start from inside a tap or key press, or Safari stays silent. The page listens for every tap and key before anything else does (`main.ts`) and wakes the sound each time. Sound files are WAV for short sounds (nothing added at either end) and MP3 for music.
 - The test tools can tap in WebKit but cannot hold a finger down or drag one. In WebKit, held and dragged fingers are touch pointer events handed to the element under the finger (see `tests/browser/touch.spec.ts`); in Chromium they are real touches.
