@@ -1,6 +1,6 @@
 # Session handoff
 
-Last updated: 2026-11-11
+Last updated: 2026-11-12
 
 ## Start here
 
@@ -25,9 +25,13 @@ The branches `claude/part-two-step-3`, `-4` and `-5` were safety copies made whi
 1. **The frame rate on the Mac with enemies on screen.** Open the live link in Safari with `?fps` on the end of the address, play to the clearing after the stumps, and say what frame rate and tier show while the scout is out. The target is 60 on the high tier. Before the enemies it was 60, with 121 draw calls and 226 thousand triangles at the end of the level. At most two enemies are drawn at once, about 14 thousand triangles each.
 2. **Whether Hard makes the older player work for it.** A perfect run that never stops gets past every enemy untouched, even on Hard. A player who hesitates is hit. If Hard is too gentle, change `enemyWarning`, `enemySpeed` and `enemyRest` for `hard` in `src/levels/bouncing-grove/difficulty.ts`, then run `npm test`.
 3. **Whether the roll and the pounce feel right to the kids**, and whether the touch button is where a thumb finds it.
-4. **The two picked enemy originals on the `hero-models` release.** They were sent to the owner in the chat as `marmot-b.glb` and `mosquito-c.glb`, with steps to attach them. If they are not on the release, the enemies cannot be rebuilt from the same models: Meshy kept them for about three days from 2026-11-11 (marmot B is task `01a1cb90-5110-76bb-aff5-cb9c9f384842`, mosquito C is task `01a1cb90-6bc4-7196-84e5-86177f2d9020`, at `GET https://api.meshy.ai/openapi/v1/image-to-3d/<task>`), and a new one costs 30 credits and needs new joint places in its guide file.
 
 How the enemies were made, for the next time one is changed or added:
+
+- **The two picked originals are on the `hero-models` release**, as Meshy made them (the owner attached them on 2026-11-12):
+  - The marmot scout (candidate B) is `marmot-b.glb`, 4,906,284 bytes: https://github.com/rowbeartow/yaarbroverse-3d/releases/download/hero-models/marmot-b.glb . Its SHA-256 starts `aa77f4afb6dd8370`.
+  - The giant mosquito (candidate C) is `mosquito-c.glb`, 5,126,232 bytes: https://github.com/rowbeartow/yaarbroverse-3d/releases/download/hero-models/mosquito-c.glb . Its SHA-256 starts `ff3a5e765a94a497`.
+  - Both were downloaded from the release and checked against the files the enemies were rigged from: same size and same checksum. Download them to a scratch folder, never into the repo.
 
 - The reference pictures were the "Alert" marmot and the "Hover" mosquito from the approved studies (`docs/art-direction/b02a/marmot-scout-study.png` and `giant-mosquito-study.png` on the private repo's `codex/forest-f01` branch), each cut out of its sheet with the background and ground dust removed. `tools/meshy-image-to-3d.mjs` asks Meshy for candidates and reports the credits spent; `tools/preview/candidates.mjs` builds the page the owner picks on. The owner's limit was 300 credits without asking.
 - **The marmot scout** is rigged by `tools/rig-quadruped.py` with `tools/marmot.rig.json`, whose `"character": "marmot"` picks the `MarmotScout` class's clips in place of the cat's: 26 bones, automatic weights worked on the mesh as it came. Clips, one for each phase of its behaviour in the 2D forest: `idle` (on watch), `walk` (a low shuffle), `warning` (rears up with its right paw back over its shoulder and holds), `throw` (the acorn leaves the paw a fifth of the way in, then it drops to all fours), `winded` (the rest after a throw), `hit` (the first strike), `hop` (its dodge) and `defeated` (over onto its back).
