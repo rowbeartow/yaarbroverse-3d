@@ -25,7 +25,7 @@ describe('sound files', () => {
     const credits = readFileSync('CREDITS.md', 'utf8');
     for (const file of onDisk) {
       const family = file.replace(/-\d+\.wav$/, '-');
-      expect(credits.includes(file) || credits.includes(`${family}1.wav\` to`), file).toBe(true);
+      expect(credits.includes(`\`${file}\``) || credits.includes(`${family}1.wav\` to`), file).toBe(true);
     }
   });
 

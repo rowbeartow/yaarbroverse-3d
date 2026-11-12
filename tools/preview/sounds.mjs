@@ -41,10 +41,21 @@ mkdirSync(media, { recursive: true });
 const files = ['sounds.js', 'media/board.json'];
 
 /** One line of source and license for each recorded file, as CREDITS.md has it. */
+const og = (title, by) => `Recorded: "${title}" by ${by}, from OpenGameArt. CC0.`;
 const CREDIT = [
-  [/^step-moss-/, 'Recorded: "Fantozzi\'s Footsteps (Grass/Sand & Stone)" by Fantozzi, from OpenGameArt. CC0.'],
-  [/^step-wood-/, 'Recorded: "Different steps on wood, stone, leaves, gravel and mud" by TinyWorlds, from OpenGameArt. CC0.'],
-  [/^grove-music/, 'Recorded: "Forest Whisper Theme" by Cleyton Kauffman, from OpenGameArt. CC0.'],
+  [/^step-moss-/, og("Fantozzi's Footsteps (Grass/Sand & Stone)", 'Fantozzi')],
+  [/^step-(wood|mushroom)/, og('Different steps on wood, stone, leaves, gravel and mud', 'TinyWorlds')],
+  [/^(jump|pounce|marmot-throw)\./, og('Swishes Sound Pack', 'artisticdude')],
+  [/^(land|strike)\./, og('Thwack Sounds', 'AntumDeluge')],
+  [/^bounce\./, og('Spring Sounds', 'bart')],
+  [/^hit\./, og('Punch', 'qubodup')],
+  [/^roll\./, og('Bowling Ball Rolling', 'qubodup')],
+  [/^(checkpoint|hearts-out)\./, og('Chimey UI Sounds', 'MouseBYTE')],
+  [/^fall\./, og('Short wind sound', 'remaxim')],
+  [/^marmot-warning\./, og('Squeak Toy Sounds', 'bart')],
+  [/^button\./, og('Interface Sounds', 'Kenney')],
+  [/^leaf-tune\./, og('Victory Fanfare Short', 'cynicmusic')],
+  [/^grove-music/, og('Forest Whisper Theme', 'Cleyton Kauffman')],
 ];
 const credits = {};
 for (const file of readdirSync('assets/audio').sort()) {

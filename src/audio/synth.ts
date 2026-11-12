@@ -1,7 +1,12 @@
 // The sounds that are made in code, with Web Audio, instead of being recorded.
-// Each one is a small recipe: a few tones and a little filtered hiss, shaped so
-// it starts and ends gently. Nothing here is loud, sharp or sudden: the
-// players are kids.
+// Only the giant mosquito's three are: no recording of a mosquito that could
+// be used was found, and a whine is the one sound a made tone does well. The
+// owner found the other made sounds read as beeps beside the recordings, so
+// they were replaced with recordings (see docs/decisions.md).
+//
+// Each one is a small recipe: a tone and a little filtered hiss, shaped so it
+// starts and ends gently. Nothing here is loud, sharp or sudden: the players
+// are kids.
 //
 // A recipe is drawn once, off screen, into a buffer (`renderSynth`), and the
 // buffer is then played like any recorded sound. Drawing all of them takes a
@@ -122,19 +127,6 @@ const breath = (ctx: BaseAudioContext, out: AudioNode, b: Breath): void => {
   source.stop(at + b.for + 0.02);
 };
 
-/** A small bell: a note with two quieter notes above it, dying away. */
-const bell = (ctx: BaseAudioContext, out: AudioNode, pitch: number, at: number, length: number, level = 0.4): void => {
-  tone(ctx, out, { from: pitch, at, for: length, level });
-  tone(ctx, out, { from: pitch * 2, at, for: length * 0.6, level: level * 0.28 });
-  tone(ctx, out, { from: pitch * 3, at, for: length * 0.35, level: level * 0.1 });
-};
-
-/** Pitches of the notes used below, in hertz. */
-const NOTE = {
-  A3: 220.0, C4: 261.63, E4: 329.63, G4: 392.0, C5: 523.25, E5: 659.25, G5: 783.99,
-  C6: 1046.5, E6: 1318.5, G6: 1567.98, C7: 2093.0,
-};
-
 export interface Recipe {
   /** Seconds of sound. A loop is exactly this long. */
   length: number;
@@ -149,107 +141,6 @@ export interface Recipe {
  * and every loop is one second long.
  */
 export const RECIPES = {
-  /** A quick rising "whup". */
-  jump: {
-    length: 0.2,
-    draw: (ctx, out) => {
-      tone(ctx, out, { from: 300, to: 620, for: 0.16, level: 0.5, attack: 0.01 });
-      breath(ctx, out, { kind: 'band', from: 900, to: 1800, for: 0.12, level: 0.08, q: 1.5 });
-    },
-  },
-  /** A soft low thump. */
-  land: {
-    length: 0.24,
-    draw: (ctx, out) => {
-      // Not too low: an iPad's small speakers lose anything much under 100 hertz.
-      tone(ctx, out, { from: 200, to: 85, for: 0.18, level: 0.7, attack: 0.005 });
-      breath(ctx, out, { kind: 'low', from: 700, to: 250, for: 0.1, level: 0.4, attack: 0.005 });
-    },
-  },
-  /** A springy "boing": the pitch dips, springs up and wobbles as it settles. */
-  bounce: {
-    length: 0.5,
-    draw: (ctx, out) => {
-      tone(ctx, out, { wave: 'triangle', from: 190, to: 420, for: 0.46, level: 0.5, attack: 0.006, soften: 1800, wobble: { rate: 21, depth: 55, depthEnd: 4 } });
-      tone(ctx, out, { from: 95, to: 210, for: 0.3, level: 0.3, attack: 0.006 });
-    },
-  },
-  /** A footstep on a mushroom cap: a small rubbery "bup". */
-  stepMushroom: {
-    length: 0.12,
-    draw: (ctx, out) => {
-      tone(ctx, out, { wave: 'triangle', from: 230, to: 150, for: 0.1, level: 0.5, attack: 0.006, soften: 1200 });
-    },
-  },
-  /** Yaarbro rolling: a low tumbling rumble, round and round while he rolls. */
-  roll: {
-    length: 1,
-    loop: true,
-    draw: (ctx, out) => {
-      // Two seconds are drawn and the second one kept (see `renderSynth`), so the filters have settled.
-      const tumble = ctx.createGain();
-      tumble.gain.value = 0.55;
-      const lfo = ctx.createOscillator();
-      const depth = ctx.createGain();
-      lfo.frequency.value = 7;
-      depth.gain.value = 0.4;
-      lfo.connect(depth).connect(tumble.gain);
-      lfo.start(0);
-      tumble.connect(out);
-      breath(ctx, tumble, { kind: 'low', from: 420, for: 2.1, level: 0.9, struck: false });
-      tone(ctx, tumble, { from: 110, for: 2.1, level: 0.3, struck: false, wobble: { rate: 7, depth: 12 } });
-    },
-  },
-  /** Caputo's pounce: a short rush of air. */
-  pounce: {
-    length: 0.3,
-    draw: (ctx, out) => {
-      breath(ctx, out, { kind: 'band', from: 400, to: 1500, for: 0.26, level: 0.6, attack: 0.05, q: 1.6 });
-      tone(ctx, out, { from: 380, to: 700, for: 0.2, level: 0.12, attack: 0.04 });
-    },
-  },
-  /** The hero is hit: a soft falling "bwomp". Not a crash. */
-  hit: {
-    length: 0.34,
-    draw: (ctx, out) => {
-      tone(ctx, out, { wave: 'triangle', from: 392, to: 185, for: 0.28, level: 0.55, attack: 0.008, soften: 1300 });
-      breath(ctx, out, { kind: 'low', from: 500, to: 200, for: 0.08, level: 0.2, attack: 0.005 });
-    },
-  },
-  /** Out of hearts: three slow notes going down. Gentle, a little sad. */
-  heartsOut: {
-    length: 1.3,
-    draw: (ctx, out) => {
-      bell(ctx, out, NOTE.E4, 0, 0.45, 0.42);
-      bell(ctx, out, NOTE.C4, 0.26, 0.45, 0.42);
-      bell(ctx, out, NOTE.A3, 0.52, 0.75, 0.46);
-    },
-  },
-  /** Falling: a slide down, like a slide whistle. */
-  fall: {
-    length: 0.7,
-    draw: (ctx, out) => {
-      tone(ctx, out, { from: 640, to: 170, for: 0.62, level: 0.42, attack: 0.03, struck: false, wobble: { rate: 9, depth: 8 } });
-    },
-  },
-  /** The marmot scout's warning: two short rising whistles, as a marmot gives. */
-  marmotTell: {
-    length: 0.36,
-    draw: (ctx, out) => {
-      // Kept well under 2,000 hertz, where a pure whistle starts to pierce.
-      tone(ctx, out, { from: 1100, to: 1450, for: 0.1, level: 0.36, attack: 0.015, struck: false });
-      tone(ctx, out, { from: 1100, to: 1550, at: 0.16, for: 0.14, level: 0.4, attack: 0.015, struck: false });
-      breath(ctx, out, { kind: 'band', from: 1300, for: 0.3, level: 0.03, q: 3, struck: false });
-    },
-  },
-  /** The scout throws its acorn: a small "tok" and a swish. */
-  marmotThrow: {
-    length: 0.24,
-    draw: (ctx, out) => {
-      tone(ctx, out, { from: 520, to: 300, for: 0.05, level: 0.4, attack: 0.004 });
-      breath(ctx, out, { kind: 'band', from: 1300, to: 450, for: 0.2, level: 0.5, attack: 0.02, q: 1.8 });
-    },
-  },
   /** The giant mosquito hovering: a thin steady whine, round and round while it is about. */
   mosquitoHover: {
     length: 1,
@@ -293,54 +184,6 @@ export const RECIPES = {
       breath(ctx, out, { kind: 'band', from: 1200, to: 450, for: 0.3, level: 0.18, attack: 0.04, q: 1.6 });
     },
   },
-  /** Landing on an enemy, or striking it with a roll or pounce: a cartoon "bonk". */
-  strike: {
-    length: 0.22,
-    draw: (ctx, out) => {
-      tone(ctx, out, { from: 540, to: 250, for: 0.14, level: 0.6, attack: 0.004 });
-      tone(ctx, out, { wave: 'triangle', from: 820, to: 760, for: 0.04, level: 0.25, attack: 0.004, soften: 2500 });
-      breath(ctx, out, { kind: 'low', from: 700, to: 250, for: 0.06, level: 0.18, attack: 0.004 });
-    },
-  },
-  /** A checkpoint: two small bells, the second higher. */
-  checkpoint: {
-    length: 0.9,
-    draw: (ctx, out) => {
-      bell(ctx, out, NOTE.C5, 0, 0.5, 0.42);
-      bell(ctx, out, NOTE.G5, 0.13, 0.72, 0.42);
-    },
-  },
-  /** A menu button: a soft tick. */
-  button: {
-    length: 0.08,
-    draw: (ctx, out) => {
-      tone(ctx, out, { from: 720, to: 620, for: 0.06, level: 0.45, attack: 0.004 });
-      tone(ctx, out, { from: 1440, for: 0.03, level: 0.1, attack: 0.004 });
-    },
-  },
-  /**
-   * Finding the golden leaf: a short happy tune on small bells. It climbs the
-   * notes of a bright chord, lands on the top note over a soft held chord, and
-   * ends with a little sparkle.
-   */
-  leafTune: {
-    length: 3.6,
-    draw: (ctx, out) => {
-      const beat = 0.15;
-      const tune: [number, number, number][] = [
-        [NOTE.G4, 0, 0.4], [NOTE.C5, 1, 0.4], [NOTE.E5, 2, 0.4], [NOTE.G5, 3, 0.6],
-        [NOTE.E5, 5, 0.4], [NOTE.G5, 6, 0.5], [NOTE.C6, 8, 1.6],
-      ];
-      for (const [pitch, beats, length] of tune) bell(ctx, out, pitch, beats * beat, length, 0.36);
-      const chordAt = 8 * beat;
-      for (const pitch of [NOTE.C4, NOTE.E4, NOTE.G4]) {
-        tone(ctx, out, { from: pitch, at: chordAt, for: 2.2, level: 0.13, attack: 0.05 });
-      }
-      [NOTE.C6, NOTE.E6, NOTE.G6, NOTE.C7].forEach((pitch, i) => {
-        tone(ctx, out, { from: pitch, at: chordAt + 0.5 + i * 0.09, for: 0.5, level: 0.07, attack: 0.006 });
-      });
-    },
-  },
 } satisfies Record<string, Recipe>;
 
 export type SynthName = keyof typeof RECIPES;
@@ -352,7 +195,7 @@ const TARGET = 0.1;
  * Brings a sound to the common loudness: finds the loudest fifth of a second
  * in it and scales the whole sound so that part sits at `TARGET`. Every made
  * sound goes through this, so none jumps out; how loud each is against the
- * others is then set on purpose in `sounds.ts`.
+ * others is then set on purpose in `sounds.ts`. Short recordings go through it too.
  */
 export const evenOut = (data: Float32Array, rate: number): void => {
   const window = Math.min(data.length, Math.round(rate * 0.2));

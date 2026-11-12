@@ -1,6 +1,6 @@
 // Every sound and piece of music in the game, in one list: what it is for,
-// where it comes from (a recorded file in assets/audio/, or a recipe in
-// synth.ts), and how loud it is against the others.
+// where it comes from (a recorded file in assets/audio/, or for the mosquito a
+// recipe in synth.ts), and how loud it is against the others.
 //
 // The sound board the owner listens on (tools/preview/sounds.mjs) is built
 // from this list, and so is the game's sound. CREDITS.md lists the source and
@@ -49,93 +49,93 @@ export const SOUNDS = {
   },
   stepMushroom: {
     group: 'Footsteps', label: 'Step on a mushroom', bus: 'step', level: -9, vary: 0.1,
-    what: 'A small rubbery "bup" on a mushroom cap. Made in code.',
-    source: { synth: 'stepMushroom' },
+    what: 'A soft, damp step on a mushroom cap. A recording of a step in mud.',
+    source: { files: ['step-mushroom.wav'] },
   },
   jump: {
-    group: 'Hero', label: 'Jump', bus: 'effect', level: -5, vary: 0.04,
-    what: 'A quick rising "whup" as the hero leaves the ground.',
-    source: { synth: 'jump' },
+    group: 'Hero', label: 'Jump', bus: 'effect', level: -5, vary: 0.06,
+    what: 'A light swish of air as the hero leaves the ground.',
+    source: { files: ['jump.wav'] },
   },
   land: {
     group: 'Hero', label: 'Landing', bus: 'effect', level: -3, vary: 0.06,
-    what: 'A soft low thump when the hero touches down.',
-    source: { synth: 'land' },
+    what: 'A dull thud when the hero touches down.',
+    source: { files: ['land.wav'] },
   },
   bounce: {
     group: 'Hero', label: 'Mushroom bounce', bus: 'effect', level: -2, vary: 0.05,
-    what: 'A springy "boing" off a mushroom.',
-    source: { synth: 'bounce' },
+    what: 'A real spring twanging: a short "boing" off a mushroom.',
+    source: { files: ['bounce.wav'] },
   },
   roll: {
     group: 'Hero', label: "Yaarbro's roll", bus: 'effect', level: -6, loop: true,
-    what: 'A low tumbling rumble for as long as he rolls. It fades in and out with the roll.',
-    source: { synth: 'roll' },
+    what: 'A heavy ball rolling, for as long as he rolls. It fades in and out with the roll.',
+    source: { files: ['roll.wav'] },
   },
   pounce: {
     group: 'Hero', label: "Caputo's pounce", bus: 'effect', level: -3, vary: 0.05,
-    what: 'A short rush of air as he springs.',
-    source: { synth: 'pounce' },
+    what: 'A heavier swish than the jump as he springs.',
+    source: { files: ['pounce.wav'] },
   },
   hit: {
     group: 'Hero', label: 'The hero is hit', bus: 'cue', level: 0,
-    what: 'A soft falling "bwomp" when a heart is lost. Clear, not a crash.',
-    source: { synth: 'hit' },
+    what: 'A soft, padded thump when a heart is lost. Clear, not a crash.',
+    source: { files: ['hit.wav'] },
   },
   heartsOut: {
     group: 'Hero', label: 'Out of hearts', bus: 'cue', level: 0,
-    what: 'Three slow notes going down, before the hero is back on the last safe bank.',
-    source: { synth: 'heartsOut' },
+    what: 'Four chime notes going down, before the hero is back on the last safe bank.',
+    source: { files: ['hearts-out.wav'] },
   },
   fall: {
     group: 'Hero', label: 'Falling', bus: 'cue', level: -3,
-    what: 'A slide down, like a slide whistle, when the hero drops off the route.',
-    source: { synth: 'fall' },
+    what: 'A second of rushing wind when the hero drops off the route.',
+    source: { files: ['fall.wav'] },
   },
   marmotTell: {
     group: 'Enemies', label: "Marmot scout's warning", bus: 'cue', level: -4,
-    what: 'Two short rising whistles as the scout rears up with its acorn. Real marmots whistle to warn.',
-    source: { synth: 'marmotTell' },
+    what: 'A squeak as the scout rears up with its acorn. A squeaky toy, played a little lower.',
+    source: { files: ['marmot-warning.wav'] },
   },
   marmotThrow: {
     group: 'Enemies', label: "Marmot scout's throw", bus: 'cue', level: -3,
-    what: 'A small "tok" and a swish as the acorn leaves its paw.',
-    source: { synth: 'marmotThrow' },
+    what: 'A quick, short swish as the acorn leaves its paw.',
+    source: { files: ['marmot-throw.wav'] },
   },
   mosquitoHover: {
     group: 'Enemies', label: 'Giant mosquito hovering', bus: 'cue', level: -12, loop: true,
-    what: 'A thin whine for as long as the mosquito is about, quiet far off and louder close. An extra, not on the list: it is how the mosquito is heard before it is seen.',
+    what: 'A thin whine for as long as the mosquito is about, quiet far off and louder close. An extra, not on the list: it is how the mosquito is heard before it is seen. Made in code.',
     source: { synth: 'mosquitoHover' },
   },
   mosquitoTell: {
     group: 'Enemies', label: "Giant mosquito's warning", bus: 'cue', level: -1,
-    what: 'The whine climbs and quickens just before it dives.',
+    what: 'The whine climbs and quickens just before it dives. Made in code.',
     source: { synth: 'mosquitoTell' },
   },
   mosquitoDive: {
     group: 'Enemies', label: "Giant mosquito's dive", bus: 'cue', level: -3,
-    what: 'The whine swoops down as it dives.',
+    what: 'The whine swoops down as it dives. Made in code.',
     source: { synth: 'mosquitoDive' },
   },
   strike: {
     group: 'Enemies', label: 'Landing on an enemy', bus: 'cue', level: 0,
-    what: 'A cartoon "bonk" when the hero lands on an enemy, or strikes it with a roll or a pounce.',
-    source: { synth: 'strike' },
+    what: 'A short hollow knock, a "bonk", when the hero lands on an enemy or strikes it with a roll or a pounce.',
+    source: { files: ['strike.wav'] },
   },
   checkpoint: {
     group: 'World', label: 'Checkpoint', bus: 'cue', level: -1,
-    what: 'Two small bells, the second higher, on reaching a safe mossy bank.',
-    source: { synth: 'checkpoint' },
+    what: 'Three bright chime notes on reaching a safe mossy bank.',
+    source: { files: ['checkpoint.wav'] },
   },
   leafTune: {
-    group: 'Music', label: 'Golden leaf tune', bus: 'music', level: 2,
-    what: 'A short happy tune on small bells when the golden leaf is found: it climbs, lands on a high note over a soft chord, and sparkles. Made in code. The grove music stops for it.',
-    source: { synth: 'leafTune' },
+    group: 'Music', label: 'Golden leaf tune', bus: 'music', level: -4,
+    what: 'A ten-second victory fanfare in a bright key when the golden leaf is found. The grove music stops for it.',
+    source: { files: ['leaf-tune.mp3'] },
   },
   button: {
     group: 'Menu', label: 'Menu button', bus: 'effect', level: -6,
-    what: 'A soft tick on every button: hero, difficulty, Play, pause, mute.',
-    source: { synth: 'button' },
+    what: 'A very short soft click on every button: hero, difficulty, Play, pause, mute.',
+    source: { files: ['button.wav'] },
   },
   groveMusic: {
     group: 'Music', label: 'Grove music', bus: 'music', level: -9, loop: true,

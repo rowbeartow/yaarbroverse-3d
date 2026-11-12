@@ -236,3 +236,7 @@ Supersedes: none
 ## 2026-11-12 Only the newest commit on main is ever published
 Reason: The owner's instruction, after a GitHub outage left an old publish run stuck in the queue. The publish workflow compares its own commit with the head of main, before the build and again just before the files go up, and finishes without publishing if they differ. A run started again later, or one that waited while newer work merged, can no longer put an older version on the live site. A run from before this change still carries the old workflow file, so the guard does not cover it.
 Supersedes: none
+
+## 2026-11-12 Sounds are recordings; a sound is made in code only where it holds up beside one
+Reason: The owner's call after the first sound board: the sounds made in code sounded like beeps next to the recorded ones. Jump, landing, mushroom bounce, the hero hit and the golden leaf tune are CC0 recordings, and so is every other sound a fitting CC0 recording could be found for. Only the giant mosquito's three sounds are still made in code, because no usable recording was found; the owner judges them on the board. A changed set of sounds goes back on the sound board for his OK before it is wired into the game.
+Supersedes: none
