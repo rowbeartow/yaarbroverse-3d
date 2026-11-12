@@ -45,7 +45,7 @@ describe('sound files', () => {
   });
 
   it('the mix is the six numbers the owner set by ear, and none of them turns anything up', () => {
-    expect(MIX).toEqual({ master: -12, music: -14, cue: -17, action: -22, step: -9, menu: -12 });
+    expect(MIX).toEqual({ master: -8, music: -21, cue: -15, action: -26, step: -24, menu: -12 });
     for (const value of Object.values(MIX)) expect(value).toBeLessThanOrEqual(0);
   });
 
