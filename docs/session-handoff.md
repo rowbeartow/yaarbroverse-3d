@@ -20,11 +20,16 @@ The branches `claude/part-two-step-3`, `-4` and `-5` were safety copies made whi
 
 **What the owner decided along the way** (all in `docs/decisions.md`): the roll tops out at one and a half times walking speed, not the 2D game's two and a half, because footing is narrower in 3D; how far a hit throws a hero is a number for each difficulty (0.5, 1.2 and 2 metres); Hard's enemy numbers stay at Caputo Mountain's until the kids have played; landing on an enemy strikes it on every difficulty; and no enemy may bother a hero in a section of diagonal jumps, which is where the kids fell most.
 
+**The owner's playtest of milestone three (2026-11-12, in `docs/decisions.md`):** Hard is properly hard and the older player loved it, so every difficulty number stays. The enemies' tells make them fair to dodge, so they stay on every difficulty. On his Mac in Safari, on Normal with the scout on screen: 120 frames a second on the high tier, 310 draw calls, 407 thousand triangles.
+
+**The publish guard.** The publish workflow (`.github/workflows/publish.yml`) only publishes the newest commit on main. It compares its own commit with the head of main before the build and again just before the files go up, and finishes with a notice and no publish if they differ. So an old run that is started again cannot put an older version on the live site.
+
+- Why: GitHub's outage on 2026-11-11 left three runs stuck in the queue, and they are still there: publish run 20 for pull request 24 (https://github.com/rowbeartow/yaarbroverse-3d/actions/runs/43097921897 ), and two runs of the checks (43097921924 and 43098011488).
+- **The guard does not cover that stuck publish run.** A run uses the workflow file of its own commit, and run 20's commit is from before the guard. If GitHub ever starts it, it would publish pull request 24's version, and the live site would stay on that until the next merge to main (or until someone runs "Publish the game" by hand from main: Actions, Publish the game, Run workflow). Cancelling it was tried on 2026-11-12 and GitHub refused ("Cannot cancel a workflow run that has not been queued yet"). The owner can try Cancel or Delete on the run's page.
+
 **What nobody has checked yet, and the owner is the one who can:**
 
-1. **The frame rate on the Mac with enemies on screen.** Open the live link in Safari with `?fps` on the end of the address, play to the clearing after the stumps, and say what frame rate and tier show while the scout is out. The target is 60 on the high tier. Before the enemies it was 60, with 121 draw calls and 226 thousand triangles at the end of the level. At most two enemies are drawn at once, about 14 thousand triangles each.
-2. **Whether Hard makes the older player work for it.** A perfect run that never stops gets past every enemy untouched, even on Hard. A player who hesitates is hit. If Hard is too gentle, change `enemyWarning`, `enemySpeed` and `enemyRest` for `hard` in `src/levels/bouncing-grove/difficulty.ts`, then run `npm test`.
-3. **Whether the roll and the pounce feel right to the kids**, and whether the touch button is where a thumb finds it.
+1. **Whether the roll and the pounce feel right to the kids**, and whether the touch button is where a thumb finds it.
 
 How the enemies were made, for the next time one is changed or added:
 

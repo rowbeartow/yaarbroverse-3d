@@ -225,3 +225,14 @@ Supersedes: none
 Reason: The owner's calls. Landing on top of an enemy strikes it, as in Caputo Mountain, for both heroes and on Easy, Normal and Hard. A perfect run that never stops gets past every enemy untouched even on Hard; whether Hard makes the older player work for it is for the kids to show, and the three Hard numbers (`enemyWarning`, `enemySpeed`, `enemyRest`) stay at Caputo Mountain's until then.
 Supersedes: none
 
+## 2026-11-12 The milestone-three playtest: every difficulty number stays, and Hard is right
+Reason: The owner's playtest. Hard is properly hard and the older player loved it: super fun, and the right difficulty. So no difficulty number changes, and Hard's three enemy numbers (`enemyWarning`, `enemySpeed`, `enemyRest`) are settled at Caputo Mountain's. On his Mac in Safari, on Normal with the scout on screen, the game ran at 120 frames a second on the high tier, with 310 draw calls and 407 thousand triangles.
+Supersedes: "Hard's enemy numbers wait for the playtest" in "Landing on an enemy strikes it on every difficulty, and Hard's enemy numbers wait for the playtest". The rest of that entry stands.
+
+## 2026-11-12 Enemies show where they will throw or attack on every difficulty
+Reason: The owner's playtest: the tells make the enemies fair to dodge. The line that shows where an attack will go stays on Easy, Normal and Hard.
+Supersedes: none
+
+## 2026-11-12 Only the newest commit on main is ever published
+Reason: The owner's instruction, after a GitHub outage left an old publish run stuck in the queue. The publish workflow compares its own commit with the head of main, before the build and again just before the files go up, and finishes without publishing if they differ. A run started again later, or one that waited while newer work merged, can no longer put an older version on the live site. A run from before this change still carries the old workflow file, so the guard does not cover it.
+Supersedes: none
