@@ -1,6 +1,6 @@
 # Credits
 
-Everything in the game that this project did not make itself is listed here, with where it came from and its license. Every file below is CC0: the maker gave up all rights, so anyone may use it for anything.
+Everything in the game that this project did not make itself is listed here, with where it came from and its license. Every third-party file below is CC0: the maker gave up all rights, so anyone may use it for anything.
 
 The Yaarbroverse, its characters and their art are not CC0. They are all rights reserved (see README.md).
 
@@ -35,6 +35,26 @@ Each texture is a colour picture (`_diff_`) and a picture of fine bumps (`_nor_g
 | `aerial_grass_rock` | The tops of the mossy banks | https://polyhaven.com/a/aerial_grass_rock | CC0 |
 | `moss_wood` | Moss growing over bark and rock | https://polyhaven.com/a/moss_wood | CC0 |
 | `coast_sand_rocks_02` | The forest floor in the gully and on the slopes | https://polyhaven.com/a/coast_sand_rocks_02 | CC0 |
+
+## Sound and music
+
+Recorded files, in `assets/audio/`. All are CC0, from OpenGameArt, downloaded on 2026-11-12. Nothing came from the 2D game, which has no sound files, and no recording here is of a voice.
+
+| File in this repo | What it is | Source | License |
+| --- | --- | --- | --- |
+| `step-moss-1.wav` to `step-moss-4.wav` | Footsteps on moss. The pack's `SandL1`, `SandR1`, `SandL2` and `SandR2` (its grass and sand steps), made mono, cut to 0.3 seconds and softened above 2,600 hertz. | "Fantozzi's Footsteps (Grass/Sand & Stone)" by Fantozzi (submitted by qubodup): https://opengameart.org/content/fantozzis-footsteps-grasssand-stone | CC0 |
+| `step-wood-1.wav` to `step-wood-3.wav` | Footsteps on wood. The pack's `wood01`, `wood02` and `wood03`, made mono and cut to a quarter of a second. | "Different steps on wood, stone, leaves, gravel and mud" by TinyWorlds: https://opengameart.org/content/different-steps-on-wood-stone-leaves-gravel-and-mud | CC0 |
+| `grove-music.mp3` | The grove's music: a calm track of 1 minute 22 seconds that loops. The pack's `Forest Whisper.wav`, evened to a steady loudness and saved as MP3. | "Forest Whisper Theme" by Cleyton Kauffman (https://soundcloud.com/cleytonkauffman): https://opengameart.org/content/forest-whisper-theme | CC0 |
+
+Every other sound, and the golden leaf tune, is made in code by this project (`src/audio/synth.ts`): there is no file, and nothing to credit.
+
+SHA-256 of each download, as OpenGameArt served it:
+
+| Download | SHA-256 |
+| --- | --- |
+| `Fantozzi-footsteps.7z` | `415d360e0911c1c1c5355ee94023b772e6f4044f59b9b580610e7dbffd1840fd` |
+| `[kdd]DifferentSteps_0.zip` | `987d072b7deaa65177e005ddd8185f2351be7c9a76cd7575dea560549c39b33b` |
+| `forest_whisper_theme.zip` | `11516801f38f4b004fa9e3641ff287fa39cb998fc805d376b372cc03db4d573f` |
 
 ## Stand-in model
 
