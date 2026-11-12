@@ -264,3 +264,7 @@ Supersedes: the two numbers (-23 LUFS, music at least 10 decibels under the effe
 ## 2026-11-12 The owner's second set of mix levels
 Reason: After the first set he sent a second from the mixer page, before anything merged: master -8, music -21, warnings and hits -15, jumps and landings -26, footsteps -24, menu -12. Warnings and hits are again the clearest group, 9 decibels over footsteps and 11 over jumps and landings. Measured, normal play is about -41.6 LUFS, the music sits 4.2 decibels under the effects, and no peak is over -19.2 dB. These are the numbers in `MIX`.
 Supersedes: the six numbers and the measurements in "The mix is the owner's six numbers, set by ear", and its note that warnings sat under footsteps. The rest of that entry stands.
+
+## 2026-11-12 Menu clicks sit under the warnings: menu is -20
+Reason: The owner's call, on being told that at -12 menu clicks were the loudest group, 3 decibels over warnings and hits. Menu is now -20, 5 under them. The other five numbers are unchanged, and menu clicks are not in the sample run, so the measurements stand.
+Supersedes: the menu number in "The owner's second set of mix levels". The rest of that entry stands.

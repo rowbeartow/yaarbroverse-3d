@@ -38,7 +38,7 @@ export const MIX: Record<Group | 'master', number> = {
   cue: -15,
   action: -26,
   step: -24,
-  menu: -12,
+  menu: -20,
 };
 
 /** Taking the edge off everything: how far the top end is turned down, and from what pitch. */
