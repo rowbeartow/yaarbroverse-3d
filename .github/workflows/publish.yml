@@ -3,6 +3,12 @@
 # GitHub Pages has to be switched on once by the repository owner:
 #   Settings > Pages > Build and deployment > Source: "GitHub Actions".
 # Until then this workflow finishes quietly without publishing anything.
+#
+# It only ever publishes the newest commit on main. A run whose commit is no
+# longer the head of main (an old run started again, or one that sat in the
+# queue while newer work merged) finishes without publishing, so the live site
+# can never go back to an older version. The check is made twice: before the
+# build, and again just before the files go up.
 name: Publish the game
 
 on:
@@ -21,7 +27,7 @@ concurrency:
 
 jobs:
   ready:
-    name: Is GitHub Pages switched on?
+    name: Is Pages switched on, and is this the newest commit?
     runs-on: ubuntu-latest
     outputs:
       ready: ${{ steps.pages.outputs.ready }}
@@ -31,7 +37,11 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           kind="$(gh api "repos/${{ github.repository }}/pages" --jq .build_type 2>/dev/null || true)"
-          if [ "$kind" = "workflow" ]; then
+          head="$(gh api "repos/${{ github.repository }}/commits/main" --jq .sha)"
+          if [ "$head" != "${{ github.sha }}" ]; then
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::Nothing was published: this run is for commit ${{ github.sha }}, and the head of main is now $head. Only the newest commit on main is ever published."
+          elif [ "$kind" = "workflow" ]; then
             echo "ready=true" >> "$GITHUB_OUTPUT"
           else
             echo "ready=false" >> "$GITHUB_OUTPUT"
@@ -58,8 +68,22 @@ jobs:
         run: npm test
       - name: Build and check the download size
         run: npm run build
+      - name: Is this still the newest commit on main?
+        id: newest
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          head="$(gh api "repos/${{ github.repository }}/commits/main" --jq .sha)"
+          if [ "$head" = "${{ github.sha }}" ]; then
+            echo "newest=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "newest=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::Nothing was published: main moved on to $head while this run was building ${{ github.sha }}. The run for that commit publishes it."
+          fi
       - uses: actions/upload-pages-artifact@v3
+        if: steps.newest.outputs.newest == 'true'
         with:
           path: dist
       - id: deploy
+        if: steps.newest.outputs.newest == 'true'
         uses: actions/deploy-pages@v4
