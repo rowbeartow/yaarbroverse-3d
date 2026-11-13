@@ -83,8 +83,9 @@
       <div class="card">
         <button type="button" id="switch-player" aria-label="Switch player"><span id="player-badge"></span><b id="player-name"></b><small>Switch player</small></button>
         <p class="eyebrow">Yaarbroverse 3D</p>
-        <h1 id="start-title">The Bouncing Grove</h1>
-        <p class="lead" id="start-lead">Find the golden leaf, tucked in the canopy.</p>
+        <h1 id="start-title">Where to?</h1>
+        <!-- The level picker: one card for each area, filled in by src/ui/picker.ts. Every area is open. -->
+        <div class="areas" id="areas" role="radiogroup" aria-labelledby="start-title"></div>
 
         <h2 id="hero-label">Who is exploring?</h2>
         <div class="choices heroes" role="radiogroup" aria-labelledby="hero-label">

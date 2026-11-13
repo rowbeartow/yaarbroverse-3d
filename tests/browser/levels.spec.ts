@@ -8,14 +8,15 @@ test.describe('the level list', () => {
   test('players get the Bouncing Grove, and nothing on the page names the sandbox', async ({ page }) => {
     await open(page);
     expect(await levelId(page)).toBe('bouncing-grove');
-    await expect(page.locator('#start-title')).toHaveText('The Bouncing Grove');
+    await expect(page.locator('.area')).toHaveCount(1);
+    await expect(page.locator('.area-pick[aria-checked="true"] .area-name')).toHaveText('The Bouncing Grove');
     expect((await page.locator('body').innerText()).toLowerCase()).not.toContain('sandbox');
   });
 
   test('?level=sandbox builds the development level, which draws and plays to its end card', async ({ page }) => {
     const problems = await open(page, 'level=sandbox');
     expect(await levelId(page)).toBe('sandbox');
-    await expect(page.locator('#start-title')).toHaveText('The Sandbox');
+    await expect(page.locator('.area-pick[aria-checked="true"] .area-name')).toHaveText('The Sandbox');
     await play(page, 'Yaarbro', 'easy');
     await expect(page.locator('#place')).toHaveText('The Sandbox · Easy');
     // Stand at the near end of the last bank: the leaf is straight ahead.

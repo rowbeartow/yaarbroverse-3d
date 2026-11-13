@@ -78,16 +78,10 @@ export class Screens {
 
   constructor(
     private choice: Choice,
-    level: { name: string; lead: string; blurbs: Record<Difficulty, string> },
+    level: { name: string; blurbs: Record<Difficulty, string> },
     private readonly onChoice: (choice: Choice) => void,
   ) {
-    // The level's name and lines, on the start screen and the end card.
-    el('#start-title').textContent = level.name;
-    el('#start-lead').textContent = level.lead;
-    el('#end-level').textContent = level.name;
-    for (const difficulty of DIFFICULTIES) {
-      el(`[data-difficulty="${difficulty}"] small`).textContent = level.blurbs[difficulty];
-    }
+    this.setLevel(level);
     this.marks.push(this.radioGroup('.heroes', 'hero', HEROES, () => this.choice.hero, (hero) => ({ ...this.choice, hero })));
     this.marks.push(
       this.radioGroup('.levels', 'difficulty', DIFFICULTIES, () => this.choice.difficulty, (difficulty) => ({
@@ -98,6 +92,14 @@ export class Screens {
     el('#controls-note').textContent = isTouchDevice()
       ? 'Left thumb moves. Right thumb jumps: hold for a higher jump. The smaller button above Jump is Yaarbro’s roll or Caputo’s pounce.'
       : 'Arrow keys or W A S D to move. Space to jump: hold for a higher jump. X or Shift for Yaarbro’s roll or Caputo’s pounce. Esc to pause. M turns sound off and on.';
+  }
+
+  /** The picked level's name on the end card, and its line for each difficulty. */
+  setLevel(level: { name: string; blurbs: Record<Difficulty, string> }): void {
+    el('#end-level').textContent = level.name;
+    for (const difficulty of DIFFICULTIES) {
+      el(`[data-difficulty="${difficulty}"] small`).textContent = level.blurbs[difficulty];
+    }
   }
 
   /** Wires one row of choice buttons: click or arrow keys pick, one is always picked. */

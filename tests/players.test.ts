@@ -14,6 +14,7 @@ import {
   bestTime,
   cleanName,
   hasFinished,
+  progressOn,
   type Run,
 } from '../src/save/players';
 import { playWithBot } from './helpers/bot';
@@ -314,5 +315,34 @@ describe('what counts as a best', () => {
     const { seconds, falls, complete } = game.summary();
     expect(players.finish(id, { levelId: entry.id, hero: 'Caputo', difficulty: 'normal', seconds, falls, complete }).first).toBe(true);
     expect(bestFor(new Players(storage).get(id)!, entry.id, 'Caputo', 'normal')).toEqual({ seconds, falls: 0 });
+  });
+});
+
+describe('what a level’s card shows for a player', () => {
+  it('nothing finished for a new player', () => {
+    const players = new Players(new FakeStorage());
+    const pip = players.add('Pip', 'moss')!;
+    expect(progressOn(pip, 'bouncing-grove')).toEqual({
+      easy: { finished: false, seconds: null },
+      normal: { finished: false, seconds: null },
+      hard: { finished: false, seconds: null },
+    });
+  });
+
+  it('each finished difficulty with its best time, the better of the two heroes, for that player and that level only', () => {
+    const players = new Players(new FakeStorage());
+    const pip = players.add('Pip', 'moss')!;
+    const moss = players.add('Moss', 'sky')!;
+    players.finish(pip.id, run({ difficulty: 'easy', hero: 'Yaarbro', seconds: 60 }));
+    players.finish(pip.id, run({ difficulty: 'easy', hero: 'Caputo', seconds: 52.3 }));
+    players.finish(pip.id, run({ difficulty: 'hard', seconds: 140 }));
+    players.finish(moss.id, run({ difficulty: 'normal', seconds: 75 }));
+    expect(progressOn(players.get(pip.id)!, 'bouncing-grove')).toEqual({
+      easy: { finished: true, seconds: 52.3 },
+      normal: { finished: false, seconds: null },
+      hard: { finished: true, seconds: 140 },
+    });
+    expect(progressOn(players.get(moss.id)!, 'bouncing-grove').normal).toEqual({ finished: true, seconds: 75 });
+    expect(progressOn(players.get(pip.id)!, 'sandbox').easy.finished).toBe(false);
   });
 });

@@ -24,3 +24,12 @@ export const findLevel = (id: unknown): LevelEntry | null => LEVELS.find((level)
  */
 export const levelFromAddress = (search: string): LevelEntry | null =>
   findLevel(new URLSearchParams(search).get('level'));
+
+/**
+ * The cards on the level picker for this address: the levels players are
+ * shown, plus a development level when the address names one.
+ */
+export const shownLevels = (search: string): LevelEntry[] => {
+  const asked = levelFromAddress(search);
+  return asked?.devOnly ? [...listedLevels(), asked] : listedLevels();
+};

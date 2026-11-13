@@ -38,7 +38,7 @@ test.describe('loading', () => {
 
     // "Who's playing?" is up at once too, and the files load behind it.
     await pickPlayer(page);
-    await expect(page.locator('h1#start-title')).toHaveText('The Bouncing Grove');
+    await expect(page.locator('.area-pick[aria-checked="true"] .area-name')).toHaveText('The Bouncing Grove');
     await expect(page.locator('#loading')).toBeVisible();
     await expect(page.locator('#loading-text')).toContainText('Loading the grove');
     await expect(page.locator('#play')).toBeDisabled();

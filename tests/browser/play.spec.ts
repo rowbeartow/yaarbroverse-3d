@@ -4,7 +4,7 @@ import { open, pickPlayer, play, ready, snapshot, standOn } from './helpers';
 test.describe('start screen', () => {
   test('loads without errors and draws the grove', async ({ page }) => {
     const problems = await open(page);
-    await expect(page.locator('h1#start-title')).toHaveText('The Bouncing Grove');
+    await expect(page.locator('.area-pick[aria-checked="true"] .area-name')).toHaveText('The Bouncing Grove');
     // Both hero pictures are drawn from the 3D models.
     for (const hero of ['Yaarbro', 'Caputo']) {
       const picture = page.locator(`[data-hero="${hero}"] img`);
