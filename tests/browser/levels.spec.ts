@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { open, play, snapshot, standOn } from './helpers';
+import { open, play, skipBoss, snapshot, standOn } from './helpers';
 
 const levelId = (page: import('@playwright/test').Page): Promise<string> =>
   page.evaluate(() => (window as unknown as { __grove: { level: string } }).__grove.level);
@@ -20,6 +20,7 @@ test.describe('the level list', () => {
     await play(page, 'Yaarbro', 'easy');
     await expect(page.locator('#place')).toHaveText('The Sandbox · Easy');
     // Stand at the near end of the last bank: the leaf is straight ahead.
+    await skipBoss(page);
     await standOn(page, 'bank-end', 3);
     await page.keyboard.down('ArrowUp');
     await expect(page.locator('#end')).toBeVisible({ timeout: 20_000 });

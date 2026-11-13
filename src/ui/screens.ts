@@ -72,6 +72,10 @@ export class Screens {
   private readonly message = el('#message');
   private readonly place = el('#place');
   private readonly hearts = el('#hearts');
+  private readonly boss = el('#boss');
+  private readonly bossName = el('#boss-name');
+  private readonly bossHealth = el('#boss-health');
+  private bossShown = '';
   private heartsShown = '';
   private readonly play = el<HTMLButtonElement>('#play');
   private messageTimer = 0;
@@ -234,6 +238,31 @@ export class Screens {
     const button = el('#move-button');
     button.textContent = name;
     button.setAttribute('aria-label', name);
+  }
+
+  /**
+   * A boss's health bar: its name over one pip for each hit it takes. Null
+   * hides it. `open` lights the pips while a hit would count.
+   */
+  setBoss(boss: { name: string; health: number; of: number; open: boolean } | null): void {
+    const key = boss ? `${boss.name}/${boss.health}/${boss.of}/${boss.open}` : '';
+    if (key === this.bossShown) return;
+    const before = this.bossShown.split('/');
+    const hit = boss !== null && before.length === 4 && before[0] === boss.name && boss.health < Number(before[1]);
+    this.bossShown = key;
+    this.boss.hidden = boss === null;
+    if (!boss) return;
+    this.bossName.textContent = boss.name;
+    this.bossHealth.innerHTML = Array.from({ length: boss.of }, (_, i) => `<span class="${i < boss.health ? 'full' : ''}"></span>`).join('');
+    this.bossHealth.setAttribute('aria-label', `${boss.name}: ${boss.health} of ${boss.of} health`);
+    this.boss.dataset.health = String(boss.health);
+    this.boss.dataset.of = String(boss.of);
+    this.boss.classList.toggle('open', boss.open);
+    if (hit) {
+      this.boss.classList.remove('hit');
+      void this.boss.offsetWidth;
+      this.boss.classList.add('hit');
+    }
   }
 
   /** Shows a short line near the top for a few seconds. */

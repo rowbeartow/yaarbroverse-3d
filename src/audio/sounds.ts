@@ -177,6 +177,16 @@ export const SOUNDS = {
     what: 'A very short soft click on every button: hero, difficulty, Play, pause, mute.',
     source: { files: ['button.wav'] },
   },
+  bossBeaten: {
+    group: 'Enemies', label: 'Boss beaten', mix: 'cue', level: 2,
+    what: 'Rising chime notes that ring out over two and a half seconds, the moment a boss is beaten.',
+    source: { files: ['boss-beaten.wav'] },
+  },
+  bossMusic: {
+    group: 'Music', label: 'Boss music', mix: 'music', level: 0, loop: true,
+    what: 'An orchestral battle theme, 40 seconds round, that takes over from a level\'s own music while a boss fight is on.',
+    source: { files: ['boss-music.mp3'] },
+  },
   groveMusic: {
     group: 'Music', label: 'Grove music', mix: 'music', level: 0, loop: true,
     what: 'A calm forest track, 1 minute 22 seconds, that goes round without a gap. It sits well under the effects.',

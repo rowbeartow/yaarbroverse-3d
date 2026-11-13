@@ -97,6 +97,11 @@ export class Sound {
     for (const name of this.loops.keys()) this.setLoop(name, 0);
   }
 
+  /** The music asked for now, whether or not it can be heard yet. */
+  get musicName(): SoundName | null {
+    return this.music;
+  }
+
   setMusic(name: SoundName | null): void {
     if (this.music === name) return;
     this.music = name;

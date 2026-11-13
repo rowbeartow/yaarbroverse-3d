@@ -21,6 +21,7 @@ Make `src/levels/<id>/` with three files:
    - `route`: the ids of the solids in the order a run crosses them. The test bot follows it, so it must be complete and in order.
    - `sections`, `hints` (shown the first time a hero stands on that solid) and `goalLine` are optional.
    - `enemies`: see how the grove places its scouts and mosquito at the end of its `layout.ts`.
+   - `boss`: see "Ending a level with a boss" below.
    - Directions: x is left and right, y is up, and the route runs away from the camera, which is -z. The camera always looks that way, so a route never comes back toward it.
 3. **`level.ts`**: the level's entry (`LevelEntry` in `src/levels/entry.ts`): `id`, `name`, `lead` (one line under the name on its card), `card`, `blurbs`, `build`, `scenery` and `music`.
 
@@ -52,6 +53,21 @@ A new kind of solid needs a name in `SolidKind` (`src/game/level.ts`) and a shap
 ## New enemies
 
 A level may reuse the marmot scout and the giant mosquito as they are. A new enemy is its own piece of work, done before the level: its behaviour in `src/game/enemy.ts`, its model made and rigged the way the handoff describes, and the owner's OK on the enemy preview page.
+
+## Ending a level with a boss
+
+Any level can end with a boss. The rules are in `src/game/boss.ts` (read its top: it says how a fight goes), the drawing in `src/view/boss.ts`. The Sandbox's practice boss is the smallest working example.
+
+1. **Its numbers** go in the level's `difficulty.ts`, as a `boss: BossNumbers` for each difficulty: health, whether it is `guarded` (only a hit while it rests counts), how long its warnings and rests last, how many acorns it throws and how fast, how fast it charges, whether lines are drawn where its attacks will go (`aimLine`: Easy only, by the owner's rule), and its `stages`. A stage is a list of attacks (`throw`, `charge`, `call`) and the share of health at which it begins, so the attacks change as it loses health. Every attack has a warning: the rules give it one whatever the list says.
+2. **Its arena** is a wide, flat solid in `layout.ts`, marked `safe: true` on every difficulty, with `safeAt` set to a spot just inside its near edge. That makes the arena's doorstep the checkpoint, so losing to the boss costs the fight and not the level. Leave at least 3 metres between `safeAt` and the near edge of the boss's `arena` rectangle, so a hero sent back stands outside the fight until they step in.
+3. **The boss itself** is `boss` on the `Level`: its `id`, the `name` on its health bar, its `look` (which enemy's model, how many times the size, a colour laid over it), where it waits, its `patch` (the rectangle its middle never leaves: keep its whole body on the arena), its `arena` (the rectangle that starts the fight when the hero stands in it), its `radius` and `height`, and the numbers. Keep `height` under about 1.7: a full jump rises 2 metres, and landing on top has to be possible.
+4. **The goal** goes beyond the arena. The game keeps it out of reach, and out of sight, until the boss is beaten.
+5. **Sidekicks** are ordinary enemies in the level's `enemies` list with `sidekickOf: '<the boss's id>'`. They lie low until the boss uses its `call` attack, come back each time it calls, and give up when it is beaten.
+6. **Its music** is `bossMusic` in the level's entry: a looping track from `src/audio/sounds.ts` that takes over from the level's own music while the fight is on. Left out, the level's music plays on.
+7. **The regen rule** needs nothing from the level: when the hero is sent back to a safe bank, the boss goes home at full health and the fight starts over.
+8. A new boss is canon: its name and what it is come from the owner. It goes on the arena preview page (`tools/preview/arena.mjs`) for his OK before it merges.
+
+The test bot fights any boss built this way: it keeps moving round it, steps out of the line of an attack, and jumps on it when a hit would count. If the bot cannot beat a boss without losing a heart, look at the boss's numbers before the bot.
 
 ## Checks
 

@@ -108,6 +108,61 @@ body {
   }
 }
 
+/* A boss's health: its name over a row of pips, bottom middle, between the thumbs. */
+#boss {
+  position: absolute;
+  left: 50%;
+  bottom: calc(max(14px, env(safe-area-inset-bottom)) + 6px);
+  transform: translateX(-50%);
+  width: min(46vw, 420px);
+  padding: 8px 14px 10px;
+  border-radius: 16px;
+  background: var(--shade);
+  pointer-events: none;
+  text-align: center;
+}
+
+#boss-name {
+  margin: 0 0 6px;
+  color: #fff6dd;
+  font-weight: 700;
+  font-size: clamp(15px, 2vw, 20px);
+  letter-spacing: 0.04em;
+}
+
+#boss-health {
+  display: flex;
+  gap: 5px;
+}
+
+#boss-health span {
+  flex: 1;
+  height: 14px;
+  border-radius: 7px;
+  border: 2px solid rgba(255, 246, 221, 0.8);
+  background: rgba(16, 32, 28, 0.55);
+}
+
+#boss-health span.full {
+  background: #f2c14e;
+}
+
+#boss.open #boss-health span.full {
+  background: #ffe9a8;
+  box-shadow: 0 0 10px #f2c14e;
+}
+
+#boss.hit {
+  animation: boss-hit 0.45s ease;
+}
+
+@keyframes boss-hit {
+  30% {
+    transform: translateX(-50%) scale(1.08);
+    background: rgba(242, 193, 78, 0.6);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   #hearts.hit {
     animation: none;

@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
-import { open, pickPlayer, play, snapshot, standOn } from './helpers';
+import { open, pickPlayer, play, skipBoss, snapshot, standOn } from './helpers';
 
 // The level picker: a card for each area, showing the current player's
 // finished difficulties and best times. The names are made up.
@@ -9,6 +9,7 @@ const mark = (page: Page, level: string, difficulty: string) =>
 
 const finishSandbox = async (page: Page, difficulty: string): Promise<void> => {
   await play(page, 'Yaarbro', difficulty);
+  await skipBoss(page);
   await standOn(page, 'bank-end', 3);
   await page.keyboard.down('ArrowUp');
   await expect(page.locator('#end')).toBeVisible({ timeout: 20_000 });

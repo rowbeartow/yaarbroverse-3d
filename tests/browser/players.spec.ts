@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
-import { address, open, pickPlayer, play, ready, snapshot, standOn, watch } from './helpers';
+import { address, open, pickPlayer, play, ready, skipBoss, snapshot, standOn, watch } from './helpers';
 
 // "Who's playing?", separate players, saved progress and the grown-ups' reset.
 // The names are made up. What is saved is read straight from the browser's
@@ -19,6 +19,7 @@ const saved = (page: Page): Promise<SavedPlayer[]> =>
 /** Plays the tiny development level to its end card. */
 const finishSandbox = async (page: Page, hero = 'Yaarbro', difficulty = 'easy'): Promise<void> => {
   await play(page, hero, difficulty);
+  await skipBoss(page);
   await standOn(page, 'bank-end', 3);
   await page.keyboard.down('ArrowUp');
   await expect(page.locator('#end')).toBeVisible({ timeout: 20_000 });

@@ -93,6 +93,16 @@ export class GameSounds {
       else if (event.type === 'safe') sound.play('checkpoint');
       else if (event.type === 'strike') sound.play('strike');
       else if (event.type === 'goal') sound.playTune('leafTune');
+      else if (event.type === 'boss') {
+        // A boss is loud enough to be heard across its arena: no fading with distance.
+        if (event.what === 'hit') sound.play('strike');
+        else if (event.what === 'blocked') sound.play('bounce');
+        else if (event.what === 'beaten') sound.play('bossBeaten');
+        else if (event.what === 'phase' && event.phase === 'warning') sound.play('marmotTell');
+        else if (event.what === 'phase' && event.phase === 'attack' && event.attack === 'throw') sound.play('marmotThrow');
+        else if (event.what === 'phase' && event.phase === 'attack' && event.attack === 'charge') sound.play('pounce');
+        else if (event.what === 'phase' && (event.phase === 'intro' || event.phase === 'roar')) sound.play('marmotTell');
+      }
       else if (event.type === 'enemy') {
         const enemy = game.enemies.find((candidate) => candidate.spot.id === event.id);
         const volume = enemy ? byDistance(distanceTo(game, enemy)) : 1;

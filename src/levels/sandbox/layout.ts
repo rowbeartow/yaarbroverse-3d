@@ -1,6 +1,7 @@
 // THE SANDBOX: where everything is. A bank, two logs with a break between
-// them, a bank, a mushroom, and a high bank with the golden leaf over it.
-// About ten seconds for the bot. Development only: see difficulty.ts.
+// them, a bank, a mushroom, and a high, wide bank that is the arena of the
+// practice boss, with the golden leaf on a ledge beyond it. The leaf cannot
+// be taken until the boss is beaten. Development only: see difficulty.ts.
 
 import type { Difficulty } from '../../game/difficulty';
 import type { Level, Solid } from '../../game/level';
@@ -29,13 +30,34 @@ export function buildSandbox(difficulty: Difficulty, numbers: SandboxNumbers = S
   solids.push({ id: 'mushroom-1', kind: 'mushroom', shape: 'round', x: 0, z: -at, halfX: n.mushroomRadius, halfZ: n.mushroomRadius, top: 1, bottom: -40, bounce: 15 });
   at += n.mushroomRadius + 0.6;
   const top = 3.4;
-  box('bank-end', 'bank', at, at + 7, 3.5, top, -40, { safe: true });
+  // The arena: safe on every difficulty, and a fall returns the hero to its doorstep, not its middle.
+  const arenaLength = 18;
+  const arenaHalf = 8;
+  box('arena', 'bank', at, at + arenaLength, arenaHalf, top, -40, { safe: true, safeAt: { x: 0, z: -(at + 1.5) } });
+  const arena = solids[solids.length - 1];
+  at += arenaLength;
+  box('bank-end', 'bank', at, at + 5, 3.5, top, -40);
+  const reach = 1.3;
 
   return {
     name: SANDBOX_NAME,
     solids,
     spawn: { x: 0, y: 0, z: 0 },
-    leaf: { x: 0, y: top + 1.3, z: -(at + 5), radius: 0.7 },
+    leaf: { x: 0, y: top + 1.3, z: -(at + 3), radius: 0.7 },
+    boss: {
+      id: 'practice-boss',
+      name: 'Practice boss',
+      look: { model: 'marmot', scale: 2 },
+      x: 0,
+      y: top,
+      z: arena.z - 4,
+      // It keeps its whole body on the bank; the fight begins a little way in from the doorstep.
+      patch: { minX: -arenaHalf + reach, maxX: arenaHalf - reach, minZ: arena.z - arena.halfZ + reach, maxZ: arena.z + arena.halfZ - reach },
+      arena: { minX: -arenaHalf, maxX: arenaHalf, minZ: arena.z - arena.halfZ, maxZ: arena.z + arena.halfZ - 2.5 },
+      radius: 1.1,
+      height: 1.6,
+      numbers: n.boss,
+    },
     fallY: -6,
     coyoteTime: n.coyoteTime,
     ledgeHelp: n.ledgeHelp,

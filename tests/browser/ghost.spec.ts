@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
-import { frames, open, pickPlayer, play, snapshot, standOn } from './helpers';
+import { frames, open, pickPlayer, play, skipBoss, snapshot, standOn } from './helpers';
 
 // The ghost in a real browser, on the tiny development level: the whole flow
 // from "Who's playing?" to the end card, a new best, and the ghost appearing
@@ -20,6 +20,7 @@ const toggle = (page: Page) => page.locator('.area.picked .ghost-toggle input');
 
 /** Walks from the start of the last bank to the leaf, and waits for the end card. */
 const finish = async (page: Page): Promise<void> => {
+  await skipBoss(page);
   await standOn(page, 'bank-end', 3);
   await page.keyboard.down('ArrowUp');
   await expect(page.locator('#end')).toBeVisible({ timeout: 20_000 });

@@ -34,6 +34,8 @@ export interface LevelEntry {
   scenery: SceneryName;
   /** The music that loops while the level is up: a sound from `src/audio/sounds.ts`. */
   music: SoundName;
+  /** The music that takes over while the level's boss fight is on, if the level has a boss. Left out: the level's own music plays on. */
+  bossMusic?: SoundName;
   /** For development only: never shown to players, and reachable only with `?level=<id>` on the address. */
   devOnly?: boolean;
 }
