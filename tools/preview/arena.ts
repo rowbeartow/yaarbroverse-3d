@@ -153,6 +153,7 @@ const bytesOf = async (address: string): Promise<ArrayBuffer> => {
   const reply = await fetch(address);
   if (!reply.ok) throw new Error(`${address}: ${reply.status}`);
   const text = atob((await reply.text()).trim());
+  loading(address);
   const bytes = new Uint8Array(text.length);
   for (let i = 0; i < text.length; i += 1) bytes[i] = text.charCodeAt(i);
   return bytes.buffer;
@@ -160,12 +161,26 @@ const bytesOf = async (address: string): Promise<ArrayBuffer> => {
 
 const byId = <T extends HTMLElement>(id: string): T => document.getElementById(id) as T;
 const status = byId('status');
+/** Anything that goes wrong is put on the page itself, so whoever is looking can say what it was. */
+const report = (what: string): void => {
+  status.hidden = false;
+  status.textContent = `Something went wrong: ${what}. Please send this line back.`;
+};
+window.addEventListener('error', (event) => report(event.message || 'a script error'));
+window.addEventListener('unhandledrejection', (event) => report(event.reason instanceof Error ? event.reason.message : String(event.reason)));
+/** Says which file is being fetched, so a page that stops says where. */
+let fetched = 0;
+const loading = (name: string): void => {
+  fetched += 1;
+  status.textContent = `Loading: got ${name} (${fetched} of 11 files)…`;
+};
+
 const ease = (from: number, to: number, rate: number, dt: number): number => from + (to - from) * (1 - Math.exp(-rate * dt));
 
 const start = async (): Promise<void> => {
   const pictures = new TextureLoader();
   const loadModel = async (name: string): Promise<GLTF> => {
-    const [bytes, color] = await Promise.all([bytesOf(`media/${name}.glb.txt`), pictures.loadAsync(`media/${name}_color.jpg`)]);
+    const [bytes, color] = await Promise.all([bytesOf(`media/${name}.glb.txt`), pictures.loadAsync(`media/${name}_color.jpg`).then((picture) => (loading(`${name}_color.jpg`), picture))]);
     const model = await new GLTFLoader().parseAsync(bytes, '');
     color.colorSpace = SRGBColorSpace;
     color.flipY = false;
@@ -181,8 +196,8 @@ const start = async (): Promise<void> => {
     return model;
   };
   const [turf, turfNormal, skyBytes, marmot, mosquito, yaarbro, caputo] = await Promise.all([
-    pictures.loadAsync('media/turf_color.jpg'),
-    pictures.loadAsync('media/turf_normal.jpg'),
+    pictures.loadAsync('media/turf_color.jpg').then((picture) => (loading('turf_color.jpg'), picture)),
+    pictures.loadAsync('media/turf_normal.jpg').then((picture) => (loading('turf_normal.jpg'), picture)),
     PLAIN ? Promise.resolve(null) : bytesOf('media/forest.hdr.txt'),
     loadModel('marmot'),
     loadModel('mosquito'),
@@ -192,7 +207,9 @@ const start = async (): Promise<void> => {
   const enemyModels = { marmot, mosquito };
   const heroModels: Record<HeroName, GLTF> = { Yaarbro: yaarbro, Caputo: caputo };
 
+  status.textContent = 'Loaded. Starting the picture…';
   const canvas = byId<HTMLCanvasElement>('view');
+  canvas.addEventListener('webglcontextlost', () => report('the browser took the 3D picture away (WebGL context lost)'));
   const renderer = new WebGLRenderer({ canvas, antialias: !PLAIN });
   renderer.toneMapping = ACESFilmicToneMapping;
   renderer.shadowMap.enabled = !PLAIN;
@@ -542,9 +559,14 @@ const start = async (): Promise<void> => {
   const frame = (now: number): void => {
     const dt = Math.min((now - last) / 1000, 0.1);
     last = now;
-    if (shown && !document.hidden) {
-      advance(dt);
-      draw(dt);
+    try {
+      if (shown && !document.hidden) {
+        advance(dt);
+        draw(dt);
+      }
+    } catch (error) {
+      report(error instanceof Error ? `${error.message} (while drawing)` : String(error));
+      return;
     }
     requestAnimationFrame(frame);
   };
@@ -553,5 +575,5 @@ const start = async (): Promise<void> => {
 
 start().catch((error: unknown) => {
   status.hidden = false;
-  status.textContent = `The page did not load. Reload it to try again. (${error instanceof Error ? error.message : String(error)})`;
+  status.textContent = `The page did not load: ${error instanceof Error ? error.message : String(error)}. Please send this line back, then reload to try again.`;
 });
