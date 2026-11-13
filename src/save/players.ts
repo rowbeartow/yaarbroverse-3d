@@ -10,12 +10,16 @@
 
 import { isDifficulty, type Difficulty } from '../game/difficulty';
 import { isHeroName, type HeroName } from '../game/hero';
+import { removeGhostsOf } from './ghosts';
 
 /** The part of the browser's storage this needs. `window.localStorage` fits. */
 export interface StorageLike {
   getItem(key: string): string | null;
   setItem(key: string, value: string): void;
   removeItem(key: string): void;
+  /** How many entries there are, and the name of entry `index`: used to find a player's ghosts. */
+  readonly length?: number;
+  key?(index: number): string | null;
 }
 
 export const PLAYERS_KEY = 'yaarbroverse-3d:players';
@@ -61,7 +65,12 @@ export interface Player {
   hero: HeroName;
   difficulty: Difficulty;
   bests: Bests;
+  /** Where this player has turned the ghost on or off themselves, by difficulty. Left out: on for Normal and Hard, off for Easy. */
+  ghost?: Partial<Record<Difficulty, boolean>>;
 }
+
+/** Whether a player races their ghost on a difficulty: their own choice if they made one, else on for Normal and Hard and off for Easy. */
+export const ghostOn = (player: Pick<Player, 'ghost'>, difficulty: Difficulty): boolean => player.ghost?.[difficulty] ?? difficulty !== 'easy';
 
 /** A finished run, as far as saving cares. */
 export interface Run {
@@ -128,6 +137,12 @@ const cleanPlayer = (saved: unknown): Player | null => {
   if (!isRecord(saved)) return null;
   const name = cleanName(saved.name);
   if (typeof saved.id !== 'string' || !ID.test(saved.id) || !name) return null;
+  let ghost: Partial<Record<Difficulty, boolean>> | null = null;
+  if (isRecord(saved.ghost)) {
+    for (const [difficulty, on] of Object.entries(saved.ghost)) {
+      if (isDifficulty(difficulty) && typeof on === 'boolean') (ghost ??= {})[difficulty] = on;
+    }
+  }
   return {
     id: saved.id,
     name,
@@ -135,6 +150,7 @@ const cleanPlayer = (saved: unknown): Player | null => {
     hero: isHeroName(saved.hero) ? saved.hero : 'Yaarbro',
     difficulty: isDifficulty(saved.difficulty) ? saved.difficulty : 'normal',
     bests: cleanBests(saved.bests),
+    ...(ghost ? { ghost } : {}),
   };
 };
 
@@ -235,11 +251,20 @@ export class Players {
     this.save();
   }
 
-  /** Wipes one player's progress. Their name, colour and last choices stay. For a parent, behind a confirmation. */
+  /** Turns a player's ghost on or off for one difficulty. */
+  setGhost(id: string, difficulty: Difficulty, on: boolean): void {
+    const player = this.get(id);
+    if (!player || !isDifficulty(difficulty)) return;
+    player.ghost = { ...player.ghost, [difficulty]: Boolean(on) };
+    this.save();
+  }
+
+  /** Wipes one player's progress. Their ghosts go too. Their name, colour and last choices stay. For a parent, behind a confirmation. */
   resetProgress(id: string): boolean {
     const player = this.get(id);
     if (!player) return false;
     player.bests = {};
+    removeGhostsOf(this.storage, id);
     this.save();
     return true;
   }
@@ -250,6 +275,7 @@ export class Players {
     this.players = this.players.filter((player) => player.id !== id);
     if (this.lastId === id) this.lastId = null;
     if (this.players.length === before) return false;
+    removeGhostsOf(this.storage, id);
     this.save();
     return true;
   }

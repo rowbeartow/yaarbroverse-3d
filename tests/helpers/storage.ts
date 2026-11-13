@@ -24,4 +24,13 @@ export class FakeStorage implements StorageLike {
     if (this.broken === 'write' || this.broken === 'both') throw new Error('storage is blocked');
     this.items.delete(key);
   }
+
+  get length(): number {
+    if (this.broken === 'read' || this.broken === 'both') throw new Error('storage is blocked');
+    return this.items.size;
+  }
+
+  key(index: number): string | null {
+    return [...this.items.keys()][index] ?? null;
+  }
 }

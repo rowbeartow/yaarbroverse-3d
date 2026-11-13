@@ -41,6 +41,8 @@ export interface HeroView {
   /** Something just happened: a jump, a landing, or a bounce off a mushroom. */
   react(event: 'jump' | 'land' | 'bounce'): void;
   info(): HeroInfo;
+  /** For a ghost: how much of it shows, from 0 (gone) to 1. */
+  fade(share: number): void;
   /** Frees what this hero held. */
   dispose(): void;
 }
@@ -56,11 +58,12 @@ export const HERO_MODEL_FILES = (): string[] => {
 /**
  * Builds a hero from its model file. With ?standin in the address, every hero
  * is the stand-in model instead, which checks the loader and animation player
- * against a file with clips of its own for standing and jumping.
+ * against a file with clips of its own for standing and jumping. `ghost`
+ * builds the see-through copy a player races: the recording of their best run.
  */
-export const buildHero = (name: HeroName, assets: Assets, simple = false): HeroView => {
+export const buildHero = (name: HeroName, assets: Assets, simple = false, ghost = false): HeroView => {
   const spec = wantsStandIn() ? STAND_IN : HERO_MODELS[name];
   const loaded = assets.models.get(spec.file);
   if (!loaded) throw new Error(`The model file ${spec.file} was not loaded`);
-  return new ModelHero(spec, loaded, simple);
+  return new ModelHero(spec, loaded, simple, ghost);
 };

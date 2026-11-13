@@ -22,11 +22,13 @@ import { GameSounds } from './audio/game-sounds';
 import { Sound } from './audio/mix';
 import { Player } from './audio/player';
 import { Game, IDLE, type GameEvent } from './game/game';
+import { GhostPlayer, GhostRecorder } from './game/ghost';
 import { MOVE_NAME, STEP } from './game/hero';
 import type { Level } from './game/level';
 import { Controls } from './input/controls';
 import { levelFromAddress, listedLevels, shownLevels } from './levels';
-import { Players, endBests, type EndBests, type Player as SavedPlayer } from './save/players';
+import { loadGhost, saveGhost, type GhostSlot } from './save/ghosts';
+import { Players, endBests, ghostOn, type EndBests, type Player as SavedPlayer } from './save/players';
 import { Picker } from './ui/picker';
 import { Screens, isTouchDevice, loadChoice, needsTurning, type Choice } from './ui/screens';
 import { Who, badge } from './ui/who';
@@ -66,6 +68,9 @@ const boot = (): void => {
   // The players on this device, and who is playing now. Null until someone is picked.
   const players = new Players(memory);
   let who: SavedPlayer | null = null;
+  /** The recording being made of this run, and the player's best run being replayed beside it (null when off, or none yet). */
+  let recorder: GhostRecorder | null = null;
+  let ghost: GhostPlayer | null = null;
   /** What the end card says about the player's bests after the run just finished. */
   let endCard: EndBests | null = null;
   const gameSounds = new GameSounds(sound);
@@ -110,6 +115,8 @@ const boot = (): void => {
     owed = 0;
     sinceGoal = 0;
     endCard = null;
+    recorder = null;
+    ghost = null;
     seen.clear();
     met.clear();
     newsUntil = 0;
@@ -123,7 +130,17 @@ const boot = (): void => {
     choice = picked;
     if (who) players.setChoice(who.id, choice.hero, choice.difficulty);
     if (rebuild) setUp();
+    showGhostSwitch();
   });
+
+  /** Where the ghost for the level, hero and difficulty picked now is kept, for whoever is playing. */
+  const ghostSlot = (): GhostSlot | null =>
+    who ? { playerId: who.id, levelId: entry.id, hero: choice.hero, difficulty: choice.difficulty } : null;
+  /** The ghost switch on the picked card follows the player, hero and difficulty picked now. */
+  const showGhostSwitch = (): void => {
+    const slot = ghostSlot();
+    if (who && slot) picker.showGhost(ghostOn(who, choice.difficulty), loadGhost(memory, slot) !== null);
+  };
 
   // The level picker: a card for each area. Picking another builds that level and plays its music.
   const picker = new Picker(document.querySelector<HTMLElement>('#areas')!, shownLevels(window.location.search), (picked) => {
@@ -131,6 +148,10 @@ const boot = (): void => {
     screens.setLevel(entry);
     sound.setMusic(entry.music);
     setUp();
+    showGhostSwitch();
+  }, (on) => {
+    if (who) players.setGhost(who.id, choice.difficulty, on);
+    showGhostSwitch();
   });
   picker.mark(entry.id);
 
@@ -169,6 +190,7 @@ const boot = (): void => {
     else if (next === 'start') {
       // The cards show the player's progress as it stands now, a run just finished included.
       if (who) picker.show(who);
+      showGhostSwitch();
       screens.show('start');
     }
     else if (next === 'paused') screens.show('paused');
@@ -178,6 +200,14 @@ const boot = (): void => {
   const play = (): void => {
     if (!view) return;
     setUp();
+    // Every run is recorded. The player's best run so far is replayed beside
+    // it as a ghost, when the ghost is on and there is one. The ghost is only
+    // drawn: the rules and the sounds never hear of it.
+    recorder = new GhostRecorder(game);
+    const slot = ghostSlot();
+    const best = who && slot && ghostOn(who, choice.difficulty) ? loadGhost(memory, slot) : null;
+    ghost = best ? new GhostPlayer(best) : null;
+    view.setGhost(ghost ? choice.hero : null);
     screens.setPlace(level.name, choice.difficulty);
     screens.setHearts(game.hearts, level.hearts);
     setMode('playing');
@@ -288,6 +318,7 @@ const boot = (): void => {
         view.handle(game.events);
         narrate(game.events);
         gameSounds.step(game);
+        recorder?.step(game);
         owed -= STEP;
         steps += 1;
       }
@@ -302,7 +333,11 @@ const boot = (): void => {
         // Only a run that reached the golden leaf is saved, for whoever is playing.
         if (who) {
           const { seconds, falls, complete } = game.summary();
-          endCard = endBests(players.finish(who.id, { levelId: entry.id, hero: choice.hero, difficulty: choice.difficulty, seconds, falls, complete }));
+          const outcome = players.finish(who.id, { levelId: entry.id, hero: choice.hero, difficulty: choice.difficulty, seconds, falls, complete });
+          endCard = endBests(outcome);
+          // The ghost is the recording of the best time: a new best takes its place.
+          const slot = ghostSlot();
+          if (outcome.bestTime && slot && recorder) saveGhost(memory, slot, recorder.finish(game));
         }
       }
       if (mode === 'ended' && screens.end.hidden) {
@@ -313,7 +348,10 @@ const boot = (): void => {
         }
       }
     }
-    view.frame(game, before, running ? Math.min(owed / STEP, 1) : 1, running ? dt : 0);
+    const blend = running ? Math.min(owed / STEP, 1) : 1;
+    // The ghost runs on the game's own clock, so it starts when the player starts and waits while the game is paused.
+    const ghostPose = ghost && mode !== 'start' ? ghost.at(game.seconds - (1 - blend) * STEP) : null;
+    view.frame(game, before, blend, running ? dt : 0, ghostPose);
     if (showRate) {
       sinceRate += dt;
       if (sinceRate > 0.5) {
@@ -350,6 +388,11 @@ const boot = (): void => {
       },
       get hero() {
         return view ? view.heroInfo() : null;
+      },
+      /** The ghost on screen, if one is being raced: whether it is drawn, where, and how long its run took. */
+      get ghost() {
+        const info = view?.ghostInfo() ?? null;
+        return info && ghost ? { ...info, seconds: ghost.seconds } : null;
       },
       get enemies() {
         return view ? view.enemyInfo() : [];

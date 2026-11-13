@@ -31,6 +31,7 @@ import type { Game, GameEvent } from '../game/game';
 import { MOVE, type HeroName } from '../game/hero';
 import { surfaceBelow, type Level } from '../game/level';
 import { loadAssets, type Assets } from './assets';
+import type { GhostPose } from '../game/ghost';
 import type { SceneryName } from '../levels/entry';
 import { Scatter, buildForest, type Forest } from './forest';
 import { ENEMY_MODELS, ENEMY_MODEL_FILES, EnemyView } from './enemies';
@@ -111,6 +112,11 @@ export class GroveView {
   private tier: Tier;
   private levelView: LevelView | null = null;
   private hero: HeroView | null = null;
+  /** The see-through copy of the hero that replays the player's best run, when there is one to race. */
+  private ghost: HeroView | null = null;
+  private ghostShown = false;
+  private ghostName: HeroName | null = null;
+  private scenery: SceneryName = 'forest';
   private enemies: EnemyView[] = [];
   private heroName: HeroName | null = null;
   private level: Level | null = null;
@@ -199,6 +205,7 @@ export class GroveView {
       this.scene.remove(enemy.root, ...enemy.extras);
       enemy.dispose();
     }
+    this.setGhost(null);
     this.enemies = (level.enemies ?? []).map((spot) => {
       const spec = ENEMY_MODELS[spot.kind];
       const loaded = this.assets.models.get(spec.file);
@@ -209,6 +216,7 @@ export class GroveView {
     });
     this.level = level;
     this.heroName = heroName;
+    this.scenery = scenery;
     const random = seeded(20261110);
     const scatter = new Scatter();
     const solids = buildSolids(level, this.materials, scatter, random);
@@ -224,6 +232,32 @@ export class GroveView {
     this.blink = 0;
     this.shadow.scale.set(this.hero.shadow.across, this.hero.shadow.along, 1);
     this.applyDetail();
+  }
+
+  /**
+   * Puts a ghost in the scene, or takes it out (null). The ghost is a
+   * see-through copy of the hero, placed each frame from a recording. It is a
+   * picture only: the rules never hear of it.
+   */
+  setGhost(heroName: HeroName | null): void {
+    if (this.ghost) {
+      this.scene.remove(this.ghost.root);
+      this.ghost.dispose();
+      this.ghost = null;
+    }
+    this.ghostShown = false;
+    this.ghostName = heroName;
+    if (!heroName) return;
+    this.ghost = buildHero(heroName, this.assets, this.tier.simple, true);
+    this.ghost.root.visible = false;
+    this.scene.add(this.ghost.root);
+  }
+
+  /** What the browser checks can ask about the ghost: whether it is drawn, and where. */
+  ghostInfo(): { shown: boolean; x: number; y: number; z: number } | null {
+    if (!this.ghost) return null;
+    const { x, y, z } = this.ghost.root.position;
+    return { shown: this.ghostShown, x, y, z };
   }
 
   /** Reacts to what just happened in the rules: squash a mushroom, stretch the hero, and so on. */
@@ -249,7 +283,7 @@ export class GroveView {
    * `blend` how far between that and now the screen is, so motion stays smooth
    * on screens faster than the rules' 60 steps a second.
    */
-  frame(game: Game, before: { x: number; y: number; z: number }, blend: number, dt: number): void {
+  frame(game: Game, before: { x: number; y: number; z: number }, blend: number, dt: number, ghostPose: GhostPose | null = null): void {
     const { hero, levelView, level } = this;
     if (!hero || !levelView || !level) return;
 
@@ -292,6 +326,22 @@ export class GroveView {
       },
       dt,
     );
+    // The ghost: where the recording says, doing what it says. It fades out
+    // when it is on top of the player's own hero, so the hero is never hidden.
+    if (this.ghost) {
+      this.ghostShown = ghostPose !== null;
+      this.ghost.root.visible = this.ghostShown;
+      if (ghostPose) {
+        this.ghost.root.position.set(ghostPose.x, ghostPose.y, ghostPose.z);
+        this.ghost.root.rotation.y = ghostPose.facing;
+        this.ghost.animate(
+          { pace: ghostPose.pace, grounded: ghostPose.grounded, rise: ghostPose.rise, rolling: ghostPose.rolling, pounce: ghostPose.pouncing ? 0.5 : null },
+          dt,
+        );
+        const apart = Math.hypot(ghostPose.x - x, ghostPose.y - y, ghostPose.z - z);
+        this.ghost.fade((apart - 0.5) / 1.5);
+      }
+    }
     this.blink = Math.max(0, this.blink - dt);
     const tuning = level.enemyTuning ?? { warning: 1, speed: 1, rest: 1 };
     this.enemies.forEach((enemy, i) => enemy.update(game.enemies[i], tuning, game.z, dt));
@@ -427,7 +477,10 @@ export class GroveView {
       this.materials = new Materials(this.assets, tier.simple);
       if (this.level && this.heroName) {
         const kept = { follow: this.follow, sinceGoal: this.sinceGoal, blink: this.blink, turn: this.hero?.root.rotation.y ?? 0 };
-        this.show(this.level, this.heroName);
+        const ghost = this.ghostName;
+        this.show(this.level, this.heroName, this.scenery);
+        // The ghost is rebuilt with the same plain or full shading as everything else.
+        this.setGhost(ghost);
         this.follow = kept.follow;
         this.sinceGoal = kept.sinceGoal;
         this.blink = kept.blink;
