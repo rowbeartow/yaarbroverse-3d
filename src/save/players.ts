@@ -291,3 +291,12 @@ export const bestTime = (player: Player, levelId: string, difficulty: Difficulty
     .filter((seconds): seconds is number => seconds !== undefined);
   return times.length ? Math.min(...times) : null;
 };
+
+/** What a level's card shows for a player: for each difficulty, whether it is finished and the best time (as either hero). */
+export const progressOn = (player: Player, levelId: string): Record<Difficulty, { finished: boolean; seconds: number | null }> => {
+  const on = (difficulty: Difficulty): { finished: boolean; seconds: number | null } => ({
+    finished: hasFinished(player, levelId, difficulty),
+    seconds: bestTime(player, levelId, difficulty),
+  });
+  return { easy: on('easy'), normal: on('normal'), hard: on('hard') };
+};

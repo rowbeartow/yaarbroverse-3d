@@ -25,8 +25,9 @@ import { Game, IDLE, type GameEvent } from './game/game';
 import { MOVE_NAME, STEP } from './game/hero';
 import type { Level } from './game/level';
 import { Controls } from './input/controls';
-import { levelFromAddress, listedLevels } from './levels';
+import { levelFromAddress, listedLevels, shownLevels } from './levels';
 import { Players, type Player as SavedPlayer } from './save/players';
+import { Picker } from './ui/picker';
 import { Screens, isTouchDevice, loadChoice, needsTurning, type Choice } from './ui/screens';
 import { Who, badge } from './ui/who';
 import type { GroveView } from './view/grove-view';
@@ -37,7 +38,7 @@ const canvas = document.querySelector<HTMLCanvasElement>('#view')!;
 
 const boot = (): void => {
   let view: GroveView | null = null;
-  const entry = levelFromAddress(window.location.search) ?? listedLevels()[0];
+  let entry = levelFromAddress(window.location.search) ?? listedLevels()[0];
   let choice: Choice = loadChoice();
   let level: Level = entry.build(choice.difficulty);
   let game = new Game(level, choice.difficulty, choice.hero);
@@ -121,6 +122,15 @@ const boot = (): void => {
     if (rebuild) setUp();
   });
 
+  // The level picker: a card for each area. Picking another builds that level and plays its music.
+  const picker = new Picker(document.querySelector<HTMLElement>('#areas')!, shownLevels(window.location.search), (picked) => {
+    entry = picked;
+    screens.setLevel(entry);
+    sound.setMusic(entry.music);
+    setUp();
+  });
+  picker.mark(entry.id);
+
   // "Who's playing?": picking a player brings up the start screen with their own hero and difficulty.
   const whoScreen = new Who(
     players,
@@ -153,7 +163,11 @@ const boot = (): void => {
     if (next !== 'playing') sound.stopLoops();
     // Nobody is picked yet on a fresh page: "Who's playing?" comes before the start screen.
     if (next === 'start' && !who) askWho();
-    else if (next === 'start') screens.show('start');
+    else if (next === 'start') {
+      // The cards show the player's progress as it stands now, a run just finished included.
+      if (who) picker.show(who);
+      screens.show('start');
+    }
     else if (next === 'paused') screens.show('paused');
     else if (next === 'playing') screens.show('none');
   };

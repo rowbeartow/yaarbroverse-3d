@@ -292,3 +292,7 @@ Supersedes: none
 ## 2026-11-13 A player is a name of up to twelve characters and one of six colours, and a grown-up can also remove one
 Reason: Claude's calls within the owner's decision on profiles. Twelve characters fit the tiles on an iPad. With four places on a device, a mistyped name or a visiting friend would otherwise use one up for good, so "For grown-ups" has "Remove player" beside "Reset progress", each behind a question whose safe answer is the big button. Each player keeps their own last hero and difficulty. Everything is one entry in the browser's storage (`yaarbroverse-3d:players`), and saved data that is missing or damaged is dropped piece by piece while the game carries on.
 Supersedes: none
+
+## 2026-11-13 The level picker is a row of cards on the start screen, and a card's best time is the better of the two heroes
+Reason: Claude's calls within the owner's instruction for the picker, shown to him on a preview page before merging. The start screen is headed "Where to?"; each area is a card with a picture, its name and line, and for the current player a tick and best time on each finished difficulty, or "Not yet". One time per difficulty keeps a card readable; each hero's own best time and fewest falls go on the end card. A development level is a card only when the address names it.
+Supersedes: none

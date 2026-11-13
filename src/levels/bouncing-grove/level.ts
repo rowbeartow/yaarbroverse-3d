@@ -9,6 +9,7 @@ export const BOUNCING_GROVE: LevelEntry = {
   id: 'bouncing-grove',
   name: GROVE_NAME,
   lead: 'Find the golden leaf, tucked in the canopy.',
+  card: 'cards/bouncing-grove.jpg',
   blurbs: GROVE_BLURB,
   build: (difficulty) => buildGrove(difficulty),
   scenery: 'forest',

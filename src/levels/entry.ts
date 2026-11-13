@@ -22,8 +22,10 @@ export interface LevelEntry {
   id: string;
   /** The name players see. */
   name: string;
-  /** One line under the name on the start screen: what the player is after. */
+  /** One line under the name on the level's card: what the player is after. */
   lead: string;
+  /** The picture on the level's card: a small JPEG in `public/cards/`, given as `cards/<id>.jpg`. A development level may leave it out. */
+  card?: string;
   /** One short line per difficulty for the start screen. */
   blurbs: Record<Difficulty, string>;
   /** Builds the level for one difficulty, from the numbers in the level's `difficulty.ts`. */

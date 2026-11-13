@@ -1,21 +1,26 @@
 # Session handoff
 
-Last updated: 2026-11-13 (milestone five, step 2)
+Last updated: 2026-11-13 (milestone five, step 3 waiting for the owner's OK)
 
 ## Start here
 
 **Milestone five is under way** (best times, a ghost to race, saved progress and a level picker; the owner's order is in `docs/decisions.md`, 2026-11-13). Its five pull requests, in order: levels as a recipe, profiles and saved progress, the level picker (waits for the owner's OK on a preview page), best times, the ghost.
 
 - **Step 1, levels as a recipe: pull request 35, merged 2026-11-13.** The game builds its level from the level list (`src/levels/index.ts`). `docs/adding-a-level.md` is the recipe for a new level. The Sandbox (`src/levels/sandbox/`) is a tiny development level that opens only with `?level=sandbox`. `tests/levels.test.ts` runs the bot over every listed level, and `tests/browser/levels.spec.ts` plays the Sandbox to its end card.
-- **Step 2, profiles and saved progress: the pull request this version of the handoff arrived in.** If you are reading this on `main`, it has merged.
+- **Step 2, profiles and saved progress: pull request 36, merged 2026-11-13.**
   - "Who's playing?" comes up first on every visit (`src/ui/who.ts`): pick a player, or add one with a typed name (12 characters at most) and one of six colours, up to four players. With nobody on the device yet it opens on the form.
   - Each player keeps their own last hero and difficulty and their own bests. The start screen shows who is playing, with "Switch player".
-  - What is saved (`src/save/players.ts`), under the one storage key `yaarbroverse-3d:players`: for each player, level, hero and difficulty, the best time and the fewest falls, kept separately. Only a run that reached the golden leaf is saved. Nothing shows these yet: the level picker (step 3) and the end card (step 4) will.
+  - What is saved (`src/save/players.ts`), under the one storage key `yaarbroverse-3d:players`: for each player, level, hero and difficulty, the best time and the fewest falls, kept separately. Only a run that reached the golden leaf is saved. The level picker shows them (step 3); the end card will (step 4).
   - "For grown-ups" on that screen: "Reset progress" (keeps the name, colour and choices) and "Remove player", each behind a question whose safe answer is the big button.
   - Reading and writing never throw. Saved data that is missing or damaged is dropped piece by piece and the game carries on. With storage blocked, everything works until the page closes.
   - A name is only ever put on the page as plain text. `tests/browser/players.spec.ts` checks no request carries it.
   - The old key `yaarbroverse-3d:choice` is no longer written. A first player on a device starts from the hero and difficulty in it.
-- Steps 3 to 5 are not started.
+- **Step 3, the level picker: the pull request this version of the handoff arrived in. It waits for the owner's OK on the preview page and must not merge before he gives it.** If you are reading this on `main`, he said OK and it has merged. If you are reading it on a branch, check the pull request for his answer first.
+  - The start screen is headed "Where to?" and shows the areas as a row of cards (`src/ui/picker.ts`), with the grove the only one. A card is a picture (`public/cards/<id>.jpg`), the area's name and line, and for whoever is playing a tick and best time for each difficulty they have finished, or "Not yet". The best time on a card is the better of the two heroes.
+  - Every area is open. Picking another card builds that level and plays its music. With `?level=sandbox` the Sandbox is a second card, already picked, which is how the checks try a row of two.
+  - The preview page for the owner: https://claude.ai/artifact/PKoes4buicSvLc9n4WYmWx . Its pictures come from `node tools/preview/screen-shots.mjs <folder> [width] [height]`, with the built game served; the page itself was put together by hand from them. To change it, publish over that address.
+  - Known: at iPad size the start card fills the height, and the Sound button sits over its top right corner.
+- **Steps 4 (best times on the end card) and 5 (the ghost) are not started.** What step 4 has to build on: `Players.finish` in `src/save/players.ts` already returns whether a run was a first finish, a best time or the fewest falls, and what was saved before. What step 5 was planned as: record the hero's place a few times a second during a run, keep the recording of the best time for each player, level, hero and difficulty under its own storage key (so a damaged or over-large ghost never costs the progress), and draw it as a see-through second copy of the hero that touches nothing. None of that is written.
 
 **Milestone four is done: the Bouncing Grove has sound and music.** The game is live at https://rowbeartow.github.io/yaarbroverse-3d/ . The likely next milestone is a second area (see "What's next"); the owner has not set it yet.
 

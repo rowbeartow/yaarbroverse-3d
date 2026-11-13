@@ -8,7 +8,8 @@ import { DIFFICULTIES } from '../src/game/difficulty';
 import { Game, IDLE } from '../src/game/game';
 import { HEROES, MOVE, STEP } from '../src/game/hero';
 import { surfaceBelow } from '../src/game/level';
-import { LEVELS, findLevel, levelFromAddress, listedLevels } from '../src/levels';
+import { existsSync, statSync } from 'node:fs';
+import { LEVELS, findLevel, levelFromAddress, listedLevels, shownLevels } from '../src/levels';
 import { Bot, playWithBot } from './helpers/bot';
 
 describe('the level list', () => {
@@ -28,6 +29,23 @@ describe('the level list', () => {
     expect(levelFromAddress('?fps&level=bouncing-grove')?.id).toBe('bouncing-grove');
     expect(levelFromAddress('?level=nowhere')).toBeNull();
     expect(levelFromAddress('')).toBeNull();
+  });
+});
+
+describe('the level picker’s cards', () => {
+  it('are the levels players are shown, plus a development level only when the address names it', () => {
+    expect(shownLevels('').map((level) => level.id)).toEqual(['bouncing-grove']);
+    expect(shownLevels('?fps').map((level) => level.id)).toEqual(['bouncing-grove']);
+    expect(shownLevels('?level=bouncing-grove').map((level) => level.id)).toEqual(['bouncing-grove']);
+    expect(shownLevels('?level=sandbox').map((level) => level.id)).toEqual(['bouncing-grove', 'sandbox']);
+    expect(shownLevels('?level=nowhere').map((level) => level.id)).toEqual(['bouncing-grove']);
+  });
+
+  it.each(listedLevels().map((level) => [level.id, level] as const))('%s has a small picture for its card', (id, level) => {
+    expect(level.card).toBe(`cards/${id}.jpg`);
+    expect(existsSync(`public/${level.card}`)).toBe(true);
+    // A card is small on screen: keep its picture small in the download.
+    expect(statSync(`public/${level.card}`).size).toBeLessThan(60_000);
   });
 });
 

@@ -22,9 +22,11 @@ Make `src/levels/<id>/` with three files:
    - `sections`, `hints` (shown the first time a hero stands on that solid) and `goalLine` are optional.
    - `enemies`: see how the grove places its scouts and mosquito at the end of its `layout.ts`.
    - Directions: x is left and right, y is up, and the route runs away from the camera, which is -z. The camera always looks that way, so a route never comes back toward it.
-3. **`level.ts`**: the level's entry (`LevelEntry` in `src/levels/entry.ts`): `id`, `name`, `lead` (one line under the name), `blurbs`, `build`, `scenery` and `music`.
+3. **`level.ts`**: the level's entry (`LevelEntry` in `src/levels/entry.ts`): `id`, `name`, `lead` (one line under the name on its card), `card`, `blurbs`, `build`, `scenery` and `music`.
 
-Then add the entry to `LEVELS` in `src/levels/index.ts`. Order there is the order players see. That is the only change outside the level's folder for a level that reuses the forest scenery and the grove music.
+And one picture, `public/cards/<id>.jpg`, for the level's card on the picker: 480 by 270, under 60 KB. Take a picture of the level with `node scripts/screenshot.mjs` and shrink it (`sharp` is installed: resize to 480 by 270, JPEG quality about 72). A level that is `devOnly` may leave `card` out.
+
+Then add the entry to `LEVELS` in `src/levels/index.ts`. Order there is the order of the cards on the level picker. The picker, saved progress and best times all work from the list and the `id`. That is the only change outside the level's folder for a level that reuses the forest scenery and the grove music.
 
 ## Scenery
 
