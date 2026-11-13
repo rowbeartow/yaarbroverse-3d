@@ -124,6 +124,14 @@ export interface GroveNumbers {
    * its legs drawn up) and its warning sound, with nothing drawn.
    */
   enemyAimLine: boolean;
+  /**
+   * How many hits it takes to beat each enemy: a roll faster than a walk, a
+   * pounce, or a landing on top. A hit shows as a flash and a short shove.
+   * An enemy that is hurt but not beaten is at full health again whenever
+   * the hero is sent back to a safe bank.
+   */
+  scoutHealth: number;
+  mosquitoHealth: number;
   /** After walking off an edge, Jump still works for this long. */
   coyoteTime: number;
   /** Feet this far below a ledge still get lifted onto it. */
@@ -165,6 +173,8 @@ export const GROVE_DIFFICULTY: Record<Difficulty, GroveNumbers> = {
     mosquitoHover: 2.2,
     mosquitoPause: 1,
     enemyAimLine: true,
+    scoutHealth: 1,
+    mosquitoHealth: 1,
     coyoteTime: 0.2,
     ledgeHelp: 0.5,
   },
@@ -202,6 +212,8 @@ export const GROVE_DIFFICULTY: Record<Difficulty, GroveNumbers> = {
     mosquitoHover: 3.4,
     mosquitoPause: 0.6,
     enemyAimLine: false,
+    scoutHealth: 1,
+    mosquitoHealth: 1,
     coyoteTime: 0.12,
     ledgeHelp: 0.3,
   },
@@ -239,6 +251,8 @@ export const GROVE_DIFFICULTY: Record<Difficulty, GroveNumbers> = {
     mosquitoHover: 3.4,
     mosquitoPause: 0.45,
     enemyAimLine: false,
+    scoutHealth: 2,
+    mosquitoHealth: 1,
     coyoteTime: 0.06,
     ledgeHelp: 0.15,
   },

@@ -73,6 +73,8 @@ type ClipKey = keyof EnemyModelSpec['clips'];
 /** Enemies further than this from the hero are neither moved nor drawn: the mist has them. */
 const SEEN_WITHIN = 70;
 const FADE_RATE = 14;
+/** How many times a second a struck enemy's flash turns over. */
+const FLASH_BLINKS = 15;
 const ACORN_COLOR = 0x8a5a2b;
 
 const acornShape = new SphereGeometry(ENEMY.acornRadius, 12, 8);
@@ -97,6 +99,8 @@ export class EnemyView {
   private gone = 0;
   /** The rest that follows a strike opens with the flinch. */
   private struck = false;
+  /** Seconds of the flash of a strike still to show. */
+  private flashing = 0;
   private clock = 0;
 
   constructor(
@@ -162,10 +166,10 @@ export class EnemyView {
     return [this.acorn, this.lane];
   }
 
-  /** The hero's move just struck it. */
+  /** The hero's move just struck it: it flashes bright, on and off, for as long as it cannot be struck again. */
   strike(): void {
     this.struck = true;
-    for (const each of this.materials) each.material.emissive.setRGB(0.9, 0.75, 0.4);
+    this.flashing = ENEMY.flash;
   }
 
   private choose(enemy: Enemy): ClipKey {
@@ -239,9 +243,11 @@ export class EnemyView {
       each.material.transparent = each.seeThrough || fading;
       each.material.opacity = each.opacity * (1 - this.gone);
       each.material.depthWrite = !each.seeThrough;
-      // The flash of a strike dies away.
-      each.material.emissive.multiplyScalar(Math.exp(-8 * dt));
+      // The flash of a strike: bright, blinking, then gone.
+      const lit = this.flashing > 0 ? (Math.floor(this.flashing * FLASH_BLINKS) % 2 === 0 ? 1 : 0.3) : 0;
+      each.material.emissive.setRGB(lit, lit * 0.92, lit * 0.7);
     }
+    this.flashing = Math.max(0, this.flashing - dt);
 
     // Which clip, and where in it.
     const next = this.choose(enemy);
@@ -305,8 +311,8 @@ export class EnemyView {
   }
 
   /** The clip showing now, for the browser checks. */
-  info(): { clip: string; visible: boolean; aimLine: boolean } {
-    return { clip: this.spec.clips[this.showing] ?? 'idle', visible: this.root.visible, aimLine: this.lane.visible };
+  info(): { clip: string; visible: boolean; aimLine: boolean; flashing: boolean } {
+    return { clip: this.spec.clips[this.showing] ?? 'idle', visible: this.root.visible, aimLine: this.lane.visible, flashing: this.flashing > 0 };
   }
 
   dispose(): void {
