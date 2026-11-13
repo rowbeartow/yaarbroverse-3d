@@ -1,0 +1,170 @@
+<title>Tougher Enemies Preview</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<style>
+  /* Layout: one column. Each enemy gets a window into the grove, its clip
+     buttons under it, and a card saying what the picked clip is for. Colours
+     and type are the game's own, the same as the hero preview page. */
+  :root {
+    --paper: #fff6dd;
+    --card: #fffbee;
+    --edge: #e9d7a6;
+    --ink: #1b2a24;
+    --quiet: #4d6157;
+    --moss: #2f6b3f;
+    --gold: #f2c14e;
+    --gold-deep: #b97f12;
+    --on-gold: #1b2a24;
+    --font-text: 'Avenir Next', 'Trebuchet MS', 'Segoe UI', system-ui, sans-serif;
+    --font-title: Georgia, 'Iowan Old Style', 'Times New Roman', serif;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --paper: #14261f; --card: #1d3a33; --edge: #3b5a4c; --ink: #fff6dd; --quiet: #b9c9b6;
+      --moss: #9ed49a; --gold: #f2c14e; --gold-deep: #f7d98a; --on-gold: #1b2a24; color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --paper: #14261f; --card: #1d3a33; --edge: #3b5a4c; --ink: #fff6dd; --quiet: #b9c9b6;
+    --moss: #9ed49a; --gold: #f2c14e; --gold-deep: #f7d98a; --on-gold: #1b2a24; color-scheme: dark;
+  }
+  * { box-sizing: border-box; }
+  body { background: var(--paper); color: var(--ink); font-family: var(--font-text); font-size: 16px; line-height: 1.5; }
+  .page {
+    max-width: 1080px; margin: 0 auto; padding-block: 28px 48px;
+    padding-left: max(16px, env(safe-area-inset-left, 0px));
+    padding-right: max(16px, env(safe-area-inset-right, 0px));
+    display: grid; gap: 22px;
+  }
+  .page > * { min-width: 0; }
+  .eyebrow { margin: 0; color: var(--moss); font-size: 13px; font-weight: 700; letter-spacing: 0.22em; text-transform: uppercase; }
+  h1 { margin: 2px 0 6px; font-family: var(--font-title); font-size: clamp(30px, 6vw, 44px); line-height: 1.1; text-wrap: balance; }
+  h2 { margin: 0; font-family: var(--font-title); font-size: 26px; line-height: 1.2; text-wrap: balance; }
+  h3 { margin: 0; font-family: var(--font-title); font-size: 20px; line-height: 1.2; }
+  p { margin: 0; max-width: 65ch; }
+  .lede { color: var(--quiet); font-size: 17px; }
+  .note, .made { color: var(--quiet); font-size: 14px; }
+
+  .row { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+  .row button {
+    min-height: 40px; padding: 0 14px; border: 2px solid var(--edge); border-radius: 999px;
+    background: var(--card); color: var(--ink); font: 600 14px var(--font-text); cursor: pointer;
+  }
+  .row button[aria-pressed="true"] { background: var(--gold); border-color: var(--gold-deep); color: var(--on-gold); }
+  .row button:focus-visible { outline: 3px solid var(--moss); outline-offset: 2px; }
+  #status { color: var(--moss); font-weight: 700; }
+
+  /* The picture: the game's own rules and enemies, in a blocked-out copy of the level. */
+  .window {
+    position: relative; width: 100%; aspect-ratio: 16 / 10; border: 3px solid var(--edge); border-radius: 18px; overflow: hidden; background: #9fc4b4;
+  }
+  @media (max-width: 560px) { .window { aspect-ratio: 4 / 3; } }
+  .window canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+  #hearts { position: absolute; left: 14px; top: 10px; color: #e2473d; font-size: 26px; letter-spacing: 2px; text-shadow: 0 1px 2px #0008; }
+  #news { position: absolute; left: 0; right: 0; top: 14px; text-align: center; color: #fff6dd; font-weight: 700; font-size: 18px; text-shadow: 0 1px 3px #000a; pointer-events: none; }
+  #stick-zone, #jump-zone { position: absolute; top: 0; bottom: 0; width: 50%; touch-action: none; display: none; }
+  body[data-mode="play"] #stick-zone, body[data-mode="play"] #jump-zone { display: block; }
+  #stick-zone { left: 0; }
+  #jump-zone { right: 0; }
+  #stick-base { position: absolute; left: 24px; bottom: 24px; width: 96px; height: 96px; border-radius: 50%; border: 3px solid #fff6dd88; opacity: 0; }
+  #stick-knob { position: absolute; left: 28px; top: 28px; width: 34px; height: 34px; border-radius: 50%; background: #fff6ddcc; }
+  @media (pointer: coarse) { #stick-base { opacity: 1; } #move-button { opacity: 1 !important; } }
+  #move-button {
+    position: absolute; right: 18px; bottom: 18px; width: 72px; height: 72px; border-radius: 50%; display: grid; place-items: center;
+    background: #f2c14ecc; color: #1b2a24; font-weight: 700; opacity: 0; user-select: none;
+  }
+  .panel { display: grid; gap: 6px; padding: 16px 18px; border: 3px solid var(--edge); border-radius: 18px; background: var(--card); }
+  .panel .line { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 14px; }
+  #doing { font-family: var(--font-title); font-size: 24px; margin: 0; }
+  #doing[data-phase="warning"] { color: var(--gold-deep); }
+  #tell { color: var(--moss); font-size: 14px; font-weight: 700; }
+  #caption { min-height: 3em; }
+  .pick { display: grid; gap: 10px; }
+  .pick .label { color: var(--quiet); font-size: 13px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; }
+  section.words { display: grid; gap: 12px; }
+  ul { margin: 0; padding-left: 20px; max-width: 70ch; }
+  li + li { margin-top: 6px; }
+  .rule { border: 0; border-top: 3px solid var(--edge); margin: 4px 0; }
+  table { border-collapse: collapse; width: 100%; max-width: 70ch; font-size: 15px; }
+  th, td { text-align: left; padding: 6px 10px 6px 0; border-bottom: 1px solid var(--edge); vertical-align: top; }
+  th { color: var(--quiet); font-size: 13px; letter-spacing: 0.04em; }
+  .scroll { overflow-x: auto; }
+</style>
+
+<main class="page">
+  <header>
+    <p class="eyebrow">Yaarbroverse 3D · milestone six, pull request 1</p>
+    <h1>Tougher enemies on Normal and Hard</h1>
+    <p class="lede">The marmot scout now walks a beat and comes after a hero it spots, the warnings are shorter, and the mosquito keeps up and dives more often. Easy is as it was. This page runs the game’s own rules and numbers at full speed. Nothing here is on the live site until you say OK.</p>
+  </header>
+
+  <p id="status" role="status">Loading the models…</p>
+
+  <div class="pick">
+    <div><span class="label">Where</span><div class="row" id="places" role="group" aria-label="Where"></div></div>
+    <div><span class="label">Difficulty</span><div class="row" id="difficulties" role="group" aria-label="Difficulty"></div></div>
+  </div>
+
+  <div class="window">
+    <canvas id="view" aria-label="The hero and the enemy in a blocked-out copy of the grove, moving at the game's speed"></canvas>
+    <div id="hearts"></div>
+    <div id="news" aria-live="polite"></div>
+    <div id="stick-zone"><div id="stick-base"><div id="stick-knob"></div></div></div>
+    <div id="jump-zone"><div id="move-button" role="button">Roll</div></div>
+  </div>
+
+  <div class="panel" aria-live="polite">
+    <div class="line"><p id="doing"></p><span id="tell"></span></div>
+    <p id="caption"></p>
+  </div>
+
+  <div class="pick">
+    <div><span class="label">Who has the hero</span><div class="row" id="modes" role="group" aria-label="Watch or play"></div></div>
+    <div><span class="label">Hero</span><div class="row" id="heroes" role="group" aria-label="Hero"></div></div>
+  </div>
+  <p class="note">“Watch” plays a short script on a loop and cuts the hero from spot to spot. “Play it yourself” gives you the hero with the game’s own controls; click the picture first if the keys do nothing. The scenery is a stand-in: plain blocks where the game has its forest. The enemies, the heroes, the warning lines, the speeds and the timing are the game’s own.</p>
+
+  <hr class="rule">
+
+  <!-- Hand-written for each change: bring it up to date before publishing. -->
+  <section class="words">
+    <h2>What changed, in numbers</h2>
+    <div class="scroll">
+    <table>
+      <tr><th></th><th>Easy</th><th>Normal</th><th>Hard</th></tr>
+      <tr><td>Warning before an attack</td><td>1.2 s (same)</td><td>0.56 s (was 0.8)</td><td>0.36 s (was 0.52)</td></tr>
+      <tr><td>Scout walks its beat</td><td>no, it hides</td><td>1.6 m/s</td><td>2.2 m/s</td></tr>
+      <tr><td>Scout comes after a hero</td><td>no</td><td>3.4 m/s</td><td>4.6 m/s</td></tr>
+      <tr><td>Mosquito keeps up at</td><td>1.5 m/s (same)</td><td>5 m/s (was 2.1)</td><td>6.5 m/s (was 2.7)</td></tr>
+      <tr><td>Mosquito waits and rests</td><td>same</td><td>0.6 of the time</td><td>0.45 of the time</td></tr>
+    </table>
+    </div>
+    <p>A hero walks at 6 metres a second, so running from a scout always works. Every number is in the grove’s <code>difficulty.ts</code>.</p>
+  </section>
+
+  <section class="words">
+    <h2>What to look for</h2>
+    <ul>
+      <li><b>The scout on its beat (Normal, Hard).</b> It crosses its bank, stops for a look at each end, and turns back. It is never hidden now, so it is seen from the stumps before the clearing.</li>
+      <li><b>The chase.</b> When a hero steps onto its bank it stands for half a second, then runs at the hero. From a few metres off it stops, rears up with the acorn and throws. Close in, it does not stop: it runs into the hero, and that costs a heart. Is the half second enough warning for the run?</li>
+      <li><b>Giving up.</b> When the hero leaves its bank, it turns and goes back to its beat. It never leaves the bank.</li>
+      <li><b>The shorter tells.</b> Compare the three difficulties in the same spot. The line showing where the acorn or the dive will go is still there on all three. On Hard it is brief: is it still fair?</li>
+      <li><b>The mosquito.</b> On Normal and Hard it stays over a walking hero and dives again soon after each rest. It hovers higher than before, because a hero who jumps a gap in the boughs would otherwise jump up into it.</li>
+    </ul>
+  </section>
+
+  <section class="words">
+    <h2>What is not checked</h2>
+    <ul>
+      <li><b>I cannot watch this move.</b> I checked it in still frames and with the rule tests. You are the first to see it at speed.</li>
+      <li><b>The scout’s run uses its shuffle clip, played fast.</b> It has no run clip of its own. If it looks wrong at speed, a run clip is a model change with its own preview.</li>
+      <li><b>Hits needed are not changed yet.</b> A scout still takes two hits on every difficulty here. One hit on Easy and Normal, two on Hard, and the rule that a damaged enemy heals when the hero is sent back, are the next pull request.</li>
+    </ul>
+  </section>
+
+  <section class="words">
+    <h2>Your call</h2>
+    <p>Reply OK and I will merge this to the live game and go on to enemy health. Or tell me what is off: too fast, too slow, a tell too short, the mosquito too pushy.</p>
+  </section>
+</main>
+
+<script type="module" src="arena.js"></script>
