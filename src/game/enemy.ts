@@ -11,7 +11,8 @@
 //                    far off and away from one who is close. Its warning is an
 //                    acorn held up; its attack is the acorn thrown to where the
 //                    hero stood. It hops back from a hero charging along the
-//                    ground. Two strikes beat it.
+//                    ground. Two strikes beat it, unless its level says
+//                    otherwise (`scoutHits`).
 //                    Where a level says so (`patrolSpeed`, `chaseSpeed`: the
 //                    grove's Normal and Hard) it does not hide or hold its
 //                    distance. It walks a beat across its patch in plain
@@ -27,6 +28,11 @@
 // attacking, and the acorn. Touching one while it warns, hops or rests does nothing.
 // What beats an enemy: Yaarbro rolling faster than a walk, Caputo's pounce, or
 // either hero landing on top of it. A strike wins over a touch that would hurt.
+// A strike shows: the enemy is shoved a short way along the hero's path and
+// flashes, and cannot be struck again until the flash is over.
+//
+// The older player's rule: when the hero is sent back to a safe bank, every
+// enemy that is not beaten is at full health again (`sendHome`).
 
 /** Distances are metres, times are seconds, speeds are metres per second. */
 export const ENEMY = {
@@ -87,11 +93,12 @@ export const ENEMY = {
   marmotHeight: 0.9,
   mosquitoRadius: 0.6,
   mosquitoHalfHeight: 0.36,
-  /** Strikes needed to beat each. */
+  /** Strikes needed to beat each, where a level does not say (`scoutHits`, `mosquitoHits`). */
   marmotHits: 2,
   mosquitoHits: 1,
-  /** A struck enemy is knocked this far along the hero's way, and cannot be struck again for this long. */
+  /** A struck enemy is shoved this far along the hero's way, over this long, and cannot be struck again while it flashes. */
   knock: 0.76,
+  knockTime: 0.14,
   flash: 0.4,
   /** Landing on one, or pouncing it, throws the hero up at this speed. */
   rebound: 10.6,
@@ -158,6 +165,9 @@ export interface EnemyTuning {
    * the enemy's own wind-up and its warning sound.
    */
   aimLine?: boolean;
+  /** Strikes it takes to beat a marmot scout, and a giant mosquito. Left out: 2 and 1. */
+  scoutHits?: number;
+  mosquitoHits?: number;
 }
 
 export interface Enemy {
@@ -176,8 +186,11 @@ export interface Enemy {
   target: { x: number; y: number; z: number };
   /** The acorn in flight, or null. */
   acorn: { x: number; y: number; z: number } | null;
-  /** Strikes left before it is beaten. */
+  /** Strikes left before it is beaten, and how many it takes from full health. */
   hits: number;
+  maxHits: number;
+  /** The shove of a strike still to be travelled: which way, and for how many more seconds. */
+  shove: { x: number; z: number; left: number };
   /** Counts down after a strike; it cannot be struck again until this is zero. */
   flash: number;
   dodgeRest: number;
@@ -212,7 +225,11 @@ export interface EnemyOutcome {
   entered: EnemyPhase[];
 }
 
-export const newEnemy = (spot: EnemySpot): Enemy => ({
+/** How many strikes it takes to beat an enemy of this kind in a level with this tuning. */
+export const fullHits = (kind: EnemyKind, tuning?: EnemyTuning): number =>
+  kind === 'marmot' ? (tuning?.scoutHits ?? ENEMY.marmotHits) : (tuning?.mosquitoHits ?? ENEMY.mosquitoHits);
+
+export const newEnemy = (spot: EnemySpot, tuning?: EnemyTuning): Enemy => ({
   spot,
   kind: spot.kind,
   x: spot.x,
@@ -224,7 +241,9 @@ export const newEnemy = (spot: EnemySpot): Enemy => ({
   from: { x: spot.x, y: spot.y, z: spot.z },
   target: { x: spot.x, y: spot.y, z: spot.z },
   acorn: null,
-  hits: spot.kind === 'marmot' ? ENEMY.marmotHits : ENEMY.mosquitoHits,
+  hits: fullHits(spot.kind, tuning),
+  maxHits: fullHits(spot.kind, tuning),
+  shove: { x: 0, z: 0, left: 0 },
   flash: 0,
   dodgeRest: 0,
   threat: 0,
@@ -233,11 +252,16 @@ export const newEnemy = (spot: EnemySpot): Enemy => ({
   grace: 0,
 });
 
-/** Puts an enemy that is not beaten back at home, as it was at the start, keeping the strikes it has taken. */
-export const sendHome = (enemy: Enemy): void => {
-  if (enemy.phase === 'defeated') return;
-  const { hits } = enemy;
-  Object.assign(enemy, newEnemy(enemy.spot), { hits, grace: ENEMY.homeGrace });
+/**
+ * Puts an enemy that is not beaten back at home, as it was at the start, at
+ * full health: whatever strikes it had taken are undone. Returns true when it
+ * had been damaged, so the game can say so. A beaten enemy stays beaten.
+ */
+export const sendHome = (enemy: Enemy): boolean => {
+  if (enemy.phase === 'defeated') return false;
+  const { hits, maxHits } = enemy;
+  Object.assign(enemy, newEnemy(enemy.spot), { hits: maxHits, maxHits, grace: ENEMY.homeGrace });
+  return hits < maxHits;
 };
 
 const clamp = (value: number, low: number, high: number): number => Math.max(low, Math.min(high, value));
@@ -277,6 +301,13 @@ export const stepEnemy = (
   enemy.flash = Math.max(0, enemy.flash - dt);
   enemy.dodgeRest = Math.max(0, enemy.dodgeRest - dt);
   enemy.grace = Math.max(0, enemy.grace - dt);
+  // The shove of a strike is travelled over a few steps, so it is seen and not a jump. It never leaves the patch.
+  if (enemy.shove.left > 0) {
+    const share = Math.min(dt, enemy.shove.left) / ENEMY.knockTime;
+    enemy.x = Math.max(enemy.spot.arena.minX, Math.min(enemy.spot.arena.maxX, enemy.x + enemy.shove.x * share));
+    enemy.z = Math.max(enemy.spot.arena.minZ, Math.min(enemy.spot.arena.maxZ, enemy.z + enemy.shove.z * share));
+    enemy.shove.left = Math.max(0, enemy.shove.left - dt);
+  }
   if (enemy.phase === 'defeated') {
     enemy.acorn = null;
     return outcome;
@@ -461,13 +492,11 @@ export const stepEnemy = (
     enemy.hits -= 1;
     enemy.flash = ENEMY.flash;
     enemy.acorn = null;
-    // Knocked along the hero's way.
+    // Shoved along the hero's way, or straight away from a hero who came down on it.
     const speed = Math.hypot(hero.vx, hero.vz);
-    if (speed > 0.1) {
-      enemy.x += (hero.vx / speed) * ENEMY.knock;
-      enemy.z += (hero.vz / speed) * ENEMY.knock;
-      stayIn();
-    }
+    const awayX = speed > 0.1 ? hero.vx / speed : apart > 1e-6 ? (enemy.x - hero.x) / apart : 0;
+    const awayZ = speed > 0.1 ? hero.vz / speed : apart > 1e-6 ? (enemy.z - hero.z) / apart : 0;
+    enemy.shove = { x: awayX * ENEMY.knock, z: awayZ * ENEMY.knock, left: ENEMY.knockTime };
     if (marmot) enemy.y = enemy.spot.y;
     enter(enemy.hits <= 0 ? 'defeated' : 'rest');
     outcome.struck = hero.pouncing > 0 ? 'pounce' : stomp ? 'stomp' : 'roll';

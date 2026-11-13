@@ -420,7 +420,7 @@ const start = async (): Promise<void> => {
         const index = level.enemies?.findIndex((spot) => spot.id === event.id) ?? -1;
         enemies[index]?.strike();
         const name = event.kind === 'marmot' ? 'Marmot' : 'Mosquito';
-        say(event.left > 0 ? `${name} knocked back!` : `${name} sent packing!`);
+        say(event.left > 0 ? `${name} hit! ${event.left} more to go.` : `${name} sent packing!`);
       } else if (event.type === 'hurt') say(event.left > 0 ? `Oof! ${event.left} of ${level.hearts} hearts left.` : 'Out of hearts. Back to safety!');
       else if (event.type === 'restored') say(`Safe again, with all ${level.hearts} hearts.`);
     }

@@ -54,6 +54,8 @@ const boot = (): void => {
   const met = new Set<string>();
   /** Game time until which a line about hearts or enemies keeps the screen. */
   let newsUntil = 0;
+  /** A line about an enemy that healed, waiting for the hero to be back on its feet. */
+  let healedNews: string | null = null;
 
   // Sound. The files are fetched now; nothing plays until the first tap or key press.
   const player = new Player();
@@ -120,6 +122,7 @@ const boot = (): void => {
     seen.clear();
     met.clear();
     newsUntil = 0;
+    healedNews = null;
     gameSounds.reset();
     view?.show(level, choice.hero, entry.scenery);
     view?.snapCamera(game);
@@ -284,9 +287,16 @@ const boot = (): void => {
         news(level.enemyTuning?.patrolSpeed ? 'The marmot scout has spotted you!' : 'A rustle in the roots… Marmot scout!', 2.5);
       } else if (event.type === 'strike') {
         const name = event.kind === 'marmot' ? 'Marmot' : 'Mosquito';
-        news(event.left > 0 ? `${name} knocked back!` : `${name} sent packing!`, 2.5);
+        news(event.left > 0 ? `${name} hit! ${event.left} more to go.` : `${name} sent packing!`, 2.5);
+      } else if (event.type === 'healed') {
+        // The older player's rule. It follows "Back to safety" on the screen, so it waits a moment.
+        healedNews = event.kind === 'marmot' ? 'The marmot scout is back to full strength.' : 'The mosquito is back to full strength.';
       } else if (event.type === 'safe') safe = true;
       else if (event.type === 'goal') screens.say(level.goalLine ?? 'You made it!', 4);
+    }
+    if (healedNews && game.returning === 0 && game.seconds >= newsUntil) {
+      news(healedNews, 3);
+      healedNews = null;
     }
     // Each part of the level has one short prompt, shown the first time you
     // stand there. It waits its turn behind any news.

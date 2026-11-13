@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
-import { frames, open, play, standOn } from './helpers';
+import { frames, open, play, snapshot, standOn } from './helpers';
 
 // The enemies in the level: they show up, they hurt, and each hero's move
 // beats them from the keyboard and from the touch button. Their rules are
@@ -11,11 +11,12 @@ interface EnemyState {
   clip: string;
   visible: boolean;
   aimLine: boolean;
+  flashing: boolean;
 }
 
 const enemy = (page: Page, index: number): Promise<EnemyState> =>
   page.evaluate((i) => {
-    const grove = (window as unknown as { __grove: { game: { enemies: Array<{ phase: string; hits: number }> }; enemies: Array<{ clip: string; visible: boolean; aimLine: boolean }> } }).__grove;
+    const grove = (window as unknown as { __grove: { game: { enemies: Array<{ phase: string; hits: number }> }; enemies: Array<{ clip: string; visible: boolean; aimLine: boolean; flashing: boolean }> } }).__grove;
     return { phase: grove.game.enemies[i].phase, hits: grove.game.enemies[i].hits, ...grove.enemies[i] };
   }, index);
 
@@ -123,9 +124,10 @@ test.describe('on the keyboard', () => {
     await play(page, 'Yaarbro', 'normal');
     await faceRestingScout(page, 6);
     await page.keyboard.down('KeyX');
-    await expect.poll(async () => (await enemy(page, 0)).hits, { timeout: 30_000 }).toBe(1);
+    // On Normal one hit beats a scout.
+    await expect.poll(async () => (await enemy(page, 0)).hits, { timeout: 30_000 }).toBe(0);
     await page.keyboard.up('KeyX');
-    await expect(page.locator('#message')).toContainText('Marmot knocked back');
+    await expect(page.locator('#message')).toContainText('Marmot sent packing');
     expect(await heartsLost(page)).toBe(0);
   });
 });
@@ -146,8 +148,35 @@ test.describe('by touch', () => {
         );
       }
     });
-    await expect.poll(async () => (await enemy(page, 0)).hits, { timeout: 30_000 }).toBeLessThanOrEqual(1);
-    await expect(page.locator('#message')).toContainText(/Marmot (knocked back|sent packing)/);
+    await expect.poll(async () => (await enemy(page, 0)).hits, { timeout: 30_000 }).toBe(0);
+    await expect(page.locator('#message')).toContainText('Marmot sent packing');
     expect(await heartsLost(page)).toBe(0);
   });
+});
+
+test('on Hard a scout takes two hits: the first shows as a flash, and a fall undoes it', async ({ page }) => {
+  const problems = await open(page);
+  await play(page, 'Yaarbro', 'hard');
+  await standOn(page, 'bank-2', 4);
+  await frames(page, 2);
+  // Come down on the scout while it rests.
+  await page.evaluate(() => {
+    const { game } = (window as unknown as { __grove: { game: any } }).__grove;
+    const bank = game.level.solids.find((s: { id: string }) => s.id === 'bank-2');
+    Object.assign(game.enemies[0], { x: bank.x, z: bank.z, phase: 'rest', timer: -60, grace: 0 });
+    Object.assign(game, { x: bank.x, z: bank.z, y: bank.top + 2, vx: 0, vy: -3, vz: 0, grounded: false });
+  });
+  await expect.poll(async () => (await enemy(page, 0)).hits, { timeout: 30_000 }).toBe(1);
+  await expect(page.locator('#message')).toContainText('Marmot hit! 1 more to go.');
+  expect((await enemy(page, 0)).flashing).toBe(true);
+  // Off the side of the clearing: back to the safe bank, and the scout is whole again.
+  await page.evaluate(() => {
+    const { game } = (window as unknown as { __grove: { game: any } }).__grove;
+    const bank = game.level.solids.find((s: { id: string }) => s.id === 'bank-2');
+    Object.assign(game, { x: bank.x + bank.halfX + 3, vx: 0, vz: 0 });
+  });
+  await expect.poll(async () => (await snapshot(page)).falls, { timeout: 60_000 }).toBe(1);
+  expect((await enemy(page, 0)).hits).toBe(2);
+  await expect(page.locator('#message')).toContainText('back to full strength', { timeout: 30_000 });
+  expect(problems).toEqual([]);
 });

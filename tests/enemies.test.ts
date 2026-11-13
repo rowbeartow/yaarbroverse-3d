@@ -379,17 +379,61 @@ describe('each move against each enemy', () => {
   });
 });
 
-describe('after a fall, or after running out of hearts', () => {
-  it('an enemy that is not beaten goes back to where it began, keeping the strikes it has taken', () => {
-    const { game, enemy } = play(marmotAt(12));
+describe('the regen rule: after a fall, or after running out of hearts', () => {
+  /** Rolls Yaarbro into a resting scout until it has taken one hit. */
+  const damage = (game: Game, enemy: Enemy): void => {
     stand(game, 3);
     Object.assign(enemy, { phase: 'rest', timer: -20 });
-    for (let i = 0; i < 90 && enemy.hits === 2; i += 1) game.step({ ...IDLE, ...RIGHT, move: true });
-    expect(enemy.hits).toBe(1);
+    for (let i = 0; i < 90 && enemy.hits === enemy.maxHits; i += 1) game.step({ ...IDLE, ...RIGHT, move: true });
+    expect(enemy.hits).toBe(enemy.maxHits - 1);
+  };
+  const events = (game: Game, type: string): unknown[] => game.events.filter((event) => event.type === type);
+
+  it('a fall puts a damaged enemy back where it began, at full health, and says so', () => {
+    const { game, enemy } = play(marmotAt(12));
+    damage(game, enemy);
     // Walk off the near side.
     for (let i = 0; i < 600 && game.falls === 0; i += 1) game.step({ ...IDLE, moveZ: 1 });
     expect(game.falls).toBe(1);
-    expect([enemy.x, enemy.z, enemy.phase, enemy.hits]).toEqual([12, 0, 'concealed', 1]);
+    expect([enemy.x, enemy.z, enemy.phase, enemy.hits]).toEqual([12, 0, 'concealed', 2]);
+    expect(events(game, 'healed')).toEqual([{ type: 'healed', id: 'scout', kind: 'marmot' }]);
+  });
+
+  it('running out of hearts does the same', () => {
+    const { game, enemy } = play(marmotAt(12), 'Yaarbro', { hearts: 1 });
+    damage(game, enemy);
+    // A strike protects the hero for a moment; then something hurts it.
+    game.protectedFor = 0;
+    expect(game.hurt(enemy.x, enemy.z)).toBe(true);
+    let healed = 0;
+    for (let i = 0; i < 300 && game.hearts < 1; i += 1) {
+      game.step(IDLE);
+      healed += events(game, 'healed').length;
+    }
+    expect(game.hearts).toBe(1);
+    expect(game.falls).toBe(0);
+    expect(enemy.hits).toBe(2);
+    expect(healed).toBe(1);
+  });
+
+  it('the healed enemy takes its full count of hits again', () => {
+    const { game, enemy } = play(marmotAt(12));
+    damage(game, enemy);
+    for (let i = 0; i < 600 && game.falls === 0; i += 1) game.step({ ...IDLE, moveZ: 1 });
+    run(game, {}, 1);
+    damage(game, enemy);
+    expect(enemy.phase).not.toBe('defeated');
+  });
+
+  it('says nothing about an enemy that had taken no hit', () => {
+    const { game, enemy } = play(marmotAt(12));
+    let healed = 0;
+    for (let i = 0; i < 600 && game.falls === 0; i += 1) {
+      game.step({ ...IDLE, moveZ: 1 });
+      healed += events(game, 'healed').length;
+    }
+    expect(game.falls).toBe(1);
+    expect([enemy.hits, healed]).toEqual([2, 0]);
   });
 
   it('a beaten enemy stays beaten', () => {
@@ -397,6 +441,91 @@ describe('after a fall, or after running out of hearts', () => {
     Object.assign(enemy, { phase: 'defeated', hits: 0 });
     for (let i = 0; i < 600 && game.falls === 0; i += 1) game.step({ ...IDLE, moveZ: 1 });
     expect(enemy.phase).toBe('defeated');
+    expect(enemy.hits).toBe(0);
+  });
+
+  it.each(HEROES)('in the grove on Hard: %s damages the scout in the clearing, falls, and finds it at full health', (hero) => {
+    const level = buildGrove('hard');
+    const game = new Game(level, 'hard', hero);
+    const scout = game.enemies[0];
+    expect([scout.hits, scout.maxHits]).toEqual([2, 2]);
+    const bank = level.solids.find((s) => s.id === 'bank-2')!;
+    // Stand on the clearing so it becomes the safe bank, then come down on the scout.
+    Object.assign(game, { x: bank.x, y: bank.top, z: bank.z + 3, vx: 0, vy: 0, vz: 0, grounded: true });
+    game.step(IDLE);
+    Object.assign(scout, { phase: 'rest', timer: -20 });
+    Object.assign(game, { x: scout.x, z: scout.z, y: bank.top + 2, vy: -3, grounded: false });
+    for (let i = 0; i < 60 && scout.hits === 2; i += 1) game.step(IDLE);
+    expect(scout.hits).toBe(1);
+    // Off the side of the clearing.
+    Object.assign(game, { x: bank.x + bank.halfX + 3, vx: 0, vz: 0 });
+    for (let i = 0; i < 600 && game.falls === 0; i += 1) game.step(IDLE);
+    expect(game.falls).toBe(1);
+    expect(game.groundId).toBe('bank-2');
+    expect([scout.hits, scout.phase]).toEqual([2, 'concealed']);
+  });
+});
+
+describe('a strike shows', () => {
+  it('the enemy is shoved a short way along the hero’s path, over a few steps and not in one', () => {
+    const { game, enemy } = play(marmotAt(12));
+    stand(game, 9);
+    Object.assign(enemy, { phase: 'rest', timer: -20 });
+    let from = 12;
+    const moved: number[] = [];
+    for (let i = 0; i < 120; i += 1) {
+      const hits = enemy.hits;
+      game.step({ ...IDLE, ...RIGHT, move: true });
+      if (enemy.hits < hits) from = enemy.x;
+      else if (enemy.hits === 1 && enemy.x !== from) {
+        moved.push(enemy.x - from);
+        from = enemy.x;
+      }
+      if (enemy.hits === 1 && enemy.shove.left === 0 && moved.length) break;
+    }
+    expect(moved.length).toBeGreaterThan(3);
+    expect(moved.reduce((sum, each) => sum + each, 0)).toBeCloseTo(ENEMY.knock, 1);
+    expect(Math.max(...moved)).toBeLessThan(ENEMY.knock / 3);
+  });
+
+  it('a hero who comes straight down on it shoves it away from where the hero is', () => {
+    const { game, enemy } = play(marmotAt(12));
+    Object.assign(enemy, { phase: 'rest', timer: -20 });
+    Object.assign(game, { x: 11.7, z: 0, y: 2, vx: 0, vy: -3, vz: 0, grounded: false });
+    run(game, {}, 0.5);
+    expect(enemy.hits).toBe(1);
+    expect(enemy.x).toBeCloseTo(12 + ENEMY.knock, 1);
+  });
+
+  it('the shove never carries it off its patch', () => {
+    const { game, enemy } = play(marmotAt(29.8));
+    Object.assign(enemy, { phase: 'rest', timer: -20 });
+    Object.assign(game, { x: 29.4, z: 0, y: 2, vx: 0, vy: -3, vz: 0, grounded: false });
+    run(game, {}, 0.5);
+    expect(enemy.hits).toBe(1);
+    expect(enemy.x).toBeLessThanOrEqual(30);
+  });
+});
+
+describe('how many hits an enemy takes', () => {
+  it('is the level’s to say, for each kind', () => {
+    const one = play(marmotAt(12), 'Yaarbro', { enemyTuning: { warning: 1, speed: 1, rest: 1, scoutHits: 1 } });
+    expect([one.enemy.hits, one.enemy.maxHits]).toEqual([1, 1]);
+    Object.assign(one.enemy, { phase: 'rest', timer: -20 });
+    Object.assign(one.game, { x: 12, z: 0, y: 2, vy: -3, grounded: false });
+    run(one.game, {}, 0.5);
+    expect(one.enemy.phase).toBe('defeated');
+    const three = play(mosquitoAt(12), 'Yaarbro', { enemyTuning: { warning: 1, speed: 1, rest: 1, mosquitoHits: 3 } });
+    expect(three.enemy.hits).toBe(3);
+  });
+
+  it('in the grove: a scout takes one on Easy and Normal and two on Hard, the mosquito one on every difficulty', () => {
+    for (const difficulty of DIFFICULTIES) {
+      const game = new Game(buildGrove(difficulty), difficulty, 'Yaarbro');
+      expect(game.enemies.map((enemy) => enemy.maxHits)).toEqual(difficulty === 'hard' ? [2, 1, 2] : [1, 1, 1]);
+      expect(game.enemies.map((enemy) => enemy.hits)).toEqual(game.enemies.map((enemy) => enemy.maxHits));
+    }
+    expect(DIFFICULTIES.map((difficulty) => [GROVE_DIFFICULTY[difficulty].scoutHealth, GROVE_DIFFICULTY[difficulty].mosquitoHealth])).toEqual([[1, 1], [1, 1], [2, 1]]);
   });
 });
 
@@ -669,6 +798,8 @@ describe('the enemies of the Bouncing Grove', () => {
       hoverAbove: numbers.mosquitoHover,
       divePause: numbers.mosquitoPause,
       aimLine: numbers.enemyAimLine,
+      scoutHits: numbers.scoutHealth,
+      mosquitoHits: numbers.mosquitoHealth,
     });
   });
 

@@ -33,6 +33,8 @@ export type GameEvent =
   | { type: 'enemy'; id: string; kind: Enemy['kind']; phase: EnemyPhase }
   /** The hero's move, or a landing, struck an enemy. `left` is how many more strikes it takes. */
   | { type: 'strike'; id: string; kind: Enemy['kind']; how: 'roll' | 'pounce' | 'stomp'; left: number }
+  /** The hero was sent back to a safe bank, and an enemy it had damaged is at full health again. */
+  | { type: 'healed'; id: string; kind: Enemy['kind'] }
   /** Lost a heart. `left` is how many remain. */
   | { type: 'hurt'; left: number }
   /** Went back to the last safe bank with every heart again, after losing the last one. */
@@ -124,8 +126,8 @@ export class Game {
     this.y = level.spawn.y;
     this.z = level.spawn.z;
     this.hearts = level.hearts;
-    this.enemies = (level.enemies ?? []).map(newEnemy);
     this.tuning = level.enemyTuning ?? { warning: 1, speed: 1, rest: 1 };
+    this.enemies = (level.enemies ?? []).map((spot) => newEnemy(spot, this.tuning));
     const under = surfaceBelow(level, this.x, this.z, this.y, MOVE.footRadius);
     this.groundId = under ? under.id : null;
     this.safeSpot = { ...level.spawn, id: under?.safe ? under.id : null };
@@ -216,8 +218,11 @@ export class Game {
     this.stunned = 0;
     this.rolling = false;
     this.pouncing = 0;
-    // Whatever was mid-attack near the safe bank starts over; strikes already landed still count.
-    for (const enemy of this.enemies) sendHome(enemy);
+    // The older player's rule: every enemy that is not beaten starts over at
+    // full health. Strikes landed before the hero was sent back are undone.
+    for (const enemy of this.enemies) {
+      if (sendHome(enemy)) this.events.push({ type: 'healed', id: enemy.spot.id, kind: enemy.kind });
+    }
     // No hearts left: start again from here with all of them, protected for a moment.
     if (this.hearts <= 0) {
       this.hearts = this.level.hearts;
