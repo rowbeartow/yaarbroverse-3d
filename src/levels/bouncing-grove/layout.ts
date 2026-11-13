@@ -411,6 +411,7 @@ export function buildGrove(
       followSpeed: n.mosquitoFollow,
       hoverAbove: n.mosquitoHover,
       divePause: n.mosquitoPause,
+      aimLine: n.enemyAimLine,
     },
     spawn: { x: 0, y: 0, z: 0 },
     leaf: { x: leafX, y: boughTop + 1.3, z: -(at + shape.boughLength - 1.6), radius: 0.7 },

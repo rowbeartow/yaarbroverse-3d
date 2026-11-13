@@ -1,12 +1,12 @@
 # Session handoff
 
-Last updated: 2026-11-13 (milestone six, pull request 1 open)
+Last updated: 2026-11-13 (milestone six, pull request 1)
 
 ## Start here
 
 **Milestone six is under way: tougher enemies, enemy health, the boss system, the marmot chief.** The owner's decisions for it, and what the kids asked for, are in `docs/decisions.md` (2026-11-13). Four pull requests, in order:
 
-1. **Tougher enemies: open, not merged. It waits for the owner's OK on the preview page** (https://claude.ai/artifact/Nmwtn8SMup8HVLkdK3PnGA ). Easy is unchanged. On Normal and Hard the marmot scout walks a beat across its bank and comes after a hero it spots, warnings are shorter (0.56 and 0.36 seconds; Easy keeps 1.2), and the mosquito keeps up with the hero and dives more often. The numbers are `enemyWarning`, `scoutPatrol`, `scoutChase`, `mosquitoFollow`, `mosquitoHover` and `mosquitoPause` in the grove's `difficulty.ts`; the rules are in `src/game/enemy.ts`.
+1. **Tougher enemies: pull request 40. The owner said OK on the preview page on 2026-11-13, with the aim line on Easy only; if you are reading this on `main`, it has merged.** The page: (https://claude.ai/artifact/Nmwtn8SMup8HVLkdK3PnGA ). Easy is unchanged. On Normal and Hard the marmot scout walks a beat across its bank and comes after a hero it spots, warnings are shorter (0.56 and 0.36 seconds; Easy keeps 1.2), and the mosquito keeps up with the hero and dives more often. The line showing where an attack will go is drawn on Easy only (`enemyAimLine`): on Normal and Hard the warning is the scout rearing up with its acorn, or the mosquito tipping nose-down, and the warning sound. The numbers are `enemyWarning`, `scoutPatrol`, `scoutChase`, `mosquitoFollow`, `mosquitoHover` and `mosquitoPause` in the grove's `difficulty.ts`; the rules are in `src/game/enemy.ts`.
 2. Enemy health and the regen rule: not started.
 3. The boss system, proved by a dev-only boss in the sandbox: not started. Three choices of boss music and two of a "boss beaten" sound are on the sound board for the owner to pick from (https://claude.ai/artifact/WvtY9CjWaa5yTpwyJCferH ). None is in the repo yet; they are CC0 recordings from OpenGameArt.
 4. The marmot chief: not started. It waits for the owner's OK on a preview of the whole fight before it merges.

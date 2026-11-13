@@ -291,7 +291,9 @@ export class EnemyView {
 
     // The line the attack will follow, shown for as long as the warning lasts
     // and through the attack itself, pulsing faster as the warning runs out.
-    if (aiming && along.lengthSq() > 1e-6) {
+    // Only where the level's difficulty asks for it: without it, the warning
+    // is the enemy's own wind-up (the clip held above) and its sound.
+    if (tuning.aimLine !== false && aiming && along.lengthSq() > 1e-6) {
       const length = along.length();
       this.lane.visible = true;
       this.lane.position.set((enemy.from.x + enemy.target.x) / 2, (enemy.from.y + enemy.target.y) / 2, (enemy.from.z + enemy.target.z) / 2);
@@ -303,8 +305,8 @@ export class EnemyView {
   }
 
   /** The clip showing now, for the browser checks. */
-  info(): { clip: string; visible: boolean } {
-    return { clip: this.spec.clips[this.showing] ?? 'idle', visible: this.root.visible };
+  info(): { clip: string; visible: boolean; aimLine: boolean } {
+    return { clip: this.spec.clips[this.showing] ?? 'idle', visible: this.root.visible, aimLine: this.lane.visible };
   }
 
   dispose(): void {

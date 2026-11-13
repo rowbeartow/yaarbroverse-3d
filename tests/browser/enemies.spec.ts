@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
-import { open, play, standOn } from './helpers';
+import { frames, open, play, standOn } from './helpers';
 
 // The enemies in the level: they show up, they hurt, and each hero's move
 // beats them from the keyboard and from the touch button. Their rules are
@@ -10,11 +10,12 @@ interface EnemyState {
   hits: number;
   clip: string;
   visible: boolean;
+  aimLine: boolean;
 }
 
 const enemy = (page: Page, index: number): Promise<EnemyState> =>
   page.evaluate((i) => {
-    const grove = (window as unknown as { __grove: { game: { enemies: Array<{ phase: string; hits: number }> }; enemies: Array<{ clip: string; visible: boolean }> } }).__grove;
+    const grove = (window as unknown as { __grove: { game: { enemies: Array<{ phase: string; hits: number }> }; enemies: Array<{ clip: string; visible: boolean; aimLine: boolean }> } }).__grove;
     return { phase: grove.game.enemies[i].phase, hits: grove.game.enemies[i].hits, ...grove.enemies[i] };
   }, index);
 
@@ -75,6 +76,35 @@ test('on Hard the marmot scout walks its beat in plain view, and comes after a h
   await expect.poll(async () => (await enemy(page, 0)).clip, { timeout: 30_000, intervals: [50] }).toMatch(/walk|warning/);
   expect(problems).toEqual([]);
 });
+
+/** Holds the scout in its warning, aimed at the hero, and says whether the aim line is drawn. */
+const lineWhileWarning = async (page: Page): Promise<EnemyState> => {
+  await standOn(page, 'bank-2', 4);
+  await page.evaluate(() => {
+    const { game } = (window as unknown as { __grove: { game: any } }).__grove;
+    const scout = game.enemies[0];
+    Object.assign(scout, { phase: 'warning', timer: -60, grace: 0, from: { x: scout.x, y: scout.y + 1.3, z: scout.z }, target: { x: game.x, y: game.y + 0.8, z: game.z } });
+  });
+  await expect.poll(async () => (await enemy(page, 0)).clip, { intervals: [50] }).toBe('warning');
+  await frames(page, 3);
+  return enemy(page, 0);
+};
+
+test('on Easy a line shows where the scout will throw', async ({ page }) => {
+  await open(page);
+  await play(page, 'Yaarbro', 'easy');
+  expect((await lineWhileWarning(page)).aimLine).toBe(true);
+});
+
+for (const difficulty of ['normal', 'hard']) {
+  test(`on ${difficulty} nothing is drawn: the warning is the scout rearing up`, async ({ page }) => {
+    const problems = await open(page);
+    await play(page, 'Yaarbro', difficulty);
+    const state = await lineWhileWarning(page);
+    expect([state.aimLine, state.clip, state.visible]).toEqual([false, 'warning', true]);
+    expect(problems).toEqual([]);
+  });
+}
 
 test('the giant mosquito hovers over the high boughs', async ({ page }) => {
   const problems = await open(page);

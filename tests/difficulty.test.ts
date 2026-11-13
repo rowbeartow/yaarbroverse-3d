@@ -43,7 +43,8 @@ describe('Bouncing Grove difficulty numbers', () => {
       const numbers = GROVE_DIFFICULTY[difficulty];
       expect(Object.keys(numbers).sort()).toEqual(names);
       // Every number is above zero, but for the two that switch a scout's walking and chasing off.
-      const { scoutPatrol, scoutChase, ...rest } = numbers;
+      const { scoutPatrol, scoutChase, enemyAimLine, ...rest } = numbers;
+      expect(typeof enemyAimLine).toBe('boolean');
       for (const value of Object.values(rest).flat()) {
         expect(Number.isFinite(value)).toBe(true);
         expect(value).toBeGreaterThan(0);

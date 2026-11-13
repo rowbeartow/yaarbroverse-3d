@@ -151,6 +151,13 @@ export interface EnemyTuning {
   hoverAbove?: number;
   /** Times how long the mosquito gets ready before a dive and rests after one. Smaller means it dives more often. Left out: 1. */
   divePause?: number;
+  /**
+   * Whether a line is drawn along the path an attack will take, for as long
+   * as its warning lasts. Left out: drawn. The rules do not use this: the
+   * attack goes where it was aimed either way. With no line, the warning is
+   * the enemy's own wind-up and its warning sound.
+   */
+  aimLine?: boolean;
 }
 
 export interface Enemy {

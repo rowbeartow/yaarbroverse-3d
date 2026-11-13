@@ -116,6 +116,14 @@ export interface GroveNumbers {
   mosquitoFollow: number;
   mosquitoHover: number;
   mosquitoPause: number;
+  /**
+   * Whether a line is drawn showing where an enemy's attack will go (the
+   * scout's throw, the mosquito's dive) while its warning lasts. Easy only.
+   * On Normal and Hard the warning is what the enemy does (the scout rears
+   * up with the acorn over its shoulder, the mosquito tips nose-down with
+   * its legs drawn up) and its warning sound, with nothing drawn.
+   */
+  enemyAimLine: boolean;
   /** After walking off an edge, Jump still works for this long. */
   coyoteTime: number;
   /** Feet this far below a ledge still get lifted onto it. */
@@ -156,6 +164,7 @@ export const GROVE_DIFFICULTY: Record<Difficulty, GroveNumbers> = {
     mosquitoFollow: 1.47,
     mosquitoHover: 2.2,
     mosquitoPause: 1,
+    enemyAimLine: true,
     coyoteTime: 0.2,
     ledgeHelp: 0.5,
   },
@@ -192,6 +201,7 @@ export const GROVE_DIFFICULTY: Record<Difficulty, GroveNumbers> = {
     mosquitoFollow: 5,
     mosquitoHover: 3.4,
     mosquitoPause: 0.6,
+    enemyAimLine: false,
     coyoteTime: 0.12,
     ledgeHelp: 0.3,
   },
@@ -228,6 +238,7 @@ export const GROVE_DIFFICULTY: Record<Difficulty, GroveNumbers> = {
     mosquitoFollow: 6.5,
     mosquitoHover: 3.4,
     mosquitoPause: 0.45,
+    enemyAimLine: false,
     coyoteTime: 0.06,
     ledgeHelp: 0.15,
   },

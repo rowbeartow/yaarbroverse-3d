@@ -623,6 +623,19 @@ describe('the enemies of the Bouncing Grove', () => {
     expect(seconds[2]).toBeGreaterThanOrEqual(0.33);
   });
 
+  it('draws the line showing where an attack will go on Easy only, and aims the attack the same way without it', () => {
+    expect(DIFFICULTIES.map((difficulty) => GROVE_DIFFICULTY[difficulty].enemyAimLine)).toEqual([true, false, false]);
+    // The rules never read it: with and without the line, the same warning, the same aim, the same throw.
+    const thrown = (aimLine: boolean) => {
+      const { game, enemy } = play(marmotAt(12), 'Yaarbro', { enemyTuning: { warning: 0.7, speed: 1, rest: 1, aimLine } });
+      stand(game, 6);
+      const entered = run(game, {}, 2.5);
+      return { entered, target: enemy.target, hearts: game.hearts };
+    };
+    expect(thrown(false)).toEqual(thrown(true));
+    expect(thrown(false).entered).toContain('warning');
+  });
+
   it('on Easy the mosquito is as it was; on Normal and Hard it keeps up, hovers clear of a jump and dives more often', () => {
     const [easy, normal, hard] = DIFFICULTIES.map((difficulty) => GROVE_DIFFICULTY[difficulty]);
     expect(easy.mosquitoFollow).toBeCloseTo(ENEMY.hoverSpeed * easy.enemySpeed, 5);
@@ -655,6 +668,7 @@ describe('the enemies of the Bouncing Grove', () => {
       followSpeed: numbers.mosquitoFollow,
       hoverAbove: numbers.mosquitoHover,
       divePause: numbers.mosquitoPause,
+      aimLine: numbers.enemyAimLine,
     });
   });
 
