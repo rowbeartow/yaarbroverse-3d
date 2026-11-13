@@ -860,3 +860,32 @@ dd {
   color: #7b8474;
   font-weight: 600;
 }
+
+/* ---------- Bests on the end card ---------- */
+
+.new-best {
+  margin: 8px 0 0;
+  padding: 6px 12px;
+  border-radius: 12px;
+  background: var(--gold);
+  color: #2b1f05;
+  font-size: clamp(16px, 2.6vh, 20px);
+  font-weight: 800;
+}
+
+.best {
+  display: block;
+  font-size: clamp(12px, 1.9vh, 15px);
+  font-weight: 700;
+  color: #4f5b50;
+  font-variant-numeric: tabular-nums;
+}
+
+dl div.is-new {
+  border-color: var(--gold-deep);
+  background: #ffe9a8;
+}
+
+dl div.is-new .best {
+  color: #7a5200;
+}

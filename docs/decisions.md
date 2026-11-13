@@ -296,3 +296,11 @@ Supersedes: none
 ## 2026-11-13 The level picker is a row of cards on the start screen, and a card's best time is the better of the two heroes
 Reason: Claude's calls within the owner's instruction for the picker, shown to him on a preview page before merging. The start screen is headed "Where to?"; each area is a card with a picture, its name and line, and for the current player a tick and best time on each finished difficulty, or "Not yet". One time per difficulty keeps a card readable; each hero's own best time and fewest falls go on the end card. A development level is a card only when the address names it.
 Supersedes: none
+
+## 2026-11-13 The owner said OK to the new screens, and the level picker merged
+Reason: His OK on the preview page (https://claude.ai/artifact/PKoes4buicSvLc9n4WYmWx ) for "Who's playing?", the level picker and the level card, as shown.
+Supersedes: none
+
+## 2026-11-13 Best time and fewest falls are kept separately, and matching a best is not beating it
+Reason: The owner's instruction for best times: for each player, level, hero and difficulty, the best time and the fewest falls, each from whichever run set it, and only from runs that reached the golden leaf. The end card shows both under the run's own numbers and marks a new one in gold. A first finish is marked as new on both.
+Supersedes: none

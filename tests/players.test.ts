@@ -13,6 +13,7 @@ import {
   bestFor,
   bestTime,
   cleanName,
+  endBests,
   hasFinished,
   progressOn,
   type Run,
@@ -344,5 +345,64 @@ describe('what a level’s card shows for a player', () => {
     });
     expect(progressOn(players.get(moss.id)!, 'bouncing-grove').normal).toEqual({ finished: true, seconds: 75 });
     expect(progressOn(players.get(pip.id)!, 'sandbox').easy.finished).toBe(false);
+  });
+});
+
+describe('what the end card says about bests', () => {
+  const fresh = (): { players: Players; id: string } => {
+    const players = new Players(new FakeStorage());
+    return { players, id: players.add('Pip', 'moss')!.id };
+  };
+
+  it('a first finish is marked new on both, with a line of its own', () => {
+    const { players, id } = fresh();
+    expect(endBests(players.finish(id, run({ seconds: 80, falls: 3 })))).toEqual({
+      time: { value: 80, isNew: true },
+      falls: { value: 3, isNew: true },
+      headline: 'First finish! That is the time to beat.',
+    });
+  });
+
+  it('a faster run with more falls marks the time only, and shows the fewest falls from before', () => {
+    const { players, id } = fresh();
+    players.finish(id, run({ seconds: 80, falls: 3 }));
+    expect(endBests(players.finish(id, run({ seconds: 70, falls: 5 })))).toEqual({
+      time: { value: 70, isNew: true },
+      falls: { value: 3, isNew: false },
+      headline: 'New best time!',
+    });
+  });
+
+  it('a slower run with fewer falls marks the falls only, and shows the best time from before', () => {
+    const { players, id } = fresh();
+    players.finish(id, run({ seconds: 80, falls: 3 }));
+    expect(endBests(players.finish(id, run({ seconds: 95, falls: 1 })))).toEqual({
+      time: { value: 80, isNew: false },
+      falls: { value: 1, isNew: true },
+      headline: 'Your fewest falls yet!',
+    });
+  });
+
+  it('a run that beats both says so, and one that beats neither marks nothing', () => {
+    const { players, id } = fresh();
+    players.finish(id, run({ seconds: 80, falls: 3 }));
+    expect(endBests(players.finish(id, run({ seconds: 60, falls: 0 })))?.headline).toBe('New best time, and your fewest falls!');
+    expect(endBests(players.finish(id, run({ seconds: 60, falls: 0 })))).toEqual({
+      time: { value: 60, isNew: false },
+      falls: { value: 0, isNew: false },
+      headline: null,
+    });
+  });
+
+  it('a run that did not count shows no bests', () => {
+    const { players, id } = fresh();
+    expect(endBests(players.finish(id, run({ complete: false })))).toBeNull();
+    expect(endBests(players.finish('p-nobody', run()))).toBeNull();
+  });
+
+  it('another hero or difficulty is a first finish of its own', () => {
+    const { players, id } = fresh();
+    players.finish(id, run({ seconds: 80 }));
+    expect(endBests(players.finish(id, run({ hero: 'Caputo', seconds: 200 })))?.headline).toBe('First finish! That is the time to beat.');
   });
 });

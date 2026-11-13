@@ -5,6 +5,7 @@
 import { DIFFICULTIES, DIFFICULTY_LABEL, isDifficulty, type Difficulty } from '../game/difficulty';
 import type { Summary } from '../game/game';
 import { HEROES, isHeroName, type HeroName } from '../game/hero';
+import type { EndBests } from '../save/players';
 
 export interface Choice {
   hero: HeroName;
@@ -248,8 +249,24 @@ export class Screens {
     this.message.classList.remove('show');
   }
 
-  /** Fills in the end card from the run record. */
-  showEnd(summary: Summary, date: Date): void {
+  /**
+   * Fills in the end card from the run record. `bests` is the player's best
+   * time and fewest falls for this level, hero and difficulty as they stand
+   * after the run; a best this run set is marked "New best". Null shows none.
+   */
+  showEnd(summary: Summary, date: Date, bests: EndBests | null = null): void {
+    const banner = el('#end-new');
+    banner.hidden = !bests?.headline;
+    banner.textContent = bests?.headline ?? '';
+    const line = (id: string, best: { value: number; isNew: boolean } | undefined, text: (value: number) => string): void => {
+      const box = el(`#end-${id}-box`);
+      const note = el(`#end-${id}-best`);
+      box.classList.toggle('is-new', Boolean(best?.isNew));
+      note.hidden = !best;
+      note.textContent = !best ? '' : best.isNew ? 'New best!' : text(best.value);
+    };
+    line('time', bests?.time, (seconds) => `Best ${formatTime(seconds)}`);
+    line('falls', bests?.falls, (falls) => `Fewest ${falls}`);
     el('#end-difficulty').textContent = DIFFICULTY_LABEL[summary.difficulty];
     el('#end-hero').textContent = summary.hero;
     el('#end-time').textContent = formatTime(summary.seconds);
