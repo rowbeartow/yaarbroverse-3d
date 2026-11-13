@@ -1,8 +1,30 @@
 # Session handoff
 
-Last updated: 2026-11-13 (milestone five, done)
+Last updated: 2026-11-13 (milestone six, pull request 1 open)
 
 ## Start here
+
+**Milestone six is under way: tougher enemies, enemy health, the boss system, the marmot chief.** The owner's decisions for it, and what the kids asked for, are in `docs/decisions.md` (2026-11-13). Four pull requests, in order:
+
+1. **Tougher enemies: open, not merged. It waits for the owner's OK on the preview page** (https://claude.ai/artifact/Nmwtn8SMup8HVLkdK3PnGA ). Easy is unchanged. On Normal and Hard the marmot scout walks a beat across its bank and comes after a hero it spots, warnings are shorter (0.56 and 0.36 seconds; Easy keeps 1.2), and the mosquito keeps up with the hero and dives more often. The numbers are `enemyWarning`, `scoutPatrol`, `scoutChase`, `mosquitoFollow`, `mosquitoHover` and `mosquitoPause` in the grove's `difficulty.ts`; the rules are in `src/game/enemy.ts`.
+2. Enemy health and the regen rule: not started.
+3. The boss system, proved by a dev-only boss in the sandbox: not started. Three choices of boss music and two of a "boss beaten" sound are on the sound board for the owner to pick from (https://claude.ai/artifact/WvtY9CjWaa5yTpwyJCferH ). None is in the repo yet; they are CC0 recordings from OpenGameArt.
+4. The marmot chief: not started. It waits for the owner's OK on a preview of the whole fight before it merges.
+
+**The arena preview page** (`tools/preview/arena.mjs`, new in pull request 1) is how the owner watches enemies at full speed before a change to their behaviour merges. It runs the game's own rules, numbers, enemy drawing and hero drawing in a blocked-out copy of the level, with a scripted "Watch" mode and a "Play it yourself" mode. Its places and scripts are the `PLACES` table in `tools/preview/arena.ts`; its hand-written words are in `arena.html`. It needs the four plain model files rebuilt from the originals on the `hero-models` release (the commands are in `CLAUDE.md`; Yaarbro's six files are named in `tools/yaarbro.guide.json`). `node tools/preview/arena-stills.mjs` takes still frames of it.
+
+**The roadmap, in the owner's order:**
+
+1. Milestone six (this one).
+2. Grove variety: keep the best vertical-log section and replace the other two with different obstacles. The kids said the grove repeats the same jump patterns.
+3. The lake: swimming, diving, a lake level and crocodiles.
+4. Fishing and the monster pike boss.
+5. Skiing in the Selkirks, with Caputo on a snowboard.
+6. Mountain climbing on rock, ice and trees.
+
+Everything below this line describes the game as milestone five left it, and is rewritten when milestone six is done.
+
+---
 
 **Milestone five is done: players, saved progress, a level picker, best times and a ghost to race.** The game is live at https://rowbeartow.github.io/yaarbroverse-3d/ . **The next step is adding a level**, and `docs/adding-a-level.md` is the recipe (see "What's next").
 
