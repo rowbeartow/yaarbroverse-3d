@@ -1,0 +1,64 @@
+# Adding a level
+
+A level is a folder of plain data plus one line in the level list. The rules, the heroes, the enemies, hearts, sound, the camera and the screens take any level. This page is the whole recipe. The Sandbox (`src/levels/sandbox/`) is the smallest working example: copy it.
+
+## Before any code
+
+1. The level's place, its name, what is in it and its goal come from the Caputo Mountain docs (the owner's private `digglesworth` repo). Nothing new is canon. If the docs do not say something you need, open an issue labeled `needs-decision` and ask the owner.
+2. The owner approves a route plan first: the sections in order, each built around one idea and ending on a safe place. The grove's plan is at the top of `src/levels/bouncing-grove/layout.ts`.
+3. This repo is public. Copy no file and no wording from the private repo.
+
+## The files
+
+Pick an id: lower case and dashes, such as `bouncing-grove`. It names the folder, goes on the address (`?level=<id>`) and is the key saved progress is kept under, so it never changes once the level is live.
+
+Make `src/levels/<id>/` with three files:
+
+1. **`difficulty.ts`**: every Easy, Normal and Hard number for the level, in one table, with a comment on each number saying what it does. Also the three one-line blurbs for the start screen. Every level needs `hearts`, `protection`, `knockback`, `coyoteTime` and `ledgeHelp`; if it has enemies, `enemyWarning`, `enemySpeed` and `enemyRest` too. Start from the grove's values for those.
+2. **`layout.ts`**: one function, `build<Name>(difficulty)`, that returns a `Level` (`src/game/level.ts`) built from those numbers. No drawing code.
+   - `solids`: everything to stand on. Kinds that already draw: `bank`, `log`, `stump`, `shelf`, `mushroom` (give it `bounce`), `bough`. Mark checkpoints `safe: true`.
+   - `spawn` must be on a safe solid. `leaf` is the goal.
+   - `route`: the ids of the solids in the order a run crosses them. The test bot follows it, so it must be complete and in order.
+   - `sections`, `hints` (shown the first time a hero stands on that solid) and `goalLine` are optional.
+   - `enemies`: see how the grove places its scouts and mosquito at the end of its `layout.ts`.
+   - Directions: x is left and right, y is up, and the route runs away from the camera, which is -z. The camera always looks that way, so a route never comes back toward it.
+3. **`level.ts`**: the level's entry (`LevelEntry` in `src/levels/entry.ts`): `id`, `name`, `lead` (one line under the name), `blurbs`, `build`, `scenery` and `music`.
+
+Then add the entry to `LEVELS` in `src/levels/index.ts`. Order there is the order players see. That is the only change outside the level's folder for a level that reuses the forest scenery and the grove music.
+
+## Scenery
+
+`scenery` in the entry names what is drawn around the solids. `'forest'` is the misty fir gully, and it lays itself out along any route (`src/view/route.ts`).
+
+For different surroundings:
+
+1. Add a name to `SceneryName` in `src/levels/entry.ts`.
+2. Write a builder in `src/view/` with the same shape as `buildForest` in `src/view/forest.ts` (it returns a `Forest`: a group, the sky, the tree crowns, and `update` and `setDetail`).
+3. Add it to `SURROUNDINGS` in `src/view/grove-view.ts`.
+4. New textures or models go in `assets/` and into `scripts/build-assets.mjs`, and each third-party file needs a line in `CREDITS.md`. Third-party files must be CC0. The build fails if the download goes over 20 MB.
+
+A new kind of solid needs a name in `SolidKind` (`src/game/level.ts`) and a shape for it in `src/view/scenery.ts`.
+
+## Music
+
+`music` in the entry is the name of a looping track in `src/audio/sounds.ts`. To give a level its own:
+
+1. Put the MP3 in `assets/audio/` and credit it in `CREDITS.md` (`tests/sound-files.test.ts` fails otherwise). Sound and music together must stay under 4 MB.
+2. Add it to `SOUNDS` beside `groveMusic`, with `mix: 'music'` and `loop: true`.
+3. It goes on the sound board for the owner's OK before it merges (`node tools/preview/sounds.mjs`).
+
+## New enemies
+
+A level may reuse the marmot scout and the giant mosquito as they are. A new enemy is its own piece of work, done before the level: its behaviour in `src/game/enemy.ts`, its model made and rigged the way the handoff describes, and the owner's OK on the enemy preview page.
+
+## Checks
+
+1. `npm test`. `tests/levels.test.ts` runs over every level in the list with no change: the level is well formed, the bot finishes it on every difficulty as each hero with no fall and no lost heart on walk and jump alone, it crosses every solid of the route in order, and standing still does not finish it. If the bot cannot finish, the level is too hard or the route list is wrong: fix the level, not the bot.
+2. Add tests of the level's own numbers next to the grove's (`tests/difficulty.test.ts`, `tests/sections.test.ts`): what each difficulty changes, and how much a fall costs.
+3. Look at it: `npm run dev`, then open the address it prints with `?level=<id>` on the end. Pictures: `node scripts/screenshot.mjs` (the top of that file says how).
+4. `npm run check`, then `npm run test:browser`.
+5. Rewrite the level's part of `docs/session-handoff.md`, and record the owner's choices in `docs/decisions.md`.
+
+## A level still in the making
+
+Set `devOnly: true` in its entry. It is then left off every screen a player sees and opens only with `?level=<id>`, while the tests and the bot still run over it. Take the line out when the owner says it is ready. The Sandbox stays `devOnly` for good.

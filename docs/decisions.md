@@ -268,3 +268,23 @@ Supersedes: the six numbers and the measurements in "The mix is the owner's six 
 ## 2026-11-12 Menu clicks sit under the warnings: menu is -20
 Reason: The owner's call, on being told that at -12 menu clicks were the loudest group, 3 decibels over warnings and hits. Menu is now -20, 5 under them. The other five numbers are unchanged, and menu clicks are not in the sample run, so the measurements stand.
 Supersedes: the menu number in "The owner's second set of mix levels". The rest of that entry stands.
+
+## 2026-11-13 Milestone five: best times, a ghost to race, saved progress and a level picker
+Reason: The owner's call. It gives the kids reasons to replay the grove and makes adding a level a repeatable recipe, so more levels can follow quickly. Five pull requests in this order: levels as a recipe, profiles and saved progress, the level picker, best times, the ghost.
+Supersedes: "No saved progress" and "more levels" as out of scope in "Milestone one is one small playable area, then stop".
+
+## 2026-11-13 Player profiles: a "Who's playing?" screen, up to four players, each with a typed name and a colour
+Reason: The owner's decision. The screen comes before the start screen. Names and progress stay in the browser's storage on that device. Nothing about players goes into the repo, a commit, a log or any network request.
+Supersedes: "The only thing kept is the hero and difficulty a device last chose" in "No database, no accounts, no online services", and "the game holds nothing personal" in "No login. The link is public and the game holds nothing personal.", for what the browser on a device keeps. The rest of both stands: no database, no accounts, no online services, and nothing personal in the repo or on the network.
+
+## 2026-11-13 Every area is open from the start
+Reason: The owner's decision. Finished areas are marked per difficulty. Nothing is locked.
+Supersedes: none
+
+## 2026-11-13 The ghost is on by default on Normal and Hard and off on Easy, with a toggle on the level card
+Reason: The owner's decision.
+Supersedes: none
+
+## 2026-11-13 The game builds its level from a level list, and a level is a folder plus one line in that list
+Reason: The owner's instruction for milestone five. `src/levels/index.ts` lists every level; each brings its own layout, difficulty numbers, scenery and music through its `level.ts`. The rule tests and the bot run over every level in the list. A tiny development level, the Sandbox, proves the recipe: it is marked `devOnly`, is never shown to players and opens only with `?level=sandbox`. `docs/adding-a-level.md` has the steps.
+Supersedes: none

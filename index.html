@@ -46,7 +46,7 @@
       <div class="card">
         <p class="eyebrow">Yaarbroverse 3D</p>
         <h1 id="start-title">The Bouncing Grove</h1>
-        <p class="lead">Find the golden leaf, tucked in the canopy.</p>
+        <p class="lead" id="start-lead">Find the golden leaf, tucked in the canopy.</p>
 
         <h2 id="hero-label">Who is exploring?</h2>
         <div class="choices heroes" role="radiogroup" aria-labelledby="hero-label">
@@ -54,7 +54,7 @@
           <button type="button" role="radio" data-hero="Caputo"><img alt="" /><b>Caputo</b></button>
         </div>
 
-        <h2 id="difficulty-label">How tough is the grove today?</h2>
+        <h2 id="difficulty-label">How tough today?</h2>
         <div class="choices levels" role="radiogroup" aria-labelledby="difficulty-label">
           <button type="button" role="radio" data-difficulty="easy"><b>Easy</b><small></small></button>
           <button type="button" role="radio" data-difficulty="normal"><b>Normal</b><small></small></button>
@@ -76,7 +76,7 @@
       <div class="card small">
         <h1 id="paused-title">Paused</h1>
         <button type="button" id="resume" class="go">Keep playing</button>
-        <button type="button" id="restart">Start the grove again</button>
+        <button type="button" id="restart">Start again</button>
         <button type="button" id="quit">Change hero or difficulty</button>
       </div>
     </section>
@@ -84,7 +84,7 @@
     <!-- End card: made to be photographed -->
     <section id="end" class="screen" hidden role="dialog" aria-labelledby="end-title">
       <div class="card small">
-        <p class="eyebrow">The Bouncing Grove</p>
+        <p class="eyebrow" id="end-level">The Bouncing Grove</p>
         <h1 id="end-title">You found the golden leaf!</h1>
         <dl>
           <div><dt>Difficulty</dt><dd id="end-difficulty"></dd></div>

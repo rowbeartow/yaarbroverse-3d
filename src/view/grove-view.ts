@@ -31,6 +31,7 @@ import type { Game, GameEvent } from '../game/game';
 import { MOVE, type HeroName } from '../game/hero';
 import { surfaceBelow, type Level } from '../game/level';
 import { loadAssets, type Assets } from './assets';
+import type { SceneryName } from '../levels/entry';
 import { Scatter, buildForest, type Forest } from './forest';
 import { ENEMY_MODELS, ENEMY_MODEL_FILES, EnemyView } from './enemies';
 import { HERO_MODEL_FILES, buildHero, type HeroView } from './heroes';
@@ -79,6 +80,15 @@ export interface ViewStats {
   drawCalls: number;
   triangles: number;
 }
+
+/**
+ * What is drawn around a level's solids, by the name the level gives in its
+ * entry (`scenery` in its `level.ts`). A new kind of surroundings is a builder
+ * added here and a name added to `SceneryName` in `src/levels/entry.ts`.
+ */
+const SURROUNDINGS: Record<SceneryName, typeof buildForest> = {
+  forest: buildForest,
+};
 
 interface LevelView extends LevelSolids {
   root: Group;
@@ -176,7 +186,7 @@ export class GroveView {
   }
 
   /** Builds the scene for a level and hero, replacing whatever was shown before. */
-  show(level: Level, heroName: HeroName): void {
+  show(level: Level, heroName: HeroName, scenery: SceneryName = 'forest'): void {
     if (this.levelView) {
       this.scene.remove(this.levelView.root);
       this.dispose(this.levelView.root);
@@ -202,7 +212,7 @@ export class GroveView {
     const random = seeded(20261110);
     const scatter = new Scatter();
     const solids = buildSolids(level, this.materials, scatter, random);
-    const forest = buildForest(level, this.materials, scatter, random);
+    const forest = SURROUNDINGS[scenery](level, this.materials, scatter, random);
     const root = new Group();
     root.add(solids.group, forest.group, scatter.build(this.materials));
     this.levelView = { ...solids, root, forest, scatter };
