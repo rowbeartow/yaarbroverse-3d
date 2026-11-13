@@ -34,6 +34,7 @@ import { loadAssets, type Assets } from './assets';
 import type { GhostPose } from '../game/ghost';
 import type { SceneryName } from '../levels/entry';
 import { Scatter, buildForest, type Forest } from './forest';
+import { BossView } from './boss';
 import { ENEMY_MODELS, ENEMY_MODEL_FILES, EnemyView } from './enemies';
 import { HERO_MODEL_FILES, buildHero, type HeroView } from './heroes';
 import { Materials, WIND, installMist } from './materials';
@@ -118,6 +119,9 @@ export class GroveView {
   private ghostName: HeroName | null = null;
   private scenery: SceneryName = 'forest';
   private enemies: EnemyView[] = [];
+  private boss: BossView | null = null;
+  /** Seconds since the goal came within reach (a boss was beaten), or -1. */
+  private sinceOpen = -1;
   private heroName: HeroName | null = null;
   private level: Level | null = null;
   private follow = { x: 0, y: 0, z: 0 };
@@ -205,6 +209,18 @@ export class GroveView {
       this.scene.remove(enemy.root, ...enemy.extras);
       enemy.dispose();
     }
+    if (this.boss) {
+      this.scene.remove(this.boss.root, ...this.boss.extras);
+      this.boss.dispose();
+      this.boss = null;
+    }
+    this.sinceOpen = -1;
+    if (level.boss) {
+      const loaded = this.assets.models.get(ENEMY_MODELS[level.boss.look.model].file);
+      if (!loaded) throw new Error(`The model file for ${level.boss.name} was not loaded`);
+      this.boss = new BossView(level.boss, loaded, this.tier.simple);
+      this.scene.add(this.boss.root, ...this.boss.extras);
+    }
     this.setGhost(null);
     this.enemies = (level.enemies ?? []).map((spot) => {
       const spec = ENEMY_MODELS[spot.kind];
@@ -274,7 +290,9 @@ export class GroveView {
       } else if (event.type === 'strike') {
         const index = this.level?.enemies?.findIndex((spot) => spot.id === event.id) ?? -1;
         this.enemies[index]?.strike();
-      } else if (event.type === 'goal') this.sinceGoal = 0;
+      } else if (event.type === 'boss' && event.what === 'hit') this.boss?.strike();
+      else if (event.type === 'boss' && event.what === 'beaten') this.sinceOpen = 0;
+      else if (event.type === 'goal') this.sinceGoal = 0;
     }
   }
 
@@ -345,6 +363,7 @@ export class GroveView {
     this.blink = Math.max(0, this.blink - dt);
     const tuning = level.enemyTuning ?? { warning: 1, speed: 1, rest: 1 };
     this.enemies.forEach((enemy, i) => enemy.update(game.enemies[i], tuning, game.z, dt));
+    if (this.boss && game.boss) this.boss.update(game.boss, game.z, dt);
 
     // The hero flickers while standing still after a fall, and for as long as
     // nothing can hurt it after a hit.
@@ -366,6 +385,11 @@ export class GroveView {
     for (const mushroom of levelView.mushrooms.values()) animateMushroom(mushroom, dt);
     const leaf = levelView.leaf;
     leaf.sparkles.rotation.y = WIND.time.value * 0.5;
+    // A level with a boss keeps its leaf out of sight until the boss is beaten. Then it bursts into view.
+    leaf.group.visible = game.goalOpen;
+    if (this.sinceOpen >= 0) this.sinceOpen += dt;
+    const burst = this.sinceOpen >= 0 && this.sinceOpen < 1 ? Math.sin(this.sinceOpen * Math.PI) : 0;
+    leaf.group.scale.setScalar(this.sinceOpen >= 0 ? Math.min(1, this.sinceOpen / 0.35) * (1 + burst * 0.8) : 1);
     if (this.sinceGoal >= 0) {
       this.sinceGoal += dt;
       const t = Math.min(this.sinceGoal / 1.2, 1);
@@ -454,6 +478,16 @@ export class GroveView {
       drawCalls: this.drawn.calls,
       triangles: this.drawn.triangles,
     };
+  }
+
+  /** What the boss on screen is showing, for the browser checks, or null when the level has none. */
+  bossInfo(): ReturnType<BossView['info']> | null {
+    return this.boss ? this.boss.info() : null;
+  }
+
+  /** Whether the golden leaf is drawn. */
+  leafShown(): boolean {
+    return this.levelView?.leaf.group.visible ?? false;
   }
 
   /** What each enemy on screen is showing, for the browser checks. */

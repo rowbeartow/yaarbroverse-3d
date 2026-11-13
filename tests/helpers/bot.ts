@@ -3,6 +3,7 @@
 // the stick and when to press Jump. It follows the level's route, so the same
 // bot plays any level built from solids.
 
+import { bossDangerous, bossFighting, bossOpen, type Boss } from '../../src/game/boss';
 import type { Enemy } from '../../src/game/enemy';
 import { Game, type Input } from '../../src/game/game';
 import { MOVE, STEP } from '../../src/game/hero';
@@ -70,6 +71,14 @@ export class Bot {
       return { moveX: distance > 1e-6 ? (dx / distance) * push : 0, moveZ: distance > 1e-6 ? (dz / distance) * push : 0, jump: this.holdingJump };
     }
 
+    // A boss in the way: fight it. The goal cannot be taken until it is beaten.
+    const boss = game.boss;
+    if (boss && boss.phase !== 'defeated') {
+      const a = boss.spot.arena;
+      const inside = game.x >= a.minX - 1 && game.x <= a.maxX + 1 && game.z >= a.minZ - 1 && game.z <= a.maxZ + 3 && Math.abs(game.y - boss.spot.y) < 8;
+      if (inside && (bossFighting(boss) || game.grounded)) return this.fight(game, boss);
+    }
+
     const next = level.solids.find((s) => s.id === level.route[this.index + 1]);
     let aim = next ? aimPoint(next, game.x, game.z) : { x: level.leaf.x, z: level.leaf.z };
     let easing = true;
@@ -122,7 +131,109 @@ export class Bot {
 
     return { moveX, moveZ, jump: this.holdingJump };
   }
+
+  private way: Way = 1;
+  /** Which side of an aimed attack the bot is getting clear to: 1, -1, or 0 when nothing is aimed. */
+  private dodge = 0;
+  private leaping = false;
+
+  /**
+   * Fighting a boss, the way a careful player would: keep moving round it at
+   * a distance, so nothing aimed at where the hero stood can land; step out
+   * of the line of a charge; and when it is open to a hit, run in and come
+   * down on top of it. Walk and jump alone.
+   */
+  private fight(game: Game, boss: Boss): Input {
+    const { spot } = boss;
+    const n = spot.numbers;
+    const dx = boss.x - game.x;
+    const dz = boss.z - game.z;
+    const distance = Math.hypot(dx, dz) || 1e-6;
+    // Back on the ground, or the leap has done its work (a hit, or a bounce off its guard): the leap is over.
+    if (game.grounded || game.events.some((event) => event.type === 'boss' && (event.what === 'hit' || event.what === 'blocked'))) this.leaping = false;
+    if (!game.grounded && game.vy <= 0) this.holdingJump = false;
+
+    // Open to a hit, with time to get there: go for it.
+    const settled = boss.phase === 'rest' || (!n.guarded && (boss.phase === 'idle' || boss.phase === 'warning'));
+    const timeLeft = boss.phase === 'rest' ? n.rest - boss.timer : Infinity;
+    const timeNeeded = Math.max(distance - 3.2, 0) / MOVE.walkSpeed + 0.6;
+    const going = this.leaping || (settled && bossOpen(boss) && timeLeft > timeNeeded);
+    if (going) {
+      // Leave the ground about three metres out, and steer to stay over it on the way down.
+      // Only once it is running at the boss: a leap begun while still drifting away falls short.
+      const closing = (game.vx * dx + game.vz * dz) / distance;
+      if (game.grounded && distance < 3.4 && closing > 4 && (distance > 2.6 || !bossDangerous(boss))) {
+        this.holdingJump = true;
+        this.leaping = true;
+      }
+      // Too close to a boss that hurts to touch: step back to leaping distance first.
+      if (!this.leaping && game.grounded && distance <= 2.6 && bossDangerous(boss)) {
+        return { moveX: -dx / distance, moveZ: -dz / distance, jump: false };
+      }
+      const push = this.leaping ? Math.min(distance / 0.6, 1) : 1;
+      return { moveX: (dx / distance) * push, moveZ: (dz / distance) * push, jump: this.holdingJump };
+    }
+
+    // Otherwise keep moving round it, about five metres off, inside the arena.
+    const { arena } = spot;
+    const room = { minX: arena.minX + 0.8, maxX: arena.maxX - 0.8, minZ: arena.minZ + 0.8, maxZ: arena.maxZ - 0.8 };
+    const want = 5.2;
+    const step = (way: Way): { x: number; z: number } => {
+      // A little way round the circle, pulled in or out toward the distance wanted.
+      const away = { x: -dx / distance, z: -dz / distance };
+      const round = { x: -away.z * way, z: away.x * way };
+      const pull = Math.max(-1, Math.min(1, (want - distance) / 1.5));
+      return { x: round.x + away.x * pull, z: round.z + away.z * pull };
+    };
+    const blocked = (heading: { x: number; z: number }): boolean => {
+      const x = game.x + heading.x * 1;
+      const z = game.z + heading.z * 1;
+      return x < room.minX || x > room.maxX || z < room.minZ || z > room.maxZ;
+    };
+    let heading = step(this.way);
+    if (blocked(heading)) {
+      this.way = -this.way as Way;
+      heading = step(this.way);
+    }
+    // An attack is coming down a fixed line (a charge), or a fan either side of one (a throw):
+    // get clear of it, to the side with more room, and stay clear until it is over.
+    const aimed = (boss.attack === 'charge' || boss.attack === 'throw') && (boss.phase === 'warning' || boss.phase === 'attack');
+    if (!aimed) this.dodge = 0;
+    else {
+      const lx = boss.target.x - boss.from.x;
+      const lz = boss.target.z - boss.from.z;
+      const length = Math.hypot(lx, lz) || 1;
+      const side = ((game.x - boss.from.x) * lz - (game.z - boss.from.z) * lx) / length;
+      const along = ((game.x - boss.from.x) * lx + (game.z - boss.from.z) * lz) / length;
+      const fan = boss.attack === 'throw' ? Math.tan((((Math.max(1, n.acorns) - 1) / 2) * n.spread * Math.PI) / 180) * Math.max(along, 0) : 0;
+      const lane = (boss.attack === 'charge' ? spot.radius : 0.3) + MOVE.bodyRadius + 1.2 + fan;
+      const out = (sign: number): { x: number; z: number } => ({ x: (lz / length) * sign, z: (-lx / length) * sign });
+      if (this.dodge === 0) {
+        // Which side has room for the whole dodge?
+        const roomFor = (sign: number): boolean => {
+          const x = game.x + out(sign).x * (lane + 0.5);
+          const z = game.z + out(sign).z * (lane + 0.5);
+          return x >= room.minX && x <= room.maxX && z >= room.minZ && z <= room.maxZ;
+        };
+        const nearer = side >= 0 ? 1 : -1;
+        this.dodge = roomFor(nearer) ? nearer : roomFor(-nearer) ? -nearer : nearer;
+      }
+      heading = side * this.dodge < lane ? out(this.dodge) : { x: 0, z: 0 };
+    }
+    // Never off the edge of the arena.
+    if (blocked(heading)) {
+      const cx = (room.minX + room.maxX) / 2 - game.x;
+      const cz = (room.minZ + room.maxZ) / 2 - game.z;
+      const c = Math.hypot(cx, cz) || 1;
+      heading = { x: cx / c, z: cz / c };
+    }
+    const size = Math.hypot(heading.x, heading.z);
+    return size > 1e-6 ? { moveX: heading.x / size, moveZ: heading.z / size, jump: false } : { moveX: 0, moveZ: 0, jump: false };
+  }
 }
+
+/** Which way round the boss the bot is circling: 1 or -1. */
+type Way = 1 | -1;
 
 /** Plays the level with the bot until the leaf is reached or time runs out. */
 export const playWithBot = (game: Game, maxSeconds = 120): Game => {

@@ -9,6 +9,7 @@
 import {
   AnimationMixer,
   Box3,
+  Color,
   CylinderGeometry,
   Group,
   LoopOnce,
@@ -68,7 +69,7 @@ export const ENEMY_MODELS: Record<EnemyKind, EnemyModelSpec> = {
 /** The model files to download before the game can start. */
 export const ENEMY_MODEL_FILES = (): string[] => Object.values(ENEMY_MODELS).map((spec) => spec.file);
 
-type ClipKey = keyof EnemyModelSpec['clips'];
+export type ClipKey = keyof EnemyModelSpec['clips'];
 
 /** Enemies further than this from the hero are neither moved nor drawn: the mist has them. */
 const SEEN_WITHIN = 70;
@@ -103,10 +104,18 @@ export class EnemyView {
   private flashing = 0;
   private clock = 0;
 
+  /**
+   * Set by a boss (src/view/boss.ts), which decides its own clips: which clip
+   * shows, and where in it to hold (a share of its length), if it is held.
+   */
+  pose: { clip: ClipKey; hold?: number } | null = null;
+
   constructor(
     private readonly spec: EnemyModelSpec,
     source: GLTF,
     simple: boolean,
+    /** For a boss drawn from an enemy's model: how many times the size, and a colour laid over its own. */
+    look: { scale?: number; tint?: number } = {},
   ) {
     const model = cloneRigged(source.scene);
     model.traverse((node) => {
@@ -118,6 +127,7 @@ export class EnemyView {
       const own = simple
         ? new MeshLambertMaterial({ map: full.map, color: full.color, transparent: full.transparent, opacity: full.opacity, side: full.side })
         : full.clone();
+      if (look.tint !== undefined) own.color.multiply(new Color(look.tint));
       mesh.material = own;
       mesh.castShadow = !full.transparent;
       mesh.receiveShadow = !full.transparent;
@@ -128,7 +138,7 @@ export class EnemyView {
     const box = new Box3().setFromObject(model);
     const size = box.getSize(new Vector3());
     const middle = box.getCenter(new Vector3());
-    const scale = spec.length / Math.max(size.z, 0.001);
+    const scale = (spec.length * (look.scale ?? 1)) / Math.max(size.z, 0.001);
     model.scale.multiplyScalar(scale);
     model.position.set(-middle.x * scale, spec.stands ? -box.min.y * scale : -middle.y * scale, -middle.z * scale);
     this.body.add(model);
@@ -250,7 +260,7 @@ export class EnemyView {
     this.flashing = Math.max(0, this.flashing - dt);
 
     // Which clip, and where in it.
-    const next = this.choose(enemy);
+    const next = this.pose?.clip ?? this.choose(enemy);
     if (next !== this.showing || entered) {
       const action = this.actions[next];
       // A clip that plays once starts from its beginning each time.
@@ -274,7 +284,11 @@ export class EnemyView {
       action.paused = true;
       action.time = action.getClip().duration * Math.min(1, Math.max(0, share));
     };
-    if (enemy.phase === 'warning') held('warning', enemy.timer / (ENEMY.warning * tuning.warning));
+    if (this.pose) {
+      const action = this.actions[this.pose.clip];
+      if (this.pose.hold !== undefined) held(this.pose.clip, this.pose.hold);
+      else if (action) action.paused = false;
+    } else if (enemy.phase === 'warning') held('warning', enemy.timer / (ENEMY.warning * tuning.warning));
     else if (enemy.phase === 'dodge') held('dodge', 0.15 + 0.7 * (enemy.timer / ENEMY.dodgeTime));
     else if (enemy.phase === 'dodge-warning') held('dodge', 0.15 * (enemy.timer / ENEMY.dodgeWarning));
     else if (enemy.phase === 'attack' && this.spec.stands) {

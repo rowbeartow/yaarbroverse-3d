@@ -128,6 +128,11 @@ export interface EnemySpot {
   notice?: number;
   /** For a marmot that walks a beat: the far end of it. Home is the near end. Left out, it is home mirrored across the middle of the patch. */
   beat?: { x: number; z: number };
+  /**
+   * The id of the boss this enemy answers to. A sidekick lies low, unseen and
+   * harmless, until its boss calls it, and is gone when its boss is beaten.
+   */
+  sidekickOf?: string;
   /** For a mosquito: the lowest and highest it flies. */
   floor?: number;
   ceiling?: number;
@@ -200,6 +205,8 @@ export interface Enemy {
   pause: number;
   /** Counts down after a hero was sent back to a safe bank: it notices nobody until this is zero. */
   grace: number;
+  /** A sidekick that has not been called: it does nothing and nothing touches it. */
+  dormant: boolean;
 }
 
 /** What an enemy needs to know about the hero. The game itself fits this. */
@@ -250,7 +257,23 @@ export const newEnemy = (spot: EnemySpot, tuning?: EnemyTuning): Enemy => ({
   leg: 0,
   pause: 0,
   grace: 0,
+  dormant: spot.sidekickOf !== undefined,
 });
+
+/** A boss calls a sidekick: it comes out at home at full health, whether it was lying low or had been beaten. */
+export const callSidekick = (enemy: Enemy): void => {
+  const { maxHits } = enemy;
+  Object.assign(enemy, newEnemy(enemy.spot), { hits: maxHits, maxHits, dormant: false });
+  if (enemy.kind === 'marmot') enemy.phase = 'idle';
+};
+
+/** A sidekick whose boss is beaten gives up at once. */
+export const dismissSidekick = (enemy: Enemy): void => {
+  if (enemy.dormant || enemy.phase === 'defeated') return;
+  enemy.phase = 'defeated';
+  enemy.timer = 0;
+  enemy.acorn = null;
+};
 
 /**
  * Puts an enemy that is not beaten back at home, as it was at the start, at
@@ -258,6 +281,12 @@ export const newEnemy = (spot: EnemySpot, tuning?: EnemyTuning): Enemy => ({
  * had been damaged, so the game can say so. A beaten enemy stays beaten.
  */
 export const sendHome = (enemy: Enemy): boolean => {
+  if (enemy.spot.sidekickOf !== undefined) {
+    // A sidekick, beaten or not, lies low again until its boss calls.
+    const { maxHits } = enemy;
+    Object.assign(enemy, newEnemy(enemy.spot), { hits: maxHits, maxHits });
+    return false;
+  }
   if (enemy.phase === 'defeated') return false;
   const { hits, maxHits } = enemy;
   Object.assign(enemy, newEnemy(enemy.spot), { hits: maxHits, maxHits, grace: ENEMY.homeGrace });
@@ -292,6 +321,7 @@ export const stepEnemy = (
   dt: number,
 ): EnemyOutcome => {
   const outcome: EnemyOutcome = { entered: [] };
+  if (enemy.dormant) return outcome;
   const enter = (phase: EnemyPhase): void => {
     enemy.phase = phase;
     enemy.timer = 0;

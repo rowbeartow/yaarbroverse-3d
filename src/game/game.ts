@@ -2,8 +2,9 @@
 // last safe bank, lose a heart to whatever hurts, reach the golden leaf. No browser or drawing code, so the
 // tests (and later a server, for two-device play) can run it as is.
 
+import { BOSS, bossFighting, newBoss, resetBoss, stepBoss, type Boss, type BossAttack, type BossPhase } from './boss';
 import type { Difficulty } from './difficulty';
-import { ENEMY, newEnemy, sendHome, stepEnemy, type Enemy, type EnemyPhase, type EnemyTuning } from './enemy';
+import { ENEMY, callSidekick, dismissSidekick, newEnemy, sendHome, stepEnemy, type Enemy, type EnemyPhase, type EnemyTuning } from './enemy';
 import { MOVE, STEP, knockSpeed, type HeroName } from './hero';
 import { pushOutside, surfaceBelow, touchesFromAbove, type Level, type Solid } from './level';
 
@@ -35,6 +36,17 @@ export type GameEvent =
   | { type: 'strike'; id: string; kind: Enemy['kind']; how: 'roll' | 'pounce' | 'stomp'; left: number }
   /** The hero was sent back to a safe bank, and an enemy it had damaged is at full health again. */
   | { type: 'healed'; id: string; kind: Enemy['kind'] }
+  /**
+   * The boss: the fight began (`begin`), it began something (`phase`, with the attack it belongs to),
+   * a hit landed (`hit`, with the health it has left), a landing bounced off its guard (`blocked`),
+   * it moved to a new stage (`stage`), it called its sidekicks (`call`), it was beaten (`beaten`), or
+   * the hero was sent back and the fight starts over (`reset`; `healed` when it had been damaged).
+   */
+  | { type: 'boss'; id: string; what: 'begin' | 'blocked' | 'call' | 'beaten' }
+  | { type: 'boss'; id: string; what: 'phase'; phase: BossPhase; attack: BossAttack | null }
+  | { type: 'boss'; id: string; what: 'hit'; how: 'roll' | 'pounce' | 'stomp'; left: number }
+  | { type: 'boss'; id: string; what: 'stage'; stage: number }
+  | { type: 'boss'; id: string; what: 'reset'; healed: boolean }
   /** Lost a heart. `left` is how many remain. */
   | { type: 'hurt'; left: number }
   /** Went back to the last safe bank with every heart again, after losing the last one. */
@@ -93,6 +105,8 @@ export class Game {
   readonly enemies: Enemy[];
   /** Enemies beaten so far. */
   beaten = 0;
+  /** The level's boss, as it is now, or null when the level has none. */
+  readonly boss: Boss | null;
   /** Hearts left, and hearts lost over the whole run. */
   hearts: number;
   heartsLost = 0;
@@ -128,6 +142,7 @@ export class Game {
     this.hearts = level.hearts;
     this.tuning = level.enemyTuning ?? { warning: 1, speed: 1, rest: 1 };
     this.enemies = (level.enemies ?? []).map((spot) => newEnemy(spot, this.tuning));
+    this.boss = level.boss ? newBoss(level.boss) : null;
     const under = surfaceBelow(level, this.x, this.z, this.y, MOVE.footRadius);
     this.groundId = under ? under.id : null;
     this.safeSpot = { ...level.spawn, id: under?.safe ? under.id : null };
@@ -142,6 +157,11 @@ export class Game {
   get striking(): boolean {
     if (this.pouncing > 0) return true;
     return this.rolling && Math.hypot(this.vx, this.vz) > MOVE.walkSpeed * 1.02;
+  }
+
+  /** True when the goal can be taken: always, but for a level whose boss is not yet beaten. */
+  get goalOpen(): boolean {
+    return !this.boss || this.boss.phase === 'defeated';
   }
 
   /** Where a fall would return the hero right now. */
@@ -222,6 +242,11 @@ export class Game {
     // full health. Strikes landed before the hero was sent back are undone.
     for (const enemy of this.enemies) {
       if (sendHome(enemy)) this.events.push({ type: 'healed', id: enemy.spot.id, kind: enemy.kind });
+    }
+    // The same rule for a boss: home, full health, and the fight starts over.
+    if (this.boss && bossFighting(this.boss)) {
+      const healed = resetBoss(this.boss);
+      this.events.push({ type: 'boss', id: this.boss.spot.id, what: 'reset', healed });
     }
     // No hearts left: start again from here with all of them, protected for a moment.
     if (this.hearts <= 0) {
@@ -403,7 +428,7 @@ export class Game {
           this.groundId = ground.id;
           if (!wasGrounded) this.events.push({ type: 'land' });
           if (ground.safe && this.safeSpot.id !== ground.id) {
-            this.safeSpot = { x: ground.x, y: ground.top, z: ground.z, id: ground.id };
+            this.safeSpot = { x: ground.safeAt?.x ?? ground.x, y: ground.top, z: ground.safeAt?.z ?? ground.z, id: ground.id };
             this.events.push({ type: 'safe', solidId: ground.id });
           }
         }
@@ -459,12 +484,70 @@ export class Game {
       }
     }
 
-    // The goal: touch the golden leaf.
+    // The boss moves, and anything it touches is settled.
+    const { boss } = this;
+    if (boss) {
+      const id = boss.spot.id;
+      const sidekicks = this.enemies.filter((enemy) => enemy.spot.sidekickOf === id);
+      const canBeHurt = this.protectedFor <= 0 && this.hearts > 0;
+      const outcome = stepBoss(boss, this, MOVE.bodyRadius, previousY, canBeHurt, level.ledgeHelp, sidekicks, dt);
+      if (outcome.began) this.events.push({ type: 'boss', id, what: 'begin' });
+      for (const phase of outcome.entered) this.events.push({ type: 'boss', id, what: 'phase', phase, attack: boss.attack });
+      if (outcome.called) {
+        for (const sidekick of sidekicks) callSidekick(sidekick);
+        this.events.push({ type: 'boss', id, what: 'call' });
+      }
+      if (outcome.struck || outcome.blocked) {
+        if (outcome.struck) this.events.push({ type: 'boss', id, what: 'hit', how: outcome.struck, left: boss.health });
+        else this.events.push({ type: 'boss', id, what: 'blocked' });
+        // A pounce or a landing bounces the hero up off it, ready to pounce again.
+        if (outcome.struck !== 'roll') {
+          if (this.pouncing > 0) {
+            const speed = Math.hypot(this.vx, this.vz);
+            if (speed > MOVE.pounceExitSpeed) {
+              this.vx *= MOVE.pounceExitSpeed / speed;
+              this.vz *= MOVE.pounceExitSpeed / speed;
+            }
+          }
+          this.vy = BOSS.rebound;
+          if (outcome.blocked) {
+            // Bounced off its guard: thrown clear of it, so the hero does not come straight back down on its head.
+            const awayX = this.x - boss.x;
+            const awayZ = this.z - boss.z;
+            const away = Math.hypot(awayX, awayZ);
+            const out = away > 0.05 ? { x: awayX / away, z: awayZ / away } : { x: Math.sin(this.facing + Math.PI), z: Math.cos(this.facing + Math.PI) };
+            this.vx = out.x * BOSS.bounceOff;
+            this.vz = out.z * BOSS.bounceOff;
+            this.knocked = true;
+          }
+          this.pouncing = 0;
+          this.pounceReady = true;
+          this.pounceRest = 0.12;
+          this.grounded = false;
+          this.groundId = null;
+          this.coyote = 0;
+          this.canCutJump = false;
+        }
+        this.protectedFor = Math.max(this.protectedFor, BOSS.strikeProtection);
+        if (boss.phase === 'defeated') {
+          this.beaten += 1;
+          this.protectedFor = Math.max(this.protectedFor, BOSS.victoryProtection);
+          for (const sidekick of sidekicks) dismissSidekick(sidekick);
+          this.events.push({ type: 'boss', id, what: 'beaten' });
+        }
+      } else if (outcome.hurt && this.hurt(outcome.hurt.x, outcome.hurt.z)) {
+        this.events.push(...this.pending);
+        this.pending = [];
+      }
+      if (outcome.stage !== undefined) this.events.push({ type: 'boss', id, what: 'stage', stage: outcome.stage });
+    }
+
+    // The goal: touch the golden leaf. A level with a boss keeps it out of reach until the boss is beaten.
     const { leaf } = level;
     const middleY = this.y + this.bodyHeight / 2;
     const reach = leaf.radius + MOVE.bodyRadius;
     const distanceSquared = (this.x - leaf.x) ** 2 + (middleY - leaf.y) ** 2 + (this.z - leaf.z) ** 2;
-    if (distanceSquared <= reach * reach) {
+    if (distanceSquared <= reach * reach && this.goalOpen) {
       this.complete = true;
       this.events.push({ type: 'goal' });
       return;

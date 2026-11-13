@@ -25,9 +25,10 @@ How it fits together:
 
 - `src/game/`: the rules. One hero in one level, advanced in fixed steps of 1/60 second. No browser or 3D code, so tests run it without a screen.
   - `ghost.ts`: records where a hero was during a run and gives it back at any moment, as small text for storage. Looked at only: the rules never see a ghost.
+  - `boss.ts`: bosses. Any level can end with one: an arena that starts the fight, a loop of warning, attack and rest, stages that change its attacks as it loses health, sidekicks it can call, and a goal kept back until it is beaten. `docs/adding-a-level.md` says how to give a level one.
   - `enemy.ts`: the marmot scout and the giant mosquito: what each does, what hurts a hero and what strikes an enemy. `game.ts` steps them with the hero. A level's difficulty can make a scout walk a beat and give chase, and the mosquito keep up and dive more often.
 - `src/levels/index.ts`: the level list. The game builds whichever level is chosen from it, and the rule tests and the bot run over every level in it. `docs/adding-a-level.md` is the recipe for a new one.
-- `src/levels/<level>/difficulty.ts`: every Easy, Normal and Hard number for that level, in one file. `layout.ts` next to it builds the level from those numbers. `level.ts` is what the level brings to the list: its name, layout, scenery and music. `src/levels/sandbox/` is a tiny development level, never shown to players.
+- `src/levels/<level>/difficulty.ts`: every Easy, Normal and Hard number for that level, in one file. `layout.ts` next to it builds the level from those numbers. `level.ts` is what the level brings to the list: its name, layout, scenery and music. `src/levels/sandbox/` is a tiny development level, never shown to players; it ends with a practice boss that proves the boss system.
 - `src/view/`: draws the level and hero and moves the camera. Looks only.
   - `grove-view.ts`: the renderer, lighting (forest light, sun with soft shadows, filmic tone mapping, glow), camera, and switching quality tiers.
   - `scenery.ts`: the level's solids as smooth textured shapes. `forest.ts`: the gully, trees, ferns, grass, mist, light. Both build shapes with `surface.ts` and `noise.ts`.
@@ -35,7 +36,7 @@ How it fits together:
   - `bank-outline.ts`: the edge of a bank's top. It may be irregular, but never reaches past where the rules let a hero stand (no 3D code, tested).
   - `materials.ts`: surfaces, plus three additions to the standard ones: mist by height, moss blending, wind sway. `pictures.ts`: textures drawn in code.
   - `assets.ts`: downloads `media/` and reports progress. `quality.ts`: the tiers and the rules for choosing one (no 3D code, tested).
-  - `enemies.ts`: draws each enemy from its model, the acorn, and the line an attack is aimed along.
+  - `enemies.ts`: draws each enemy from its model, the acorn, and the line an attack is aimed along. `boss.ts`: draws a boss from an enemy's model, bigger and recoloured, with its acorns and aim lines.
   - `heroes.ts`: builds a hero from its model (`hero-model.ts`, mixing rules in `hero-motion.ts`). To give a character a model, see the top of `hero-model.ts`.
 - `src/audio/`: sound. Nothing plays before the first tap or key press.
   - `sounds.ts`: every sound and the music in one list: what it is for, its file in `assets/audio/` (or its recipe), its group, and its level within the group. `MIX` at the top is how loud each group and the whole game is, in decibels: the six numbers the owner sets on the mixer page.
@@ -45,7 +46,7 @@ How it fits together:
 - `src/save/ghosts.ts`: where each player's ghosts are kept, one storage entry for each level, hero and difficulty, apart from their progress.
 - `src/save/players.ts`: the players on this device and their saved progress. Reading and writing never throw: damaged saved data is dropped and the game carries on (no browser code, tested).
 - `src/input/controls.ts`: keyboard and touch, turned into "which way", "is Jump held" and "is the move button held" (Yaarbro's roll, Caputo's pounce).
-- `src/ui/screens.ts` and `index.html`: start screen, pause, end card, "turn sideways" card, messages. `src/ui/who.ts`: the "Who's playing?" screen, shown first, with the grown-ups' reset behind a confirmation. `src/ui/picker.ts`: the level picker on the start screen, a card for each area with the current player's finished difficulties and best times, and the ghost switch.
+- `src/ui/screens.ts` and `index.html`: start screen, pause, end card, "turn sideways" card, messages, hearts and a boss's health bar. `src/ui/who.ts`: the "Who's playing?" screen, shown first, with the grown-ups' reset behind a confirmation. `src/ui/picker.ts`: the level picker on the start screen, a card for each area with the current player's finished difficulties and best times, and the ghost switch.
 - `src/main.ts`: the loop that connects them, the Sound button and the M key. The start screen shows first; the 3D code and files load behind it with a progress bar.
 
 Address-bar switches: `?fps` shows the frame rate and tier, `?quality=high|medium|low|minimal` fixes the tier, `?level=sandbox` opens the development level, `?standin` plays both heroes as the CC0 stand-in model (for checking the loader and animation player against a library file).

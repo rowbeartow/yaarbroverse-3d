@@ -55,6 +55,8 @@ Recorded files, in `assets/audio/`. All are CC0, from OpenGameArt, downloaded on
 | `button.wav` | Menu buttons (`select_002`). | "Interface Sounds" by Kenney (www.kenney.nl): https://opengameart.org/content/interface-sounds | CC0 |
 | `leaf-tune.mp3` | The tune for finding the golden leaf (`Heavy_ConceptB.wav`), evened to a steady loudness and saved as MP3. | "Victory Fanfare Short" by cynicmusic (pixelsphere.org): https://opengameart.org/content/victory-fanfare-short | CC0 |
 | `grove-music.mp3` | The grove's music: a calm track of 1 minute 22 seconds that loops (`Forest Whisper.wav`), evened to a steady loudness and saved as MP3. | "Forest Whisper Theme" by Cleyton Kauffman (https://soundcloud.com/cleytonkauffman): https://opengameart.org/content/forest-whisper-theme | CC0 |
+| `boss-music.mp3` | The music of a boss fight: 40 seconds from the middle of the track (8 to 48 seconds in), joined end to start so it loops, set to the grove music's loudness and saved as MP3. | "Battle Theme" by Wolfgang_: https://opengameart.org/content/battle-theme-0 | CC0 |
+| `boss-beaten.wav` | A boss is beaten (`PositiveChoice`), with a longer fade out. | "Short Jingle" by OO: https://opengameart.org/content/short-jingle | CC0 |
 
 The giant mosquito's three sounds and the low thump under a landing are made in code by this project (`src/audio/synth.ts`): there is no file, and nothing to credit. A jump and a landing have no files of their own: they play the moss and wood footsteps above.
 
@@ -75,6 +77,8 @@ SHA-256 of each download, as OpenGameArt served it:
 | `kenney_interfaceSounds.zip` | `f2193d072726d6758a5f7871b2dcc54dcce0d5c35c6f0a62f92549b327c81232` |
 | `Heavy_ConceptB.wav` | `cf7aca1193530c804f41a22cfd9a2813c25d3c244fa96ad88c88c6206daa033d` |
 | `forest_whisper_theme.zip` | `11516801f38f4b004fa9e3641ff287fa39cb998fc805d376b372cc03db4d573f` |
+| `Battle.mp3` ("Battle Theme") | `dde7bd4f10bde031800ba8e22151fad591b7c13e1c9ae51920341b4e4ae37be5` |
+| `PositiveChoice_0.ogg` ("Short Jingle") | `9a2288c29f9edfc1ab67869a00e84314f7343324f52a0c987baf2de9d7d38177` |
 
 ## Stand-in model
 

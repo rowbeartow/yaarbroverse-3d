@@ -14,5 +14,6 @@ export const SANDBOX: LevelEntry = {
   build: (difficulty) => buildSandbox(difficulty),
   scenery: 'forest',
   music: 'groveMusic',
+  bossMusic: 'bossMusic',
   devOnly: true,
 };

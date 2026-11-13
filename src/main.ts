@@ -21,6 +21,7 @@ import './style.css';
 import { GameSounds } from './audio/game-sounds';
 import { Sound } from './audio/mix';
 import { Player } from './audio/player';
+import { bossFighting, bossOpen } from './game/boss';
 import { Game, IDLE, type GameEvent } from './game/game';
 import { GhostPlayer, GhostRecorder } from './game/ghost';
 import { MOVE_NAME, STEP } from './game/hero';
@@ -124,6 +125,9 @@ const boot = (): void => {
     newsUntil = 0;
     healedNews = null;
     gameSounds.reset();
+    // A fight that was on is over: the level's own music again, and no health bar.
+    sound.setMusic(entry.music);
+    screens.setBoss(null);
     view?.show(level, choice.hero, entry.scenery);
     view?.snapCamera(game);
   };
@@ -267,6 +271,13 @@ const boot = (): void => {
   window.addEventListener('orientationchange', fit);
   window.visualViewport?.addEventListener('resize', fit);
 
+  /** The boss's health bar: up from the moment its fight begins, and until a moment after it is beaten. */
+  const showBoss = (): void => {
+    const boss = game.boss;
+    const shown = boss && (bossFighting(boss) || (boss.phase === 'defeated' && boss.timer < 2.5));
+    screens.setBoss(boss && shown ? { name: boss.spot.name, health: boss.health, of: boss.spot.numbers.health, open: bossOpen(boss) && boss.phase !== 'intro' } : null);
+  };
+
   /** What the rules reported this step, turned into messages. */
   const narrate = (events: GameEvent[]): void => {
     let safe = false;
@@ -291,6 +302,20 @@ const boot = (): void => {
       } else if (event.type === 'healed') {
         // The older player's rule. It follows "Back to safety" on the screen, so it waits a moment.
         healedNews = event.kind === 'marmot' ? 'The marmot scout is back to full strength.' : 'The mosquito is back to full strength.';
+      } else if (event.type === 'boss') {
+        const name = level.boss?.name ?? 'The boss';
+        if (event.what === 'begin') {
+          news(`${name}!`, 2.5);
+          // Its music takes over for as long as the fight is on.
+          if (entry.bossMusic) sound.setMusic(entry.bossMusic);
+        } else if (event.what === 'hit' && event.left > 0) news(`${name} hit! ${event.left} more to go.`, 2.5);
+        else if (event.what === 'blocked') news('It shrugs that off. Hit it while it rests!', 2.5);
+        else if (event.what === 'stage') news(`${name} is getting angry!`, 2.5);
+        else if (event.what === 'call') news(`${name} calls its sidekicks!`, 2.5);
+        else if (event.what === 'beaten') {
+          news(`${name} is beaten! The golden leaf is yours.`, 5);
+          sound.setMusic(entry.music);
+        } else if (event.what === 'reset' && event.healed) healedNews = `${name} is back to full strength.`;
       } else if (event.type === 'safe') safe = true;
       else if (event.type === 'goal') screens.say(level.goalLine ?? 'You made it!', 4);
     }
@@ -335,6 +360,7 @@ const boot = (): void => {
       }
       if (steps === 6) owed = 0;
       screens.setHearts(game.hearts, level.hearts);
+      showBoss();
       if (game.complete && mode === 'playing') {
         mode = 'ended';
         sound.stopLoops();
@@ -407,6 +433,17 @@ const boot = (): void => {
       },
       get enemies() {
         return view ? view.enemyInfo() : [];
+      },
+      /** The boss on screen, if the level has one, and whether the golden leaf is drawn. */
+      get boss() {
+        return view ? view.bossInfo() : null;
+      },
+      get leafShown() {
+        return view ? view.leafShown() : false;
+      },
+      /** The music asked for now. */
+      get music() {
+        return sound.musicName;
       },
       /** What the sound is doing: whether it has been unlocked, muted, and what has played. */
       get sound() {

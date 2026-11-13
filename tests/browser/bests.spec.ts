@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
-import { open, pickPlayer, play, standOn } from './helpers';
+import { open, pickPlayer, play, skipBoss, standOn } from './helpers';
 
 // Best times and fewest falls on the end card. The runs are of the tiny
 // development level; a run's clock and fall count are set by hand where a
@@ -8,6 +8,7 @@ import { open, pickPlayer, play, standOn } from './helpers';
 /** Plays the Sandbox to its end card. `seconds` and `falls`, when given, are what the run's record will say. */
 const finish = async (page: Page, hero: string, difficulty: string, set: { seconds?: number; falls?: number } = {}): Promise<void> => {
   await play(page, hero, difficulty);
+  await skipBoss(page);
   await standOn(page, 'bank-end', 3);
   await page.evaluate((wanted) => {
     const { game } = (window as unknown as { __grove: { game: { seconds: number; falls: number } } }).__grove;

@@ -4,6 +4,7 @@
 // Directions: x is left (-) and right (+), y is up, z is toward the camera (+)
 // and away from it (-). Levels run away from the camera, so "forward" is -z.
 
+import type { BossSpot } from './boss';
 import type { EnemySpot, EnemyTuning } from './enemy';
 
 export type SolidKind = 'bank' | 'log' | 'stump' | 'shelf' | 'mushroom' | 'bough';
@@ -27,6 +28,8 @@ export interface Solid {
   bounce?: number;
   /** Mossy banks: standing here makes it the place a fall returns you to. */
   safe?: boolean;
+  /** Where on a safe solid a fall returns you to, when that is not its middle: the doorstep of a boss's arena, say. */
+  safeAt?: { x: number; z: number };
 }
 
 export interface Leaf {
@@ -66,6 +69,8 @@ export interface Level {
   enemies?: EnemySpot[];
   /** How this difficulty stretches the enemies' warnings, speed and rest. All 1 when left out. */
   enemyTuning?: EnemyTuning;
+  /** The boss the level ends with, if it has one. The goal cannot be taken until it is beaten. */
+  boss?: BossSpot;
   /** Ids of the solids in the order a run crosses them, start to goal. */
   route: string[];
   /** The level's sections in order, each with the ids of its solids in route order. */

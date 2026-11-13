@@ -139,6 +139,18 @@ export const standOn = (page: Page, solidId: string, back = 0): Promise<void> =>
   );
 
 /**
+ * Counts the level's boss as beaten, if it has one, so a check about the end
+ * of a run (the leaf, the end card, saved bests) does not have to fight it
+ * first. The fight itself is played by the rule tests (tests/boss.test.ts)
+ * and checked in a browser by boss.spec.ts.
+ */
+export const skipBoss = (page: Page): Promise<void> =>
+  page.evaluate(() => {
+    const { game } = (window as unknown as { __grove: { game: { boss: { phase: string; health: number; timer: number } | null } } }).__grove;
+    if (game.boss) Object.assign(game.boss, { phase: 'defeated', health: 0, timer: 10 });
+  });
+
+/**
  * Checks the hero has come to a stop and stays there. It waits on the game's
  * own speed, not on the clock: a machine that draws one frame a second takes
  * a couple of seconds to play out the slide to a halt.
