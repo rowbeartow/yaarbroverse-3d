@@ -300,3 +300,39 @@ export const progressOn = (player: Player, levelId: string): Record<Difficulty, 
   });
   return { easy: on('easy'), normal: on('normal'), hard: on('hard') };
 };
+
+/** One line of the end card's bests: the best as it now stands, and whether this run set it. */
+export interface BestLine {
+  value: number;
+  isNew: boolean;
+}
+
+/** What the end card says about a player's bests after a run. */
+export interface EndBests {
+  time: BestLine;
+  falls: BestLine;
+  /** The line over the card when this run set a best, or null when it set none. */
+  headline: string | null;
+}
+
+/**
+ * Turns what saving a run changed into the end card's lines. Null when the
+ * run did not count, so the card shows no bests at all.
+ */
+export const endBests = (outcome: Outcome): EndBests | null => {
+  if (!outcome.counted || !outcome.best) return null;
+  const headline = outcome.first
+    ? 'First finish! That is the time to beat.'
+    : outcome.bestTime && outcome.fewestFalls
+      ? 'New best time, and your fewest falls!'
+      : outcome.bestTime
+        ? 'New best time!'
+        : outcome.fewestFalls
+          ? 'Your fewest falls yet!'
+          : null;
+  return {
+    time: { value: outcome.best.seconds, isNew: outcome.bestTime },
+    falls: { value: outcome.best.falls, isNew: outcome.fewestFalls },
+    headline,
+  };
+};

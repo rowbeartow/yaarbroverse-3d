@@ -125,11 +125,13 @@
       <div class="card small">
         <p class="eyebrow" id="end-level">The Bouncing Grove</p>
         <h1 id="end-title">You found the golden leaf!</h1>
+        <!-- Shown when this run set a best for whoever is playing -->
+        <p id="end-new" class="new-best" hidden></p>
         <dl>
           <div><dt>Difficulty</dt><dd id="end-difficulty"></dd></div>
           <div><dt>Hero</dt><dd id="end-hero"></dd></div>
-          <div><dt>Time</dt><dd id="end-time"></dd></div>
-          <div><dt>Falls</dt><dd id="end-falls"></dd></div>
+          <div id="end-time-box"><dt>Time</dt><dd id="end-time"></dd><small class="best" id="end-time-best"></small></div>
+          <div id="end-falls-box"><dt>Falls</dt><dd id="end-falls"></dd><small class="best" id="end-falls-best"></small></div>
           <div><dt>Hearts lost</dt><dd id="end-hearts"></dd></div>
         </dl>
         <p class="note" id="end-date"></p>

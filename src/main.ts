@@ -26,7 +26,7 @@ import { MOVE_NAME, STEP } from './game/hero';
 import type { Level } from './game/level';
 import { Controls } from './input/controls';
 import { levelFromAddress, listedLevels, shownLevels } from './levels';
-import { Players, type Player as SavedPlayer } from './save/players';
+import { Players, endBests, type EndBests, type Player as SavedPlayer } from './save/players';
 import { Picker } from './ui/picker';
 import { Screens, isTouchDevice, loadChoice, needsTurning, type Choice } from './ui/screens';
 import { Who, badge } from './ui/who';
@@ -66,6 +66,8 @@ const boot = (): void => {
   // The players on this device, and who is playing now. Null until someone is picked.
   const players = new Players(memory);
   let who: SavedPlayer | null = null;
+  /** What the end card says about the player's bests after the run just finished. */
+  let endCard: EndBests | null = null;
   const gameSounds = new GameSounds(sound);
   void player.preload();
   sound.setMusic(entry.music);
@@ -107,6 +109,7 @@ const boot = (): void => {
     before = { x: game.x, y: game.y, z: game.z };
     owed = 0;
     sinceGoal = 0;
+    endCard = null;
     seen.clear();
     met.clear();
     newsUntil = 0;
@@ -299,14 +302,14 @@ const boot = (): void => {
         // Only a run that reached the golden leaf is saved, for whoever is playing.
         if (who) {
           const { seconds, falls, complete } = game.summary();
-          players.finish(who.id, { levelId: entry.id, hero: choice.hero, difficulty: choice.difficulty, seconds, falls, complete });
+          endCard = endBests(players.finish(who.id, { levelId: entry.id, hero: choice.hero, difficulty: choice.difficulty, seconds, falls, complete }));
         }
       }
       if (mode === 'ended' && screens.end.hidden) {
         sinceGoal += dt;
         if (sinceGoal > 1.6) {
           screens.hush();
-          screens.showEnd(game.summary(), new Date());
+          screens.showEnd(game.summary(), new Date(), endCard);
         }
       }
     }

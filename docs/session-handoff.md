@@ -1,6 +1,6 @@
 # Session handoff
 
-Last updated: 2026-11-13 (milestone five, step 3 waiting for the owner's OK)
+Last updated: 2026-11-13 (milestone five, step 4)
 
 ## Start here
 
@@ -15,12 +15,17 @@ Last updated: 2026-11-13 (milestone five, step 3 waiting for the owner's OK)
   - Reading and writing never throw. Saved data that is missing or damaged is dropped piece by piece and the game carries on. With storage blocked, everything works until the page closes.
   - A name is only ever put on the page as plain text. `tests/browser/players.spec.ts` checks no request carries it.
   - The old key `yaarbroverse-3d:choice` is no longer written. A first player on a device starts from the hero and difficulty in it.
-- **Step 3, the level picker: the pull request this version of the handoff arrived in. It waits for the owner's OK on the preview page and must not merge before he gives it.** If you are reading this on `main`, he said OK and it has merged. If you are reading it on a branch, check the pull request for his answer first.
+- **Step 3, the level picker: pull request 37, merged 2026-11-13 after the owner said OK on the preview page.**
   - The start screen is headed "Where to?" and shows the areas as a row of cards (`src/ui/picker.ts`), with the grove the only one. A card is a picture (`public/cards/<id>.jpg`), the area's name and line, and for whoever is playing a tick and best time for each difficulty they have finished, or "Not yet". The best time on a card is the better of the two heroes.
   - Every area is open. Picking another card builds that level and plays its music. With `?level=sandbox` the Sandbox is a second card, already picked, which is how the checks try a row of two.
   - The preview page for the owner: https://claude.ai/artifact/PKoes4buicSvLc9n4WYmWx . Its pictures come from `node tools/preview/screen-shots.mjs <folder> [width] [height]`, with the built game served; the page itself was put together by hand from them. To change it, publish over that address.
   - Known: at iPad size the start card fills the height, and the Sound button sits over its top right corner.
-- **Steps 4 (best times on the end card) and 5 (the ghost) are not started.** What step 4 has to build on: `Players.finish` in `src/save/players.ts` already returns whether a run was a first finish, a best time or the fewest falls, and what was saved before. What step 5 was planned as: record the hero's place a few times a second during a run, keep the recording of the best time for each player, level, hero and difficulty under its own storage key (so a damaged or over-large ghost never costs the progress), and draw it as a see-through second copy of the hero that touches nothing. None of that is written.
+- **Step 4, best times: the pull request this version of the handoff arrived in.** If you are reading this on `main`, it has merged.
+  - The end card shows, under Time and Falls, the player's best time and fewest falls for that level, hero and difficulty: "Best 1:07.4" and "Fewest 2". They are kept separately, so each can come from a different run.
+  - A best this run set is marked "New best!" in a gold box, with a gold line over the card: "New best time!", "Your fewest falls yet!", both, or "First finish! That is the time to beat."
+  - Only a run that reached the golden leaf counts. Matching a best is not beating it.
+  - The words are chosen by `endBests` in `src/save/players.ts` (tested); `showEnd` in `src/ui/screens.ts` puts them on the card.
+- **Step 5, the ghost, is not started.** The plan: record the hero's place a few times a second during a run, keep the recording of the best time for each player, level, hero and difficulty under its own storage key (so a damaged or over-large ghost never costs the progress), and draw it as a see-through second copy of the hero that touches nothing.
 
 **Milestone four is done: the Bouncing Grove has sound and music.** The game is live at https://rowbeartow.github.io/yaarbroverse-3d/ . The likely next milestone is a second area (see "What's next"); the owner has not set it yet.
 
@@ -195,7 +200,7 @@ Milestone four (sound and music) is done, in the pull requests listed under "Sta
 - **Camera.** Behind and above the hero, always looking the same way. A soft dark spot under the hero shows where a jump will land.
 - **Difficulty.** Easy, Normal, Hard on the start screen. All numbers are in `src/levels/bouncing-grove/difficulty.ts`: the route's sizes and gaps, the checkpoints, hearts, how long a hit protects, how far it throws, and the enemies' warning, speed and rest.
 - **Falls.** A fall returns the hero to the last safe mossy bank and is counted. It costs no heart.
-- **End card.** Difficulty, hero, time, falls, hearts lost, date. "Play again" returns to the start screen.
+- **End card.** Difficulty, hero, time, falls, hearts lost, date, and the player's best time and fewest falls with a new best marked. "Play again" returns to the start screen.
 - **Controls.** Mac: arrows or W A S D, Space, X or Shift for the hero's own move, Esc, M for sound off and on. Touch: drag the left half to move, press the right half to jump, and a smaller round button above Jump for the hero's own move.
 - **Turn sideways.** A touch device whose page is taller than wide gets a "Turn sideways to play" card.
 - **This device remembers** its players (see "Start here") and whether sound is off.
