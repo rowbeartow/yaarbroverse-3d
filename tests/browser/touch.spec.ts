@@ -1,5 +1,5 @@
 import { expect, test, type CDPSession, type Page } from '@playwright/test';
-import { expectAtRest, open, play, snapshot, standOn } from './helpers';
+import { address, expectAtRest, open, pickPlayer, play, snapshot, standOn } from './helpers';
 
 // Touch play, as on the iPad held sideways.
 test.skip(({ hasTouch }) => !hasTouch, 'Touch checks run on the iPad-sized screen');
@@ -177,9 +177,11 @@ test('held upright: shows "Turn sideways" and holds the game until it is turned'
 
 test('held upright at the start screen: the card covers it', async ({ page }) => {
   await page.setViewportSize({ width: 768, height: 1024 });
-  await open(page);
+  await page.goto(address());
+  // The card covers "Who's playing?" too: nothing under it can be tapped.
   await expect(page.locator('#rotate')).toBeVisible();
   await page.setViewportSize({ width: 1024, height: 768 });
   await expect(page.locator('#rotate')).toBeHidden();
+  await pickPlayer(page);
   await expect(page.locator('#play')).toBeVisible();
 });

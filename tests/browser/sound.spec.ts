@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
-import { address, open, play, watch } from './helpers';
+import { address, open, play, ready, watch } from './helpers';
 
 // Sound in a real browser: nothing before the first tap or key press, sounds
 // once the game is being played, the Sound button and the M key, the mute
@@ -38,7 +38,11 @@ const drop = (page: Page): Promise<void> =>
   });
 
 test('nothing plays before the first tap or key press', async ({ page }) => {
-  const problems = await open(page);
+  // "Who's playing?" is up and the files are in, and nobody has touched anything yet.
+  const problems = watch(page);
+  await page.goto(address());
+  await expect(page.locator('#who')).toBeVisible();
+  await ready(page);
   const before = await sound(page);
   expect(before.unlocked).toBe(false);
   expect(before.state).toBe('none');

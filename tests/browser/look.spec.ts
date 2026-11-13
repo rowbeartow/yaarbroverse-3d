@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { address, frames, open, play, ready, snapshot, watch } from './helpers';
+import { address, frames, open, pickPlayer, play, ready, snapshot, watch } from './helpers';
 
 // The look: loading, the frame counter, quality tiers, the full lighting, and
 // hero models. These run in every browser project.
@@ -36,7 +36,8 @@ test.describe('loading', () => {
     });
     await page.goto(address());
 
-    await expect(page.locator('#start')).toBeVisible();
+    // "Who's playing?" is up at once too, and the files load behind it.
+    await pickPlayer(page);
     await expect(page.locator('h1#start-title')).toHaveText('The Bouncing Grove');
     await expect(page.locator('#loading')).toBeVisible();
     await expect(page.locator('#loading-text')).toContainText('Loading the grove');
@@ -61,6 +62,7 @@ test.describe('loading', () => {
     await expect(page.locator('#failed')).toBeVisible();
     await expect(page.locator('#failed h1')).toHaveText('The grove did not finish loading');
     await expect(page.locator('#start')).toBeHidden();
+    await expect(page.locator('#who')).toBeHidden();
 
     await page.unroute('**/media/textures/**');
     await page.locator('#reload').click();

@@ -9,6 +9,10 @@
 // The start screen shows straight away. The 3D code and its files download
 // behind it, with a progress bar, and Play switches on when they are ready.
 //
+// "Who's playing?" comes first: up to four players, each with a name, a
+// colour and their own saved choices and progress (src/save/players.ts).
+// Nothing about a player leaves this device.
+//
 // Sound (src/audio) starts on the first tap or key press, because browsers
 // block it before that. The Sound button and the M key mute it, and the
 // choice is remembered.
@@ -22,7 +26,9 @@ import { MOVE_NAME, STEP } from './game/hero';
 import type { Level } from './game/level';
 import { Controls } from './input/controls';
 import { levelFromAddress, listedLevels } from './levels';
-import { Screens, isTouchDevice, loadChoice, needsTurning, saveChoice, type Choice } from './ui/screens';
+import { Players, type Player as SavedPlayer } from './save/players';
+import { Screens, isTouchDevice, loadChoice, needsTurning, type Choice } from './ui/screens';
+import { Who, badge } from './ui/who';
 import type { GroveView } from './view/grove-view';
 
 type Mode = 'start' | 'playing' | 'paused' | 'ended';
@@ -56,6 +62,9 @@ const boot = (): void => {
     }
   })();
   const sound = new Sound(player, memory);
+  // The players on this device, and who is playing now. Null until someone is picked.
+  const players = new Players(memory);
+  let who: SavedPlayer | null = null;
   const gameSounds = new GameSounds(sound);
   void player.preload();
   sound.setMusic(entry.music);
@@ -108,9 +117,33 @@ const boot = (): void => {
   const screens = new Screens(choice, entry, (picked) => {
     const rebuild = picked.difficulty !== choice.difficulty || picked.hero !== choice.hero;
     choice = picked;
-    saveChoice(choice);
+    if (who) players.setChoice(who.id, choice.hero, choice.difficulty);
     if (rebuild) setUp();
   });
+
+  // "Who's playing?": picking a player brings up the start screen with their own hero and difficulty.
+  const whoScreen = new Who(
+    players,
+    (picked) => {
+      const now = players.choose(picked.id) ?? picked;
+      who = now;
+      const rebuild = now.difficulty !== choice.difficulty || now.hero !== choice.hero;
+      choice = { hero: now.hero, difficulty: now.difficulty };
+      screens.setChoice(choice);
+      screens.setPlayer(now.name, badge(now));
+      if (rebuild) setUp();
+      whoScreen.close();
+      setMode('start');
+    },
+    () => {
+      // The player who was playing may have been removed.
+      if (who && !players.get(who.id)) who = null;
+    },
+  );
+  const askWho = (): void => {
+    screens.show('who');
+    whoScreen.open();
+  };
 
   const setMode = (next: Mode): void => {
     mode = next;
@@ -118,7 +151,9 @@ const boot = (): void => {
     controls.release();
     // The roll and the mosquito's whine stop with the game.
     if (next !== 'playing') sound.stopLoops();
-    if (next === 'start') screens.show('start');
+    // Nobody is picked yet on a fresh page: "Who's playing?" comes before the start screen.
+    if (next === 'start' && !who) askWho();
+    else if (next === 'start') screens.show('start');
     else if (next === 'paused') screens.show('paused');
     else if (next === 'playing') screens.show('none');
   };
@@ -148,6 +183,7 @@ const boot = (): void => {
     setUp();
     setMode('start');
   });
+  document.querySelector('#switch-player')!.addEventListener('click', askWho);
   document.querySelector('#pause')!.addEventListener('click', pause);
   document.querySelector('#resume')!.addEventListener('click', () => setMode('playing'));
   document.querySelector('#restart')!.addEventListener('click', play);
@@ -157,6 +193,8 @@ const boot = (): void => {
   });
   document.querySelector('#reload')!.addEventListener('click', () => window.location.reload());
   window.addEventListener('keydown', (event) => {
+    // Typing a name is not a key press for the game.
+    if (event.target instanceof HTMLInputElement) return;
     if (event.code === 'KeyM' && !event.repeat && !event.metaKey && !event.ctrlKey && !event.altKey) sound.toggleMute();
     if (event.code !== 'Escape' && event.code !== 'KeyP') return;
     if (mode === 'playing') pause();
@@ -244,6 +282,11 @@ const boot = (): void => {
         controls.enabled = false;
         controls.release();
         sinceGoal = 0;
+        // Only a run that reached the golden leaf is saved, for whoever is playing.
+        if (who) {
+          const { seconds, falls, complete } = game.summary();
+          players.finish(who.id, { levelId: entry.id, hero: choice.hero, difficulty: choice.difficulty, seconds, falls, complete });
+        }
       }
       if (mode === 'ended' && screens.end.hidden) {
         sinceGoal += dt;
@@ -276,6 +319,10 @@ const boot = (): void => {
       /** The id of the level that is up, from the level list. */
       get level() {
         return entry.id;
+      },
+      /** Whether a player has been picked, and how many are on this device. Never their names. */
+      get players() {
+        return { picked: who !== null, count: players.list().length };
       },
       /** True once the 3D picture has loaded and Play works. */
       get ready() {
@@ -315,6 +362,7 @@ const boot = (): void => {
     } catch (error) {
       console.error(error);
       // Either this browser cannot draw 3D at all, or a file did not arrive.
+      whoScreen.close();
       screens.fail(error instanceof Error && error.name === 'No3d' ? 'no-3d' : 'download');
       return;
     }

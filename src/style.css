@@ -565,3 +565,188 @@ dd {
   pointer-events: none;
   z-index: 5;
 }
+
+/* ---------- Who's playing? ---------- */
+
+.players {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  gap: 12px;
+  margin-top: clamp(10px, 2vh, 18px);
+}
+
+.player {
+  display: grid;
+  justify-items: center;
+  gap: 6px;
+  min-height: 120px;
+  padding: 12px 8px;
+  border: 3px solid var(--paper-edge);
+  border-radius: 18px;
+  background: #fffdf4;
+  cursor: pointer;
+}
+
+.player b {
+  font-size: clamp(17px, 2.8vh, 22px);
+  overflow-wrap: anywhere;
+}
+
+.player.add {
+  border-style: dashed;
+}
+
+.badge {
+  display: grid;
+  place-items: center;
+  width: clamp(48px, 9vh, 68px);
+  height: clamp(48px, 9vh, 68px);
+  border-radius: 50%;
+  border: 3px solid rgba(27, 42, 36, 0.35);
+  background: #e9e2c8;
+  color: #fff;
+  font-size: clamp(24px, 4.6vh, 36px);
+  font-weight: 800;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.55);
+}
+
+.player.add .badge {
+  color: var(--moss-deep);
+  text-shadow: none;
+}
+
+.quiet {
+  margin-top: clamp(8px, 1.6vh, 14px);
+  padding: 8px 14px;
+  border: 0;
+  background: none;
+  color: #4f5b50;
+  font-size: clamp(13px, 2vh, 16px);
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+#who-form label {
+  display: block;
+  margin: clamp(8px, 2vh, 18px) 0 6px;
+  font-size: clamp(14px, 2.2vh, 18px);
+  font-weight: 700;
+  color: var(--moss-deep);
+}
+
+#who-name {
+  width: min(100%, 360px);
+  min-height: 56px;
+  padding: 8px 14px;
+  border: 3px solid var(--moss-deep);
+  border-radius: 16px;
+  background: #fffdf4;
+  color: var(--ink);
+  font: inherit;
+  font-size: clamp(20px, 3.2vh, 26px);
+  font-weight: 700;
+  text-align: center;
+  /* The one place on the page where text can be typed and selected. */
+  user-select: text;
+  -webkit-user-select: text;
+  touch-action: manipulation;
+}
+
+#who-name:focus-visible {
+  outline: 4px solid #1f6feb;
+  outline-offset: 2px;
+}
+
+.swatches {
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.swatch {
+  width: clamp(44px, 8vh, 60px);
+  height: clamp(44px, 8vh, 60px);
+  border-radius: 50%;
+  border: 3px solid rgba(27, 42, 36, 0.35);
+  cursor: pointer;
+}
+
+.swatch[aria-checked='true'] {
+  border-color: var(--ink);
+  box-shadow: 0 0 0 4px var(--gold);
+}
+
+.problem {
+  min-height: 1.3em;
+  color: #a12a2a;
+  font-weight: 700;
+}
+
+.grown-row {
+  display: grid;
+  grid-template-columns: auto 1fr auto auto;
+  align-items: center;
+  gap: 10px;
+  margin-top: 10px;
+  text-align: left;
+}
+
+.grown-row .badge {
+  width: 40px;
+  height: 40px;
+  font-size: 20px;
+}
+
+.grown-row b {
+  font-size: clamp(16px, 2.6vh, 20px);
+  overflow-wrap: anywhere;
+}
+
+.grown-row button,
+.danger {
+  min-height: 48px;
+  padding: 6px 12px;
+  border: 3px solid var(--moss-deep);
+  border-radius: 14px;
+  background: #fffdf4;
+  font-size: clamp(14px, 2.1vh, 17px);
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.danger {
+  display: block;
+  width: 100%;
+  margin-top: 12px;
+  border-color: #a12a2a;
+  color: #a12a2a;
+}
+
+/* Who is playing, on the start screen. Tapping it goes back to "Who's playing?". */
+#switch-player {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+  padding: 4px 14px 4px 4px;
+  border: 3px solid var(--paper-edge);
+  border-radius: 999px;
+  background: #fffdf4;
+  cursor: pointer;
+}
+
+#switch-player .badge {
+  width: 36px;
+  height: 36px;
+  font-size: 18px;
+}
+
+#switch-player b {
+  font-size: clamp(15px, 2.4vh, 19px);
+}
+
+#switch-player small {
+  color: #4f5b50;
+  text-decoration: underline;
+}

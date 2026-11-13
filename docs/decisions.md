@@ -288,3 +288,7 @@ Supersedes: none
 ## 2026-11-13 The game builds its level from a level list, and a level is a folder plus one line in that list
 Reason: The owner's instruction for milestone five. `src/levels/index.ts` lists every level; each brings its own layout, difficulty numbers, scenery and music through its `level.ts`. The rule tests and the bot run over every level in the list. A tiny development level, the Sandbox, proves the recipe: it is marked `devOnly`, is never shown to players and opens only with `?level=sandbox`. `docs/adding-a-level.md` has the steps.
 Supersedes: none
+
+## 2026-11-13 A player is a name of up to twelve characters and one of six colours, and a grown-up can also remove one
+Reason: Claude's calls within the owner's decision on profiles. Twelve characters fit the tiles on an iPad. With four places on a device, a mistyped name or a visiting friend would otherwise use one up for good, so "For grown-ups" has "Remove player" beside "Reset progress", each behind a question whose safe answer is the big button. Each player keeps their own last hero and difficulty. Everything is one entry in the browser's storage (`yaarbroverse-3d:players`), and saved data that is missing or damaged is dropped piece by piece while the game carries on.
+Supersedes: none
