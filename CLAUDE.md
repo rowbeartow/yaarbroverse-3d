@@ -25,7 +25,8 @@ How it fits together:
 
 - `src/game/`: the rules. One hero in one level, advanced in fixed steps of 1/60 second. No browser or 3D code, so tests run it without a screen.
   - `enemy.ts`: the marmot scout and the giant mosquito: what each does, what hurts a hero and what strikes an enemy. `game.ts` steps them with the hero.
-- `src/levels/<level>/difficulty.ts`: every Easy, Normal and Hard number for that level, in one file. `layout.ts` next to it builds the level from those numbers.
+- `src/levels/index.ts`: the level list. The game builds whichever level is chosen from it, and the rule tests and the bot run over every level in it. `docs/adding-a-level.md` is the recipe for a new one.
+- `src/levels/<level>/difficulty.ts`: every Easy, Normal and Hard number for that level, in one file. `layout.ts` next to it builds the level from those numbers. `level.ts` is what the level brings to the list: its name, layout, scenery and music. `src/levels/sandbox/` is a tiny development level, never shown to players.
 - `src/view/`: draws the level and hero and moves the camera. Looks only.
   - `grove-view.ts`: the renderer, lighting (forest light, sun with soft shadows, filmic tone mapping, glow), camera, and switching quality tiers.
   - `scenery.ts`: the level's solids as smooth textured shapes. `forest.ts`: the gully, trees, ferns, grass, mist, light. Both build shapes with `surface.ts` and `noise.ts`.
@@ -44,7 +45,7 @@ How it fits together:
 - `src/ui/screens.ts` and `index.html`: start screen, pause, end card, "turn sideways" card, messages.
 - `src/main.ts`: the loop that connects them, the Sound button and the M key. The start screen shows first; the 3D code and files load behind it with a progress bar.
 
-Address-bar switches: `?fps` shows the frame rate and tier, `?quality=high|medium|low|minimal` fixes the tier, `?standin` plays both heroes as the CC0 stand-in model (for checking the loader and animation player against a library file).
+Address-bar switches: `?fps` shows the frame rate and tier, `?quality=high|medium|low|minimal` fixes the tier, `?level=sandbox` opens the development level, `?standin` plays both heroes as the CC0 stand-in model (for checking the loader and animation player against a library file).
 
 ## Run and deploy
 

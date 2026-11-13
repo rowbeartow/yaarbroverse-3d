@@ -1,6 +1,10 @@
 // Starts the page and runs the game loop: read the controls, advance the rules
-// in fixed steps, draw. The rules live in src/game, the level in src/levels,
+// in fixed steps, draw. The rules live in src/game, the levels in src/levels,
 // the drawing in src/view. This file only connects them.
+//
+// Which level is built comes from the level list (src/levels/index.ts): the
+// first one players are shown, or the one named on the address (?level=sandbox),
+// which is the only way into a development level.
 //
 // The start screen shows straight away. The 3D code and its files download
 // behind it, with a progress bar, and Play switches on when they are ready.
@@ -17,8 +21,7 @@ import { Game, IDLE, type GameEvent } from './game/game';
 import { MOVE_NAME, STEP } from './game/hero';
 import type { Level } from './game/level';
 import { Controls } from './input/controls';
-import { GROVE_BLURB } from './levels/bouncing-grove/difficulty';
-import { buildGrove } from './levels/bouncing-grove/layout';
+import { levelFromAddress, listedLevels } from './levels';
 import { Screens, isTouchDevice, loadChoice, needsTurning, saveChoice, type Choice } from './ui/screens';
 import type { GroveView } from './view/grove-view';
 
@@ -28,8 +31,9 @@ const canvas = document.querySelector<HTMLCanvasElement>('#view')!;
 
 const boot = (): void => {
   let view: GroveView | null = null;
+  const entry = levelFromAddress(window.location.search) ?? listedLevels()[0];
   let choice: Choice = loadChoice();
-  let level: Level = buildGrove(choice.difficulty);
+  let level: Level = entry.build(choice.difficulty);
   let game = new Game(level, choice.difficulty, choice.hero);
   let mode: Mode = 'start';
   let before = { x: game.x, y: game.y, z: game.z };
@@ -54,7 +58,7 @@ const boot = (): void => {
   const sound = new Sound(player, memory);
   const gameSounds = new GameSounds(sound);
   void player.preload();
-  sound.setMusic('groveMusic');
+  sound.setMusic(entry.music);
   // Any of these counts as the player's say-so. They are caught before anything
   // else sees them, so the very tap that starts the game can also be heard.
   for (const kind of ['pointerdown', 'pointerup', 'touchend', 'click', 'keydown'] as const) {
@@ -88,7 +92,7 @@ const boot = (): void => {
 
   /** Builds the level and hero for the current choice and stands the hero at the start. */
   const setUp = (): void => {
-    level = buildGrove(choice.difficulty);
+    level = entry.build(choice.difficulty);
     game = new Game(level, choice.difficulty, choice.hero);
     before = { x: game.x, y: game.y, z: game.z };
     owed = 0;
@@ -97,11 +101,11 @@ const boot = (): void => {
     met.clear();
     newsUntil = 0;
     gameSounds.reset();
-    view?.show(level, choice.hero);
+    view?.show(level, choice.hero, entry.scenery);
     view?.snapCamera(game);
   };
 
-  const screens = new Screens(choice, GROVE_BLURB, (picked) => {
+  const screens = new Screens(choice, entry, (picked) => {
     const rebuild = picked.difficulty !== choice.difficulty || picked.hero !== choice.hero;
     choice = picked;
     saveChoice(choice);
@@ -268,6 +272,10 @@ const boot = (): void => {
       },
       get mode() {
         return mode;
+      },
+      /** The id of the level that is up, from the level list. */
+      get level() {
+        return entry.id;
       },
       /** True once the 3D picture has loaded and Play works. */
       get ready() {

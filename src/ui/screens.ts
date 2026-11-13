@@ -81,11 +81,15 @@ export class Screens {
 
   constructor(
     private choice: Choice,
-    blurbs: Record<Difficulty, string>,
+    level: { name: string; lead: string; blurbs: Record<Difficulty, string> },
     private readonly onChoice: (choice: Choice) => void,
   ) {
+    // The level's name and lines, on the start screen and the end card.
+    el('#start-title').textContent = level.name;
+    el('#start-lead').textContent = level.lead;
+    el('#end-level').textContent = level.name;
     for (const difficulty of DIFFICULTIES) {
-      el(`[data-difficulty="${difficulty}"] small`).textContent = blurbs[difficulty];
+      el(`[data-difficulty="${difficulty}"] small`).textContent = level.blurbs[difficulty];
     }
     this.radioGroup('.heroes', 'hero', HEROES, () => this.choice.hero, (hero) => ({ ...this.choice, hero }));
     this.radioGroup('.levels', 'difficulty', DIFFICULTIES, () => this.choice.difficulty, (difficulty) => ({

@@ -1,8 +1,13 @@
 # Session handoff
 
-Last updated: 2026-11-12 (milestone four)
+Last updated: 2026-11-13 (milestone five, step 1)
 
 ## Start here
+
+**Milestone five is under way** (best times, a ghost to race, saved progress and a level picker; the owner's order is in `docs/decisions.md`, 2026-11-13). Its five pull requests, in order: levels as a recipe, profiles and saved progress, the level picker (waits for the owner's OK on a preview page), best times, the ghost.
+
+- **Step 1, levels as a recipe: the pull request this version of the handoff arrived in.** If you are reading this on `main`, it has merged. The game builds its level from the level list (`src/levels/index.ts`). `docs/adding-a-level.md` is the recipe for a new level. The Sandbox (`src/levels/sandbox/`) is a tiny development level that opens only with `?level=sandbox`. `tests/levels.test.ts` runs the bot over every listed level, and `tests/browser/levels.spec.ts` plays the Sandbox to its end card.
+- Steps 2 to 5 are not started.
 
 **Milestone four is done: the Bouncing Grove has sound and music.** The game is live at https://rowbeartow.github.io/yaarbroverse-3d/ . The likely next milestone is a second area (see "What's next"); the owner has not set it yet.
 
@@ -200,7 +205,7 @@ Milestone four (sound and music) is done, in the pull requests listed under "Sta
 ## What's next
 
 1. **The owner and the kids play with sound** and he says what is too loud, too quiet, too often or wrong (see "Start here"). A level is one number in `src/audio/sounds.ts`; a different recording goes on the sound board first.
-2. **A second area is the likely next milestone.** The owner has not set it. What it would need from him before any work: which part of the Caputo Mountain forest it is (the docs and art in the private repo are the only source, and nothing new is canon), and whether it brings new enemies, which are made as the marmot and mosquito were. What is ready for it: a level is plain data built by a `layout.ts` from the numbers in a `difficulty.ts`, both in `src/levels/<level>/`; the rules, enemies, hearts, moves, sound and drawing take any level. What is not: the game knows one level (`main.ts` builds the grove directly, and the start screen has no level picker), the forest scenery is laid out for the grove's route, there is no saved progress between levels, and the music is one track.
+2. **A second area is the likely next milestone.** The owner has not set it. What it would need from him before any work: which part of the Caputo Mountain forest it is (the docs and art in the private repo are the only source, and nothing new is canon), and whether it brings new enemies, which are made as the marmot and mosquito were. What is ready for it: a level is plain data built by a `layout.ts` from the numbers in a `difficulty.ts`, both in `src/levels/<level>/`; the rules, enemies, hearts, moves, sound and drawing take any level. The game builds its level from the level list, and `docs/adding-a-level.md` is the recipe. What is not there yet: the start screen has no level picker, there is no saved progress, there is one kind of scenery (the forest, which lays itself out along any route) and one music track.
 3. **Ideas that came up and were not asked for** are not in the code: saved progress, the rest of the 2D forest's enemies, sound that moves left and right with what makes it.
 4. **Checking the Blender scripts on new files.** `tools/rig-quadruped.py` is meant for new enemies too: each needs its own guide file of joint places, like `tools/caputo.rig.json`.
 
