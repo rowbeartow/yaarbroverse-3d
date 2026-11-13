@@ -92,6 +92,7 @@ export class EnemyView {
   private showing: ClipKey = 'idle';
   private last = { x: 0, z: 0 };
   private moving = 0;
+  private pace = 0;
   private risen = 0;
   private gone = 0;
   /** The rest that follows a strike opens with the flinch. */
@@ -196,6 +197,7 @@ export class EnemyView {
     if (!this.root.visible) {
       this.phase = enemy.phase;
       this.risen = 0;
+      this.pace = 0;
       this.last = { x: enemy.x, z: enemy.z };
       return;
     }
@@ -208,6 +210,8 @@ export class EnemyView {
     const speed = dt > 0 ? Math.hypot(enemy.x - this.last.x, enemy.z - this.last.z) / dt : 0;
     this.last = { x: enemy.x, z: enemy.z };
     this.moving += (Math.min(speed, 1.5) / 1.5 - this.moving) * (1 - Math.exp(-10 * dt));
+    // A scout giving chase covers ground several times faster than its shuffle: its legs keep up.
+    this.pace += (Math.min(speed, 6) - this.pace) * (1 - Math.exp(-10 * dt));
     this.root.position.set(enemy.x, enemy.y, enemy.z);
     let facing = enemy.facing;
     let nose = 0;
@@ -272,7 +276,7 @@ export class EnemyView {
       if (action) action.paused = false;
     }
     const walk = this.actions.walk;
-    if (walk) walk.setEffectiveTimeScale(0.6 + this.moving);
+    if (walk) walk.setEffectiveTimeScale(0.6 + Math.max(this.moving, this.pace / 1.5));
     this.mixer.update(dt);
 
     // The acorn: in the raised paw through the warning, then in flight.

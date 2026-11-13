@@ -4,7 +4,7 @@ A level is a folder of plain data plus one line in the level list. The rules, th
 
 ## Before any code
 
-1. The level's place, its name, what is in it and its goal come from the Caputo Mountain docs (the owner's private `digglesworth` repo). Nothing new is canon. If the docs do not say something you need, open an issue labeled `needs-decision` and ask the owner.
+1. The level's place, its name, what is in it and its goal come from the Caputo Mountain docs (the owner's private `digglesworth` repo) and from what the owner has said in a prompt (recorded in `docs/decisions.md`). Nothing else is canon. If neither says something you need, open an issue labeled `needs-decision` and ask the owner.
 2. The owner approves a route plan first: the sections in order, each built around one idea and ending on a safe place. The grove's plan is at the top of `src/levels/bouncing-grove/layout.ts`.
 3. This repo is public. Copy no file and no wording from the private repo.
 
@@ -14,7 +14,7 @@ Pick an id: lower case and dashes, such as `bouncing-grove`. It names the folder
 
 Make `src/levels/<id>/` with three files:
 
-1. **`difficulty.ts`**: every Easy, Normal and Hard number for the level, in one table, with a comment on each number saying what it does. Also the three one-line blurbs for the start screen. Every level needs `hearts`, `protection`, `knockback`, `coyoteTime` and `ledgeHelp`; if it has enemies, `enemyWarning`, `enemySpeed` and `enemyRest` too. Start from the grove's values for those.
+1. **`difficulty.ts`**: every Easy, Normal and Hard number for the level, in one table, with a comment on each number saying what it does. Also the three one-line blurbs for the start screen. Every level needs `hearts`, `protection`, `knockback`, `coyoteTime` and `ledgeHelp`; if it has enemies, `enemyWarning`, `enemySpeed` and `enemyRest` too, and if its scouts walk a beat and give chase or its mosquito keeps up, the grove's `scoutPatrol`, `scoutChase`, `mosquitoFollow`, `mosquitoHover` and `mosquitoPause`. Start from the grove's values for those.
 2. **`layout.ts`**: one function, `build<Name>(difficulty)`, that returns a `Level` (`src/game/level.ts`) built from those numbers. No drawing code.
    - `solids`: everything to stand on. Kinds that already draw: `bank`, `log`, `stump`, `shelf`, `mushroom` (give it `bounce`), `bough`. Mark checkpoints `safe: true`.
    - `spawn` must be on a safe solid. `leaf` is the goal.

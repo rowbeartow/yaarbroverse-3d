@@ -79,9 +79,11 @@ export interface GroveNumbers {
   knockback: number;
   /**
    * The enemies: the marmot scout and the giant mosquito. Each warns before
-   * it attacks and rests after. These three stretch that timing, and are
-   * Caputo Mountain's numbers. 1 is the grove as it comes.
+   * it attacks and rests after. These three stretch that timing. Easy's are
+   * Caputo Mountain's numbers.
    *   enemyWarning   times how long a warning lasts (0.8 seconds). Longer is easier.
+   *                  The warning is the tell: it stays on every difficulty, long
+   *                  on Easy, noticeably shorter on Normal and brief on Hard.
    *   enemySpeed     times how fast enemies move, acorns fly and mosquitoes dive.
    *   enemyRest      times how long an enemy rests after attacking (1.35 seconds),
    *                  which is the opening to strike it or get past. Longer is easier.
@@ -89,6 +91,31 @@ export interface GroveNumbers {
   enemyWarning: number;
   enemySpeed: number;
   enemyRest: number;
+  /**
+   * The marmot scouts on the move. On Easy both are 0: a scout hides where
+   * it is, shuffles to keep its distance and only throws. Speeds are metres a
+   * second; a hero walks at 6, so keep the chase under that.
+   *   scoutPatrol   how fast a scout walks its beat across its bank, in plain
+   *                 view, while no hero is about.
+   *   scoutChase    how fast it comes after a hero it has spotted on its bank.
+   *                 It stops to throw from a few metres off, runs straight at
+   *                 a hero who is close, and gives up when the hero leaves.
+   */
+  scoutPatrol: number;
+  scoutChase: number;
+  /**
+   * The giant mosquito over the high boughs.
+   *   mosquitoFollow   how fast it keeps up with a hero under it, in metres a
+   *                    second. Under 6 a running hero leaves it behind.
+   *   mosquitoHover    how far above the middle of the hero it hovers. At 2.2
+   *                    a full jump under it touches it; above about 3.3 it
+   *                    does not, which a mosquito that keeps up needs to be fair.
+   *   mosquitoPause    times how long it gets ready before a dive and rests
+   *                    after one. Smaller means it dives more often.
+   */
+  mosquitoFollow: number;
+  mosquitoHover: number;
+  mosquitoPause: number;
   /** After walking off an edge, Jump still works for this long. */
   coyoteTime: number;
   /** Feet this far below a ledge still get lifted onto it. */
@@ -124,6 +151,11 @@ export const GROVE_DIFFICULTY: Record<Difficulty, GroveNumbers> = {
     enemyWarning: 1.5,
     enemySpeed: 0.7,
     enemyRest: 1.4,
+    scoutPatrol: 0,
+    scoutChase: 0,
+    mosquitoFollow: 1.47,
+    mosquitoHover: 2.2,
+    mosquitoPause: 1,
     coyoteTime: 0.2,
     ledgeHelp: 0.5,
   },
@@ -152,9 +184,14 @@ export const GROVE_DIFFICULTY: Record<Difficulty, GroveNumbers> = {
     hearts: 3,
     protection: 1,
     knockback: 1.2,
-    enemyWarning: 1,
+    enemyWarning: 0.7,
     enemySpeed: 1,
     enemyRest: 1,
+    scoutPatrol: 1.6,
+    scoutChase: 3.4,
+    mosquitoFollow: 5,
+    mosquitoHover: 3.4,
+    mosquitoPause: 0.6,
     coyoteTime: 0.12,
     ledgeHelp: 0.3,
   },
@@ -183,9 +220,14 @@ export const GROVE_DIFFICULTY: Record<Difficulty, GroveNumbers> = {
     hearts: 2,
     protection: 0.6,
     knockback: 2,
-    enemyWarning: 0.65,
+    enemyWarning: 0.45,
     enemySpeed: 1.3,
     enemyRest: 0.7,
+    scoutPatrol: 2.2,
+    scoutChase: 4.6,
+    mosquitoFollow: 6.5,
+    mosquitoHover: 3.4,
+    mosquitoPause: 0.45,
     coyoteTime: 0.06,
     ledgeHelp: 0.15,
   },

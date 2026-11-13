@@ -33,17 +33,46 @@ const faceRestingScout = (page: Page, ahead: number): Promise<void> =>
     Object.assign(game.enemies[0], { x: bank.x, z: bank.z + 4 - gap, phase: 'rest', timer: -60 });
   }, ahead);
 
-test('the marmot scout comes out of hiding in the clearing, and standing still there costs a heart', async ({ page }) => {
+test('the marmot scout spots a hero in the clearing, and standing still there costs a heart', async ({ page }) => {
   const problems = await open(page);
   await play(page, 'Yaarbro', 'normal');
   expect((await enemy(page, 0)).visible).toBe(false);
   await standOn(page, 'bank-2', 4);
   await expect.poll(async () => (await enemy(page, 0)).visible).toBe(true);
-  await expect(page.locator('#message')).toContainText('Marmot scout');
+  await expect(page.locator('#message')).toContainText('marmot scout has spotted you');
   // It warns, with the acorn raised, then throws at where the hero stands.
   await expect.poll(async () => (await enemy(page, 0)).clip, { timeout: 30_000, intervals: [50] }).toBe('warning');
   await expect.poll(() => heartsLost(page), { timeout: 60_000 }).toBeGreaterThanOrEqual(1);
   await expect(page.locator('#hearts svg.lost')).not.toHaveCount(0);
+  expect(problems).toEqual([]);
+});
+
+test('on Easy the marmot scout comes out of hiding in the clearing', async ({ page }) => {
+  const problems = await open(page);
+  await play(page, 'Caputo', 'easy');
+  expect((await enemy(page, 0)).phase).toBe('concealed');
+  await standOn(page, 'bank-2', 4);
+  await expect.poll(async () => (await enemy(page, 0)).visible).toBe(true);
+  await expect(page.locator('#message')).toContainText('A rustle in the roots');
+  expect(problems).toEqual([]);
+});
+
+test('on Hard the marmot scout walks its beat in plain view, and comes after a hero in the clearing', async ({ page }) => {
+  const problems = await open(page);
+  await play(page, 'Yaarbro', 'hard');
+  await expect.poll(async () => (await enemy(page, 0)).phase).toBe('patrol');
+  // Stand at the near end of the clearing, as far from the scout as the bank allows.
+  await standOn(page, 'bank-2', 5);
+  await expect.poll(async () => (await enemy(page, 0)).visible).toBe(true);
+  const gap = (): Promise<number> =>
+    page.evaluate(() => {
+      const { game } = (window as unknown as { __grove: { game: { x: number; z: number; enemies: Array<{ x: number; z: number }> } } }).__grove;
+      return Math.hypot(game.enemies[0].x - game.x, game.enemies[0].z - game.z);
+    });
+  const first = await gap();
+  // It closes on the hero, walking: the game's own state says so, not the clock.
+  await expect.poll(gap, { timeout: 30_000 }).toBeLessThan(first - 1);
+  await expect.poll(async () => (await enemy(page, 0)).clip, { timeout: 30_000, intervals: [50] }).toMatch(/walk|warning/);
   expect(problems).toEqual([]);
 });
 

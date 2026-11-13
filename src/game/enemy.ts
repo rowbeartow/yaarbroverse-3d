@@ -12,12 +12,19 @@
 //                    acorn held up; its attack is the acorn thrown to where the
 //                    hero stood. It hops back from a hero charging along the
 //                    ground. Two strikes beat it.
+//                    Where a level says so (`patrolSpeed`, `chaseSpeed`: the
+//                    grove's Normal and Hard) it does not hide or hold its
+//                    distance. It walks a beat across its patch in plain
+//                    view, comes after a hero it spots, stops to throw from
+//                    a few metres off, runs straight at a hero who is close,
+//                    and gives up and goes back to its beat when the hero
+//                    leaves its patch.
 //   Giant mosquito   Hovers above the hero. Its warning is a wind-up; its
 //                    attack is a dive to where the hero stood, where it then
 //                    rests, low enough to reach. One strike beats it.
 //
-// What hurts a hero: touching either while it is idle or attacking, and the
-// acorn. Touching one while it warns, hops or rests does nothing.
+// What hurts a hero: touching either while it is idle, on its beat or
+// attacking, and the acorn. Touching one while it warns, hops or rests does nothing.
 // What beats an enemy: Yaarbro rolling faster than a walk, Caputo's pounce, or
 // either hero landing on top of it. A strike wins over a touch that would hurt.
 
@@ -69,6 +76,12 @@ export const ENEMY = {
   diveTime: 0.42,
   /** How fast either goes home when no hero is near. */
   homeSpeed: 1.3,
+  /** A scout on its beat stands and looks about for this long at each end. */
+  patrolPause: 0.9,
+  /** A scout that comes after a hero throws from between `marmotNear` and `marmotFar`, or from anywhere once it has chased for this long. */
+  chaseLong: 2.2,
+  /** After a hero is sent back to a safe bank, no enemy notices it for this long. */
+  homeGrace: 1.5,
   /** Body sizes: how far out from the middle, and how tall. A marmot stands on its feet; a mosquito's middle is its place. */
   marmotRadius: 0.55,
   marmotHeight: 0.9,
@@ -92,7 +105,7 @@ export const ENEMY = {
 
 export type EnemyKind = 'marmot' | 'mosquito';
 
-export type EnemyPhase = 'concealed' | 'idle' | 'dodge-warning' | 'dodge' | 'warning' | 'attack' | 'rest' | 'defeated';
+export type EnemyPhase = 'concealed' | 'patrol' | 'idle' | 'dodge-warning' | 'dodge' | 'warning' | 'attack' | 'rest' | 'defeated';
 
 /** Where an enemy lives in a level. */
 export interface EnemySpot {
@@ -106,6 +119,8 @@ export interface EnemySpot {
   arena: { minX: number; maxX: number; minZ: number; maxZ: number };
   /** How far past the edge of its patch it notices a hero, and aims. 0 when left out. */
   notice?: number;
+  /** For a marmot that walks a beat: the far end of it. Home is the near end. Left out, it is home mirrored across the middle of the patch. */
+  beat?: { x: number; z: number };
   /** For a mosquito: the lowest and highest it flies. */
   floor?: number;
   ceiling?: number;
@@ -119,6 +134,23 @@ export interface EnemyTuning {
   speed: number;
   /** Times the rest after an attack. Longer is easier. */
   rest: number;
+  /**
+   * The marmot scout walks a beat across its patch at this speed, in plain
+   * view, while no hero is about. 0 or left out: it hides where it is.
+   */
+  patrolSpeed?: number;
+  /**
+   * The marmot scout comes after a hero on its patch at this speed. Keep it
+   * under a hero's walking speed (6), so running away works. 0 or left out:
+   * it shuffles to keep its distance and only throws.
+   */
+  chaseSpeed?: number;
+  /** How fast the mosquito keeps up with a hero under it. Left out: 2.1 times `speed`. */
+  followSpeed?: number;
+  /** How far above the middle of the hero the mosquito hovers. Left out: 2.2. Above about 3.3, a full jump under it no longer touches it. */
+  hoverAbove?: number;
+  /** Times how long the mosquito gets ready before a dive and rests after one. Smaller means it dives more often. Left out: 1. */
+  divePause?: number;
 }
 
 export interface Enemy {
@@ -143,6 +175,11 @@ export interface Enemy {
   flash: number;
   dodgeRest: number;
   threat: number;
+  /** A scout on its beat: which end it is heading for (0 the far end, 1 home), and how long it still stands at this end. */
+  leg: number;
+  pause: number;
+  /** Counts down after a hero was sent back to a safe bank: it notices nobody until this is zero. */
+  grace: number;
 }
 
 /** What an enemy needs to know about the hero. The game itself fits this. */
@@ -184,13 +221,16 @@ export const newEnemy = (spot: EnemySpot): Enemy => ({
   flash: 0,
   dodgeRest: 0,
   threat: 0,
+  leg: 0,
+  pause: 0,
+  grace: 0,
 });
 
 /** Puts an enemy that is not beaten back at home, as it was at the start, keeping the strikes it has taken. */
 export const sendHome = (enemy: Enemy): void => {
   if (enemy.phase === 'defeated') return;
   const { hits } = enemy;
-  Object.assign(enemy, newEnemy(enemy.spot), { hits });
+  Object.assign(enemy, newEnemy(enemy.spot), { hits, grace: ENEMY.homeGrace });
 };
 
 const clamp = (value: number, low: number, high: number): number => Math.max(low, Math.min(high, value));
@@ -204,7 +244,7 @@ export const enemyBody = (enemy: Enemy): { bottom: number; top: number; radius: 
     : { bottom: enemy.y - ENEMY.mosquitoHalfHeight, top: enemy.y + ENEMY.mosquitoHalfHeight, radius: ENEMY.mosquitoRadius };
 
 /** True while touching this enemy would hurt. */
-export const isDangerous = (enemy: Enemy): boolean => enemy.phase === 'idle' || enemy.phase === 'attack';
+export const isDangerous = (enemy: Enemy): boolean => enemy.phase === 'idle' || enemy.phase === 'patrol' || enemy.phase === 'attack';
 
 /**
  * Advances one enemy by `dt` seconds and works out what it does to the hero.
@@ -229,6 +269,7 @@ export const stepEnemy = (
   enemy.timer += dt;
   enemy.flash = Math.max(0, enemy.flash - dt);
   enemy.dodgeRest = Math.max(0, enemy.dodgeRest - dt);
+  enemy.grace = Math.max(0, enemy.grace - dt);
   if (enemy.phase === 'defeated') {
     enemy.acorn = null;
     return outcome;
@@ -243,17 +284,48 @@ export const stepEnemy = (
   const reach = enemy.spot.notice ?? 0;
   const inArena =
     hero.x >= arena.minX - reach && hero.x <= arena.maxX + reach && hero.z >= arena.minZ - reach && hero.z <= arena.maxZ + reach;
-  const level = Math.abs(middle - (marmot ? enemy.y + ENEMY.marmotHeight / 2 : enemy.spot.y)) < ENEMY.noticeHeight + (marmot ? 0 : ENEMY.hoverAbove);
-  const nearby = level && inArena;
+  const hoverAbove = tuning.hoverAbove ?? ENEMY.hoverAbove;
+  const level = Math.abs(middle - (marmot ? enemy.y + ENEMY.marmotHeight / 2 : enemy.spot.y)) < ENEMY.noticeHeight + (marmot ? 0 : hoverAbove);
+  const nearby = level && inArena && enemy.grace === 0;
+  const patrolSpeed = marmot ? (tuning.patrolSpeed ?? 0) : 0;
+  const chaseSpeed = marmot ? (tuning.chaseSpeed ?? 0) : 0;
+  const pause = marmot ? 1 : (tuning.divePause ?? 1);
   const stayIn = (): void => {
     enemy.x = clamp(enemy.x, arena.minX, arena.maxX);
     enemy.z = clamp(enemy.z, arena.minZ, arena.maxZ);
   };
 
-  if (enemy.phase === 'concealed' && nearby) enter('idle');
+  // A scout with a beat to walk is never hidden.
+  if (enemy.phase === 'concealed' && patrolSpeed > 0) enemy.phase = 'patrol';
+  if ((enemy.phase === 'concealed' || enemy.phase === 'patrol') && nearby) enter('idle');
 
-  if (enemy.phase === 'idle') {
-    if (!nearby) {
+  if (enemy.phase === 'patrol') {
+    // Back and forth between home and the far end of its beat, with a look about at each end.
+    const far = enemy.spot.beat ?? { x: arena.minX + arena.maxX - enemy.spot.x, z: enemy.spot.z };
+    const end = enemy.leg === 0 ? far : { x: enemy.spot.x, z: enemy.spot.z };
+    enemy.pause = Math.max(0, enemy.pause - dt);
+    if (enemy.pause === 0) {
+      const gap = Math.hypot(end.x - enemy.x, end.z - enemy.z);
+      const step = patrolSpeed * dt;
+      if (gap > step) {
+        enemy.facing = Math.atan2(end.x - enemy.x, end.z - enemy.z);
+        enemy.x += ((end.x - enemy.x) / gap) * step;
+        enemy.z += ((end.z - enemy.z) / gap) * step;
+      } else {
+        enemy.x = end.x;
+        enemy.z = end.z;
+        enemy.leg = 1 - enemy.leg;
+        enemy.pause = ENEMY.patrolPause;
+      }
+      stayIn();
+    }
+  } else if (enemy.phase === 'idle') {
+    if (!nearby && patrolSpeed > 0) {
+      // The hero has left its patch: it gives up and goes back to its beat.
+      enter('patrol');
+      enemy.threat = 0;
+      enemy.pause = ENEMY.patrolPause;
+    } else if (!nearby) {
       // Home is fixed. It never follows a hero out of its patch.
       const gap = Math.hypot(enemy.spot.x - enemy.x, enemy.spot.z - enemy.z);
       const step = ENEMY.homeSpeed * tuning.speed * dt;
@@ -285,6 +357,14 @@ export const stepEnemy = (
             y: enemy.y,
             z: clamp(enemy.z - towardZ * ENEMY.dodgeDistance, arena.minZ, arena.maxZ),
           };
+        } else if (chaseSpeed > 0) {
+          // It comes after the hero, and stands its ground only to throw.
+          // A beat on the spot first, each time: that is the tell for the run.
+          const step = chaseSpeed * dt;
+          if (enemy.timer >= ENEMY.marmotReady && distance > step) {
+            enemy.x += towardX * step;
+            enemy.z += towardZ * step;
+          }
         } else if (distance > ENEMY.marmotFar) {
           enemy.x += towardX * ENEMY.marmotCloseSpeed * tuning.speed * dt;
           enemy.z += towardZ * ENEMY.marmotCloseSpeed * tuning.speed * dt;
@@ -294,7 +374,7 @@ export const stepEnemy = (
         }
       } else {
         // Stalk the hero from above. Only this follows; the warning and the dive are fixed.
-        const step = ENEMY.hoverSpeed * tuning.speed * dt;
+        const step = (tuning.followSpeed ?? ENEMY.hoverSpeed * tuning.speed) * dt;
         if (distance > step) {
           enemy.x += towardX * step;
           enemy.z += towardZ * step;
@@ -302,11 +382,15 @@ export const stepEnemy = (
           enemy.x = hero.x;
           enemy.z = hero.z;
         }
-        const height = clamp(middle + ENEMY.hoverAbove, enemy.spot.floor ?? -Infinity, enemy.spot.ceiling ?? Infinity);
+        const height = clamp(middle + hoverAbove, enemy.spot.floor ?? -Infinity, enemy.spot.ceiling ?? Infinity);
         enemy.y = approach(enemy.y, height, ENEMY.climbSpeed * tuning.speed * dt);
       }
       stayIn();
-      const ready = marmot ? enemy.timer >= ENEMY.marmotReady : enemy.timer >= ENEMY.mosquitoReady && enemy.y >= middle + ENEMY.diveAbove;
+      // A scout that chases throws once it is a few metres off, or has chased long enough; one close to the hero keeps coming.
+      const inRange = chaseSpeed === 0 || (distance >= ENEMY.marmotNear && (distance <= ENEMY.marmotFar || enemy.timer >= ENEMY.chaseLong));
+      const ready = marmot
+        ? enemy.timer >= ENEMY.marmotReady && inRange
+        : enemy.timer >= ENEMY.mosquitoReady * pause && enemy.y >= middle + ENEMY.diveAbove;
       if (enemy.phase === 'idle' && ready) {
         enter('warning');
         enemy.from = { x: enemy.x, y: marmot ? enemy.y + ENEMY.acornFrom : enemy.y, z: enemy.z };
@@ -351,7 +435,7 @@ export const stepEnemy = (
     else Object.assign(enemy, at);
     if (share === 1) enter('rest');
   } else if (enemy.phase === 'rest') {
-    if (enemy.timer >= ENEMY.rest * tuning.rest) {
+    if (enemy.timer >= ENEMY.rest * tuning.rest * pause) {
       enter('idle');
       enemy.threat = 0;
     }

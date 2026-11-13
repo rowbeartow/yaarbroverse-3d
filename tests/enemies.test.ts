@@ -6,7 +6,7 @@ import { describe, expect, it } from 'vitest';
 import { DIFFICULTIES } from '../src/game/difficulty';
 import { ENEMY, type Enemy, type EnemyPhase, type EnemySpot } from '../src/game/enemy';
 import { Game, IDLE, type Input } from '../src/game/game';
-import { HEROES, MOVE, STEP, type HeroName } from '../src/game/hero';
+import { HEROES, MOVE, STEP, fullJumpHeight, type HeroName } from '../src/game/hero';
 import { GROVE_DIFFICULTY } from '../src/levels/bouncing-grove/difficulty';
 import { buildGrove } from '../src/levels/bouncing-grove/layout';
 import { Bot } from './helpers/bot';
@@ -400,7 +400,244 @@ describe('after a fall, or after running out of hearts', () => {
   });
 });
 
+describe('a marmot scout that walks a beat and gives chase', () => {
+  // Normal's numbers in the grove, near enough.
+  const TOUGH = { warning: 0.7, speed: 1, rest: 1, patrolSpeed: 1.6, chaseSpeed: 3.4 };
+  // Home at x = 12 on a patch from 2 to 30, so the far end of its beat is x = 20.
+  const tough = (hero: HeroName = 'Yaarbro', tuning = TOUGH) => play(marmotAt(12), hero, { enemyTuning: tuning });
+  /** Parks the hero well off the patch, where no enemy notices it. */
+  const away = (game: Game): void => stand(game, -6);
+
+  it('is in plain view from the start and walks back and forth across its patch, with a look about at each end', () => {
+    const { game, enemy } = tough();
+    away(game);
+    game.step(IDLE);
+    expect(enemy.phase).toBe('patrol');
+    const seen: number[] = [];
+    let stoodStill = 0;
+    for (let i = 0; i < 20 / STEP; i += 1) {
+      const before = enemy.x;
+      game.step(IDLE);
+      seen.push(enemy.x);
+      if (enemy.x === before) stoodStill += 1;
+      expect(enemy.phase).toBe('patrol');
+    }
+    expect(Math.min(...seen)).toBeCloseTo(12, 5);
+    expect(Math.max(...seen)).toBeCloseTo(20, 5);
+    // It reaches the far end, comes back, and sets off again.
+    expect(seen.indexOf(20)).toBeGreaterThan(0);
+    expect(seen.lastIndexOf(12)).toBeGreaterThan(seen.indexOf(20));
+    expect(stoodStill * STEP).toBeGreaterThan(ENEMY.patrolPause * 2);
+  });
+
+  it('walks the beat its level gives it, when it gives one', () => {
+    const { game, enemy } = play({ ...marmotAt(12), beat: { x: 12, z: 3 } }, 'Yaarbro', { enemyTuning: TOUGH });
+    away(game);
+    run(game, {}, 3 / TOUGH.patrolSpeed + 0.1);
+    expect([enemy.x, enemy.z]).toEqual([12, 3]);
+  });
+
+  it('spots a hero on its patch, stands a beat, then comes after it', () => {
+    const { game, enemy } = tough();
+    stand(game, 3);
+    expect(run(game, {}, STEP * 2)).toEqual(['idle']);
+    const from = enemy.x;
+    run(game, {}, ENEMY.marmotReady - STEP * 4);
+    // The beat on the spot is its tell.
+    expect(enemy.x).toBe(from);
+    run(game, {}, 1);
+    expect(from - enemy.x).toBeCloseTo(TOUGH.chaseSpeed * 1, 0);
+  });
+
+  it('stops a few metres off to throw, with the warning first', () => {
+    const { game, enemy } = tough();
+    stand(game, 3);
+    const entered = run(game, {}, 3);
+    expect(entered.slice(0, 3)).toEqual(['idle', 'warning', 'attack']);
+    // It threw from within its range, not from where it first stood.
+    expect(enemy.x - 3).toBeLessThanOrEqual(ENEMY.marmotFar + 0.1);
+    expect(enemy.x - 3).toBeGreaterThanOrEqual(ENEMY.marmotNear);
+  });
+
+  it('throws from where it is, once it has chased long enough without getting near', () => {
+    const { game } = play(marmotAt(29), 'Yaarbro', { enemyTuning: { ...TOUGH, chaseSpeed: 0.5 } });
+    stand(game, 3);
+    const seen: Array<[EnemyPhase, number]> = [];
+    for (let i = 0; i < 4 / STEP; i += 1) {
+      game.step(IDLE);
+      for (const event of game.events) if (event.type === 'enemy') seen.push([event.phase, i * STEP]);
+    }
+    const warning = seen.find(([phase]) => phase === 'warning');
+    expect(warning?.[1]).toBeCloseTo(ENEMY.chaseLong, 1);
+  });
+
+  it('runs straight at a hero who is close, and touching it costs a heart', () => {
+    const { game, enemy } = tough();
+    stand(game, 10);
+    const entered = run(game, {}, 1.2);
+    expect(entered).not.toContain('warning');
+    expect(game.hearts).toBe(2);
+    // It hurt the hero, so it rests.
+    expect(enemy.phase).toBe('rest');
+  });
+
+  it('gives up when the hero leaves its patch, and goes back to its beat', () => {
+    const { game, enemy } = tough();
+    stand(game, 3);
+    run(game, {}, 0.8);
+    expect(enemy.x).toBeLessThan(12);
+    away(game);
+    expect(run(game, {}, STEP * 2)).toEqual(['patrol']);
+    run(game, {}, 20);
+    expect(enemy.phase).toBe('patrol');
+    expect(enemy.x).toBeGreaterThanOrEqual(12 - 1e-9);
+    expect(enemy.x).toBeLessThanOrEqual(20 + 1e-9);
+    expect(enemy.z).toBe(0);
+  });
+
+  it('never leaves its patch, even after a hero just outside it', () => {
+    const { game, enemy } = play({ ...marmotAt(4), notice: 3 }, 'Yaarbro', { enemyTuning: TOUGH });
+    stand(game, 0);
+    for (let i = 0; i < 4 / STEP; i += 1) {
+      game.step(IDLE);
+      expect(enemy.x).toBeGreaterThanOrEqual(2);
+    }
+  });
+
+  it('on its beat it hurts to walk into, and can be landed on', () => {
+    const walked = tough();
+    away(walked.game);
+    walked.game.step(IDLE);
+    Object.assign(walked.enemy, { grace: 60 });
+    stand(walked.game, 11.4);
+    walked.game.step(IDLE);
+    expect(walked.game.hearts).toBe(2);
+
+    const landed = tough();
+    away(landed.game);
+    landed.game.step(IDLE);
+    Object.assign(landed.enemy, { grace: 60, pause: 60 });
+    Object.assign(landed.game, { x: 12, z: 0, y: 2, vx: 0, vy: -3, vz: 0, grounded: false });
+    run(landed.game, {}, 0.4);
+    expect(landed.enemy.hits).toBeLessThan(ENEMY.marmotHits);
+    expect(landed.game.hearts).toBe(3);
+  });
+
+  it('a hero who keeps running is never caught: the chase is slower than a walk', () => {
+    const { game } = play(marmotAt(12), 'Yaarbro', { enemyTuning: { ...TOUGH, chaseSpeed: 4.6 } });
+    stand(game, 10);
+    run(game, { moveX: -1 }, 0.1);
+    // Run up and down the far side of the patch for a while.
+    for (let lap = 0; lap < 6; lap += 1) {
+      run(game, { moveZ: lap % 2 ? 1 : -1 }, 1);
+    }
+    expect(game.hearts).toBe(3);
+  });
+
+  it('without the two speeds it hides and holds its distance, as it always did', () => {
+    const { game, enemy } = play(marmotAt(12), 'Yaarbro', { enemyTuning: { warning: 1.5, speed: 0.7, rest: 1.4, patrolSpeed: 0, chaseSpeed: 0 } });
+    away(game);
+    run(game, {}, 3);
+    expect([enemy.phase, enemy.x]).toEqual(['concealed', 12]);
+    stand(game, 10.5);
+    run(game, {}, 0.4);
+    expect(enemy.x).toBeGreaterThan(12);
+  });
+});
+
+describe('a giant mosquito that keeps up and dives more often', () => {
+  const KEEN = { warning: 0.7, speed: 1, rest: 1, followSpeed: 5, hoverAbove: 3.4, divePause: 0.6 };
+  const keen = (tuning = KEEN) => play({ ...mosquitoAt(8), y: 4.6, ceiling: 6 }, 'Yaarbro', { enemyTuning: tuning });
+
+  it('keeps up with a hero walking along under it, where the slow one is left behind', () => {
+    const gap = (tuning: typeof KEEN | { warning: number; speed: number; rest: number }): number => {
+      const { game, enemy } = play({ ...mosquitoAt(8), y: 4.6, ceiling: 6 }, 'Yaarbro', { enemyTuning: tuning });
+      stand(game, 8);
+      // Hold it on watch, so only the following is measured.
+      enemy.timer = -60;
+      run(game, { moveX: 0.8 }, 2.5);
+      return game.x - enemy.x;
+    };
+    expect(gap(KEEN)).toBeLessThan(0.5);
+    expect(gap({ warning: 1, speed: 1, rest: 1 })).toBeGreaterThan(4);
+  });
+
+  it('hovers high enough that a full jump under it does not touch it', () => {
+    const { game, enemy } = keen();
+    stand(game, 8);
+    enemy.timer = -60;
+    run(game, {}, 1);
+    expect(enemy.y).toBeCloseTo(MOVE.bodyHeight / 2 + 3.4, 5);
+    run(game, { jump: true }, 0.9);
+    expect(game.hearts).toBe(3);
+  });
+
+  it('dives more often: less time getting ready and a shorter rest', () => {
+    const dives = (tuning: typeof KEEN): number => {
+      const { game } = keen(tuning);
+      stand(game, 8);
+      let count = 0;
+      for (let i = 0; i < 12 / STEP; i += 1) {
+        // Keep walking up and down the patch, so no dive lands.
+        game.step({ ...IDLE, moveX: Math.floor(i / 150) % 2 ? -1 : 1 });
+        for (const event of game.events) if (event.type === 'enemy' && event.phase === 'attack') count += 1;
+      }
+      return count;
+    };
+    expect(dives(KEEN)).toBeGreaterThan(dives({ ...KEEN, divePause: 1 }));
+  });
+});
+
+describe('after a hero is sent back to a safe bank', () => {
+  it('no enemy notices the hero for a moment, so nothing is on top of it before it can move', () => {
+    const { game, enemy } = play({ ...marmotAt(3), notice: 3 }, 'Yaarbro', { enemyTuning: { warning: 0.45, speed: 1.3, rest: 0.7, patrolSpeed: 2.2, chaseSpeed: 4.6 } });
+    // Walk off the near side: the fall returns the hero to the middle of the floor, on the scout's patch.
+    for (let i = 0; i < 600 && game.falls === 0; i += 1) game.step({ ...IDLE, moveZ: 1 });
+    expect(game.falls).toBe(1);
+    expect(enemy.grace).toBe(ENEMY.homeGrace);
+    const entered = run(game, {}, ENEMY.homeGrace - 0.1);
+    expect(entered).toEqual([]);
+    expect(game.hearts).toBe(3);
+    expect(ENEMY.homeGrace).toBeGreaterThan(MOVE.returnPause + 0.5);
+    expect(run(game, {}, 0.2)).toEqual(['idle']);
+  });
+});
+
 describe('the enemies of the Bouncing Grove', () => {
+  it('on Easy the scouts hide and hold their distance; on Normal and Hard they walk a beat and give chase, slower than a hero walks', () => {
+    const [easy, normal, hard] = DIFFICULTIES.map((difficulty) => GROVE_DIFFICULTY[difficulty]);
+    expect([easy.scoutPatrol, easy.scoutChase]).toEqual([0, 0]);
+    expect(normal.scoutPatrol).toBeGreaterThan(0);
+    expect(hard.scoutPatrol).toBeGreaterThan(normal.scoutPatrol);
+    expect(normal.scoutChase).toBeGreaterThan(normal.scoutPatrol);
+    expect(hard.scoutChase).toBeGreaterThan(normal.scoutChase);
+    expect(hard.scoutChase).toBeLessThan(MOVE.walkSpeed);
+  });
+
+  it('keeps a warning before every attack: long on Easy, noticeably shorter on Normal, brief on Hard', () => {
+    const seconds = DIFFICULTIES.map((difficulty) => ENEMY.warning * GROVE_DIFFICULTY[difficulty].enemyWarning);
+    expect(seconds[0]).toBeCloseTo(1.2, 5);
+    expect(seconds[1]).toBeLessThan(seconds[0] * 0.6);
+    expect(seconds[2]).toBeLessThan(seconds[1] * 0.75);
+    // Brief, but never gone: a third of a second is about as fast as a player can answer.
+    expect(seconds[2]).toBeGreaterThanOrEqual(0.33);
+  });
+
+  it('on Easy the mosquito is as it was; on Normal and Hard it keeps up, hovers clear of a jump and dives more often', () => {
+    const [easy, normal, hard] = DIFFICULTIES.map((difficulty) => GROVE_DIFFICULTY[difficulty]);
+    expect(easy.mosquitoFollow).toBeCloseTo(ENEMY.hoverSpeed * easy.enemySpeed, 5);
+    expect([easy.mosquitoHover, easy.mosquitoPause]).toEqual([ENEMY.hoverAbove, 1]);
+    expect(normal.mosquitoFollow).toBeGreaterThan(easy.mosquitoFollow * 2);
+    expect(hard.mosquitoFollow).toBeGreaterThan(MOVE.walkSpeed);
+    for (const numbers of [normal, hard]) {
+      // The top of a hero at the height of a full jump stays under the mosquito's underside.
+      expect(MOVE.bodyHeight / 2 + numbers.mosquitoHover - ENEMY.mosquitoHalfHeight).toBeGreaterThan(fullJumpHeight() + MOVE.bodyHeight);
+    }
+    expect(normal.mosquitoPause).toBeLessThan(1);
+    expect(hard.mosquitoPause).toBeLessThan(normal.mosquitoPause);
+  });
+
+
   it.each(DIFFICULTIES)('on %s: a scout in the clearing, a mosquito over the later high boughs, a scout at the foot of the climb', (difficulty) => {
     const level = buildGrove(difficulty);
     expect((level.enemies ?? []).map((spot) => [spot.id, spot.kind])).toEqual([
@@ -409,7 +646,16 @@ describe('the enemies of the Bouncing Grove', () => {
       ['scout-climb', 'marmot'],
     ]);
     const numbers = GROVE_DIFFICULTY[difficulty];
-    expect(level.enemyTuning).toEqual({ warning: numbers.enemyWarning, speed: numbers.enemySpeed, rest: numbers.enemyRest });
+    expect(level.enemyTuning).toEqual({
+      warning: numbers.enemyWarning,
+      speed: numbers.enemySpeed,
+      rest: numbers.enemyRest,
+      patrolSpeed: numbers.scoutPatrol,
+      chaseSpeed: numbers.scoutChase,
+      followSpeed: numbers.mosquitoFollow,
+      hoverAbove: numbers.mosquitoHover,
+      divePause: numbers.mosquitoPause,
+    });
   });
 
   it.each(DIFFICULTIES)('on %s: each one notices a hero only on its own footing, never in a section of diagonal jumps', (difficulty) => {
@@ -439,25 +685,26 @@ describe('the enemies of the Bouncing Grove', () => {
 
   it('gives Easy the longest warnings and rests and the slowest enemies, and Hard the reverse', () => {
     const [easy, normal, hard] = DIFFICULTIES.map((difficulty) => GROVE_DIFFICULTY[difficulty]);
-    expect([easy.enemyWarning, normal.enemyWarning, hard.enemyWarning]).toEqual([1.5, 1, 0.65]);
+    expect([easy.enemyWarning, normal.enemyWarning, hard.enemyWarning]).toEqual([1.5, 0.7, 0.45]);
     expect([easy.enemySpeed, normal.enemySpeed, hard.enemySpeed]).toEqual([0.7, 1, 1.3]);
     expect([easy.enemyRest, normal.enemyRest, hard.enemyRest]).toEqual([1.4, 1, 0.7]);
   });
 
   describe.each(DIFFICULTIES)('a run through the enemies on %s', (difficulty) => {
-    it.each(HEROES)('%s reaches the leaf without losing a heart, though every enemy noticed and warned', (hero) => {
+    it.each(HEROES)('%s reaches the leaf without losing a heart, though every enemy noticed the hero', (hero) => {
       const level = buildGrove(difficulty);
       const game = new Game(level, difficulty, hero);
       const bot = new Bot(level);
-      const warned = new Set<string>();
+      const noticed = new Set<string>();
       for (let i = 0; i < 120 / STEP && !game.complete; i += 1) {
         game.step(bot.input(game));
-        for (const event of game.events) if (event.type === 'enemy' && event.phase === 'warning') warned.add(event.id);
+        // A scout notices by going on watch; the mosquito is always on watch, so its first warning is the sign.
+        for (const event of game.events) if (event.type === 'enemy' && (event.phase === 'idle' || event.phase === 'warning')) noticed.add(event.id);
       }
       expect(game.complete).toBe(true);
       expect(game.heartsLost).toBe(0);
       expect(game.falls).toBe(0);
-      expect([...warned].sort()).toEqual(['mosquito-boughs', 'scout-clearing', 'scout-climb']);
+      expect([...noticed].sort()).toEqual(['mosquito-boughs', 'scout-clearing', 'scout-climb']);
       // On Easy, and here on every difficulty, with walk and jump alone.
       expect(game.movesUsed).toBe(0);
     });
