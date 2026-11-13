@@ -13,7 +13,11 @@ export interface Choice {
 
 const STORAGE_KEY = 'yaarbroverse-3d:choice';
 
-/** The hero and difficulty this device last chose. Falls back quietly if storage is blocked. */
+/**
+ * The hero and difficulty this device chose before there were players. It is
+ * what the game is built with until a player is picked, and what a first
+ * player starts from. Falls back quietly if storage is blocked.
+ */
 export const loadChoice = (): Choice => {
   const fallback: Choice = { hero: 'Yaarbro', difficulty: 'normal' };
   try {
@@ -29,14 +33,6 @@ export const loadChoice = (): Choice => {
     // Private windows and blocked storage: the game still works, it just forgets.
   }
   return fallback;
-};
-
-export const saveChoice = (choice: Choice): void => {
-  try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(choice));
-  } catch {
-    // Nothing to do: see loadChoice.
-  }
 };
 
 /** Play time as minutes, seconds and tenths: 1:07.4 */
@@ -78,6 +74,7 @@ export class Screens {
   private heartsShown = '';
   private readonly play = el<HTMLButtonElement>('#play');
   private messageTimer = 0;
+  private readonly marks: Array<() => void> = [];
 
   constructor(
     private choice: Choice,
@@ -91,11 +88,13 @@ export class Screens {
     for (const difficulty of DIFFICULTIES) {
       el(`[data-difficulty="${difficulty}"] small`).textContent = level.blurbs[difficulty];
     }
-    this.radioGroup('.heroes', 'hero', HEROES, () => this.choice.hero, (hero) => ({ ...this.choice, hero }));
-    this.radioGroup('.levels', 'difficulty', DIFFICULTIES, () => this.choice.difficulty, (difficulty) => ({
-      ...this.choice,
-      difficulty,
-    }));
+    this.marks.push(this.radioGroup('.heroes', 'hero', HEROES, () => this.choice.hero, (hero) => ({ ...this.choice, hero })));
+    this.marks.push(
+      this.radioGroup('.levels', 'difficulty', DIFFICULTIES, () => this.choice.difficulty, (difficulty) => ({
+        ...this.choice,
+        difficulty,
+      })),
+    );
     el('#controls-note').textContent = isTouchDevice()
       ? 'Left thumb moves. Right thumb jumps: hold for a higher jump. The smaller button above Jump is Yaarbro’s roll or Caputo’s pounce.'
       : 'Arrow keys or W A S D to move. Space to jump: hold for a higher jump. X or Shift for Yaarbro’s roll or Caputo’s pounce. Esc to pause. M turns sound off and on.';
@@ -108,7 +107,7 @@ export class Screens {
     values: readonly T[],
     current: () => T,
     apply: (value: T) => Choice,
-  ): void {
+  ): () => void {
     const buttons = values.map((value) => el<HTMLButtonElement>(`${selector} [data-${attribute}="${value}"]`));
     const mark = (): void => {
       buttons.forEach((button, i) => {
@@ -133,6 +132,20 @@ export class Screens {
       });
     });
     mark();
+    return mark;
+  }
+
+  /** Shows a hero and difficulty as picked, without reporting it as a new choice: a player's own, when they are picked. */
+  setChoice(choice: Choice): void {
+    this.choice = choice;
+    for (const mark of this.marks) mark();
+  }
+
+  /** Who is playing, on the start screen. The name goes on the page as plain text. */
+  setPlayer(name: string, badge: HTMLElement): void {
+    el('#player-badge').replaceChildren(badge);
+    el('#player-name').textContent = name;
+    el('#switch-player').setAttribute('aria-label', `${name} is playing. Switch player.`);
   }
 
   /**
@@ -173,17 +186,17 @@ export class Screens {
     el<HTMLImageElement>(`[data-hero="${hero}"] img`).src = picture;
   }
 
-  /** Shows exactly one of the big screens, or none while playing. */
-  show(screen: 'start' | 'paused' | 'end' | 'none'): void {
+  /** Shows exactly one of the big screens, or none while playing. "Who's playing?" (src/ui/who.ts) opens and closes itself. */
+  show(screen: 'who' | 'start' | 'paused' | 'end' | 'none'): void {
     this.start.hidden = screen !== 'start';
     this.paused.hidden = screen !== 'paused';
     this.end.hidden = screen !== 'end';
     const playing = screen === 'none' || screen === 'paused';
     this.hud.hidden = !playing;
     this.touch.hidden = !(screen === 'none' && isTouchDevice());
-    const focus = { start: '#play', paused: '#resume', end: '#again', none: '' }[screen];
+    const focus = { who: '', start: '#play', paused: '#resume', end: '#again', none: '' }[screen];
     if (focus) el(focus).focus({ preventScroll: true });
-    else (document.activeElement as HTMLElement | null)?.blur();
+    else if (screen === 'none') (document.activeElement as HTMLElement | null)?.blur();
   }
 
   setPlace(levelName: string, difficulty: Difficulty): void {

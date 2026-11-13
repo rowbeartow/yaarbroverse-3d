@@ -62,11 +62,31 @@ export const ready = async (page: Page, timeout = 60_000): Promise<void> => {
   await expect(page.locator('#play')).toBeEnabled({ timeout });
 };
 
-/** Opens the game, waits until it is ready to play, and collects anything the browser complains about. */
+/**
+ * Gets past "Who's playing?": picks the named player if they are on this
+ * device, and adds them if not. The name is made up.
+ */
+export const pickPlayer = async (page: Page, name = 'Pip'): Promise<void> => {
+  await expect(page.locator('#who')).toBeVisible();
+  const tile = page.locator('#who-players .player:not(.add)', { hasText: name });
+  if (await page.locator('#who-list').isVisible()) {
+    if (await tile.count()) {
+      await tile.first().click();
+      await expect(page.locator('#start')).toBeVisible();
+      return;
+    }
+    await page.locator('#who-add').click();
+  }
+  await page.locator('#who-name').fill(name);
+  await page.locator('#who-done').click();
+  await expect(page.locator('#start')).toBeVisible();
+};
+
+/** Opens the game, picks a player, waits until it is ready to play, and collects anything the browser complains about. */
 export const open = async (page: Page, query = ''): Promise<string[]> => {
   const problems = watch(page);
   await page.goto(address(query));
-  await expect(page.locator('#start')).toBeVisible();
+  await pickPlayer(page);
   await ready(page);
   return problems;
 };
@@ -88,6 +108,8 @@ export const frames = (page: Page, count: number): Promise<void> =>
   );
 
 export const play = async (page: Page, hero = 'Yaarbro', difficulty = 'normal'): Promise<void> => {
+  // After a reload, "Who's playing?" is up again.
+  if (await page.locator('#who').isVisible()) await pickPlayer(page);
   await page.locator(`[data-hero="${hero}"]`).click();
   await page.locator(`[data-difficulty="${difficulty}"]`).click();
   await page.locator('#play').click();

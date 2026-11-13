@@ -36,6 +36,9 @@ page.on('console', (message) => {
 });
 
 await page.goto(`http://localhost:${process.env.PORT || 4173}/?quality=${quality}`);
+// "Who's playing?" comes first: add a made-up player.
+await page.locator('#who-name').fill('Pip');
+await page.locator('#who-done').click();
 await page.locator('#play:not([disabled])').waitFor({ timeout: 240_000 });
 await page.locator(`[data-hero="${hero}"]`).click();
 await page.locator(`[data-difficulty="${difficulty}"]`).click();

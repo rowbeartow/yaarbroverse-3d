@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { open, play, ready, snapshot, standOn } from './helpers';
+import { open, pickPlayer, play, ready, snapshot, standOn } from './helpers';
 
 test.describe('start screen', () => {
   test('loads without errors and draws the grove', async ({ page }) => {
@@ -28,11 +28,12 @@ test.describe('start screen', () => {
     }
   });
 
-  test('remembers the hero and difficulty on this device', async ({ page }) => {
+  test('remembers each player’s hero and difficulty on this device', async ({ page }) => {
     await open(page);
     await page.locator('[data-hero="Caputo"]').click();
     await page.locator('[data-difficulty="hard"]').click();
     await page.reload();
+    await pickPlayer(page);
     await ready(page);
     await expect(page.locator('[data-hero="Caputo"]')).toHaveAttribute('aria-checked', 'true');
     await expect(page.locator('[data-difficulty="hard"]')).toHaveAttribute('aria-checked', 'true');

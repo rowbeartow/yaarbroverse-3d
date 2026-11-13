@@ -41,9 +41,47 @@
       </div>
     </div>
 
-    <!-- Start screen -->
-    <section id="start" class="screen" aria-labelledby="start-title">
+    <!-- Who's playing? Shown first, before the start screen. Names stay on this device. -->
+    <section id="who" class="screen" hidden aria-labelledby="who-title">
       <div class="card">
+        <p class="eyebrow">Yaarbroverse 3D</p>
+        <h1 id="who-title">Who’s playing?</h1>
+
+        <div id="who-list">
+          <div class="players" id="who-players"></div>
+          <p class="note">Names and progress stay on this device.</p>
+          <button type="button" id="who-manage" class="quiet">For grown-ups</button>
+        </div>
+
+        <form id="who-form" hidden autocomplete="off">
+          <label for="who-name">Type your name</label>
+          <input id="who-name" type="text" autocomplete="off" autocorrect="off" autocapitalize="words" spellcheck="false" enterkeyhint="done" />
+          <h2 id="who-colour-label">Pick a colour</h2>
+          <div class="swatches" id="who-swatches" role="radiogroup" aria-labelledby="who-colour-label"></div>
+          <p class="note problem" id="who-problem" role="alert"></p>
+          <button type="submit" id="who-done" class="go">Let’s go</button>
+          <button type="button" id="who-back" class="quiet">Back</button>
+          <p class="note">Names and progress stay on this device.</p>
+        </form>
+
+        <div id="who-grown" hidden>
+          <p class="lead">Reset a player’s progress, or take a player off this device.</p>
+          <div id="who-rows"></div>
+          <button type="button" id="who-grown-done" class="go">Done</button>
+        </div>
+
+        <div id="who-confirm" hidden role="alertdialog" aria-labelledby="who-confirm-text">
+          <p class="lead" id="who-confirm-text"></p>
+          <button type="button" id="who-confirm-no" class="go">No, keep it</button>
+          <button type="button" id="who-confirm-yes" class="danger"></button>
+        </div>
+      </div>
+    </section>
+
+    <!-- Start screen -->
+    <section id="start" class="screen" hidden aria-labelledby="start-title">
+      <div class="card">
+        <button type="button" id="switch-player" aria-label="Switch player"><span id="player-badge"></span><b id="player-name"></b><small>Switch player</small></button>
         <p class="eyebrow">Yaarbroverse 3D</p>
         <h1 id="start-title">The Bouncing Grove</h1>
         <p class="lead" id="start-lead">Find the golden leaf, tucked in the canopy.</p>
@@ -67,7 +105,7 @@
         </div>
         <button type="button" id="play" class="go" disabled>Play</button>
         <p class="note" id="controls-note"></p>
-        <p class="note">This device remembers your choices.</p>
+        <p class="note">This device remembers each player’s choices and progress.</p>
       </div>
     </section>
 

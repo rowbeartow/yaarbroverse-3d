@@ -1,13 +1,21 @@
 # Session handoff
 
-Last updated: 2026-11-13 (milestone five, step 1)
+Last updated: 2026-11-13 (milestone five, step 2)
 
 ## Start here
 
 **Milestone five is under way** (best times, a ghost to race, saved progress and a level picker; the owner's order is in `docs/decisions.md`, 2026-11-13). Its five pull requests, in order: levels as a recipe, profiles and saved progress, the level picker (waits for the owner's OK on a preview page), best times, the ghost.
 
-- **Step 1, levels as a recipe: the pull request this version of the handoff arrived in.** If you are reading this on `main`, it has merged. The game builds its level from the level list (`src/levels/index.ts`). `docs/adding-a-level.md` is the recipe for a new level. The Sandbox (`src/levels/sandbox/`) is a tiny development level that opens only with `?level=sandbox`. `tests/levels.test.ts` runs the bot over every listed level, and `tests/browser/levels.spec.ts` plays the Sandbox to its end card.
-- Steps 2 to 5 are not started.
+- **Step 1, levels as a recipe: pull request 35, merged 2026-11-13.** The game builds its level from the level list (`src/levels/index.ts`). `docs/adding-a-level.md` is the recipe for a new level. The Sandbox (`src/levels/sandbox/`) is a tiny development level that opens only with `?level=sandbox`. `tests/levels.test.ts` runs the bot over every listed level, and `tests/browser/levels.spec.ts` plays the Sandbox to its end card.
+- **Step 2, profiles and saved progress: the pull request this version of the handoff arrived in.** If you are reading this on `main`, it has merged.
+  - "Who's playing?" comes up first on every visit (`src/ui/who.ts`): pick a player, or add one with a typed name (12 characters at most) and one of six colours, up to four players. With nobody on the device yet it opens on the form.
+  - Each player keeps their own last hero and difficulty and their own bests. The start screen shows who is playing, with "Switch player".
+  - What is saved (`src/save/players.ts`), under the one storage key `yaarbroverse-3d:players`: for each player, level, hero and difficulty, the best time and the fewest falls, kept separately. Only a run that reached the golden leaf is saved. Nothing shows these yet: the level picker (step 3) and the end card (step 4) will.
+  - "For grown-ups" on that screen: "Reset progress" (keeps the name, colour and choices) and "Remove player", each behind a question whose safe answer is the big button.
+  - Reading and writing never throw. Saved data that is missing or damaged is dropped piece by piece and the game carries on. With storage blocked, everything works until the page closes.
+  - A name is only ever put on the page as plain text. `tests/browser/players.spec.ts` checks no request carries it.
+  - The old key `yaarbroverse-3d:choice` is no longer written. A first player on a device starts from the hero and difficulty in it.
+- Steps 3 to 5 are not started.
 
 **Milestone four is done: the Bouncing Grove has sound and music.** The game is live at https://rowbeartow.github.io/yaarbroverse-3d/ . The likely next milestone is a second area (see "What's next"); the owner has not set it yet.
 
@@ -185,7 +193,7 @@ Milestone four (sound and music) is done, in the pull requests listed under "Sta
 - **End card.** Difficulty, hero, time, falls, hearts lost, date. "Play again" returns to the start screen.
 - **Controls.** Mac: arrows or W A S D, Space, X or Shift for the hero's own move, Esc, M for sound off and on. Touch: drag the left half to move, press the right half to jump, and a smaller round button above Jump for the hero's own move.
 - **Turn sideways.** A touch device whose page is taller than wide gets a "Turn sideways to play" card.
-- **This device remembers** the last hero and difficulty, and whether sound is off.
+- **This device remembers** its players (see "Start here") and whether sound is off.
 - **Size.** The whole download is 10.06 MB (budget 20 MB), of which sound and music are 1.81 MB (budget 4 MB). Both are checked on every build.
 - **Credits.** `CREDITS.md` lists every third-party file. All are CC0, the sounds and music included. It also lists the hero and enemy models, which are not: the README says the characters, their art and the models are all rights reserved.
 - **Checks on every pull request.** `.github/workflows/checks.yml`, three jobs: the private-terms check; rule tests, build with size check and browser checks in Chromium; browser checks in WebKit. The two browser jobs run inside Playwright's container image, pinned to the Playwright version in `package.json` (1.63.0), so a run installs nothing from Ubuntu's servers. Before this, on 2026-11-11, four runs in a row failed before any test because GitHub's machines could not reach those servers.
@@ -218,7 +226,6 @@ Milestone four (sound and music) is done, in the pull requests listed under "Sta
 - The high boughs are logs on tall snags. They read clearly as footing, but they do not look like living boughs growing from trees.
 - A hero who falls from high up drops a long way before the fall is counted (the rule is a fixed height, 6 m below the start), and the camera follows it down.
 - The test bot is the only thing that has played the whole level. It measures whether each difficulty can be finished and how long a perfect run takes, not whether a jump reads well or feels fair.
-- No saved progress, one player.
 - Sound is the same in both ears: an enemy on the left does not sound from the left.
 - Footsteps are counted from distance walked, not from the hero's feet touching down, so a step can sound a moment off the animation.
 - The golden leaf tune is ten seconds long, and the end card appears under two seconds into it.
