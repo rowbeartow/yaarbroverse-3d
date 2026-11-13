@@ -5,7 +5,7 @@
 import { describe, expect, it } from 'vitest';
 import { GameSounds, FAR, NEAR, byDistance } from '../src/audio/game-sounds';
 import { MUTE_KEY, Sound, type Memory, type PlayOptions, type Speaker } from '../src/audio/mix';
-import type { SoundName } from '../src/audio/sounds';
+import { VOICE, type SoundName } from '../src/audio/sounds';
 import { Game } from '../src/game/game';
 import { buildGrove } from '../src/levels/bouncing-grove/layout';
 import { JUMP, RIGHT, hold, solid, yard } from './helpers/yard';
@@ -453,6 +453,36 @@ describe('in the grove', () => {
     // Resting and going back on watch make no sound.
     expect(heard({ type: 'boss', id, what: 'phase', phase: 'rest', attack: 'throw' })).toEqual([]);
     expect(heard({ type: 'boss', id, what: 'phase', phase: 'idle', attack: null })).toEqual([]);
+  });
+
+  it("a boss's warnings, throws and hits are the scout's sounds played lower, and nothing else is", () => {
+    const game = grove();
+    const { speaker, sounds } = listening(game);
+    const id = 'marmot-chief';
+    game.events = [
+      { type: 'boss', id, what: 'phase', phase: 'intro', attack: null },
+      { type: 'boss', id, what: 'phase', phase: 'warning', attack: 'throw' },
+      { type: 'boss', id, what: 'phase', phase: 'attack', attack: 'throw' },
+      { type: 'boss', id, what: 'phase', phase: 'roar', attack: null },
+      { type: 'boss', id, what: 'hit', how: 'stomp', left: 3 },
+      { type: 'boss', id, what: 'phase', phase: 'attack', attack: 'charge' },
+      { type: 'boss', id, what: 'blocked' },
+      { type: 'boss', id, what: 'beaten' },
+      { type: 'strike', id: 'x', kind: 'marmot', how: 'stomp', left: 1 },
+    ];
+    sounds.step(game);
+    expect(speaker.played.map((entry) => [entry.name, entry.options.voice])).toEqual([
+      ['marmotTell', 'chief'],
+      ['marmotTell', 'chief'],
+      ['marmotThrow', 'chief'],
+      ['marmotTell', 'chief'],
+      ['strike', 'chief'],
+      ['pounce', undefined],
+      ['bounce', undefined],
+      ['bossBeaten', undefined],
+      ['strike', undefined],
+    ]);
+    expect(VOICE.chief.rate).toBeLessThan(VOICE.yaarbro.rate);
   });
 
   it('a sidekick its boss has not called makes no whine', () => {

@@ -196,10 +196,16 @@ export const SOUNDS = {
 
 export type SoundName = keyof typeof SOUNDS;
 
-/** How each hero's footsteps differ. Caputo's are a cat's: quieter, lighter and with the edge taken off. */
-export const STEP_VOICE = {
+/**
+ * Who a sound is made by, when that changes how it is played. Caputo's
+ * footsteps are a cat's: quieter, lighter and with the edge taken off. A boss
+ * plays the scout's sounds lower (0.7 of the speed is about six notes down,
+ * and that much longer), so it sounds as big as it looks.
+ */
+export const VOICE = {
   yaarbro: { level: 0, rate: 1, soften: 0 },
   caputo: { level: -6, rate: 1.25, soften: 1500 },
+  chief: { level: 0, rate: 0.7, soften: 0 },
 } as const;
 
 /** Decibels to the number a volume control takes. */

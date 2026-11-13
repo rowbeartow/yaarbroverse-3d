@@ -384,3 +384,7 @@ Supersedes: none
 ## 2026-11-13 A ghost holds up to 2,400 samples
 Reason: Claude's call. A run of the grove with the chief's fight is longer than the 80 seconds that 1,200 samples hold at full rate, so every ghost on Normal and Hard would have been kept at half rate. 2,400 samples hold 160 seconds at 15 a second. A ghost is now up to about 26,000 characters, and four dozen of the biggest come to about a megabyte and a quarter, still well inside a browser's storage.
 Supersedes: "never more than 1,200 samples" in "The ghost is the recording of the best time, drawn only, and kept apart from the progress". The rest of that entry stands.
+
+## 2026-11-13 The owner approved the marmot chief, and it sounds lower than the scout
+Reason: The owner's OK on the preview of the whole fight, and on these calls by name: the chief's bank as a checkpoint on every difficulty, the camera pulling back for the fight, the mosquito climbing back before it warns, the longer ghost, and the words "Hit it while it rests!". His instruction with it: the chief's warnings, throws and hits play lower in pitch than the scout's, so it sounds as big as it looks. Claude's call on how much: 0.7 of the speed, about six notes down (`VOICE.chief` in `src/audio/sounds.ts`). They are the same recordings, so nothing new is downloaded. Its charge and a landing that bounces off it are unchanged.
+Supersedes: none

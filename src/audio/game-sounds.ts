@@ -95,13 +95,15 @@ export class GameSounds {
       else if (event.type === 'goal') sound.playTune('leafTune');
       else if (event.type === 'boss') {
         // A boss is loud enough to be heard across its arena: no fading with distance.
-        if (event.what === 'hit') sound.play('strike');
+        // Its warnings, throws and hits are the scout's sounds played lower, so it sounds its size.
+        const big = { voice: 'chief' } as const;
+        if (event.what === 'hit') sound.play('strike', big);
         else if (event.what === 'blocked') sound.play('bounce');
         else if (event.what === 'beaten') sound.play('bossBeaten');
-        else if (event.what === 'phase' && event.phase === 'warning') sound.play('marmotTell');
-        else if (event.what === 'phase' && event.phase === 'attack' && event.attack === 'throw') sound.play('marmotThrow');
+        else if (event.what === 'phase' && event.phase === 'warning') sound.play('marmotTell', big);
+        else if (event.what === 'phase' && event.phase === 'attack' && event.attack === 'throw') sound.play('marmotThrow', big);
         else if (event.what === 'phase' && event.phase === 'attack' && event.attack === 'charge') sound.play('pounce');
-        else if (event.what === 'phase' && (event.phase === 'intro' || event.phase === 'roar')) sound.play('marmotTell');
+        else if (event.what === 'phase' && (event.phase === 'intro' || event.phase === 'roar')) sound.play('marmotTell', big);
       }
       else if (event.type === 'enemy') {
         const enemy = game.enemies.find((candidate) => candidate.spot.id === event.id);

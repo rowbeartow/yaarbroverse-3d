@@ -15,8 +15,8 @@ import type { SoundName } from './sounds';
 export interface PlayOptions {
   /** Louder or quieter, as a share: 1 is as listed, 0.5 is half. Used for distance. */
   volume?: number;
-  /** Whose footstep it is. Caputo's are lighter and softer. */
-  voice?: 'yaarbro' | 'caputo';
+  /** Who makes it. Caputo's footsteps are lighter and softer; a boss's sounds are lower. */
+  voice?: 'yaarbro' | 'caputo' | 'chief';
 }
 
 /** What makes the noise. Every call may be made any number of times. */

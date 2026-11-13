@@ -40,7 +40,7 @@ Milestone six, in the order the owner set:
 **What nobody has checked yet in milestone six, and the owner is the one who can:**
 
 1. **How any of it moves.** A cloud session only sees still frames. The owner watched the tougher enemies on the preview page; nobody has watched them in the game itself, or the flash and shove of a hit, or the boss's health bar and the camera pulling back.
-2. **How the fight sounds.** The boss music and the "boss beaten" sound were picked on the sound board, not heard in the game. The chief's warnings, throws and hits use the scout's sounds.
+2. **How the fight sounds.** The boss music and the "boss beaten" sound were picked on the sound board, not heard in the game. The chief's warnings, throws and hits are the scout's sounds played lower (0.7 of the speed, `VOICE.chief` in `src/audio/sounds.ts`), at the owner's word, so it sounds as big as it looks. Nobody has heard that either: if it is too low or not low enough, that one number changes it.
 3. **Whether Easy's chief is easy enough for the younger player, and Hard's is work enough for the older player.** The numbers are in one place if not.
 4. **The frame rate in the fight**, in Safari on the Mac with `?fps` on the address: the chief, two mosquitoes and the hero are on screen together.
 5. **Safari itself and a real iPad.** The checks pass in WebKit built for Linux.
@@ -297,9 +297,10 @@ Milestone four (sound and music) is done, in the pull requests listed under "Sta
 ## What's next
 
 1. **Grove variety** (the owner's next milestone). The vertical-log hops appear three times in the grove: the stumps of section 2, the mushrooms over open air in section 4 and the snags and mushrooms of section 6 all step left and right and climb. Keep the best of them and replace the other two with different obstacles. What it needs from the owner first: which one is "the best" (or leave to pick), and an approved plan for the two replacements. Every piece of the grove comes from the Caputo Mountain forest or from what he says; nothing in the forest moves, so a moving platform needs his word. The route's numbers are in `src/levels/bouncing-grove/difficulty.ts`, its shape in `layout.ts`, and the bot and the rule tests check any change.
-2. **The owner and the kids play milestone six** and say what is off (see "What nobody has checked yet"). Tuning is numbers in `difficulty.ts`: `chief` for the boss, `enemyWarning`, `scoutChase` and the rest for the enemies.
-3. **Then the lake**, and the rest of the roadmap in "Start here". A level that is not the forest needs its own surroundings and music; `docs/adding-a-level.md` says where those go, and how to end a level with a boss.
-4. **Ideas that came up and were not asked for** are not in the code: a run clip for the scout and clips of its own for the chief, sounds of its own for the chief, a hint on screen the first time a guarded boss is open, remembering the last area each player picked, a ghost of someone else's run, sound that moves left and right with what makes it.
+2. **Check whether saved ghosts will outgrow browser storage** (the owner asked for this in the next milestone). A ghost is now up to about 26,000 characters, and each player keeps one for every level, hero and difficulty, so more levels and longer runs multiply it. A browser's storage (`localStorage`, where `src/save/ghosts.ts` keeps them) holds about 5 MB for the whole site, and Safari counts two bytes a character. Work out the worst case for four players across the levels on the roadmap. If it will not fit, move the ghosts to IndexedDB, which has room to spare, and carry over the ghosts already saved. Players and bests can stay where they are.
+3. **The owner and the kids play milestone six** and say what is off (see "What nobody has checked yet"). Tuning is numbers in `difficulty.ts`: `chief` for the boss, `enemyWarning`, `scoutChase` and the rest for the enemies.
+4. **Then the lake**, and the rest of the roadmap in "Start here". A level that is not the forest needs its own surroundings and music; `docs/adding-a-level.md` says where those go, and how to end a level with a boss.
+5. **Ideas that came up and were not asked for** are not in the code: a run clip for the scout and clips of its own for the chief, recorded sounds of its own for the chief, a hint on screen the first time a guarded boss is open, remembering the last area each player picked, a ghost of someone else's run, sound that moves left and right with what makes it.
 
 ## Known limits
 
