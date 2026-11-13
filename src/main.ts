@@ -50,7 +50,7 @@ const boot = (): void => {
   let sinceGoal = 0;
   let turned = false;
   const seen = new Set<string>();
-  /** Scouts that have already come out of hiding this run. */
+  /** Scouts that have already noticed the hero this run. */
   const met = new Set<string>();
   /** Game time until which a line about hearts or enemies keeps the screen. */
   let newsUntil = 0;
@@ -278,9 +278,10 @@ const boot = (): void => {
       else if (event.type === 'hurt') news('Out of hearts. Back to safety!', 2.5);
       else if (event.type === 'restored') news(`Safe again, with all ${level.hearts} hearts.`, 3);
       else if (event.type === 'enemy' && event.phase === 'idle' && event.kind === 'marmot' && !met.has(event.id)) {
-        // The first time a scout comes out of hiding.
+        // The first time a scout notices the hero.
         met.add(event.id);
-        news('A rustle in the roots… Marmot scout!', 2.5);
+        // A scout that walks a beat was in plain view; one that hides was not.
+        news(level.enemyTuning?.patrolSpeed ? 'The marmot scout has spotted you!' : 'A rustle in the roots… Marmot scout!', 2.5);
       } else if (event.type === 'strike') {
         const name = event.kind === 'marmot' ? 'Marmot' : 'Mosquito';
         news(event.left > 0 ? `${name} knocked back!` : `${name} sent packing!`, 2.5);

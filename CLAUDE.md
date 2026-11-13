@@ -25,7 +25,7 @@ How it fits together:
 
 - `src/game/`: the rules. One hero in one level, advanced in fixed steps of 1/60 second. No browser or 3D code, so tests run it without a screen.
   - `ghost.ts`: records where a hero was during a run and gives it back at any moment, as small text for storage. Looked at only: the rules never see a ghost.
-  - `enemy.ts`: the marmot scout and the giant mosquito: what each does, what hurts a hero and what strikes an enemy. `game.ts` steps them with the hero.
+  - `enemy.ts`: the marmot scout and the giant mosquito: what each does, what hurts a hero and what strikes an enemy. `game.ts` steps them with the hero. A level's difficulty can make a scout walk a beat and give chase, and the mosquito keep up and dive more often.
 - `src/levels/index.ts`: the level list. The game builds whichever level is chosen from it, and the rule tests and the bot run over every level in it. `docs/adding-a-level.md` is the recipe for a new one.
 - `src/levels/<level>/difficulty.ts`: every Easy, Normal and Hard number for that level, in one file. `layout.ts` next to it builds the level from those numbers. `level.ts` is what the level brings to the list: its name, layout, scenery and music. `src/levels/sandbox/` is a tiny development level, never shown to players.
 - `src/view/`: draws the level and hero and moves the camera. Looks only.
@@ -67,6 +67,7 @@ Node 22 (`.nvmrc`).
 - Compress a hero model: `node tools/compress-hero.mjs <model.glb> <name>` (see the top of that file)
 - Hero preview page: `npm run assets`, then `node tools/preview/build.mjs <rigged caputo.glb> <folder>` (see the top of that file, which also says how to publish it). Publish the folder as a private Claude artifact and wait for the owner's OK before merging a change to a hero. `node tools/preview/stills.mjs` takes still frames of the page, for judging a clip in a session that cannot watch it move, and `node tools/preview/measure.mjs` measures how far planted paws slide in each gait and at each change of gait.
 - Enemy preview page: `node tools/preview/enemies.mjs <folder> marmot=<rigged.glb> mosquito=<rigged.glb>`, published as a private Claude artifact for the owner's OK before a change to an enemy merges. `node tools/preview/enemy-stills.mjs` takes still frames of it.
+- Arena preview page (enemies and bosses at full speed, on the game's own rules, in a blocked-out level): `npm run assets`, then `node tools/preview/arena.mjs <folder> marmot=<rigged.glb> mosquito=<rigged.glb> yaarbro=<rigged.glb> caputo=<rigged.glb>`, published as a private Claude artifact for the owner's OK before a change to how an enemy behaves merges. `node tools/preview/arena-stills.mjs` takes still frames of it. The tops of those files say the rest.
 - Enemy model candidates: `NODE_USE_ENV_PROXY=1 node tools/meshy-image-to-3d.mjs <picture.png> <scratch folder> <name>` asks Meshy for three models from one picture (30 credits each; it prints the balance before and after, and never prints a key). Then `node tools/preview/candidates.mjs <scratch folder> <page folder>` builds the page the owner picks on, and `node tools/preview/candidate-stills.mjs` takes a still of it. The tops of those files say the rest.
 - Pictures of the screens ("Who's playing?", the level picker, a level card), for a preview page before a change to them merges: with the built game served, `node tools/preview/screen-shots.mjs <folder> [width] [height]`.
 - Sound board: `node tools/preview/sounds.mjs <folder> [<extras folder>]` builds the page the owner listens to every sound on, published as a private Claude artifact for his OK before a sound goes into the game or changes. The top of that file says the rest.
@@ -77,7 +78,7 @@ Node 22 (`.nvmrc`).
 
 ## Conventions
 
-- World, characters and tone come from Caputo Mountain (the owner's private `digglesworth` repo: its `docs/` folder and art). Read only; never change that repo. Do not invent canon. If something is needed that is not there, ask the owner.
+- World, characters and tone come from Caputo Mountain (the owner's private `digglesworth` repo: its `docs/` folder and art) and from the owner's prompts. Anything the owner states in a prompt is canon; record it in `docs/decisions.md`. The private repo is read only; never change it. Do not invent canon. If something is needed that neither source gives, ask the owner.
 - This repo is public. No family names, no files copied from the private repo. The one exception is the hero models the owner made from that art (`assets/heroes/`, compressed, all rights reserved; see `docs/decisions.md`).
 - A check on every pull request fails if a private term (the repository secret `PRIVATE_TERMS`) appears in a tracked file, the pull request's title or description, or a commit message. The kids are "the younger player" and "the older player" everywhere. Player names in tests and docs are made up (Pip, Moss). If a flagged line is an ordinary word, reword it; never add an allowlist.
 - Every level has Easy, Normal and Hard, with all its numbers in that level's `difficulty.ts`. After changing numbers run `npm test`: a bot plays each difficulty start to finish.

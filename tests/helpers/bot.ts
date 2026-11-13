@@ -3,6 +3,7 @@
 // the stick and when to press Jump. It follows the level's route, so the same
 // bot plays any level built from solids.
 
+import type { Enemy } from '../../src/game/enemy';
 import { Game, type Input } from '../../src/game/game';
 import { MOVE, STEP } from '../../src/game/hero';
 import { surfaceBelow, type Level, type Solid } from '../../src/game/level';
@@ -24,10 +25,15 @@ const distanceToEdge = (s: Solid, x: number, z: number): number => {
   return Math.hypot(Math.max(Math.abs(x - s.x) - s.halfX, 0), Math.max(Math.abs(z - s.z) - s.halfZ, 0));
 };
 
+/** A scout this close, on the bot's own footing and able to hurt, gets jumped on. */
+const STOMP_FROM = 3;
+
 export class Bot {
   /** Position in the level's route of the solid the bot last stood or bounced on. */
   private index = 0;
   private holdingJump = false;
+  /** The enemy the bot is in the air over, on its way to landing on it. */
+  private stomping: Enemy | null = null;
 
   constructor(private readonly level: Level) {}
 
@@ -38,6 +44,31 @@ export class Bot {
       if (event.type === 'bounce') this.index = level.route.indexOf(event.solidId);
     }
     if (game.grounded && game.groundId) this.index = level.route.indexOf(game.groundId);
+
+    // A scout coming at the bot: jump, and come down on top of it. Landing on
+    // an enemy strikes it on every difficulty, so this is walk and jump alone.
+    const over = (event: Game['events'][number]): boolean => event.type === 'strike' || event.type === 'hurt' || event.type === 'bounce';
+    if (this.stomping && (game.grounded || game.events.some(over) || (this.stomping.phase !== 'idle' && this.stomping.phase !== 'patrol'))) this.stomping = null;
+    if (!this.stomping && game.grounded) {
+      this.stomping =
+        game.enemies.find(
+          (enemy) =>
+            enemy.kind === 'marmot' &&
+            (enemy.phase === 'idle' || enemy.phase === 'patrol') &&
+            Math.abs(enemy.y - game.y) < 0.5 &&
+            Math.hypot(enemy.x - game.x, enemy.z - game.z) < STOMP_FROM,
+        ) ?? null;
+      if (this.stomping) this.holdingJump = true;
+    }
+    if (this.stomping) {
+      const dx = this.stomping.x - game.x;
+      const dz = this.stomping.z - game.z;
+      const distance = Math.hypot(dx, dz);
+      const push = Math.min(distance / 0.6, 1);
+      // Hold Jump all the way up, then let go.
+      if (!game.grounded && game.vy <= 0) this.holdingJump = false;
+      return { moveX: distance > 1e-6 ? (dx / distance) * push : 0, moveZ: distance > 1e-6 ? (dz / distance) * push : 0, jump: this.holdingJump };
+    }
 
     const next = level.solids.find((s) => s.id === level.route[this.index + 1]);
     let aim = next ? aimPoint(next, game.x, game.z) : { x: level.leaf.x, z: level.leaf.z };

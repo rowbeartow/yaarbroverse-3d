@@ -457,7 +457,7 @@ export class GroveView {
   }
 
   /** What each enemy on screen is showing, for the browser checks. */
-  enemyInfo(): Array<{ clip: string; visible: boolean }> {
+  enemyInfo(): Array<{ clip: string; visible: boolean; aimLine: boolean }> {
     return this.enemies.map((enemy) => enemy.info());
   }
 

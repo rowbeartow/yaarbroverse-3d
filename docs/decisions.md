@@ -308,3 +308,47 @@ Supersedes: none
 ## 2026-11-13 The ghost is the recording of the best time, drawn only, and kept apart from the progress
 Reason: The owner's instruction for the ghost: the player's best run for that level, hero and difficulty, replayed as a see-through copy of the hero they ran with; visual only, never blocking, hitting, triggering anything or making sound; starting when the player starts and stopping at the leaf; small enough that a few dozen fit in browser storage. Claude's calls within it: "best" means best time; the ghost runs on the game's clock, so it waits while the game is paused; it fades out where it stands on the player's own hero; a recording is eight bytes a sample at 15 samples a second and never more than 1,200 samples, halving its rate each time it fills; and each ghost is its own storage entry, so a damaged or over-large ghost never costs the progress. The rules are never handed a ghost, which is what makes it unable to touch anything.
 Supersedes: none
+
+## 2026-11-13 Canon comes from the Caputo Mountain docs and from the owner's prompts
+Reason: The owner's rule. Anything the owner states in a prompt is canon, the same as what the Caputo Mountain docs and art say. Everything else still is not: if something is needed that neither says, ask him.
+Supersedes: "Nothing new is canon" in "World, characters and tone come from Caputo Mountain. Nothing new is canon.", for what counts as a source. The rest of that entry stands.
+
+## 2026-11-13 From the kids: more levels that are not all jumping, and the lake comes first among them
+Reason: The owner's decision, from what the kids asked for. Lakes are central to the Yaarbroverse. Both heroes swim, on the surface and underwater. There is fishing. Lake enemies include monster-sized pike and crocodiles. Caputo can swim; it would be nice, not required, if he shakes the water off when he gets out. The monster pike is fought both on the fishing line and in the water.
+Supersedes: none
+
+## 2026-11-13 From the kids: skiing in the Selkirk mountains, where Caputo snowboards
+Reason: The owner's decision, from what the kids asked for.
+Supersedes: none
+
+## 2026-11-13 From the kids: mountain climbing on rock, ice and trees
+Reason: The owner's decision, from what the kids asked for.
+Supersedes: none
+
+## 2026-11-13 From the kids: bosses, and the grove's boss is a giant marmot chief with mosquito sidekicks
+Reason: The owner's decision, from what the kids asked for. The chief uses the marmot scout's model, much larger and recoloured so it clearly reads as the chief. Nothing else is added to its look (a crown, a scar) unless the owner says so. Its attacks grow from what the scouts already do (throwing, charging), and in a later phase it calls in mosquito sidekicks. Its arena goes at the end of the grove, before the golden leaf. On Easy it can be beaten by jumping on it alone, with sidekicks that are easy to avoid. On Hard it should make the older player work for it.
+Supersedes: none
+
+## 2026-11-13 The older player's rule: an enemy that was damaged regains full health when the hero is sent back to a checkpoint
+Reason: The owner's decision, from the older player. If the hero is sent back to a checkpoint (by a fall or by running out of hearts) after damaging an enemy, that enemy regains full health. This applies to every enemy and every boss.
+Supersedes: "keeping the strikes it has taken" as the rule for an enemy that goes home after a fall (built in milestone three, part two; described in `docs/session-handoff.md`).
+
+## 2026-11-13 From the kids: the marmot scout and the mosquito are too easy, so they get tougher on Normal and Hard
+Reason: The owner's decision, from the kids' playtest: the tells make them easy to dodge, and the scout barely moves. Easy stays as it is. On Normal and Hard the marmot scout patrols its area and comes after a hero it spots, and gives up and goes back when the hero leaves its area. Tells stay, so attacks remain fair, but they get shorter: noticeably on Normal, brief on Hard. The mosquito follows the hero along the boughs and dives more often. All new numbers go in the level's `difficulty.ts`. Still no enemies in diagonal-jump sections.
+Supersedes: "no difficulty number changes, and Hard's three enemy numbers (`enemyWarning`, `enemySpeed`, `enemyRest`) are settled at Caputo Mountain's" in "The milestone-three playtest: every difficulty number stays, and Hard is right", for the enemies' numbers on Normal and Hard. The route's numbers stay. "Enemies show where they will throw or attack on every difficulty" stands.
+
+## 2026-11-13 From the kids: the grove repeats its jump patterns, and that is fixed in the milestone after this one
+Reason: The owner's decision, from the kids' playtest: the vertical-log hops appear three times. Grove variety keeps the best vertical-log section and replaces the other two with different obstacles. It is not part of milestone six.
+Supersedes: none
+
+## 2026-11-13 Milestone six is tougher enemies, enemy health, the boss system and the marmot chief; the roadmap after it is set
+Reason: The owner's call. Four pull requests in this order: tougher enemies; enemy health and the regen rule (a scout takes one hit on Easy and Normal and two on Hard, the mosquito one on every difficulty, and damage shows with a flash and a small knockback); the boss system (an arena the hero enters, a health bar, phases that change the boss's attacks as it loses health, a tell for every attack, the regen rule, boss music that takes over in the arena, a victory moment, built so any level can end with a boss, proved by a dev-only boss in the sandbox); the marmot chief. He looks at a private preview page before the first and the fourth merge. The roadmap, in order: (1) milestone six; (2) grove variety; (3) the lake: swimming, diving, a lake level and crocodiles; (4) fishing and the monster pike boss; (5) skiing in the Selkirks, with Caputo on a snowboard; (6) mountain climbing on rock, ice and trees.
+Supersedes: "The next step is adding a level" as what comes next (`docs/session-handoff.md`, milestone five).
+
+## 2026-11-13 How the tougher enemies work, and their numbers
+Reason: Claude's calls within the owner's decision, shown to him on a preview page before merging. On Normal and Hard a scout is never hidden: it walks a beat across its bank (1.6 and 2.2 metres a second), and when a hero comes onto its bank it stands for half a second, then comes after the hero (3.4 and 4.6 metres a second; a hero walks at 6, so running away always works). From between 2.5 and 4.2 metres it stops and throws, with its warning first; nearer than that it keeps coming, and touching it costs a heart. It never leaves its bank. A warning lasts 1.2 seconds on Easy as before, 0.56 on Normal (it was 0.8) and 0.36 on Hard (it was 0.52). The mosquito keeps up with the hero at 5 and 6.5 metres a second (it was 2.1 and 2.7, which a running hero left behind), gets ready and rests for 0.6 and 0.45 of the time, and hovers 3.4 metres over the hero in place of 2.2, so a jump across a gap in the boughs does not carry the hero up into it. After a hero is sent back to a safe bank, no enemy notices it for a second and a half, so nothing reaches the hero before the controls come back. The test bot now jumps on a scout that comes at it: landing on an enemy is walk and jump alone.
+Supersedes: none
+
+## 2026-11-13 The line showing where an attack will go is drawn on Easy only
+Reason: The owner's call on the tougher-enemies preview. On Normal and Hard the warning is the enemy's own wind-up and its warning sound, with nothing drawn: the marmot scout rears up on its hind legs with the acorn back over its shoulder before it throws, and the giant mosquito tips nose-down along its dive with its legs drawn up and its wings racing. Both wind-ups were already in the models' `warning` clips, stretched to last exactly as long as the warning. The same goes for anything that marks where the mosquito will strike. The switch is `enemyAimLine` in the level's `difficulty.ts`; the rules do not read it, so attacks are aimed and timed the same with and without the line. He also approved, as built: a beaten enemy stays beaten under the regen rule; the mosquito's higher hover on Normal and Hard; and the second and a half in which no enemy notices a hero sent back to a safe bank.
+Supersedes: "Enemies show where they will throw or attack on every difficulty", for Normal and Hard. It stands for Easy.

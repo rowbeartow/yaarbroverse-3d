@@ -42,10 +42,14 @@ describe('Bouncing Grove difficulty numbers', () => {
     for (const difficulty of DIFFICULTIES) {
       const numbers = GROVE_DIFFICULTY[difficulty];
       expect(Object.keys(numbers).sort()).toEqual(names);
-      for (const value of Object.values(numbers).flat()) {
+      // Every number is above zero, but for the two that switch a scout's walking and chasing off.
+      const { scoutPatrol, scoutChase, enemyAimLine, ...rest } = numbers;
+      expect(typeof enemyAimLine).toBe('boolean');
+      for (const value of Object.values(rest).flat()) {
         expect(Number.isFinite(value)).toBe(true);
         expect(value).toBeGreaterThan(0);
       }
+      for (const value of [scoutPatrol, scoutChase]) expect(value).toBeGreaterThanOrEqual(0);
       expect(GROVE_BLURB[difficulty].length).toBeGreaterThan(0);
     }
   });
