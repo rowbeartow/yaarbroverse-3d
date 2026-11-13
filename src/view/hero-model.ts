@@ -23,6 +23,7 @@ import {
   Vector3,
   type AnimationAction,
   type AnimationClip,
+  type Material,
   type Mesh,
   type MeshStandardMaterial,
   type Object3D,
@@ -218,6 +219,9 @@ const footprint = (model: Object3D, meshes: Mesh[]): { ground: number; top: numb
   return { ground, top, x: middle.x, z: middle.z };
 };
 
+/** How solid a ghost looks: a little under half. */
+export const GHOST_OPACITY = 0.42;
+
 export class ModelHero implements HeroView {
   readonly root = new Group();
   readonly shadow: { across: number; along: number };
@@ -241,8 +245,8 @@ export class ModelHero implements HeroView {
   /** Seconds left of the push off the ground at the start of a jump. */
   private pushing = 0;
 
-  /** Plain materials made for this hero alone (see `simple`), freed with it. */
-  private readonly ownMaterials: MeshLambertMaterial[] = [];
+  /** Materials made for this hero alone (see `simple` and `ghost`), freed with it. */
+  private readonly ownMaterials: Material[] = [];
 
   /**
    * `simple` gives the model plain matte shading with its own colours and
@@ -252,6 +256,8 @@ export class ModelHero implements HeroView {
     private readonly spec: HeroModelSpec,
     source: GLTF,
     simple = false,
+    /** A ghost is the same model, see-through: it casts no shadow and hides nothing behind it. */
+    ghost = false,
   ) {
     this.shadow = spec.shadow;
     this.portrait = spec.portrait;
@@ -274,6 +280,18 @@ export class ModelHero implements HeroView {
         const plain = new MeshLambertMaterial({ map: full.map, color: full.color, vertexColors: full.vertexColors });
         this.ownMaterials.push(plain);
         mesh.material = plain;
+      }
+      if (ghost) {
+        const seeThrough = simple ? (mesh.material as Material) : (mesh.material as Material).clone();
+        seeThrough.transparent = true;
+        seeThrough.opacity = GHOST_OPACITY;
+        seeThrough.depthWrite = false;
+        if (!simple) this.ownMaterials.push(seeThrough);
+        mesh.material = seeThrough;
+        mesh.castShadow = false;
+        mesh.receiveShadow = false;
+        // Drawn after the solid things, so it never hides the player's own hero.
+        mesh.renderOrder = 2;
       }
     });
     this.body.add(model);
@@ -448,6 +466,11 @@ export class ModelHero implements HeroView {
 
     this.squashed *= Math.exp(-dt * 10);
     this.body.scale.set(1 + this.squashed * 0.5, 1 - this.squashed, 1 + this.squashed * 0.5);
+  }
+
+  /** Makes a ghost fainter or fuller: 0 is gone, 1 is as see-through as a ghost gets. */
+  fade(share: number): void {
+    for (const material of this.ownMaterials) material.opacity = GHOST_OPACITY * Math.min(Math.max(share, 0), 1);
   }
 
   info(): HeroInfo {

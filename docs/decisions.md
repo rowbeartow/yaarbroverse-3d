@@ -304,3 +304,7 @@ Supersedes: none
 ## 2026-11-13 Best time and fewest falls are kept separately, and matching a best is not beating it
 Reason: The owner's instruction for best times: for each player, level, hero and difficulty, the best time and the fewest falls, each from whichever run set it, and only from runs that reached the golden leaf. The end card shows both under the run's own numbers and marks a new one in gold. A first finish is marked as new on both.
 Supersedes: none
+
+## 2026-11-13 The ghost is the recording of the best time, drawn only, and kept apart from the progress
+Reason: The owner's instruction for the ghost: the player's best run for that level, hero and difficulty, replayed as a see-through copy of the hero they ran with; visual only, never blocking, hitting, triggering anything or making sound; starting when the player starts and stopping at the leaf; small enough that a few dozen fit in browser storage. Claude's calls within it: "best" means best time; the ghost runs on the game's clock, so it waits while the game is paused; it fades out where it stands on the player's own hero; a recording is eight bytes a sample at 15 samples a second and never more than 1,200 samples, halving its rate each time it fills; and each ghost is its own storage entry, so a damaged or over-large ghost never costs the progress. The rules are never handed a ghost, which is what makes it unable to touch anything.
+Supersedes: none

@@ -8,7 +8,7 @@ Read first: `docs/session-handoff.md` (what exists, what's next, open questions)
 
 ## Status
 
-In development. One playable area, the Bouncing Grove: a full level in six sections, with three enemies, hearts, a move for each hero, and sound and music (milestone four, done). `docs/session-handoff.md` says what the owner has still to check on a real device.
+In development. One playable area, the Bouncing Grove: a full level in six sections, with three enemies, hearts, a move for each hero, and sound and music. Around it: up to four players on a device, a level picker, saved best times and a ghost of each player's best run to race (milestone five, done). The next step is a second level, by the recipe in `docs/adding-a-level.md`. `docs/session-handoff.md` says what the owner has still to check on a real device.
 Live at: https://rowbeartow.github.io/yaarbroverse-3d/ . Every merge to `main` publishes there, straight to the kids' devices.
 
 ## Architecture
@@ -17,13 +17,14 @@ Live at: https://rowbeartow.github.io/yaarbroverse-3d/ . Every merge to `main` p
 - Assets: source textures, the forest light (HDRI) and models in `assets/`. `scripts/build-assets.mjs` compresses them into `public/media/` (KTX2 textures, meshopt geometry, a smaller HDR) before every build and before `npm run dev`. `public/media/` is not committed. Third-party files are CC0 and listed in `CREDITS.md`; the build fails over 20 MB. Recorded sounds and music are in `assets/audio/` (WAV and MP3, which Safari plays; under 4 MB in total, checked by `tests/sound-files.test.ts`).
 - Hero models: `assets/heroes/` holds them already compressed, and the build copies them as they are. The owner's originals (20 to 30 MB each, files on the `hero-models` release) are never committed. Blender scripts in `tools/`, run with no window, make each model from its originals: `prepare-rigged.py` for a character Meshy rigged (Yaarbro: puts his one-clip files on one model, makes each clip happen on the spot, cleans up the skin), `rig-quadruped.py` for one Meshy could not rig (Caputo: builds the skeleton, skins it, writes the clips), and `pose-test.py` to look at a skin in test poses. `tools/compress-hero.mjs` then makes the small file and lists its clips. `tools/preview/` builds the page the owner reviews a hero on before a change to it is merged. Enemy models are kept the same way in `assets/enemies/`: `rig-quadruped.py` rigs the marmot scout (its guide file picks the marmot's own clips), `rig-insect.py` rigs the giant mosquito, `joint-views.py` draws a model on a grid to find its joints, and `tools/preview/enemies.mjs` builds the page the owner reviews them on. `tools/meshy-image-to-3d.mjs` makes enemy model candidates from a picture through Meshy's API, and `tools/preview/candidates.mjs` builds the page the owner picks one on.
 - Deploy target: GitHub Pages, static files only. `.github/workflows/publish.yml` builds and publishes on every merge to main.
-- Data layer: none. The browser's own storage on each device keeps the players (up to four, each a typed name, a colour, their last hero and difficulty, and their bests) and whether sound is muted. Nothing about a player goes into the repo, a commit, a log or a network request.
+- Data layer: none. The browser's own storage on each device keeps the players (up to four, each a typed name, a colour, their last hero and difficulty, their bests and the ghost of each best run) and whether sound is muted. Nothing about a player goes into the repo, a commit, a log or a network request.
 - Auth: none.
 - External services: none, and none are allowed inside the game (no accounts, payments, online services or AI calls).
 
 How it fits together:
 
 - `src/game/`: the rules. One hero in one level, advanced in fixed steps of 1/60 second. No browser or 3D code, so tests run it without a screen.
+  - `ghost.ts`: records where a hero was during a run and gives it back at any moment, as small text for storage. Looked at only: the rules never see a ghost.
   - `enemy.ts`: the marmot scout and the giant mosquito: what each does, what hurts a hero and what strikes an enemy. `game.ts` steps them with the hero.
 - `src/levels/index.ts`: the level list. The game builds whichever level is chosen from it, and the rule tests and the bot run over every level in it. `docs/adding-a-level.md` is the recipe for a new one.
 - `src/levels/<level>/difficulty.ts`: every Easy, Normal and Hard number for that level, in one file. `layout.ts` next to it builds the level from those numbers. `level.ts` is what the level brings to the list: its name, layout, scenery and music. `src/levels/sandbox/` is a tiny development level, never shown to players.
@@ -41,9 +42,10 @@ How it fits together:
   - `mix.ts`: whether sound may play yet, mute and its memory (no browser code, tested). `game-sounds.ts`: turns what the rules report into sounds: events, footsteps by surface and hero, the roll, the mosquito's whine, and fading with distance (no browser code, tested).
   - `graph.ts`: how the sounds are wired: each sound, its group's volume, the master, the top end turned down, a soft limiter. Shared by the game, the mixer page and the measuring tool. `player.ts`: the game's speaker: fetches and decodes the files and plays them through that wiring.
   - `synth.ts`: the recipes for the few sounds made in code, and the step that brings short sounds to one loudness.
+- `src/save/ghosts.ts`: where each player's ghosts are kept, one storage entry for each level, hero and difficulty, apart from their progress.
 - `src/save/players.ts`: the players on this device and their saved progress. Reading and writing never throw: damaged saved data is dropped and the game carries on (no browser code, tested).
 - `src/input/controls.ts`: keyboard and touch, turned into "which way", "is Jump held" and "is the move button held" (Yaarbro's roll, Caputo's pounce).
-- `src/ui/screens.ts` and `index.html`: start screen, pause, end card, "turn sideways" card, messages. `src/ui/who.ts`: the "Who's playing?" screen, shown first, with the grown-ups' reset behind a confirmation. `src/ui/picker.ts`: the level picker on the start screen, a card for each area with the current player's finished difficulties and best times.
+- `src/ui/screens.ts` and `index.html`: start screen, pause, end card, "turn sideways" card, messages. `src/ui/who.ts`: the "Who's playing?" screen, shown first, with the grown-ups' reset behind a confirmation. `src/ui/picker.ts`: the level picker on the start screen, a card for each area with the current player's finished difficulties and best times, and the ghost switch.
 - `src/main.ts`: the loop that connects them, the Sound button and the M key. The start screen shows first; the 3D code and files load behind it with a progress bar.
 
 Address-bar switches: `?fps` shows the frame rate and tier, `?quality=high|medium|low|minimal` fixes the tier, `?level=sandbox` opens the development level, `?standin` plays both heroes as the CC0 stand-in model (for checking the loader and animation player against a library file).

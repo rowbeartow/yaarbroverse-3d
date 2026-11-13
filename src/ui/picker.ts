@@ -11,13 +11,15 @@ import { progressOn, type Player } from '../save/players';
 import { formatTime } from './screens';
 
 export class Picker {
-  private readonly cards = new Map<string, { root: HTMLElement; pick: HTMLButtonElement; marks: HTMLElement }>();
+  private readonly cards = new Map<string, { root: HTMLElement; pick: HTMLButtonElement; marks: HTMLElement; ghost: HTMLInputElement; ghostNote: HTMLElement }>();
 
   constructor(
     container: HTMLElement,
     levels: readonly LevelEntry[],
     /** Called when a card is picked that was not the picked one already. */
     private readonly onPick: (level: LevelEntry) => void,
+    /** Called when the ghost is switched on or off on the picked card. */
+    private readonly onGhost: (on: boolean) => void,
   ) {
     container.dataset.count = String(levels.length);
     levels.forEach((level, index) => {
@@ -54,9 +56,23 @@ export class Picker {
         event.preventDefault();
         this.choose(levels[(index + step + levels.length) % levels.length], true);
       });
-      root.append(pick);
+      // The ghost switch, at the foot of the card. Only the picked card shows it.
+      const foot = document.createElement('label');
+      foot.className = 'ghost-toggle';
+      const ghost = document.createElement('input');
+      ghost.type = 'checkbox';
+      ghost.id = `ghost-${level.id}`;
+      ghost.setAttribute('role', 'switch');
+      const words = document.createElement('span');
+      const title = document.createElement('b');
+      title.textContent = 'Race your ghost';
+      const ghostNote = document.createElement('small');
+      words.append(title, ghostNote);
+      foot.append(ghost, words);
+      ghost.addEventListener('change', () => this.onGhost(ghost.checked));
+      root.append(pick, foot);
       container.append(root);
-      this.cards.set(level.id, { root, pick, marks });
+      this.cards.set(level.id, { root, pick, marks, ghost, ghostNote });
     });
   }
 
@@ -74,9 +90,25 @@ export class Picker {
     this.picked = levelId;
     for (const [id, card] of this.cards) {
       const picked = id === levelId;
+      card.root.classList.toggle('picked', picked);
       card.pick.setAttribute('aria-checked', String(picked));
       card.pick.tabIndex = picked ? 0 : -1;
     }
+  }
+
+  /**
+   * Sets the ghost switch on the picked card: whether the ghost is on for the
+   * hero and difficulty picked now, and whether there is a best run to race yet.
+   */
+  showGhost(on: boolean, recorded: boolean): void {
+    const card = this.cards.get(this.picked);
+    if (!card) return;
+    card.ghost.checked = on;
+    card.ghostNote.textContent = !on
+      ? 'Off. Your best run is still saved.'
+      : recorded
+        ? 'A see-through copy of your best run runs beside you.'
+        : 'Finish a run this way first, then race it.';
   }
 
   /** Fills every card's marks for a player: finished difficulties and best times. */

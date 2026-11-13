@@ -1,39 +1,44 @@
 # Session handoff
 
-Last updated: 2026-11-13 (milestone five, step 4)
+Last updated: 2026-11-13 (milestone five, done)
 
 ## Start here
 
-**Milestone five is under way** (best times, a ghost to race, saved progress and a level picker; the owner's order is in `docs/decisions.md`, 2026-11-13). Its five pull requests, in order: levels as a recipe, profiles and saved progress, the level picker (waits for the owner's OK on a preview page), best times, the ghost.
+**Milestone five is done: players, saved progress, a level picker, best times and a ghost to race.** The game is live at https://rowbeartow.github.io/yaarbroverse-3d/ . **The next step is adding a level**, and `docs/adding-a-level.md` is the recipe (see "What's next").
 
-- **Step 1, levels as a recipe: pull request 35, merged 2026-11-13.** The game builds its level from the level list (`src/levels/index.ts`). `docs/adding-a-level.md` is the recipe for a new level. The Sandbox (`src/levels/sandbox/`) is a tiny development level that opens only with `?level=sandbox`. `tests/levels.test.ts` runs the bot over every listed level, and `tests/browser/levels.spec.ts` plays the Sandbox to its end card.
-- **Step 2, profiles and saved progress: pull request 36, merged 2026-11-13.**
-  - "Who's playing?" comes up first on every visit (`src/ui/who.ts`): pick a player, or add one with a typed name (12 characters at most) and one of six colours, up to four players. With nobody on the device yet it opens on the form.
-  - Each player keeps their own last hero and difficulty and their own bests. The start screen shows who is playing, with "Switch player".
-  - What is saved (`src/save/players.ts`), under the one storage key `yaarbroverse-3d:players`: for each player, level, hero and difficulty, the best time and the fewest falls, kept separately. Only a run that reached the golden leaf is saved. The level picker shows them (step 3); the end card will (step 4).
-  - "For grown-ups" on that screen: "Reset progress" (keeps the name, colour and choices) and "Remove player", each behind a question whose safe answer is the big button.
-  - Reading and writing never throw. Saved data that is missing or damaged is dropped piece by piece and the game carries on. With storage blocked, everything works until the page closes.
-  - A name is only ever put on the page as plain text. `tests/browser/players.spec.ts` checks no request carries it.
-  - The old key `yaarbroverse-3d:choice` is no longer written. A first player on a device starts from the hero and difficulty in it.
-- **Step 3, the level picker: pull request 37, merged 2026-11-13 after the owner said OK on the preview page.**
-  - The start screen is headed "Where to?" and shows the areas as a row of cards (`src/ui/picker.ts`), with the grove the only one. A card is a picture (`public/cards/<id>.jpg`), the area's name and line, and for whoever is playing a tick and best time for each difficulty they have finished, or "Not yet". The best time on a card is the better of the two heroes.
-  - Every area is open. Picking another card builds that level and plays its music. With `?level=sandbox` the Sandbox is a second card, already picked, which is how the checks try a row of two.
-  - The preview page for the owner: https://claude.ai/artifact/PKoes4buicSvLc9n4WYmWx . Its pictures come from `node tools/preview/screen-shots.mjs <folder> [width] [height]`, with the built game served; the page itself was put together by hand from them. To change it, publish over that address.
-  - Known: at iPad size the start card fills the height, and the Sound button sits over its top right corner.
-- **Step 4, best times: the pull request this version of the handoff arrived in.** If you are reading this on `main`, it has merged.
-  - The end card shows, under Time and Falls, the player's best time and fewest falls for that level, hero and difficulty: "Best 1:07.4" and "Fewest 2". They are kept separately, so each can come from a different run.
-  - A best this run set is marked "New best!" in a gold box, with a gold line over the card: "New best time!", "Your fewest falls yet!", both, or "First finish! That is the time to beat."
-  - Only a run that reached the golden leaf counts. Matching a best is not beating it.
-  - The words are chosen by `endBests` in `src/save/players.ts` (tested); `showEnd` in `src/ui/screens.ts` puts them on the card.
-- **Step 5, the ghost, is not started.** The plan: record the hero's place a few times a second during a run, keep the recording of the best time for each player, level, hero and difficulty under its own storage key (so a damaged or over-large ghost never costs the progress), and draw it as a see-through second copy of the hero that touches nothing.
+Milestone five, in the order the owner set (his decisions are in `docs/decisions.md`, 2026-11-13):
 
-**Milestone four is done: the Bouncing Grove has sound and music.** The game is live at https://rowbeartow.github.io/yaarbroverse-3d/ . The likely next milestone is a second area (see "What's next"); the owner has not set it yet.
+1. **Levels as a recipe: pull request 35, merged 2026-11-13.** The game builds its level from the level list (`src/levels/index.ts`). Each level brings its layout, difficulty numbers, scenery and music through a `level.ts` in its folder. The Sandbox (`src/levels/sandbox/`) is a tiny development level that opens only with `?level=sandbox` and is never shown to players. `tests/levels.test.ts` runs the bot over every listed level.
+2. **Players and saved progress: pull request 36, merged 2026-11-13.**
+   - "Who's playing?" comes up first on every visit (`src/ui/who.ts`): pick a player, or add one with a typed name (12 characters at most) and one of six colours, up to four players. With nobody on the device yet it opens on the form.
+   - Each player keeps their own last hero and difficulty, their own bests and their own ghosts. The start screen shows who is playing, with "Switch player".
+   - "For grown-ups" on that screen: "Reset progress" (wipes bests and ghosts, keeps the name, colour and choices) and "Remove player", each behind a question whose safe answer is the big button.
+   - Players and bests are one entry in the browser's storage, `yaarbroverse-3d:players` (`src/save/players.ts`). Reading and writing never throw: saved data that is missing or damaged is dropped piece by piece and the game carries on. With storage blocked, everything works until the page closes.
+   - A name is only ever put on the page as plain text. `tests/browser/players.spec.ts` checks no request carries it.
+   - The old key `yaarbroverse-3d:choice` is no longer written. A first player on a device starts from the hero and difficulty in it.
+3. **The level picker: pull request 37, merged 2026-11-13 after the owner said OK on the preview page** (https://claude.ai/artifact/PKoes4buicSvLc9n4WYmWx ).
+   - The start screen is headed "Where to?" and shows the areas as a row of cards (`src/ui/picker.ts`), with the grove the only one. A card is a picture (`public/cards/<id>.jpg`), the area's name and line, and for whoever is playing a tick and best time for each difficulty they have finished, or "Not yet". The time on a card is the better of the two heroes.
+   - Every area is open. Picking another card builds that level and plays its music. With `?level=sandbox` the Sandbox is a second card, already picked, which is how the checks try a row of two.
+   - To show the owner a change to these screens: with the built game served, `node tools/preview/screen-shots.mjs <folder> [width] [height]` takes the pictures; the page itself was put together by hand from them and published over that address.
+4. **Best times: pull request 38, merged 2026-11-13.**
+   - For each player, level, hero and difficulty, the best time and the fewest falls are kept separately, so each can come from a different run. Only a run that reached the golden leaf counts. Matching a best is not beating it.
+   - The end card shows them under Time and Falls ("Best 1:07.4", "Fewest 2"). A best this run set is marked "New best!" in a gold box, with a gold line over the card.
+   - The words are chosen by `endBests` in `src/save/players.ts`; `showEnd` in `src/ui/screens.ts` puts them on the card.
+5. **The ghost: the pull request this version of the handoff arrived in.** If you are reading this on `main`, it has merged.
+   - Every run is recorded (`src/game/ghost.ts`). When a run sets a best time, its recording is kept as the ghost for that player, level, hero and difficulty, in place of the old one.
+   - On the next run that way, the ghost is a see-through copy of the hero that replays the best run on the game's own clock: it starts when the player starts, waits while the game is paused, and stops at the leaf. It fades out when it is on top of the player's own hero.
+   - It is a picture only. The rules (`src/game/game.ts`) and the sounds are never told about it, so it cannot block, hit or trigger anything and it makes no sound. `tests/ghost.test.ts` plays a run with and without a ghost and checks every step is the same.
+   - On by default on Normal and Hard, off on Easy. "Race your ghost" at the foot of the picked level card switches it for the difficulty picked now, and the choice is kept for each player.
+   - Size: eight bytes a sample, 15 samples a second, and never more than 1,200 samples: a recording that fills up drops every other sample and carries on at half the rate. A grove run is about 9,000 characters, the biggest possible about 13,000. Four players with a ghost for every hero and difficulty of two levels (48) come to under 700,000 characters.
+   - Each ghost is its own entry in storage, `yaarbroverse-3d:ghost:<player>:<level>:<hero>:<difficulty>` (`src/save/ghosts.ts`), apart from the players' entry, so a ghost that is damaged or will not fit never costs anyone their progress. A ghost that cannot be read is no ghost.
+   - Between samples the ghost goes in a straight line, so it cuts the corner a little where a mushroom turns a drop into a bounce (under 0.6 m, for a fifteenth of a second).
 
-Milestone four, in the order the owner set:
+**What nobody has checked yet in milestone five, and the owner is the one who can:**
 
-1. **Pull request 30, merged 2026-11-12: the publish guard.** Only the newest commit on main is ever published (see "The publish guard" below).
-2. **Pull requests 31 and 32, merged 2026-11-12: the sounds and the sound board.** The owner listened twice on the board (https://claude.ai/artifact/RTKmtRe5ttBzn6Rg7zYL9c ). After the first he asked for recordings in place of the sounds made in code, which read as beeps. After the second he said OK to everything except the two mushroom sounds, which he wanted as boings.
-3. **Sound in the game: the pull request this version of the handoff arrived in.** It also makes the two mushroom sounds boings. If you are reading this on `main`, it has merged.
+1. **The frame rate with a ghost on screen**, in Safari on the Mac with `?fps` on the address. The ghost is a second copy of the hero's model (about 14 thousand triangles and a second skeleton). The target is 60 on the high tier. It was 120 without one.
+2. **How the ghost looks moving.** A cloud session has only seen still frames: it is see-through, it is where the recording says, and it plays the hero's clips from the recording's speed.
+3. **The new screens in Safari and on a real iPad**, typing a name with the on-screen keyboard above all. At iPad size the start screen is as tall as the screen, and the Sound button sits over the card's top right corner.
+4. **Whether the kids can read the end card's bests** and whether "New best!" is clear enough.
 
 **The quieter, softer mix (the pull request this version of the handoff arrived in; on `main`, it has merged).** The owner played with the kids and said everything was far too loud, the music most of all, the jump and landing clanky, and all the sounds harsh. What changed, and how to change it again:
 
@@ -222,14 +227,17 @@ Milestone four (sound and music) is done, in the pull requests listed under "Sta
 
 ## What's next
 
-1. **The owner and the kids play with sound** and he says what is too loud, too quiet, too often or wrong (see "Start here"). A level is one number in `src/audio/sounds.ts`; a different recording goes on the sound board first.
-2. **A second area is the likely next milestone.** The owner has not set it. What it would need from him before any work: which part of the Caputo Mountain forest it is (the docs and art in the private repo are the only source, and nothing new is canon), and whether it brings new enemies, which are made as the marmot and mosquito were. What is ready for it: a level is plain data built by a `layout.ts` from the numbers in a `difficulty.ts`, both in `src/levels/<level>/`; the rules, enemies, hearts, moves, sound and drawing take any level. The game builds its level from the level list, and `docs/adding-a-level.md` is the recipe. What is not there yet: the start screen has no level picker, there is no saved progress, there is one kind of scenery (the forest, which lays itself out along any route) and one music track.
-3. **Ideas that came up and were not asked for** are not in the code: saved progress, the rest of the 2D forest's enemies, sound that moves left and right with what makes it.
-4. **Checking the Blender scripts on new files.** `tools/rig-quadruped.py` is meant for new enemies too: each needs its own guide file of joint places, like `tools/caputo.rig.json`.
+1. **Add a level.** `docs/adding-a-level.md` is the recipe: a folder in `src/levels/` with `difficulty.ts`, `layout.ts` and `level.ts`, a card picture, and one line in the level list. The picker, saved progress, best times, the ghost, the rule tests and the bot all work from that list with no other change. What it needs from the owner before any work: which part of Caputo Mountain it is (the kids are picking from a list he was given in the milestone-five report; that list is not in this repo, because the Caputo Mountain docs are private), an approved route plan, and whether it brings new enemies, which are made as the marmot and mosquito were. A level that is not the forest also needs its own surroundings and music; the recipe says where those go.
+2. **The owner checks milestone five on his Mac** (see "Start here"), the frame rate with a ghost above all.
+3. **The owner and the kids play with sound** and he says what is too loud, too quiet, too often or wrong. A level is one number in `src/audio/sounds.ts`; a different recording goes on the sound board first.
+4. **Ideas that came up and were not asked for** are not in the code: remembering the last area each player picked, a ghost of someone else's run, the rest of the 2D forest's enemies, sound that moves left and right with what makes it.
+5. **Checking the Blender scripts on new files.** `tools/rig-quadruped.py` is meant for new enemies too: each needs its own guide file of joint places, like `tools/caputo.rig.json`.
 
 ## Known limits
 
 - One area, with three enemies in it.
+- Progress lives in one browser on one device. Another browser, a private window or cleared site data starts from nothing, and nothing carries between the Mac and the iPad.
+- A ghost is only kept for a best time. A run with the fewest falls that was slower leaves no ghost.
 - A perfect run that never stops is never hit by an enemy, on any difficulty. The enemies punish stopping, not speed.
 - The mosquito has five legs: Meshy made its two middle legs as one.
 - A scout's dodge and the mosquito's resting place are easy to miss at speed: nothing on screen explains that a resting enemy is the one to strike.
