@@ -8,6 +8,7 @@
 // After changing a number, run `npm test`. The tests play the whole level on
 // all three difficulties and fail if a change makes one impossible to finish.
 
+import type { BossNumbers } from '../../game/boss';
 import type { Difficulty } from '../../game/difficulty';
 
 export interface GroveNumbers {
@@ -132,11 +133,47 @@ export interface GroveNumbers {
    */
   scoutHealth: number;
   mosquitoHealth: number;
+  /**
+   * THE MARMOT CHIEF, the grove's boss: a giant marmot with mosquito
+   * sidekicks, on a wide mossy bank at the top of the last climb, between the
+   * hero and the golden leaf. Its attacks grow from what the scouts do.
+   *   health          hits it takes: a landing on top, a roll faster than a
+   *                   walk, or a pounce.
+   *   guarded         false: any hit counts unless it is staggered, so Easy
+   *                   can be won by jumping on it alone. true: only a hit
+   *                   while it rests counts.
+   *   pause           seconds on watch between attacks, walking at walkSpeed
+   *                   toward the hero. Touching it then costs a heart.
+   *   warning         seconds it rears up before a throw or a call.
+   *   chargeWarning   seconds it lowers itself before a charge.
+   *   rest            seconds it rests after an attack: the opening.
+   *   acorns, spread, acornSpeed
+   *                   a throw: how many acorns, how many degrees apart they
+   *                   fan out, and how fast they fly.
+   *   chargeSpeed     how fast it charges, in a straight line through where
+   *                   the hero stood to the far side of its bank.
+   *   stages          its attacks, taken in turn, and the share of its health
+   *                   at which each list takes over. It throws; then it
+   *                   charges too; then it calls its sidekicks as well.
+   *   aimLine         lines showing where the acorns and the charge will go.
+   *                   Easy only, as for the scouts.
+   * A hero sent back to the bank's edge finds it at full health.
+   */
+  chief: BossNumbers;
+  /** How many giant mosquitoes come when the chief calls. They fly as the mosquito over the boughs does on this difficulty. */
+  chiefSidekicks: number;
   /** After walking off an edge, Jump still works for this long. */
   coyoteTime: number;
   /** Feet this far below a ledge still get lifted onto it. */
   ledgeHelp: number;
 }
+
+/** The chief throws, then charges as well once a third of its health is gone, then calls its sidekicks too in its last third. */
+const CHIEF_STAGES: BossNumbers['stages'] = [
+  { from: 1, attacks: ['throw'] },
+  { from: 0.67, attacks: ['charge', 'throw'] },
+  { from: 0.34, attacks: ['call', 'charge', 'throw'] },
+];
 
 export const GROVE_DIFFICULTY: Record<Difficulty, GroveNumbers> = {
   easy: {
@@ -175,6 +212,8 @@ export const GROVE_DIFFICULTY: Record<Difficulty, GroveNumbers> = {
     enemyAimLine: true,
     scoutHealth: 1,
     mosquitoHealth: 1,
+    chief: { health: 4, guarded: false, pause: 1.8, walkSpeed: 1, warning: 1.3, chargeWarning: 1.5, rest: 3, acorns: 1, spread: 0, acornSpeed: 6, chargeSpeed: 7, stages: CHIEF_STAGES, aimLine: true },
+    chiefSidekicks: 1,
     coyoteTime: 0.2,
     ledgeHelp: 0.5,
   },
@@ -214,6 +253,8 @@ export const GROVE_DIFFICULTY: Record<Difficulty, GroveNumbers> = {
     enemyAimLine: false,
     scoutHealth: 1,
     mosquitoHealth: 1,
+    chief: { health: 6, guarded: true, pause: 1.2, walkSpeed: 1.8, warning: 0.7, chargeWarning: 0.9, rest: 2.2, acorns: 3, spread: 16, acornSpeed: 8, chargeSpeed: 10, stages: CHIEF_STAGES, aimLine: false },
+    chiefSidekicks: 2,
     coyoteTime: 0.12,
     ledgeHelp: 0.3,
   },
@@ -253,6 +294,8 @@ export const GROVE_DIFFICULTY: Record<Difficulty, GroveNumbers> = {
     enemyAimLine: false,
     scoutHealth: 2,
     mosquitoHealth: 1,
+    chief: { health: 8, guarded: true, pause: 0.7, walkSpeed: 2.4, warning: 0.45, chargeWarning: 0.6, rest: 1.5, acorns: 5, spread: 13, acornSpeed: 10, chargeSpeed: 13.5, stages: CHIEF_STAGES, aimLine: false },
+    chiefSidekicks: 2,
     coyoteTime: 0.06,
     ledgeHelp: 0.15,
   },

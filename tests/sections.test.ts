@@ -40,13 +40,22 @@ const RUN_TIME: Record<Difficulty, [number, number]> = {
   hard: [55, 80],
 };
 
+/** How long the bot's fight with the marmot chief should take, from stepping onto its bank to the leaf. */
+const CHIEF_TIME: Record<Difficulty, [number, number]> = {
+  easy: [8, 25],
+  normal: [20, 50],
+  hard: [30, 70],
+};
+
 describe.each(DIFFICULTIES)('the sections of the grove on %s', (difficulty) => {
   const { level, reached, seconds } = cleanRun(difficulty);
   const sections = level.sections ?? [];
 
   it('together hold every solid once, in route order', () => {
     expect(sections.flatMap((s) => s.solids)).toEqual(level.route);
-    for (const section of sections) expect(section.solids.length).toBeGreaterThan(1);
+    // Every section but the last is several pieces; the last is the bough with the leaf, past the chief.
+    for (const section of sections.slice(0, -1)) expect(section.solids.length).toBeGreaterThan(1);
+    expect(sections[sections.length - 1].solids).toEqual(['bough']);
   });
 
   it('each end on a bank, and the last on the bough with the leaf', () => {
@@ -62,17 +71,21 @@ describe.each(DIFFICULTIES)('the sections of the grove on %s', (difficulty) => {
     console.log(`${difficulty}: ${ends.join(', ')}; leaf ${seconds.toFixed(1)} s`);
   }
 
-  it('a perfect run takes about as long as planned', () => {
-    expect(seconds).toBeGreaterThan(RUN_TIME[difficulty][0]);
-    expect(seconds).toBeLessThan(RUN_TIME[difficulty][1]);
+  it('a perfect run takes about as long as planned: to the chief’s bank, and then the fight', () => {
+    const toChief = reached.get('bank-6') ?? Infinity;
+    expect(toChief).toBeGreaterThan(RUN_TIME[difficulty][0]);
+    expect(toChief).toBeLessThan(RUN_TIME[difficulty][1]);
+    expect(seconds - toChief).toBeGreaterThan(CHIEF_TIME[difficulty][0]);
+    expect(seconds - toChief).toBeLessThan(CHIEF_TIME[difficulty][1]);
   });
 
   it('a fall never costs more than about 30 seconds of a perfect run', () => {
     // The worst place to fall after each safe bank is just before the next
     // safe bank, or just before the leaf.
+    // The chief's bank is the last safe one. What comes after it is the fight, which a hero sent back starts over (the regen rule).
     const safeTimes = level.route.filter((id) => byId(level, id).safe).map((id) => reached.get(id) ?? Infinity);
-    const stops = [...safeTimes, seconds];
-    for (let i = 1; i < stops.length; i += 1) expect(stops[i] - stops[i - 1]).toBeLessThan(32);
+    expect(byId(level, 'bank-6').safe).toBe(true);
+    for (let i = 1; i < safeTimes.length; i += 1) expect(safeTimes[i] - safeTimes[i - 1]).toBeLessThan(32);
   });
 
   it('a fall in any section returns the hero to the last safe bank before it', () => {
@@ -95,7 +108,7 @@ describe.each(DIFFICULTIES)('the sections of the grove on %s', (difficulty) => {
   });
 });
 
-describe('the six sections', () => {
+describe('the seven sections', () => {
   it('are the ones in the route plan, on every difficulty', () => {
     for (const difficulty of DIFFICULTIES) {
       expect((buildGrove(difficulty).sections ?? []).map((s) => s.name)).toEqual([
@@ -105,15 +118,16 @@ describe('the six sections', () => {
         'The Mushroom Springs',
         'The High Boughs',
         'The Climb',
+        'The Marmot Chief',
       ]);
     }
   });
 
-  it('get harder along the route on Normal: no section is shorter than 5 seconds or longer than 15', () => {
-    const { level, reached, seconds } = cleanRun('normal');
+  it('get harder along the route on Normal: no section before the chief is shorter than 5 seconds or longer than 15', () => {
+    const { level, reached } = cleanRun('normal');
     let last = 0;
-    for (const section of level.sections ?? []) {
-      const end = section === level.sections?.[level.sections.length - 1] ? seconds : (reached.get(section.solids[section.solids.length - 1]) ?? 0);
+    for (const section of (level.sections ?? []).slice(0, -1)) {
+      const end = reached.get(section.solids[section.solids.length - 1]) ?? 0;
       expect(end - last, section.name).toBeGreaterThan(5);
       expect(end - last, section.name).toBeLessThan(15);
       last = end;

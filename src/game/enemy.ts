@@ -73,7 +73,12 @@ export const ENEMY = {
   dodgeHeight: 1.8,
   dodgeTime: 0.5,
   dodgeRest: 3.6,
-  /** The mosquito hovers this far above the middle of the hero, and dives once it is at least `diveAbove` above it. */
+  /**
+   * The mosquito hovers this far above the middle of the hero, and dives once
+   * it is at least `diveAbove` above it. Where a level has it hover higher,
+   * it dives from no lower than `diveAbove` under that height: it has to
+   * climb back over the hero's head before it can warn again.
+   */
   hoverAbove: 2.2,
   diveAbove: 1.1,
   hoverSpeed: 2.1,
@@ -261,9 +266,10 @@ export const newEnemy = (spot: EnemySpot, tuning?: EnemyTuning): Enemy => ({
 });
 
 /** A boss calls a sidekick: it comes out at home at full health, whether it was lying low or had been beaten. */
-export const callSidekick = (enemy: Enemy): void => {
+export const callSidekick = (enemy: Enemy, wait = 0): void => {
   const { maxHits } = enemy;
-  Object.assign(enemy, newEnemy(enemy.spot), { hits: maxHits, maxHits, dormant: false });
+  // `wait` holds back its first dive, so sidekicks called together do not dive together.
+  Object.assign(enemy, newEnemy(enemy.spot), { hits: maxHits, maxHits, dormant: false, timer: -wait });
   if (enemy.kind === 'marmot') enemy.phase = 'idle';
 };
 
@@ -458,7 +464,7 @@ export const stepEnemy = (
       const inRange = chaseSpeed === 0 || (distance >= ENEMY.marmotNear && (distance <= ENEMY.marmotFar || enemy.timer >= ENEMY.chaseLong));
       const ready = marmot
         ? enemy.timer >= ENEMY.marmotReady && inRange
-        : enemy.timer >= ENEMY.mosquitoReady * pause && enemy.y >= middle + ENEMY.diveAbove;
+        : enemy.timer >= ENEMY.mosquitoReady * pause && enemy.y >= middle + Math.max(ENEMY.diveAbove, hoverAbove - ENEMY.diveAbove);
       if (enemy.phase === 'idle' && ready) {
         enter('warning');
         enemy.from = { x: enemy.x, y: marmot ? enemy.y + ENEMY.acornFrom : enemy.y, z: enemy.z };

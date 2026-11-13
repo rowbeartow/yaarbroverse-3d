@@ -92,7 +92,8 @@ describe('a ghost replays the path it recorded', () => {
       for (let k = Math.max(0, step - ghost.interval); k <= Math.min(path.length - 1, step + ghost.interval); k += 1) {
         nearest = Math.min(nearest, Math.hypot(pose.x - path[k].x, pose.y - path[k].y, pose.z - path[k].z));
       }
-      expect(nearest).toBeLessThan(0.12);
+      // The bounce up off a boss is the sharpest turn there is: 14 cm at most.
+      expect(nearest).toBeLessThan(0.16);
     }
   });
 
@@ -138,9 +139,9 @@ describe('a ghost is only looked at', () => {
 });
 
 describe('a ghost stays small', () => {
-  it('the grove on Normal is a few thousand characters', () => {
+  it('the grove on Normal, boss fight and all, is under twenty thousand characters', () => {
     const { ghost } = record(new Game(grove.build('normal'), 'normal', 'Yaarbro'));
-    expect(encodeGhost(ghost)!.length).toBeLessThan(12_000);
+    expect(encodeGhost(ghost)!.length).toBeLessThan(20_000);
   });
 
   it('a run of twenty minutes is no bigger than a run of two, and still replays', () => {
@@ -158,9 +159,9 @@ describe('a ghost stays small', () => {
     expect(ghost.samples.length).toBeLessThanOrEqual(GHOST_MAX_SAMPLES + 1);
     expect(ghost.steps).toBe((20 * 60) / STEP);
     const text = encodeGhost(ghost)!;
-    expect(text.length).toBeLessThan(13_500);
-    // Four dozen of the biggest ghosts are well under a megabyte of text.
-    expect(text.length * 48).toBeLessThan(700_000);
+    expect(text.length).toBeLessThan(27_000);
+    // Four dozen of the biggest ghosts are about a megabyte and a quarter of text: a browser keeps five.
+    expect(text.length * 48).toBeLessThan(1_300_000);
     const player = new GhostPlayer(decodeGhost(text)!);
     for (let i = 0; i < ghost.samples.length - 1; i += 1) {
       const pose = player.at(i * ghost.interval * STEP);
@@ -272,7 +273,7 @@ describe('ghosts are kept for each player, level, hero and difficulty', () => {
     expect(storage.items.has(PLAYERS_KEY)).toBe(true);
   });
 
-  it('four players with a ghost for every hero and difficulty of two levels fit in well under a megabyte', () => {
+  it('four players with a ghost for every hero and difficulty of two levels fit in about a megabyte', () => {
     const storage = new FakeStorage();
     const big = record(new Game(grove.build('hard'), 'hard', 'Yaarbro')).ghost;
     for (const playerId of ['p-1', 'p-2', 'p-3', 'p-4']) {
@@ -282,7 +283,7 @@ describe('ghosts are kept for each player, level, hero and difficulty', () => {
     }
     expect(storage.items.size).toBe(48);
     const characters = [...storage.items.entries()].reduce((sum, [key, value]) => sum + key.length + value.length, 0);
-    expect(characters).toBeLessThan(700_000);
+    expect(characters).toBeLessThan(1_100_000);
   });
 });
 

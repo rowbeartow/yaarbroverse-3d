@@ -110,3 +110,50 @@ test('the leaf cannot be taken while the boss stands', async ({ page }) => {
   await frames(page, 6);
   expect((await snapshot(page)).complete).toBe(false);
 });
+
+test.describe('the marmot chief, at the end of the Bouncing Grove', () => {
+  test('waits on its bank, much larger than a scout; the fight begins a few steps in, with its bar, its music and the wider view', async ({ page }) => {
+    const problems = await open(page);
+    await play(page, 'Yaarbro', 'easy');
+    await standOn(page, 'bank-6', 8);
+    await frames(page, 3);
+    // On the doorstep: no fight yet, and the leaf is not to be seen.
+    expect((await boss(page)).phase).toBe('waiting');
+    expect((await boss(page)).visible).toBe(true);
+    expect(await leafShown(page)).toBe(false);
+    await expect(page.locator('#boss')).toBeHidden();
+    await standOn(page, 'bank-6', 3);
+    await expect.poll(async () => (await boss(page)).phase, { timeout: 30_000 }).not.toBe('waiting');
+    await expect(page.locator('#boss-name')).toHaveText('The Marmot Chief');
+    await expect(page.locator('#boss-health span.full')).toHaveCount(4);
+    expect(await music(page)).toBe('bossMusic');
+    // Its sidekicks are not about until it calls them.
+    const sidekicks = await page.evaluate(() => {
+      const grove = (window as unknown as { __grove: { game: { enemies: Array<{ dormant: boolean; spot: { sidekickOf?: string } }> }; enemies: Array<{ visible: boolean }> } }).__grove;
+      return grove.game.enemies.map((enemy, i) => ({ sidekick: Boolean(enemy.spot.sidekickOf), dormant: enemy.dormant, visible: grove.enemies[i].visible })).filter((each) => each.sidekick);
+    });
+    expect(sidekicks).toEqual([{ sidekick: true, dormant: true, visible: false }]);
+    expect(problems).toEqual([]);
+  });
+
+  test('beaten, it gives up the golden leaf', async ({ page }) => {
+    const problems = await open(page);
+    await play(page, 'Caputo', 'easy');
+    await standOn(page, 'bank-6', 3);
+    await expect.poll(async () => (await boss(page)).phase, { timeout: 30_000 }).toBe('idle');
+    for (const left of [3, 2, 1, 0]) {
+      await hit(page);
+      await expect.poll(async () => (await boss(page)).health, { timeout: 30_000 }).toBe(left);
+    }
+    await expect(page.locator('#message')).toContainText('The Marmot Chief is beaten!');
+    expect(await music(page)).toBe('groveMusic');
+    await expect.poll(() => leafShown(page)).toBe(true);
+    await page.evaluate(() => {
+      const { game } = (window as unknown as { __grove: { game: any } }).__grove;
+      Object.assign(game, { x: game.level.leaf.x, z: game.level.leaf.z, y: game.level.leaf.y - 1, vx: 0, vy: 0, vz: 0 });
+    });
+    await expect(page.locator('#end')).toBeVisible({ timeout: 30_000 });
+    await expect(page.locator('#end-title')).toHaveText('You found the golden leaf!');
+    expect(problems).toEqual([]);
+  });
+});

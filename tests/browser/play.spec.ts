@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { open, pickPlayer, play, ready, snapshot, standOn } from './helpers';
+import { open, pickPlayer, play, ready, skipBoss, snapshot, standOn } from './helpers';
 
 test.describe('start screen', () => {
   test('loads without errors and draws the grove', async ({ page }) => {
@@ -80,6 +80,8 @@ test.describe('playing', () => {
     await play(page, 'Caputo', 'easy');
     // Stand at the near end of the last bough, then let the page run: the leaf
     // is straight ahead. The walk itself is checked in the keyboard and touch tests.
+    // The marmot chief stands between the hero and the leaf: count it as beaten here (boss.spec.ts fights it).
+    await skipBoss(page);
     await standOn(page, 'bough', 2);
     await page.keyboard.down('ArrowUp');
     await expect(page.locator('#end')).toBeVisible({ timeout: 20_000 });

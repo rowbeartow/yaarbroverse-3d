@@ -14,4 +14,5 @@ export const BOUNCING_GROVE: LevelEntry = {
   build: (difficulty) => buildGrove(difficulty),
   scenery: 'forest',
   music: 'groveMusic',
+  bossMusic: 'bossMusic',
 };

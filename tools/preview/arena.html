@@ -1,4 +1,4 @@
-<title>Tougher Enemies Preview</title>
+<title>Marmot Chief Preview</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <style>
   /* Layout: one column. Each enemy gets a window into the grove, its clip
@@ -61,6 +61,12 @@
   .window canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
   #hearts { position: absolute; left: 14px; top: 10px; color: #e2473d; font-size: 26px; letter-spacing: 2px; text-shadow: 0 1px 2px #0008; }
   #news { position: absolute; left: 0; right: 0; top: 14px; text-align: center; color: #fff6dd; font-weight: 700; font-size: 18px; text-shadow: 0 1px 3px #000a; pointer-events: none; }
+  #boss { position: absolute; left: 50%; bottom: 12px; transform: translateX(-50%); width: min(50%, 420px); padding: 6px 12px 9px; border-radius: 14px; background: #10201cb0; pointer-events: none; text-align: center; }
+  #boss-name { margin: 0 0 5px; max-width: none; color: #fff6dd; font-weight: 700; font-size: 16px; letter-spacing: 0.04em; }
+  #boss-health { display: flex; gap: 4px; }
+  #boss-health span { flex: 1; height: 12px; border-radius: 6px; border: 2px solid #fff6ddcc; background: #10201c8c; }
+  #boss-health span.full { background: #f2c14e; }
+  #boss.open #boss-health span.full { background: #ffe9a8; box-shadow: 0 0 10px #f2c14e; }
   #stick-zone, #jump-zone { position: absolute; top: 0; bottom: 0; width: 50%; touch-action: none; display: none; }
   body[data-mode="play"] #stick-zone, body[data-mode="play"] #jump-zone { display: block; }
   #stick-zone { left: 0; }
@@ -92,9 +98,9 @@
 
 <main class="page">
   <header>
-    <p class="eyebrow">Yaarbroverse 3D · milestone six, pull request 1</p>
-    <h1>Tougher enemies on Normal and Hard</h1>
-    <p class="lede">The marmot scout now walks a beat and comes after a hero it spots, the warnings are shorter, and the mosquito keeps up and dives more often. Easy is as it was. This page runs the game’s own rules and numbers at full speed. Nothing here is on the live site until you say OK.</p>
+    <p class="eyebrow">Yaarbroverse 3D · milestone six, pull request 4</p>
+    <h1>The marmot chief</h1>
+    <p class="lede">The grove’s boss: the marmot scout’s model, much larger and darker, on a wide mossy bank at the top of the last climb, between the hero and the golden leaf. This page runs the whole fight on the game’s own rules and numbers at full speed. Nothing here is on the live site until you say OK.</p>
   </header>
 
   <p id="status" role="status">Loading the models…</p>
@@ -105,9 +111,10 @@
   </div>
 
   <div class="window">
-    <canvas id="view" aria-label="The hero and the enemy in a blocked-out copy of the grove, moving at the game's speed"></canvas>
+    <canvas id="view" aria-label="The hero and the marmot chief in a blocked-out copy of the grove, moving at the game's speed"></canvas>
     <div id="hearts"></div>
     <div id="news" aria-live="polite"></div>
+    <div id="boss" hidden><p id="boss-name"></p><div id="boss-health" role="img" aria-label="The boss's health"></div></div>
     <div id="stick-zone"><div id="stick-base"><div id="stick-knob"></div></div></div>
     <div id="jump-zone"><div id="move-button" role="button">Roll</div></div>
   </div>
@@ -121,51 +128,68 @@
     <div><span class="label">Who has the hero</span><div class="row" id="modes" role="group" aria-label="Watch or play"></div></div>
     <div><span class="label">Hero</span><div class="row" id="heroes" role="group" aria-label="Hero"></div></div>
   </div>
-  <p class="note">“Watch” plays a short script on a loop and cuts the hero from spot to spot. “Play it yourself” gives you the hero with the game’s own controls; click the picture first if the keys do nothing. The scenery is a stand-in: plain blocks where the game has its forest. The enemies, the heroes, the warning lines, the speeds and the timing are the game’s own.</p>
+  <p class="note">“Watch” is the rule tests’ own player fighting the chief, start to finish, over and over. “Play it yourself” gives you the hero on the chief’s doorstep with the game’s own controls; click the picture first if the keys do nothing. Walk in to start the fight. The scenery is a stand-in: plain blocks where the game has its forest, and a gold disc where it has the leaf. The chief, its sidekicks, the heroes, the health bar, the speeds and the timing are the game’s own. This page has no sound; in the game the boss music you picked takes over when the fight begins.</p>
 
   <hr class="rule">
 
   <!-- Hand-written for each change: bring it up to date before publishing. -->
   <section class="words">
-    <h2>What changed, in numbers</h2>
+    <h2>How the fight goes</h2>
+    <ul>
+      <li><b>It begins when the hero walks in.</b> The bank is a checkpoint on every difficulty. A hero sent back stands on its near edge, outside the fight, and steps in when ready.</li>
+      <li><b>It throws, then it charges too, then it calls its sidekicks as well.</b> Each third of its health changes its attacks, and it roars at each change. Every attack has a warning first: it rears up before a throw or a call, and lowers itself before a charge.</li>
+      <li><b>After every attack it rests.</b> That is the opening. A landing on top, Yaarbro’s roll or Caputo’s pounce is a hit. The pips on its bar glow while a hit will count.</li>
+      <li><b>On Easy any landing on top counts</b>, resting or not, so it can be beaten by jumping on it alone. On Normal and Hard only a hit while it rests counts: at other times a landing bounces off and does no harm.</li>
+      <li><b>The older player’s rule.</b> Fall off its bank or run out of hearts, and it is back at full health when the hero returns.</li>
+      <li><b>Beat it</b> and its sidekicks give up, the golden leaf appears on the bough beyond, and nothing can hurt the hero for three seconds.</li>
+    </ul>
+  </section>
+
+  <section class="words">
+    <h2>The numbers</h2>
     <div class="scroll">
     <table>
       <tr><th></th><th>Easy</th><th>Normal</th><th>Hard</th></tr>
-      <tr><td>Warning before an attack</td><td>1.2 s (same)</td><td>0.56 s (was 0.8)</td><td>0.36 s (was 0.52)</td></tr>
-      <tr><td>Line showing where the attack will go</td><td>yes (same)</td><td>no</td><td>no</td></tr>
-      <tr><td>Scout walks its beat</td><td>no, it hides</td><td>1.6 m/s</td><td>2.2 m/s</td></tr>
-      <tr><td>Scout comes after a hero</td><td>no</td><td>3.4 m/s</td><td>4.6 m/s</td></tr>
-      <tr><td>Mosquito keeps up at</td><td>1.5 m/s (same)</td><td>5 m/s (was 2.1)</td><td>6.5 m/s (was 2.7)</td></tr>
-      <tr><td>Mosquito waits and rests</td><td>same</td><td>0.6 of the time</td><td>0.45 of the time</td></tr>
+      <tr><td>Hits to beat it</td><td>4</td><td>6</td><td>8</td></tr>
+      <tr><td>When a hit counts</td><td>any time</td><td>while it rests</td><td>while it rests</td></tr>
+      <tr><td>Warning before a throw</td><td>1.3 s</td><td>0.7 s</td><td>0.45 s</td></tr>
+      <tr><td>Warning before a charge</td><td>1.5 s</td><td>0.9 s</td><td>0.6 s</td></tr>
+      <tr><td>Rest after an attack</td><td>3 s</td><td>2.2 s</td><td>1.5 s</td></tr>
+      <tr><td>Acorns in a throw</td><td>1</td><td>3, fanned</td><td>5, fanned</td></tr>
+      <tr><td>Charge</td><td>7 m/s</td><td>10 m/s</td><td>13.5 m/s</td></tr>
+      <tr><td>Sidekicks</td><td>1, slow</td><td>2</td><td>2</td></tr>
+      <tr><td>Lines showing where attacks go</td><td>yes</td><td>no</td><td>no</td></tr>
     </table>
     </div>
-    <p>A hero walks at 6 metres a second, so running from a scout always works. Every number is in the grove’s <code>difficulty.ts</code>.</p>
+    <p>A hero runs at 6 metres a second. Every number is in the grove’s <code>difficulty.ts</code>, under <code>chief</code>.</p>
   </section>
 
   <section class="words">
     <h2>What to look for</h2>
     <ul>
-      <li><b>The scout on its beat (Normal, Hard).</b> It crosses its bank, stops for a look at each end, and turns back. It is never hidden now, so it is seen from the stumps before the clearing.</li>
-      <li><b>The chase.</b> When a hero steps onto its bank it stands for half a second, then runs at the hero. From a few metres off it stops, rears up with the acorn and throws. Close in, it does not stop: it runs into the hero, and that costs a heart. Is the half second enough warning for the run?</li>
-      <li><b>Giving up.</b> When the hero leaves its bank, it turns and goes back to its beat. It never leaves the bank.</li>
-      <li><b>The tells, with no line.</b> As you asked, the line showing where the acorn or the dive will go is drawn on Easy only. On Normal and Hard the warning is the scout rearing up on its hind legs with the acorn back over its shoulder, and the mosquito tipping nose-down with its legs drawn up, each with its warning sound in the game. Nothing is drawn on the ground or in the air. This page has no sound.</li>
-      <li><b>The mosquito.</b> On Normal and Hard it stays over a walking hero and dives again soon after each rest. It hovers higher than before, because a hero who jumps a gap in the boughs would otherwise jump up into it.</li>
+      <li><b>Does it read as the chief?</b> It is the scout’s model at 2.3 times the size, with a dark colour laid over its fur. Nothing else is added.</li>
+      <li><b>The warnings on Normal and Hard</b>, with no lines drawn. Rearing up means acorns or a call. Lowering itself means a charge. On Hard the charge warning is 0.6 seconds: is that fair?</li>
+      <li><b>The fan of acorns.</b> Three on Normal, five on Hard, spread to either side of where the hero stood. Running sideways clears them.</li>
+      <li><b>The sidekicks.</b> They fly as the mosquito over the boughs does on that difficulty. On Easy there is one and it is slow. In “Watch” on Easy the test player wins in about ten seconds, before the chief ever calls: to see Easy’s sidekick, play it yourself and take your time.</li>
+      <li><b>Hard.</b> Eight hits, each needing an opening, with two mosquitoes about from the sixth. The test player takes about 48 seconds. Is that work enough for the older player, or too much with the regen rule?</li>
     </ul>
   </section>
 
   <section class="words">
     <h2>What is not checked</h2>
     <ul>
-      <li><b>I cannot watch this move.</b> I checked it in still frames and with the rule tests. You are the first to see it at speed.</li>
-      <li><b>The scout’s run uses its shuffle clip, played fast.</b> It has no run clip of its own. If it looks wrong at speed, a run clip is a model change with its own preview.</li>
-      <li><b>Hits needed are not changed yet.</b> A scout still takes two hits on every difficulty here. One hit on Easy and Normal, two on Hard, and the rule that a damaged enemy heals when the hero is sent back, are the next pull request.</li>
+      <li><b>I cannot watch this move.</b> I checked it in still frames and with the rule tests, where the test player beats the chief first time on every difficulty as each hero. You are the first to see it at speed.</li>
+      <li><b>Its clips are the scout’s.</b> The charge is its shuffle played fast, and the wind-up for a charge is the start of its hop. It has no clips of its own.</li>
+      <li><b>The test player loses one heart on Normal</b> and none on Easy or Hard. It never runs out.</li>
+      <li><b>Nobody has heard the fight.</b> Its warnings, throws and hits use the scout’s sounds.</li>
     </ul>
   </section>
 
   <section class="words">
     <h2>Your call</h2>
-    <p>You said OK with the aim line on Easy only. That change is on this page now, and this pull request merges once its checks pass. If the wind-up alone turns out too hard to read once the kids play it, say so: it is one switch in the grove’s numbers.</p>
+    <p>Reply OK and I will merge the chief into the live game. Or tell me what is off: its colour, its size, a warning too short, too many hits, the sidekicks too much.</p>
   </section>
 </main>
 
+<script>document.documentElement.dataset.first = 'chief';</script>
 <script type="module" src="arena.js"></script>

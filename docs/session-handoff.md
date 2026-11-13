@@ -1,32 +1,66 @@
 # Session handoff
 
-Last updated: 2026-11-13 (milestone six, pull request 3)
+Last updated: 2026-11-13 (milestone six, done)
 
 ## Start here
 
-**Milestone six is under way: tougher enemies, enemy health, the boss system, the marmot chief.** The owner's decisions for it, and what the kids asked for, are in `docs/decisions.md` (2026-11-13). Four pull requests, in order:
+**Milestone six is done: tougher enemies, enemy health and the regen rule, the boss system, and the marmot chief at the end of the grove.** The game is live at https://rowbeartow.github.io/yaarbroverse-3d/ . **The next step is grove variety** (see "The roadmap" and "What's next"). The owner's decisions for milestone six, and what the kids asked for, are in `docs/decisions.md` (2026-11-13).
 
-1. **Tougher enemies: pull request 40, merged 2026-11-13 after the owner said OK on the preview page** (https://claude.ai/artifact/Nmwtn8SMup8HVLkdK3PnGA ). Easy is unchanged. On Normal and Hard the marmot scout walks a beat across its bank and comes after a hero it spots, warnings are shorter (0.56 and 0.36 seconds; Easy keeps 1.2), and the mosquito keeps up with the hero and dives more often. The line showing where an attack will go is drawn on Easy only (`enemyAimLine`), at the owner's word: on Normal and Hard the warning is the scout rearing up with its acorn, or the mosquito tipping nose-down, and the warning sound. The numbers are `enemyWarning`, `scoutPatrol`, `scoutChase`, `mosquitoFollow`, `mosquitoHover` and `mosquitoPause` in the grove's `difficulty.ts`; the rules are in `src/game/enemy.ts`.
-2. **Enemy health and the regen rule: pull request 41, merged 2026-11-13.** A scout takes one hit on Easy and Normal and two on Hard; the mosquito one on every difficulty (`scoutHealth`, `mosquitoHealth`). A hit shows as a blinking flash and a short shove, and the screen says how many more it takes. The older player's rule: when the hero is sent back to a safe bank by a fall or by running out of hearts, every enemy that is not beaten is at full health again, and the screen says so. A beaten enemy stays beaten (the owner approved that).
-3. **The boss system: the pull request this version of the handoff arrived in. If you are reading this on `main`, it has merged.** Any level can end with a boss: `docs/adding-a-level.md` has the recipe ("Ending a level with a boss"), `src/game/boss.ts` the rules, `src/view/boss.ts` the drawing, `tests/boss.test.ts` the rule tests. The Sandbox (`?level=sandbox`) ends with a practice boss, a marmot twice the scout's size: one acorn, then a charge once half its health is gone; on Easy any landing on top counts, on Normal and Hard only a hit while it rests. The arena is a checkpoint on every difficulty. The health bar is at the bottom of the screen. The test bot beats it on every difficulty as each hero without losing a heart. The grove has no boss yet. The owner picked its sounds on the sound board (https://claude.ai/artifact/WvtY9CjWaa5yTpwyJCferH ): boss music A ("Battle Theme" by Wolfgang_) and "boss beaten" B ("Short Jingle" by OO), both CC0 from OpenGameArt. They are `assets/audio/boss-music.mp3` and `boss-beaten.wav`.
-4. The marmot chief: not started. It waits for the owner's OK on a preview of the whole fight before it merges.
+Milestone six, in the order the owner set:
 
-**The arena preview page** (`tools/preview/arena.mjs`, new in pull request 1) is how the owner watches enemies at full speed before a change to their behaviour merges. It runs the game's own rules, numbers, enemy drawing and hero drawing in a blocked-out copy of the level, with a scripted "Watch" mode and a "Play it yourself" mode. Its places and scripts are the `PLACES` table in `tools/preview/arena.ts`; its hand-written words are in `arena.html`. It needs the four plain model files rebuilt from the originals on the `hero-models` release (the commands are in `CLAUDE.md`; Yaarbro's six files are named in `tools/yaarbro.guide.json`). `node tools/preview/arena-stills.mjs` takes still frames of it.
+1. **Tougher enemies: pull request 40, merged 2026-11-13 after the owner said OK on the preview page** (https://claude.ai/artifact/Nmwtn8SMup8HVLkdK3PnGA ).
+   - Easy is unchanged.
+   - On Normal and Hard the marmot scout is never hidden. It walks a beat across its bank (1.6 and 2.2 metres a second), and when a hero steps onto its bank it stands for half a second, then comes after the hero (3.4 and 4.6; a hero runs at 6). From 2.5 to 4.2 metres it stops and throws; closer, it keeps coming and touching it costs a heart. It never leaves its bank, and gives up when the hero does.
+   - A warning lasts 1.2 seconds on Easy, 0.56 on Normal and 0.36 on Hard.
+   - The line showing where an attack will go is drawn on Easy only, at the owner's word (`enemyAimLine`). On Normal and Hard the warning is the scout rearing up with its acorn, or the mosquito tipping nose-down, and the warning sound.
+   - The mosquito keeps up with the hero on Normal and Hard (5 and 6.5 metres a second), dives more often, and hovers 3.4 metres over the hero so a jump across a gap does not carry the hero up into it.
+   - After a hero is sent back to a safe bank, no enemy notices it for a second and a half.
+   - The numbers are `enemyWarning`, `enemyAimLine`, `scoutPatrol`, `scoutChase`, `mosquitoFollow`, `mosquitoHover` and `mosquitoPause` in the grove's `difficulty.ts`; the rules are in `src/game/enemy.ts`.
+2. **Enemy health and the regen rule: pull request 41, merged 2026-11-13.**
+   - A scout takes one hit on Easy and Normal and two on Hard; the mosquito one on every difficulty (`scoutHealth`, `mosquitoHealth`).
+   - A hit shows as a blinking flash and a short shove, and the screen says how many more it takes.
+   - The older player's rule: when the hero is sent back to a safe bank by a fall or by running out of hearts, every enemy that is not beaten is at full health again, and the screen says so. A beaten enemy stays beaten (the owner approved that).
+3. **The boss system: pull request 42, merged 2026-11-13.**
+   - Any level can end with a boss. `docs/adding-a-level.md` has the recipe ("Ending a level with a boss"), `src/game/boss.ts` the rules, `src/view/boss.ts` the drawing, `tests/boss.test.ts` the rule tests.
+   - A fight begins when the hero stands in the boss's arena. The boss goes round on watch, warning, attack, rest. Its attacks (`throw`, `charge`, `call`) come in turn from a list that changes as it loses health, with a roar at each change. A hit is a roll faster than a walk, a pounce, or a landing on top. A `guarded` boss only takes a hit while it rests; at other times a landing bounces off unharmed.
+   - The health bar is the boss's name over a pip for each hit, at the bottom of the screen. The pips glow while a hit will count.
+   - The level's goal is out of reach and out of sight until the boss is beaten.
+   - The arena is a checkpoint on every difficulty. A hero sent back stands on its doorstep, outside the fight, with the boss at full health and at home (the regen rule).
+   - Boss music (`bossMusic` in a level's entry) takes over while the fight is on. The owner picked it and the "boss beaten" sound on the sound board (https://claude.ai/artifact/WvtY9CjWaa5yTpwyJCferH ): "Battle Theme" by Wolfgang_ and "Short Jingle" by OO, both CC0 from OpenGameArt.
+   - The Sandbox (`?level=sandbox`) ends with a practice boss, a marmot twice the scout's size, which proves the system.
+4. **The marmot chief: the pull request this version of the handoff arrived in. It waits for the owner's OK on the preview of the whole fight** (https://claude.ai/artifact/EkkwHXFr8ibqGY28T3NGAc ). **If you are reading this on `main`, he said OK and it has merged.**
+   - The chief is the scout's model at 2.3 times the size, with a dark colour laid over its fur. Nothing else is added to its look, at the owner's word.
+   - It waits on a wide mossy bank (`bank-6`, 16 by 19 metres) at the top of the last climb. The bough with the golden leaf reaches out from the bank's far side. The grove has a seventh section, The Marmot Chief.
+   - It takes 4, 6 and 8 hits. It throws; from two thirds of its health it charges too; in its last third it also calls its sidekicks, giant mosquitoes (1, 2 and 2).
+   - On Easy any landing on top counts, it throws one slow acorn, and lines show where its attacks go. On Normal and Hard only a hit while it rests counts, it throws a fan of 3 and 5 acorns, and nothing is drawn.
+   - Every number is `chief` and `chiefSidekicks` in the grove's `difficulty.ts`. `tests/chief.test.ts` holds its tests.
+   - In a boss fight the camera pulls back and up so the whole arena shows (`src/view/boss-camera.ts`).
+   - A ghost now holds 2,400 samples (160 seconds at full rate), because a run with the fight is longer than the old 80.
+
+**What nobody has checked yet in milestone six, and the owner is the one who can:**
+
+1. **How any of it moves.** A cloud session only sees still frames. The owner watched the tougher enemies on the preview page; nobody has watched them in the game itself, or the flash and shove of a hit, or the boss's health bar and the camera pulling back.
+2. **How the fight sounds.** The boss music and the "boss beaten" sound were picked on the sound board, not heard in the game. The chief's warnings, throws and hits use the scout's sounds.
+3. **Whether Easy's chief is easy enough for the younger player, and Hard's is work enough for the older player.** The numbers are in one place if not.
+4. **The frame rate in the fight**, in Safari on the Mac with `?fps` on the address: the chief, two mosquitoes and the hero are on screen together.
+5. **Safari itself and a real iPad.** The checks pass in WebKit built for Linux.
+
+**The preview pages for behaviour** (new in milestone six). `tools/preview/arena.mjs` builds a page that runs the game's own rules, numbers, enemy and boss drawing and hero drawing in a blocked-out copy of the level, at full speed. "Watch" plays a script, or for a boss fight the rule tests' own bot; "Play it yourself" hands over the hero. Its places are the `PLACES` table in `tools/preview/arena.ts`; its hand-written words are in `arena.html`, which now holds the chief's page. It needs the four plain model files rebuilt from the originals on the `hero-models` release (the commands are in `CLAUDE.md`; Yaarbro's six files are named in `tools/yaarbro.guide.json`). `node tools/preview/arena-stills.mjs` takes still frames of it. The first version of the page did not load for the owner once; it now says what it is loading and reports its own errors on the page.
 
 **The roadmap, in the owner's order:**
 
-1. Milestone six (this one).
-2. Grove variety: keep the best vertical-log section and replace the other two with different obstacles. The kids said the grove repeats the same jump patterns.
-3. The lake: swimming, diving, a lake level and crocodiles.
-4. Fishing and the monster pike boss.
+1. Milestone six: done.
+2. **Grove variety: next.** Keep the best vertical-log section and replace the other two with different obstacles. The kids said the grove repeats the same jump patterns: the vertical-log hops appear three times.
+3. The lake: swimming, diving, a lake level and crocodiles. Lakes are central to the Yaarbroverse. Both heroes swim, on the surface and underwater. It would be nice, not required, if Caputo shakes the water off when he gets out.
+4. Fishing and the monster pike boss. The pike is fought both on the fishing line and in the water.
 5. Skiing in the Selkirks, with Caputo on a snowboard.
 6. Mountain climbing on rock, ice and trees.
 
-Everything below this line describes the game as milestone five left it, and is rewritten when milestone six is done.
+Everything from "Milestone five" down to "Where things stand" is the record of earlier milestones, kept as it was written.
 
 ---
 
-**Milestone five is done: players, saved progress, a level picker, best times and a ghost to race.** The game is live at https://rowbeartow.github.io/yaarbroverse-3d/ . **The next step is adding a level**, and `docs/adding-a-level.md` is the recipe (see "What's next").
+**Milestone five (done 2026-11-13): players, saved progress, a level picker, best times and a ghost to race.**
 
 Milestone five, in the order the owner set (his decisions are in `docs/decisions.md`, 2026-11-13):
 
@@ -51,7 +85,7 @@ Milestone five, in the order the owner set (his decisions are in `docs/decisions
    - On the next run that way, the ghost is a see-through copy of the hero that replays the best run on the game's own clock: it starts when the player starts, waits while the game is paused, and stops at the leaf. It fades out when it is on top of the player's own hero.
    - It is a picture only. The rules (`src/game/game.ts`) and the sounds are never told about it, so it cannot block, hit or trigger anything and it makes no sound. `tests/ghost.test.ts` plays a run with and without a ghost and checks every step is the same.
    - On by default on Normal and Hard, off on Easy. "Race your ghost" at the foot of the picked level card switches it for the difficulty picked now, and the choice is kept for each player.
-   - Size: eight bytes a sample, 15 samples a second, and never more than 1,200 samples: a recording that fills up drops every other sample and carries on at half the rate. A grove run is about 9,000 characters, the biggest possible about 13,000. Four players with a ghost for every hero and difficulty of two levels (48) come to under 700,000 characters.
+   - Size (as built in milestone five; milestone six raised the limit to 2,400 samples): eight bytes a sample, 15 samples a second, and never more than 1,200 samples: a recording that fills up drops every other sample and carries on at half the rate. A grove run is about 9,000 characters, the biggest possible about 13,000. Four players with a ghost for every hero and difficulty of two levels (48) come to under 700,000 characters.
    - Each ghost is its own entry in storage, `yaarbroverse-3d:ghost:<player>:<level>:<hero>:<difficulty>` (`src/save/ghosts.ts`), apart from the players' entry, so a ghost that is damaged or will not fit never costs anyone their progress. A ghost that cannot be read is no ghost.
    - Between samples the ghost goes in a straight line, so it cuts the corner a little where a mushroom turns a drop into a bounce (under 0.6 m, for a fifteenth of a second).
 
@@ -171,15 +205,16 @@ Milestone four (sound and music) is done, in the pull requests listed under "Sta
 
 ## What exists now
 
-- **The level.** Six sections, each built around one idea and ending on a mossy bank. About 235 m of route on Normal (164 on Easy, 278 on Hard), climbing about 15 m. It runs away from the camera and never comes back toward it; sections 3 and 5 move it sideways.
+- **The level.** Six sections, each built around one idea and ending on a mossy bank, then the marmot chief. About 250 m of route on Normal (180 on Easy, 295 on Hard), climbing about 15 m. It runs away from the camera and never comes back toward it; sections 3 and 5 move it sideways.
   1. **The Broken Logs.** Fallen logs end to end (three on Easy, five on Normal, six on Hard). The first break is a short hop on every difficulty; the rest are real jumps.
   2. **The Stump Steps.** Stumps that climb, left and right (four, seven or eight), to a wide clearing.
   3. **The Ravine.** Root shelves step down and to the right (two on Easy, three otherwise), a low log with a break crosses the bottom, and shelves climb out to a bank. On Easy the shelves are close enough to walk down and low enough to step up.
   4. **The Mushroom Springs.** A mushroom bounces the hero to a high log, then mushrooms over open air (one, four or five) lead to a mossy ledge high up.
   5. **The High Boughs.** Five narrow boughs level with the ledge: forward, across the screen to the left, forward, across again, forward to a bank. Each corner is a gap on Normal and Hard: two are jumped away from the camera and two across the screen. On Easy only the first corner has a gap and the others are joined.
-  6. **The Climb.** A mushroom, a high log, tall snags that climb (two, four or five), mushrooms over open air (one, three or four), then the great cedar's bough with the golden leaf. Touch the leaf to finish.
-- **How long it takes.** The test bot's perfect run: 39.6 seconds on Easy, 57.0 on Normal, 61.1 on Hard. On Normal the sections take it 9.0, 8.2, 11.1, 6.9, 11.6 and 10.2 seconds. `GROVE_TIMES=1 npx vitest run tests/sections.test.ts --silent=false` prints these. A first try will take a good deal longer.
-- **Checkpoints.** Every bank is a checkpoint on Easy and Normal, so a fall costs one section at most. On Hard only the clearing (bank 2) and the high ledge (bank 4) are; the other banks are bare stone. The worst fall on Hard, just short of the leaf, costs 23.5 seconds of a perfect run. Which banks are checkpoints is the `checkpoints` list in `difficulty.ts`.
+  6. **The Climb.** A mushroom, a high log, tall snags that climb (two, four or five), mushrooms over open air (one, three or four), up to a wide mossy bank at the top.
+  7. **The Marmot Chief.** The wide bank is the chief's (see "The marmot chief" below). Beyond it, the great cedar's bough with the golden leaf. The leaf is not there to take until the chief is beaten. Touch the leaf to finish.
+- **How long it takes.** The test bot's run to the chief's bank: 39.0 seconds on Easy, 57.0 on Normal, 62.2 on Hard. Its fight with the chief: 13, 38 and 48 seconds more. `GROVE_TIMES=1 npx vitest run tests/sections.test.ts --silent=false` prints the time to the end of each section. A first try will take a good deal longer.
+- **Checkpoints.** Every bank is a checkpoint on Easy and Normal, so a fall costs one section at most. On Hard only the clearing (bank 2), the high ledge (bank 4) and the chief's bank (bank 6) are; the other banks are bare stone. The worst fall on Hard, just short of the chief's bank, costs about 24 seconds of a perfect run. Which banks are checkpoints is the `checkpoints` list in `difficulty.ts`; the chief's bank is one on every difficulty. A hero sent back to it stands on its near edge, and the chief is at full health again.
 - **Platform kinds.** Banks, logs, stumps (the tall snags of section 6 are stumps too), mushrooms, root shelves (`shelf`: the flat top of a great root on a trunk rising from the mist) and boughs. A root shelf's top edge is drawn the way a bank's is, never past where a hero can stand, and the bank-outline tests cover it. The high boughs of section 5 are drawn as thick mossy limbs on snags, turned a quarter turn where they lie across; only the last bough of the route is the great cedar's. A log end that rests on no bank or shelf is held up by a snag.
 - **Drawing by distance.** The forest, the ferns and grass, and the platforms are built in 36 m stretches of route. Only the stretches between the camera and 140 m ahead of the hero are drawn: past that the mist has hidden nineteen twentieths of anything. Past 85 m trees wear their lighter crowns, and ferns, grass and the boulders and roots on the sides of banks are left out. The forest follows the route's middle (`src/view/route.ts`), so the gully and the trees bend where the route does, and no tree stands closer than 3.5 m to anything a hero can stand on. Measured on the test machine at medium quality, standing at the start of each section on Normal: 280 to 375 thousand triangles and 179 to 301 draw calls a frame. The short level drew 322 thousand in 144. So the triangle count runs from 13% under to 17% over what it was, and draw calls are up to twice what they were. What that does to the frame rate on a real iPad is not known.
 - **The look.** The route crosses a misty gully in a fir forest. Logs and trunks have bark with moss growing over it, stumps have cut rings, mushrooms have glossy spotted caps. Ferns and grass sway. The golden leaf glows.
@@ -206,40 +241,52 @@ Milestone four (sound and music) is done, in the pull requests listed under "Sta
   - A model is stood on the spot the rules use by its footprint: soles or paws on the ground, the middle of them over the spot, so the soft dark spot sits under the feet and an edge looks as safe as it is.
   - The owner's original model files are files on the `hero-models` release of this repo: six for Yaarbro, one clip each (about 29 MB each), and one for Caputo (20.9 MB, `Meshy_AI_SaberToothCatGameRead_1110213716_texture.glb`). They are not committed. To rebuild a hero, run its Blender script on the originals and then `node tools/compress-hero.mjs <out.glb> <name>`; the commands are in `CLAUDE.md`. The compressed files are `assets/heroes/yaarbro.glb` (1.1 MB) and `assets/heroes/caputo.glb` (0.9 MB), which the build copies as they are. The CC0 stand-in robot (`?standin`) still checks the loader with a library file that has its whole jump in one clip.
 - **Each hero's own move.** Yaarbro rolls while the move button is held: he tucks down and builds up to one and a half times walking speed, more slowly than he walks up to speed, keeps going with the stick let go, and carries the speed into a jump. Caputo pounces when it is pressed: a flat burst at about twice walking speed for a fifth of a second, the way the stick points or the way he faces, once for each time in the air. A roll faster than a walk, or a pounce, is a strike. The numbers are in `src/game/hero.ts`.
-- **Enemies.** Three, on every difficulty: a marmot scout in the clearing after the stumps (`bank-2`), a giant mosquito over the last three high boughs, and a second scout on the bank at the foot of the last climb (`bank-5`). Each notices a hero only on its own footing and never aims outside it. Their behaviour is Caputo Mountain's (`src/game/enemy.ts`):
-  - Both get ready, give a warning during which the aim is fixed on where the hero stood, attack along that line, then rest. A line on screen shows where the attack will go for as long as the warning lasts.
-  - **The marmot scout** hides until a hero is near, shuffles toward a hero who is far off and away from one who is close, rears up with an acorn, throws it, and rests. It hops back from a hero charging it along the ground. Two strikes beat it.
-  - **The giant mosquito** hovers above the hero, dives to where the hero stood, and rests there, low enough to reach. One strike beats it.
-  - **What hurts:** touching either while it is ready or attacking, and the acorn. Touching one while it warns, hops or rests does nothing.
-  - **What strikes:** a roll faster than a walk, a pounce, or either hero landing on top. A pounce or a landing bounces the hero up off it. A strike wins over a touch that would hurt.
-  - After a fall, or after running out of hearts, an enemy that is not beaten goes home and starts over, keeping the strikes it has taken. A beaten one stays beaten for the run.
+- **Enemies.** Three on the route, on every difficulty: a marmot scout in the clearing after the stumps (`bank-2`), a giant mosquito over the last three high boughs, and a second scout on the bank at the foot of the last climb (`bank-5`). Each notices a hero only on its own footing and never aims outside it. The rules are in `src/game/enemy.ts`:
+  - Both get ready, give a warning during which the aim is fixed on where the hero stood, attack along that line, then rest. On Easy a line on screen shows where the attack will go for as long as the warning lasts. On Normal and Hard nothing is drawn: the warning is what the enemy does and its sound.
+  - **The marmot scout on Easy** hides until a hero is near, shuffles toward a hero who is far off and away from one who is close, rears up with an acorn, throws it, and rests.
+  - **The marmot scout on Normal and Hard** walks a beat across its bank in plain view, comes after a hero who steps onto its bank, stops to throw from a few metres off, runs straight at a hero who is close, and gives up when the hero leaves.
+  - On every difficulty it hops back from a hero charging it along the ground.
+  - **The giant mosquito** hovers above the hero, dives to where the hero stood, and rests there, low enough to reach. On Normal and Hard it keeps up with a running hero, dives more often, and hovers higher.
+  - **Health:** a scout takes one hit on Easy and Normal and two on Hard; the mosquito one. A hit shows as a blinking flash and a short shove.
+  - **What hurts:** touching either while it is on watch, on its beat or attacking, and the acorn. Touching one while it warns, hops or rests does nothing.
+  - **What is a hit:** a roll faster than a walk, a pounce, or either hero landing on top. A pounce or a landing bounces the hero up off it. A hit wins over a touch that would hurt.
+  - **The regen rule:** after a fall, or after running out of hearts, every enemy that is not beaten goes home at full health, and notices nobody for a second and a half. A beaten one stays beaten for the run.
   - They are drawn by `src/view/enemies.ts` from `assets/enemies/marmot.glb` and `mosquito.glb`, each playing the clip for what the rules say it is doing. Enemies far from the hero are neither moved nor drawn.
+- **The marmot chief.** The grove's boss, on the wide bank at the top of the climb (`bank-6`). The rules for any boss are in `src/game/boss.ts`; the chief's numbers are `chief` in the grove's `difficulty.ts`.
+  - The fight begins when the hero walks a few steps onto its bank. Its name and health come up at the bottom of the screen, the boss music takes over, and the camera pulls back so the whole bank shows.
+  - It goes round on watch (walking at the hero; touching it costs a heart), warning, attack, rest. It rears up before a throw or a call, and lowers itself before a charge.
+  - It throws acorns (1, a fan of 3, a fan of 5). From two thirds of its health it also charges, straight through where the hero stood to the far side of its bank. In its last third it also calls giant mosquitoes (1, 2, 2), which come back each time it calls.
+  - It takes 4, 6 and 8 hits. On Easy any landing on top counts unless it is staggered. On Normal and Hard only a hit while it rests counts; a landing at other times bounces the hero clear, unharmed.
+  - Beaten, it topples and fades, its sidekicks give up, the "boss beaten" sound plays, the grove music comes back, and the golden leaf bursts into view on the bough beyond.
+  - Fall off its bank or run out of hearts, and the hero is back on the bank's near edge with the chief at full health and at home. The fight starts over when the hero steps in.
+  - It is drawn by `src/view/boss.ts` from the scout's model, 2.3 times the size and darker. It has no clips of its own.
 - **Sound.** Nothing plays until the first tap or key press, because browsers block it before that; the files are fetched while the start screen is up.
-  - **Music.** A calm forest track loops from the first tap on, on the start screen too. Finding the golden leaf plays a ten-second fanfare; the grove music makes way for it and drifts back after.
+  - **Music.** A calm forest track loops from the first tap on, on the start screen too. A battle theme takes over while a boss fight is on. Finding the golden leaf plays a ten-second fanfare; the grove music makes way for it and drifts back after.
   - **What the hero does:** a swish for a jump, a thud for a landing, a boing off a mushroom, a rolling rumble for as long as Yaarbro rolls (louder the faster he goes), a heavier swish for Caputo's pounce.
   - **Footsteps** by what is underfoot: moss on banks, wood on logs, stumps, shelves and boughs. A step every 1.25 metres for Yaarbro and every 0.8 for Caputo, whose steps are the same recordings made quieter, lighter and softer. A gentle walk is quieter than a run. Each step is a little higher or lower than the last.
-  - **What tells the player something:** a hit, running out of hearts, a fall, a checkpoint (the first time a safe bank is reached), landing on or striking an enemy, the marmot scout's warning squeak and its throw, the mosquito's warning and its dive. These are the loudest, and the music dips under them.
+  - **What tells the player something:** a hit, running out of hearts, a fall, a checkpoint (the first time a safe bank is reached), landing on or striking an enemy, the marmot scout's warning squeak and its throw, the mosquito's warning and its dive, and a boss being beaten. A boss's own warnings, throws and hits use the scout's sounds. These are the loudest, and the music dips under them.
   - **Distance.** Enemy sounds are full within 6 metres and fade to nothing at 48, well past the edge of the screen. The mosquito whines for as long as it is about, so it is heard before it is seen.
   - **Mute.** A Sound button beside Pause, on every screen, and the M key. The choice is remembered in the browser. Muted, the music keeps its place silently, so it is there when sound comes back.
   - **Loudness.** Every short sound is brought to one loudness when it loads, then set by its job. One limiter holds down whatever piles up.
   - Pausing, the end of the level and starting again stop the roll and the whine. Every button gives a soft click.
 - **Hearts.** 5 on Easy, 3 on Normal, 2 on Hard, shown under the level's name; a lost heart stays in place as a dark outline. A hit takes one, throws the hero away from what hurt it (0.5, 1.2 or 2 metres, by difficulty), takes the controls for a moment, and then nothing can hurt the hero for a while (1.3 seconds, times 1.5 on Easy and 0.6 on Hard), during which the hero flickers. A fall costs no heart. Losing the last one returns the hero to the last safe bank with all of them again. That is the same bank a fall returns to, so on Hard the cost stays under about 30 seconds of a perfect run.
-- **Camera.** Behind and above the hero, always looking the same way. A soft dark spot under the hero shows where a jump will land.
+- **Camera.** Behind and above the hero, always looking the same way. A soft dark spot under the hero shows where a jump will land. In a boss fight it pulls back and up so the whole arena shows.
 - **Difficulty.** Easy, Normal, Hard on the start screen. All numbers are in `src/levels/bouncing-grove/difficulty.ts`: the route's sizes and gaps, the checkpoints, hearts, how long a hit protects, how far it throws, and the enemies' warning, speed and rest.
 - **Falls.** A fall returns the hero to the last safe mossy bank and is counted. It costs no heart.
 - **End card.** Difficulty, hero, time, falls, hearts lost, date, and the player's best time and fewest falls with a new best marked. "Play again" returns to the start screen.
 - **Controls.** Mac: arrows or W A S D, Space, X or Shift for the hero's own move, Esc, M for sound off and on. Touch: drag the left half to move, press the right half to jump, and a smaller round button above Jump for the hero's own move.
 - **Turn sideways.** A touch device whose page is taller than wide gets a "Turn sideways to play" card.
 - **This device remembers** its players (see "Start here") and whether sound is off.
-- **Size.** The whole download is 10.06 MB (budget 20 MB), of which sound and music are 1.81 MB (budget 4 MB). Both are checked on every build.
+- **Size.** The whole download is 10.80 MB (budget 20 MB), of which sound and music are 2.48 MB (budget 4 MB). Both are checked on every build.
 - **Credits.** `CREDITS.md` lists every third-party file. All are CC0, the sounds and music included. It also lists the hero and enemy models, which are not: the README says the characters, their art and the models are all rights reserved.
 - **Checks on every pull request.** `.github/workflows/checks.yml`, three jobs: the private-terms check; rule tests, build with size check and browser checks in Chromium; browser checks in WebKit. The two browser jobs run inside Playwright's container image, pinned to the Playwright version in `package.json` (1.63.0), so a run installs nothing from Ubuntu's servers. Before this, on 2026-11-11, four runs in a row failed before any test because GitHub's machines could not reach those servers.
 
 ## Checks on this state
 
-- `npm test`: 437 tests pass. New in milestone four: seven on the sound files (the list and the folder agree, every file is credited, WAV and MP3 only, under 4 MB) and twenty-six on sound itself (nothing before the first tap or key press, mute and its memory, footsteps by surface and hero, each event's sound, fading with distance, the mosquito's whine).
-- `npm run test:browser`: 110 browser checks pass, in Chromium at Mac size with the keyboard, in Chromium at iPad size with touch, and in WebKit at iPad size with touch. New in milestone four (`tests/browser/sound.spec.ts`): no sound before the first tap or key press; sound starts with the first tap and the music plays; a landing and a button click are heard; the Sound button and the M key mute and unmute; mute is remembered across a reload; a muted visit plays through with nothing played. Every one also checks the browser's console stays clean. All the older checks now run with sound on, since they click Play.
+- `npm test`: 667 rule tests pass. New in milestone six: the scout's beat and chase, the shorter warnings, the mosquito keeping up, enemy health, the shove of a hit, the regen rule for enemies (`tests/enemies.test.ts`); how any boss fights, its stages, its guard, its sidekicks, the locked goal and the regen rule for a boss (`tests/boss.test.ts`); the marmot chief's place, look, numbers and sidekicks (`tests/chief.test.ts`). The test bot plays every level on every difficulty as each hero: no fall, no heart lost on the way to a boss, the boss beaten in its first fight, on walk and jump alone. It loses no heart to the chief on Easy and Hard and one on Normal.
+- `npm run test:browser`: 201 browser checks pass, in Chromium at Mac size with the keyboard, in Chromium at iPad size with touch, and in WebKit at iPad size with touch. New in milestone six: the scout hiding on Easy and walking its beat on Hard, the aim line on Easy only, a hit showing and a fall undoing it (`enemies.spec.ts`); a boss's bar, music, hit, regen, victory and locked leaf, on the practice boss and on the chief (`boss.spec.ts`). Checks about the end of a run count the boss as beaten (`skipBoss` in `helpers.ts`) and do not fight it.
 - **Not checked:**
+  - How anything moves or sounds in milestone six, beyond the owner's look at the tougher enemies on the preview page (see "Start here").
   - How anything sounds. Nobody can hear a test browser, and a cloud session cannot hear. The checks prove sound is asked for at the right moments and raises no error.
   - Safari itself, a real iPad, a real Mac. The test browsers have no graphics card, so most checks run on the minimal tier, which has plain shading and no shadows. The full lighting is drawn in both browsers by two checks, slowly and in a small window.
   - Frame rate on an iPad. On the owner's Mac in Safari it was 120 a second on the high tier with a scout on screen (before sound). Whether sound costs frames on any device has not been measured; it should not, since sounds are decoded once and played by the browser.
@@ -249,18 +296,20 @@ Milestone four (sound and music) is done, in the pull requests listed under "Sta
 
 ## What's next
 
-1. **Add a level.** `docs/adding-a-level.md` is the recipe: a folder in `src/levels/` with `difficulty.ts`, `layout.ts` and `level.ts`, a card picture, and one line in the level list. The picker, saved progress, best times, the ghost, the rule tests and the bot all work from that list with no other change. What it needs from the owner before any work: which part of Caputo Mountain it is (the kids are picking from a list he was given in the milestone-five report; that list is not in this repo, because the Caputo Mountain docs are private), an approved route plan, and whether it brings new enemies, which are made as the marmot and mosquito were. A level that is not the forest also needs its own surroundings and music; the recipe says where those go.
-2. **The owner checks milestone five on his Mac** (see "Start here"), the frame rate with a ghost above all.
-3. **The owner and the kids play with sound** and he says what is too loud, too quiet, too often or wrong. A level is one number in `src/audio/sounds.ts`; a different recording goes on the sound board first.
-4. **Ideas that came up and were not asked for** are not in the code: remembering the last area each player picked, a ghost of someone else's run, the rest of the 2D forest's enemies, sound that moves left and right with what makes it.
-5. **Checking the Blender scripts on new files.** `tools/rig-quadruped.py` is meant for new enemies too: each needs its own guide file of joint places, like `tools/caputo.rig.json`.
+1. **Grove variety** (the owner's next milestone). The vertical-log hops appear three times in the grove: the stumps of section 2, the mushrooms over open air in section 4 and the snags and mushrooms of section 6 all step left and right and climb. Keep the best of them and replace the other two with different obstacles. What it needs from the owner first: which one is "the best" (or leave to pick), and an approved plan for the two replacements. Every piece of the grove comes from the Caputo Mountain forest or from what he says; nothing in the forest moves, so a moving platform needs his word. The route's numbers are in `src/levels/bouncing-grove/difficulty.ts`, its shape in `layout.ts`, and the bot and the rule tests check any change.
+2. **The owner and the kids play milestone six** and say what is off (see "What nobody has checked yet"). Tuning is numbers in `difficulty.ts`: `chief` for the boss, `enemyWarning`, `scoutChase` and the rest for the enemies.
+3. **Then the lake**, and the rest of the roadmap in "Start here". A level that is not the forest needs its own surroundings and music; `docs/adding-a-level.md` says where those go, and how to end a level with a boss.
+4. **Ideas that came up and were not asked for** are not in the code: a run clip for the scout and clips of its own for the chief, sounds of its own for the chief, a hint on screen the first time a guarded boss is open, remembering the last area each player picked, a ghost of someone else's run, sound that moves left and right with what makes it.
 
 ## Known limits
 
-- One area, with three enemies in it.
+- One area, with three enemies and a boss in it.
 - Progress lives in one browser on one device. Another browser, a private window or cleared site data starts from nothing, and nothing carries between the Mac and the iPad.
 - A ghost is only kept for a best time. A run with the fewest falls that was slower leaves no ghost.
-- A perfect run that never stops is never hit by an enemy, on any difficulty. The enemies punish stopping, not speed.
+- On Easy a run that never stops is never hit by an enemy. On Normal and Hard a scout comes after the hero, so it has to be outrun, jumped over or hit.
+- The chief and the scout share one model and one set of clips: the chief's charge is the scout's shuffle played fast.
+- A boss's attacks are taken in a fixed order, so a fight plays the same way each time until the player does something different.
+- On Normal and Hard nothing on screen marks where an attack will land. That is the owner's rule; if the kids cannot read the wind-ups, `enemyAimLine` and `chief.aimLine` bring the lines back.
 - The mosquito has five legs: Meshy made its two middle legs as one.
 - A scout's dodge and the mosquito's resting place are easy to miss at speed: nothing on screen explains that a resting enemy is the one to strike.
 - The high boughs are logs on tall snags. They read clearly as footing, but they do not look like living boughs growing from trees.
@@ -277,4 +326,4 @@ Milestone four (sound and music) is done, in the pull requests listed under "Sta
 
 ## Added as plain scenery, not canon
 
-Tree stumps to hop on, the tall snags of the last climb, the snags that hold logs and boughs up, the great cedar that holds the last bough, and the misty gully the route crosses with its slopes, ferns and boulders. The Caputo Mountain docs do not say what lies below the grove; its forest painting shows a misty valley of firs, which this follows. Everything else comes from Caputo Mountain: the Bouncing Grove, mossy banks as safe places, mushroom springs, logs with breaks, root shelves, a ravine, high boughs, a climb that starts with a spring, the golden leaf tucked in the canopy, both heroes' looks, and the end card. No platform in the level moves, because none in the Caputo Mountain forest does. The enemies, the hearts and the two moves are Caputo Mountain's too.
+Tree stumps to hop on, the tall snags of the last climb, the snags that hold logs and boughs up, the great cedar that holds the last bough, and the misty gully the route crosses with its slopes, ferns and boulders. The Caputo Mountain docs do not say what lies below the grove; its forest painting shows a misty valley of firs, which this follows. The marmot chief, its mosquito sidekicks and the regen rule come from the owner (`docs/decisions.md`, 2026-11-13); the wide bank it stands on is plain scenery. Everything else comes from Caputo Mountain: the Bouncing Grove, mossy banks as safe places, mushroom springs, logs with breaks, root shelves, a ravine, high boughs, a climb that starts with a spring, the golden leaf tucked in the canopy, both heroes' looks, and the end card. No platform in the level moves, because none in the Caputo Mountain forest does. The enemies, the hearts and the two moves are Caputo Mountain's too.

@@ -522,7 +522,7 @@ describe('how many hits an enemy takes', () => {
   it('in the grove: a scout takes one on Easy and Normal and two on Hard, the mosquito one on every difficulty', () => {
     for (const difficulty of DIFFICULTIES) {
       const game = new Game(buildGrove(difficulty), difficulty, 'Yaarbro');
-      expect(game.enemies.map((enemy) => enemy.maxHits)).toEqual(difficulty === 'hard' ? [2, 1, 2] : [1, 1, 1]);
+      expect(game.enemies.slice(0, 3).map((enemy) => enemy.maxHits)).toEqual(difficulty === 'hard' ? [2, 1, 2] : [1, 1, 1]);
       expect(game.enemies.map((enemy) => enemy.hits)).toEqual(game.enemies.map((enemy) => enemy.maxHits));
     }
     expect(DIFFICULTIES.map((difficulty) => [GROVE_DIFFICULTY[difficulty].scoutHealth, GROVE_DIFFICULTY[difficulty].mosquitoHealth])).toEqual([[1, 1], [1, 1], [2, 1]]);
@@ -782,7 +782,8 @@ describe('the enemies of the Bouncing Grove', () => {
 
   it.each(DIFFICULTIES)('on %s: a scout in the clearing, a mosquito over the later high boughs, a scout at the foot of the climb', (difficulty) => {
     const level = buildGrove(difficulty);
-    expect((level.enemies ?? []).map((spot) => [spot.id, spot.kind])).toEqual([
+    // The chief's sidekicks come after these in the list; they have their own tests (tests/chief.test.ts).
+    expect((level.enemies ?? []).filter((spot) => !spot.sidekickOf).map((spot) => [spot.id, spot.kind])).toEqual([
       ['scout-clearing', 'marmot'],
       ['mosquito-boughs', 'mosquito'],
       ['scout-climb', 'marmot'],
@@ -811,7 +812,7 @@ describe('the enemies of the Bouncing Grove', () => {
       // The first mushroom of the climb grows on the bank itself.
       'scout-climb': ['bank-5', 'climb-mushroom-1'],
     };
-    for (const spot of level.enemies ?? []) {
+    for (const spot of (level.enemies ?? []).filter((each) => !each.sidekickOf)) {
       const reach = spot.notice ?? 0;
       const noticed = level.solids.filter((s) => {
         // Does any part of this solid's top lie inside the area the enemy notices?
@@ -836,20 +837,22 @@ describe('the enemies of the Bouncing Grove', () => {
   });
 
   describe.each(DIFFICULTIES)('a run through the enemies on %s', (difficulty) => {
-    it.each(HEROES)('%s reaches the leaf without losing a heart, though every enemy noticed the hero', (hero) => {
+    it.each(HEROES)('%s reaches the chief without losing a heart, though every enemy on the way noticed the hero', (hero) => {
       const level = buildGrove(difficulty);
       const game = new Game(level, difficulty, hero);
       const bot = new Bot(level);
       const noticed = new Set<string>();
-      for (let i = 0; i < 120 / STEP && !game.complete; i += 1) {
+      let lostBeforeChief = -1;
+      for (let i = 0; i < 300 / STEP && !game.complete; i += 1) {
         game.step(bot.input(game));
+        if (lostBeforeChief < 0 && game.events.some((event) => event.type === 'boss' && event.what === 'begin')) lostBeforeChief = game.heartsLost;
         // A scout notices by going on watch; the mosquito is always on watch, so its first warning is the sign.
         for (const event of game.events) if (event.type === 'enemy' && (event.phase === 'idle' || event.phase === 'warning')) noticed.add(event.id);
       }
       expect(game.complete).toBe(true);
-      expect(game.heartsLost).toBe(0);
+      expect(lostBeforeChief).toBe(0);
       expect(game.falls).toBe(0);
-      expect([...noticed].sort()).toEqual(['mosquito-boughs', 'scout-clearing', 'scout-climb']);
+      expect([...noticed].filter((id) => !id.startsWith('sidekick')).sort()).toEqual(['mosquito-boughs', 'scout-clearing', 'scout-climb']);
       // On Easy, and here on every difficulty, with walk and jump alone.
       expect(game.movesUsed).toBe(0);
     });

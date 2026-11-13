@@ -138,7 +138,7 @@ export class GameSounds {
     // The mosquito's whine: the nearest one that is still about.
     let whine = 0;
     for (const enemy of game.enemies) {
-      if (enemy.kind !== 'mosquito' || enemy.phase === 'defeated' || enemy.phase === 'concealed') continue;
+      if (enemy.kind !== 'mosquito' || enemy.phase === 'defeated' || enemy.phase === 'concealed' || enemy.dormant) continue;
       whine = Math.max(whine, byDistance(distanceTo(game, enemy)));
     }
     // In steps of a twentieth, so the speaker is not told about every hair's breadth.

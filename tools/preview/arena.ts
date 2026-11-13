@@ -36,6 +36,7 @@ import {
 } from 'three';
 import { GLTFLoader, type GLTF } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { HDRLoader } from 'three/examples/jsm/loaders/HDRLoader.js';
+import { bossFighting, bossOpen, type Boss } from '../../src/game/boss';
 import { DIFFICULTIES, DIFFICULTY_LABEL, type Difficulty } from '../../src/game/difficulty';
 import { ENEMY, type Enemy } from '../../src/game/enemy';
 import { Game, IDLE, type GameEvent, type Input } from '../../src/game/game';
@@ -43,8 +44,12 @@ import { HEROES, MOVE, MOVE_NAME, STEP, type HeroName } from '../../src/game/her
 import { surfaceBelow, type Level, type Solid } from '../../src/game/level';
 import { Controls } from '../../src/input/controls';
 import { findLevel } from '../../src/levels';
+import { BossView } from '../../src/view/boss';
+import { FIGHT_CAMERA, fightView } from '../../src/view/boss-camera';
 import { ENEMY_MODELS, EnemyView } from '../../src/view/enemies';
 import { HERO_MODELS, ModelHero } from '../../src/view/hero-model';
+// The rule tests' own player. In "Watch", it is what fights a boss.
+import { Bot } from '../../tests/helpers/bot';
 
 const params = new URLSearchParams(window.location.search);
 /** Flat light and no shadows, for a machine that draws in software. */
@@ -68,8 +73,10 @@ interface Place {
   id: string;
   label: string;
   level: string;
-  /** The enemy the read-out under the picture follows. */
-  watch: string;
+  /** The enemy the read-out under the picture follows. Left out for a boss fight: the read-out follows the boss. */
+  watch?: string;
+  /** True when "Watch" is the test bot playing (a boss fight), not a script. */
+  bot?: boolean;
   /** Where "Play it yourself" stands the hero. */
   start(level: Level): { x: number; y: number; z: number };
   script(level: Level, difficulty: Difficulty): Beat[];
@@ -133,7 +140,49 @@ const PLACES: Place[] = [
     },
   },
   scoutPlace('climb', 'The scout at the foot of the climb', 'bank-5', 'scout-climb'),
+  {
+    id: 'chief',
+    label: 'The marmot chief',
+    level: 'bouncing-grove',
+    bot: true,
+    start: (level) => {
+      const bank = solid(level, 'bank-6');
+      return { x: bank.safeAt?.x ?? bank.x, y: bank.top, z: bank.safeAt?.z ?? bank.z };
+    },
+    script: () => [],
+  },
 ];
+
+/** Put the chief first when the address asks for it (the chief's own preview page does). */
+if (params.get('place') === null && document.documentElement.dataset.first) {
+  const first = PLACES.findIndex((each) => each.id === document.documentElement.dataset.first);
+  if (first > 0) PLACES.unshift(...PLACES.splice(first, 1));
+}
+
+/** What a boss is doing, in the page's words. */
+const BOSS_DOING = (boss: Boss): string => {
+  const attack = boss.attack === 'charge' ? 'a charge' : boss.attack === 'call' ? 'a call to its sidekicks' : 'a throw';
+  switch (boss.phase) {
+    case 'waiting':
+      return 'Waiting at home';
+    case 'intro':
+      return 'The fight begins';
+    case 'idle':
+      return 'On watch, walking at the hero';
+    case 'warning':
+      return `Warning: ${attack} is coming`;
+    case 'attack':
+      return boss.attack === 'charge' ? 'Charging' : boss.attack === 'call' ? 'Calling its sidekicks' : 'Throwing';
+    case 'rest':
+      return 'Resting: the opening';
+    case 'stagger':
+      return 'Hit!';
+    case 'roar':
+      return 'Roaring: its attacks change';
+    default:
+      return 'Beaten';
+  }
+};
 
 /** What an enemy is doing, in the page's words. */
 const DOING: Record<string, string> = {
@@ -293,6 +342,14 @@ const start = async (): Promise<void> => {
     return made;
   };
 
+  // The golden leaf, as a plain gold marker.
+  const leaf = new Mesh(new CylinderGeometry(0.5, 0.5, 0.08, 6), new MeshStandardMaterial({ color: 0xf2c14e, emissive: 0xb97f12, roughness: 0.4 }));
+  leaf.rotation.z = Math.PI / 2;
+  scene.add(leaf);
+  const bar = byId('boss');
+  const barName = byId('boss-name');
+  const pips = byId('boss-health');
+
   const shadow = new Mesh(new CircleGeometry(0.5, 24), new MeshBasicMaterial({ color: 0x0c1a14, transparent: true, opacity: 0.32, depthWrite: false }));
   shadow.rotation.x = -Math.PI / 2;
   scene.add(shadow);
@@ -319,6 +376,11 @@ const start = async (): Promise<void> => {
   let blink = 0;
   let newsFor = 0;
   let lastPut: { x: number; y: number; z: number } | null = null;
+  let bossView: BossView | null = null;
+  let bot: Bot | null = null;
+  /** Seconds since the bot's fight was over, one way or the other. */
+  let sinceOver = 0;
+  let fight = 0;
 
   const caption = byId('caption');
   const news = byId('news');
@@ -360,6 +422,11 @@ const start = async (): Promise<void> => {
       scene.remove(hero.root);
       hero.dispose();
     }
+    if (bossView) {
+      scene.remove(bossView.root, ...bossView.extras);
+      bossView.dispose();
+      bossView = null;
+    }
     const entry = findLevel(place.level);
     if (!entry) throw new Error(`No level called ${place.level}`);
     level = entry.build(difficulty);
@@ -372,7 +439,15 @@ const start = async (): Promise<void> => {
       scene.add(view.root, ...view.extras);
       return view;
     });
+    if (level.boss) {
+      bossView = new BossView(level.boss, enemyModels[level.boss.look.model], PLAIN);
+      scene.add(bossView.root, ...bossView.extras);
+    }
+    leaf.position.set(level.leaf.x, level.leaf.y, level.leaf.z);
     beats = place.script(level, difficulty);
+    bot = null;
+    sinceOver = 0;
+    fight = 0;
     owed = 0;
     blink = 0;
     news.textContent = '';
@@ -385,9 +460,18 @@ const start = async (): Promise<void> => {
       putHero(at);
       follow = { ...at };
       caption.textContent = `You have the hero. Arrow keys or W A S D to move, Space to jump, X or Shift to ${MOVE_NAME[heroName].toLowerCase()}. On a touch screen: left thumb moves, right thumb jumps.`;
+    } else if (place.bot) {
+      const at = place.start(level);
+      putHero(at);
+      follow = { ...at };
+      bot = new Bot(level);
+      caption.textContent = 'The rule tests’ own player has the hero. It keeps moving round the chief, steps out of the line of an attack, and jumps on it when a hit will count. It uses walk and jump alone. When the fight is over it starts again.';
     } else startBeat(0);
     const seconds = ENEMY.warning * (level.enemyTuning?.warning ?? 1);
-    tell.textContent = `On ${DIFFICULTY_LABEL[difficulty]} a warning lasts ${seconds.toFixed(2)} seconds.`;
+    const numbers = place.bot ? level.boss?.numbers : undefined;
+    tell.textContent = numbers
+      ? `On ${DIFFICULTY_LABEL[difficulty]}: ${numbers.health} hits to beat it, ${numbers.guarded ? 'and only a hit while it rests counts' : 'and any landing on top counts'}. It warns for ${numbers.warning} s before a throw and ${numbers.chargeWarning} s before a charge, and rests for ${numbers.rest} s.`
+      : `On ${DIFFICULTY_LABEL[difficulty]} a warning lasts ${seconds.toFixed(2)} seconds.`;
     for (const button of document.querySelectorAll<HTMLButtonElement>('[data-place]')) button.setAttribute('aria-pressed', String(button.dataset.place === place.id));
     for (const button of document.querySelectorAll<HTMLButtonElement>('[data-difficulty]')) button.setAttribute('aria-pressed', String(button.dataset.difficulty === difficulty));
     for (const button of document.querySelectorAll<HTMLButtonElement>('[data-hero]')) button.setAttribute('aria-pressed', String(button.dataset.hero === heroName));
@@ -423,10 +507,23 @@ const start = async (): Promise<void> => {
         say(event.left > 0 ? `${name} hit! ${event.left} more to go.` : `${name} sent packing!`);
       } else if (event.type === 'hurt') say(event.left > 0 ? `Oof! ${event.left} of ${level.hearts} hearts left.` : 'Out of hearts. Back to safety!');
       else if (event.type === 'restored') say(`Safe again, with all ${level.hearts} hearts.`);
+      else if (event.type === 'healed') say(event.kind === 'marmot' ? 'The marmot scout is back to full strength.' : 'The mosquito is back to full strength.');
+      else if (event.type === 'boss') {
+        const name = level.boss?.name ?? 'The boss';
+        if (event.what === 'begin') say(`${name}!`);
+        else if (event.what === 'hit') {
+          bossView?.strike();
+          if (event.left > 0) say(`${name} hit! ${event.left} more to go.`);
+        } else if (event.what === 'blocked') say('It shrugs that off. Hit it while it rests!');
+        else if (event.what === 'stage') say(`${name} is getting angry!`);
+        else if (event.what === 'call') say(`${name} calls its sidekicks!`);
+        else if (event.what === 'beaten') say(`${name} is beaten! The golden leaf is yours.`);
+        else if (event.what === 'reset' && event.healed) say(`${name} is back to full strength.`);
+      } else if (event.type === 'goal') say('A golden leaf, tucked in the canopy!');
     }
     if (events.some((event) => event.type === 'fall' || event.type === 'restored')) {
       // In a script, a hero knocked off its footing is put back where this part of the script began.
-      if (!playing && lastPut) putHero(lastPut);
+      if (!playing && lastPut && !place.bot) putHero(lastPut);
       was = { x: game.x, y: game.y, z: game.z };
     }
   };
@@ -461,15 +558,36 @@ const start = async (): Promise<void> => {
     hero.root.visible = flicker <= 0 || Math.floor(flicker * 12) % 2 === 0;
     const tuning = level.enemyTuning ?? { warning: 1, speed: 1, rest: 1 };
     enemies.forEach((each, i) => each.update(game.enemies[i], tuning, game.z, dt));
+    if (bossView && game.boss) bossView.update(game.boss, game.z, dt);
+    // The golden leaf: out of sight until a boss in its way is beaten.
+    leaf.visible = game.goalOpen && !game.complete;
+    leaf.rotation.y += dt * 2;
+    const boss = game.boss;
+    const fighting = boss !== null && (bossFighting(boss) || (boss.phase === 'defeated' && boss.timer < 2.5));
+    bar.hidden = !fighting;
+    if (boss && fighting) {
+      barName.textContent = boss.spot.name;
+      const key = `${boss.health}/${boss.spot.numbers.health}`;
+      if (pips.dataset.key !== key) {
+        pips.dataset.key = key;
+        pips.innerHTML = Array.from({ length: boss.spot.numbers.health }, (_, i) => `<span class="${i < boss.health ? 'full' : ''}"></span>`).join('');
+      }
+      bar.classList.toggle('open', bossOpen(boss) && boss.phase !== 'intro');
+    }
 
     const ground = surfaceBelow(level, x, z, y + level.ledgeHelp, MOVE.footRadius);
     shadow.visible = ground !== null;
     if (ground) shadow.position.set(x, ground.top + 0.03, z);
 
-    follow.x = ease(follow.x, x, 7, dt);
-    follow.z = ease(follow.z, z, 7, dt);
+    // The game's own camera, boss fights included (src/view/boss-camera.ts).
+    const inFight = game.boss !== null && bossFighting(game.boss);
+    fight = Math.max(0, Math.min(1, fight + (inFight ? dt / FIGHT_CAMERA.easeIn : -dt / FIGHT_CAMERA.easeOut)));
+    const aim = fightView(fight, { x, z }, level.boss);
+    follow.x = ease(follow.x, aim.x, 7, dt);
+    follow.z = ease(follow.z, aim.z, 7, dt);
     follow.y = ease(follow.y, Math.max(y, -4), game.grounded ? 5 : 2.6, dt);
-    camera.position.set(follow.x * 0.85, follow.y + 8, follow.z + 12);
+    const out = fightView(fight, follow, level.boss);
+    camera.position.set(follow.x * 0.85, follow.y + 8 * out.up, follow.z + 12 * out.back);
     camera.lookAt(follow.x * 0.92, follow.y + 1, follow.z - 4.5);
     sun.target.position.set(follow.x, follow.y, follow.z - 4);
     sun.position.set(follow.x - 14, follow.y + 26, follow.z + 8);
@@ -478,7 +596,10 @@ const start = async (): Promise<void> => {
     hearts.textContent = `${'♥'.repeat(game.hearts)}${'♡'.repeat(level.hearts - game.hearts)}`;
     hearts.setAttribute('aria-label', `${game.hearts} of ${level.hearts} hearts`);
     const watched: Enemy | undefined = game.enemies.find((each) => each.spot.id === place.watch);
-    if (watched) {
+    if (!place.watch && boss) {
+      doing.textContent = BOSS_DOING(boss);
+      doing.dataset.phase = boss.phase;
+    } else if (watched) {
       const moving = watched.phase === 'idle' && watched.kind === 'marmot' && (level.enemyTuning?.chaseSpeed ?? 0) > 0 && watched.timer >= ENEMY.marmotReady;
       const hovering = watched.phase === 'idle' && watched.kind === 'mosquito';
       doing.textContent = moving ? 'Coming after the hero' : hovering ? 'Hovering over the hero' : (DOING[watched.phase] ?? watched.phase);
@@ -495,11 +616,18 @@ const start = async (): Promise<void> => {
     let steps = 0;
     while (owed >= STEP && steps < 6) {
       was = { x: game.x, y: game.y, z: game.z };
-      game.step(playing ? controls.read() : scripted());
+      game.step(playing ? controls.read() : bot ? bot.input(game) : scripted());
       react(game.events);
       owed -= STEP;
       steps += 1;
-      if (!playing) {
+      if (!playing && bot) {
+        // The bot's fight, over and over: a few seconds after the leaf is taken, it starts again.
+        if (game.complete) sinceOver += STEP;
+        if (sinceOver > 4) {
+          setUp();
+          return;
+        }
+      } else if (!playing) {
         beatFor += STEP;
         if (beatFor >= beats[beat].seconds) startBeat(beat + 1);
       }

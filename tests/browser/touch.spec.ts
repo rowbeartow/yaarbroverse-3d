@@ -1,5 +1,5 @@
 import { expect, test, type CDPSession, type Page } from '@playwright/test';
-import { address, expectAtRest, open, pickPlayer, play, snapshot, standOn } from './helpers';
+import { address, expectAtRest, open, pickPlayer, play, skipBoss, snapshot, standOn } from './helpers';
 
 // Touch play, as on the iPad held sideways.
 test.skip(({ hasTouch }) => !hasTouch, 'Touch checks run on the iPad-sized screen');
@@ -128,6 +128,8 @@ test('a thumb on the stick walks the hero to the golden leaf, and the end card s
   await play(page, 'Yaarbro', 'easy');
   // Start at the near end of the last bough (the whole route is played by the
   // rule tests), then walk the rest by thumb: the leaf is straight ahead.
+  // The marmot chief stands between the hero and the leaf: count it as beaten here (boss.spec.ts fights it).
+  await skipBoss(page);
   await standOn(page, 'bough', 2);
   const touch = await fingers(page, browserName);
   await touch.send('touchStart', [{ x: 200, y: 600, id: 1 }]);
