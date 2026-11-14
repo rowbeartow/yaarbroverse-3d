@@ -48,7 +48,7 @@ export type Source = { synth: SynthName } | { files: string[] };
 
 export interface SoundDef {
   /** The heading it goes under on the sound board. */
-  group: 'Footsteps' | 'Hero' | 'Enemies' | 'World' | 'Menu' | 'Music';
+  group: 'Footsteps' | 'Hero' | 'Water' | 'Enemies' | 'World' | 'Menu' | 'Music';
   label: string;
   /** One line for the sound board: when it plays and what it should sound like. */
   what: string;
@@ -186,6 +186,21 @@ export const SOUNDS = {
     group: 'World', label: 'Wind before a bough moves', mix: 'cue', level: -3, vary: 0.04,
     what: 'A gust that swells just before a windy bough rises or sinks: its tell. The owner picked choice B.',
     source: { files: ['gust.wav'] },
+  },
+  waterIn: {
+    group: 'Water', label: 'Going into the water', mix: 'action', level: 0, vary: 0.05,
+    what: 'A splash when a hero goes into deep water, louder the higher the drop. The owner picked choice A.',
+    source: { files: ['water-in.wav'] },
+  },
+  stroke: {
+    group: 'Water', label: 'A swimming stroke', mix: 'step', level: -2, vary: 0.08,
+    what: 'A small splash for each stroke while swimming at the surface. The owner picked choice B.',
+    source: { files: ['stroke.wav'] },
+  },
+  surfacing: {
+    group: 'Water', label: 'Surfacing', mix: 'action', level: -4, vary: 0.05,
+    what: "A soft splash when a swimmer's head comes back up. The owner picked choice A.",
+    source: { files: ['surfacing.wav'] },
   },
   leafTune: {
     group: 'Music', label: 'Golden leaf tune', mix: 'music', level: 6,

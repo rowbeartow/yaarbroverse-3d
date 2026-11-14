@@ -123,7 +123,7 @@ const row = (key: string, label: string, what: string, credit: string, what_: It
 
 const status = document.getElementById('status')!;
 const groups = document.getElementById('groups')!;
-const ORDER: SoundDef['group'][] = ['Footsteps', 'Hero', 'Enemies', 'World', 'Menu', 'Music'];
+const ORDER: SoundDef['group'][] = ['Footsteps', 'Hero', 'Water', 'Enemies', 'World', 'Menu', 'Music'];
 const NOTE: Partial<Record<SoundDef['group'], string>> = {
   Footsteps: "Each press plays the next recording, a little higher or lower each time. Caputo's are the same steps made quieter, lighter and softer.",
   Enemies: 'In the game these fade with distance. Here they play at their closest.',

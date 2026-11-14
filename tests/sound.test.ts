@@ -3,7 +3,8 @@
 // right sounds. A stand-in speaker writes down what it is asked to do.
 
 import { describe, expect, it } from 'vitest';
-import { GameSounds, FAR, NEAR, byDistance } from '../src/audio/game-sounds';
+import { GameSounds, FAR, NEAR, STROKE, byDistance, splashVolume } from '../src/audio/game-sounds';
+import { buildSandbox } from '../src/levels/sandbox/layout';
 import { MUTE_KEY, Sound, type Memory, type PlayOptions, type Speaker } from '../src/audio/mix';
 import { VOICE, type SoundName } from '../src/audio/sounds';
 import { Game } from '../src/game/game';
@@ -40,6 +41,10 @@ class Notebook implements Speaker {
   }
   setMuted(muted: boolean): void {
     this.muted = muted;
+  }
+  underwater = false;
+  setUnderwater(under: boolean): void {
+    this.underwater = under;
   }
   names(): SoundName[] {
     return this.played.map((entry) => entry.name);
@@ -498,5 +503,67 @@ describe('in the grove', () => {
     sidekick.dormant = false;
     sounds.step(game);
     expect(speaker.loops.get('mosquitoHover')).toBeGreaterThan(0);
+  });
+});
+
+describe('in the water', () => {
+  /** A hero dropped into the Sandbox's pool from `height` metres over the water. */
+  const dropped = (height: number, hero: 'Yaarbro' | 'Caputo' = 'Yaarbro', difficulty: 'easy' | 'normal' = 'normal') => {
+    const game = new Game(buildSandbox(difficulty), difficulty, hero);
+    const pool = game.level.water![0];
+    Object.assign(game, { x: 0, z: pool.maxZ - 4, y: pool.surface + height, vx: 0, vy: 0, vz: 0, grounded: false, groundId: null });
+    return { game, ...listening(game) };
+  };
+  const idle = { moveX: 0, moveZ: 0, jump: false };
+
+  it('going in splashes, louder the higher the drop', () => {
+    const low = dropped(0.5);
+    low.run(idle, 1.5);
+    const high = dropped(6);
+    high.run(idle, 2.5);
+    const volume = (speaker: Notebook): number => speaker.played.find((entry) => entry.name === 'waterIn')!.options.volume!;
+    expect(volume(high.speaker)).toBeGreaterThan(volume(low.speaker));
+    expect(splashVolume(0)).toBeGreaterThan(0.3);
+    expect(splashVolume(40)).toBe(1);
+  });
+
+  it.each(['Yaarbro', 'Caputo'] as const)('%s makes a stroke for each stretch swum at the surface, none standing still, none underwater', (hero) => {
+    const { speaker, run } = dropped(0.5, hero);
+    run(idle, 2);
+    expect(speaker.names()).not.toContain('stroke');
+    run({ moveX: 0, moveZ: -1, jump: false }, 2);
+    const strokes = speaker.names().filter((name) => name === 'stroke').length;
+    // About 3.6 metres a second at the surface.
+    expect(strokes).toBeGreaterThanOrEqual(Math.floor((3.6 * 1.5) / STROKE[hero]));
+    speaker.played = [];
+    run({ moveX: 0, moveZ: -1, jump: false, move: true }, 1.5);
+    expect(speaker.names()).not.toContain('stroke');
+    expect(speaker.names()).not.toContain('stepMoss');
+  });
+
+  it('underwater everything is muffled, and surfacing clears it with a splash', () => {
+    const { speaker, sound, run } = dropped(0.5);
+    run(idle, 2);
+    expect(speaker.underwater).toBe(false);
+    run({ ...idle, move: true }, 1);
+    expect(speaker.underwater).toBe(true);
+    expect(sound.underwater).toBe(true);
+    run(idle, 5);
+    expect(speaker.underwater).toBe(false);
+    expect(speaker.names()).toContain('surfacing');
+  });
+
+  it('a new run clears the muffle', () => {
+    const { speaker, sounds, run } = dropped(0.5);
+    run({ ...idle, move: true }, 2);
+    expect(speaker.underwater).toBe(true);
+    sounds.reset();
+    expect(speaker.underwater).toBe(false);
+  });
+
+  it('running out of breath sounds like running out of hearts', () => {
+    const { speaker, run } = dropped(0.5);
+    run({ ...idle, move: true }, 16);
+    expect(speaker.names()).toContain('heartsOut');
   });
 });

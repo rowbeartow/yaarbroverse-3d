@@ -8,7 +8,7 @@
 // called from every one of those, so sound also comes back after Safari has
 // put it to sleep (a phone call, another tab).
 
-import { LIST, Turns, buildMix, loadBuffers, startMusic, strike, type Buffers, type MixGraph } from './graph';
+import { LIST, Turns, buildMix, loadBuffers, setUnderwater, startMusic, strike, type Buffers, type MixGraph } from './graph';
 import type { PlayOptions, Speaker } from './mix';
 import { gainOf, type SoundName } from './sounds';
 
@@ -24,6 +24,8 @@ export interface PlayerInfo {
   ready: boolean;
   /** How loud everything is let through: 1, or 0 when muted. */
   volume: number;
+  /** True while everything is muffled, the hero's head being underwater. */
+  underwater: boolean;
   music: SoundName | null;
   loops: SoundName[];
   /** The last sounds played, oldest first. */
@@ -47,6 +49,7 @@ export class Player implements Speaker {
   private ready = false;
 
   private muted = false;
+  private underwater = false;
   private wantedMusic: SoundName | null = null;
   private music: Running | null = null;
   private tune: AudioBufferSourceNode | null = null;
@@ -99,6 +102,7 @@ export class Player implements Speaker {
         return;
       }
       this.graph = buildMix(this.ctx);
+      if (this.underwater) setUnderwater(this.graph, true);
       this.graph.gate.gain.value = this.muted ? 0 : 1;
       void this.decode(this.ctx);
     }
@@ -122,6 +126,12 @@ export class Player implements Speaker {
     if (strike(graph, this.turns, name, options) <= 0) return;
     this.played.push(name);
     if (this.played.length > 60) this.played.shift();
+  }
+
+  /** Underwater: muffle everything (see MUFFLE in graph.ts). Remembered until sound can play. */
+  setUnderwater(under: boolean): void {
+    this.underwater = under;
+    if (this.graph) setUnderwater(this.graph, under);
   }
 
   setLoop(name: SoundName, volume: number): void {
@@ -226,6 +236,7 @@ export class Player implements Speaker {
       state: this.ctx?.state ?? 'none',
       ready: this.ready,
       volume: this.muted ? 0 : 1,
+      underwater: this.underwater,
       music: this.music ? this.wantedMusic : null,
       loops: [...this.loops.keys()],
       played: [...this.played],

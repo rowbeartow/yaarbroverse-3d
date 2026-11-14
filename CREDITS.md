@@ -61,6 +61,9 @@ Recorded files, in `assets/audio/`. All are CC0, from OpenGameArt, downloaded on
 | `moss-rustle.wav` | Moss about to crumble: 0.8 seconds of `rustle07.flac`, with the bass under 150 hertz taken out. Added 2026-11-14. | "20 Rustles of dry leaves" by qubodup: https://opengameart.org/content/20-rustles-dry-leaves | CC0 |
 | `moss-fall.wav` | Moss falling away (`bfh1_wood_falling_01.ogg`). Added 2026-11-14. | "75 CC0 breaking / falling / hit sfx" by rubberduck: https://opengameart.org/content/75-cc0-breaking-falling-hit-sfx | CC0 |
 | `gust.wav` | The gust before a windy bough moves: 1.6 seconds of `wind3.wav` from 20 seconds in, faded in over 0.6 seconds and out over 0.7, with the bass under 150 hertz taken out. Added 2026-11-14. | "wind1" by Luke.RUSTLTD: https://opengameart.org/content/wind1 | CC0 |
+| `water-in.wav` | A hero going into the water: 0.74 seconds of `splash_05.ogg`, with the rumble under 80 hertz taken out. Added 2026-11-14. | "40 CC0 water / splash / slime SFX" by rubberduck: https://opengameart.org/content/40-cc0-water-splash-slime-sfx | CC0 |
+| `stroke.wav` | One swimming stroke at the surface: 0.32 seconds of `splash_03.ogg`, with the rumble under 80 hertz taken out. Added 2026-11-14. | "40 CC0 water / splash / slime SFX" by rubberduck: https://opengameart.org/content/40-cc0-water-splash-slime-sfx | CC0 |
+| `surfacing.wav` | A swimmer's head coming back up: 0.52 seconds of `splash_02.ogg`, with the rumble under 80 hertz taken out. Added 2026-11-14. | "40 CC0 water / splash / slime SFX" by rubberduck: https://opengameart.org/content/40-cc0-water-splash-slime-sfx | CC0 |
 
 The giant mosquito's three sounds and the low thump under a landing are made in code by this project (`src/audio/synth.ts`): there is no file, and nothing to credit. A jump and a landing have no files of their own: they play the moss and wood footsteps above.
 
@@ -87,6 +90,7 @@ SHA-256 of each download, as OpenGameArt served it:
 | `qubodup-rustle.7z` ("20 Rustles of dry leaves") | `c5d7458085e9b208009388b832184bddc0045482f6fa67a1eb6ea09335bb7a43` |
 | `sfx_breaking_and_falling.zip` ("75 CC0 breaking / falling / hit sfx") | `e6ee04d91c5f4d30cfda1260d2c9d1faf96fda36319287215fbd07bcb1a80451` |
 | `wind3.wav` ("wind1") | `8def85e8546fb4850f017ede32b938593aeca5dfd3a9361cbabd80d455ff954d` |
+| `water-splash-slime-sfx.zip` ("40 CC0 water / splash / slime SFX") | `7cd39abb49d4362a37ba18dc0e454c7dc1d08029d4e5b683149046bc237b2eba` |
 
 ## Stand-in model
 
