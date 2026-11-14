@@ -158,8 +158,16 @@ export class Players {
   private players: Player[] = [];
   private lastId: string | null = null;
 
-  /** `storage` is null when the browser has none to give (private windows): everything works, and is forgotten when the page closes. */
-  constructor(private readonly storage: StorageLike | null) {
+  /**
+   * `storage` is null when the browser has none to give (private windows):
+   * everything works, and is forgotten when the page closes. `ghosts` is
+   * where the players' ghosts are kept (the game's ghost store), so they go
+   * with their progress; left out, it is `storage`.
+   */
+  constructor(
+    private readonly storage: StorageLike | null,
+    private readonly ghosts: StorageLike | null = storage,
+  ) {
     this.load();
   }
 
@@ -264,7 +272,7 @@ export class Players {
     const player = this.get(id);
     if (!player) return false;
     player.bests = {};
-    removeGhostsOf(this.storage, id);
+    removeGhostsOf(this.ghosts, id);
     this.save();
     return true;
   }
@@ -275,7 +283,7 @@ export class Players {
     this.players = this.players.filter((player) => player.id !== id);
     if (this.lastId === id) this.lastId = null;
     if (this.players.length === before) return false;
-    removeGhostsOf(this.storage, id);
+    removeGhostsOf(this.ghosts, id);
     this.save();
     return true;
   }

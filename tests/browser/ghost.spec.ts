@@ -132,13 +132,28 @@ test('only a better time replaces the ghost, and a damaged ghost is no ghost', a
   await page.locator('#pause').click();
   await page.locator('#quit').click();
 
+  // Ghosts are kept in the browser's database, not in local storage.
+  expect(await page.evaluate(() => Object.keys(localStorage).filter((key) => key.startsWith('yaarbroverse-3d:ghost:')).length)).toBe(0);
   // Spoil the saved ghost: the next run simply has none, and the best time is still there.
-  await page.evaluate(() => {
-    for (let i = 0; i < localStorage.length; i += 1) {
-      const key = localStorage.key(i)!;
-      if (key.startsWith('yaarbroverse-3d:ghost:')) localStorage.setItem(key, '{"v":1,"d":"@@@"');
-    }
-  });
+  const spoiled = await page.evaluate(
+    () =>
+      new Promise<number>((resolve, reject) => {
+        const opening = indexedDB.open('yaarbroverse-3d');
+        opening.onerror = () => reject(opening.error);
+        opening.onsuccess = () => {
+          const shelf = opening.result.transaction('ghosts', 'readwrite').objectStore('ghosts');
+          const keys = shelf.getAllKeys();
+          keys.onsuccess = () => {
+            for (const key of keys.result) shelf.put('{"v":1,"d":"@@@"', key);
+            shelf.transaction.oncomplete = () => {
+              opening.result.close();
+              resolve(keys.result.length);
+            };
+          };
+        };
+      }),
+  );
+  expect(spoiled).toBeGreaterThan(0);
   await page.reload();
   await pickPlayer(page, 'Pip');
   await expect(page.locator('.area.picked .ghost-toggle small')).toHaveText('Finish a run this way first, then race it.');
@@ -146,5 +161,46 @@ test('only a better time replaces the ghost, and a damaged ghost is no ghost', a
   await play(page, 'Yaarbro', 'normal');
   await expect.poll(async () => (await snapshot(page)).seconds).toBeGreaterThan(0.2);
   expect(await ghost(page)).toBeNull();
+  expect(problems).toEqual([]);
+});
+
+test('a ghost saved in local storage by an earlier version is carried over into the database', async ({ page }) => {
+  const problems = await open(page, 'level=sandbox');
+  await page.locator('[data-difficulty="normal"]').click();
+  await play(page, 'Yaarbro', 'normal');
+  await finish(page);
+  await page.locator('#again').click();
+
+  // Put the saved ghost back where an earlier version kept it: in local storage, and not in the database.
+  const moved = await page.evaluate(
+    () =>
+      new Promise<number>((resolve, reject) => {
+        const opening = indexedDB.open('yaarbroverse-3d');
+        opening.onerror = () => reject(opening.error);
+        opening.onsuccess = () => {
+          const shelf = opening.result.transaction('ghosts', 'readwrite').objectStore('ghosts');
+          const keys = shelf.getAllKeys();
+          const values = shelf.getAll();
+          values.onsuccess = () => {
+            keys.result.forEach((key, i) => localStorage.setItem(String(key), values.result[i] as string));
+            shelf.clear();
+            shelf.transaction.oncomplete = () => {
+              opening.result.close();
+              resolve(keys.result.length);
+            };
+          };
+        };
+      }),
+  );
+  expect(moved).toBe(1);
+
+  await page.reload();
+  await pickPlayer(page, 'Pip');
+  await page.locator('[data-difficulty="normal"]').click();
+  // The ghost is there to race, and local storage no longer holds it.
+  await expect(page.locator('.area.picked .ghost-toggle small')).toHaveText('A see-through copy of your best run runs beside you.');
+  await expect.poll(() => page.evaluate(() => Object.keys(localStorage).filter((key) => key.startsWith('yaarbroverse-3d:ghost:')).length)).toBe(0);
+  await play(page, 'Yaarbro', 'normal');
+  await expect.poll(async () => (await ghost(page))?.shown).toBe(true);
   expect(problems).toEqual([]);
 });
