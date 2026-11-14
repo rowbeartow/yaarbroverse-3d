@@ -455,3 +455,11 @@ export const underwaterCeiling = (water: Water, solids: readonly { x: number; z:
   }
   return ceiling;
 };
+
+/** True when a point is inside (or within `margin` of) any solid: a camera there would show only rock. */
+export const insideSolid = (solids: readonly { x: number; z: number; halfX: number; halfZ: number; bottom: number; top: number; shape: string; gone?: boolean }[], x: number, y: number, z: number, margin = 0.3): boolean =>
+  solids.some((s) => {
+    if (s.gone || y < s.bottom - margin || y > s.top + margin) return false;
+    if (s.shape === 'round') return Math.hypot(x - s.x, z - s.z) < s.halfX + margin;
+    return Math.abs(x - s.x) < s.halfX + margin && Math.abs(z - s.z) < s.halfZ + margin;
+  });
