@@ -7,7 +7,8 @@ import { bossDangerous, bossFighting, bossOpen, type Boss, type BossSpot } from 
 import type { Enemy } from '../../src/game/enemy';
 import { Game, type Input } from '../../src/game/game';
 import { MOVE, STEP } from '../../src/game/hero';
-import { surfaceBelow, topAt, type Level, type Solid } from '../../src/game/level';
+import { surfaceBelow, topAt, touchesFromAbove, type Level, type Solid } from '../../src/game/level';
+import { SWIM, type Water } from '../../src/game/swim';
 import { steadyFor } from '../../src/game/moving';
 
 /** The spot on a solid the bot heads for: its middle if round, else the nearest point well inside. */
@@ -48,6 +49,11 @@ export class Bot {
       if (event.type === 'bounce') this.index = level.route.indexOf(event.solidId);
     }
     if (game.grounded && game.groundId) this.index = level.route.indexOf(game.groundId);
+    if (game.swimming && game.waterId) {
+      this.index = level.route.indexOf(game.waterId);
+      return this.swim(game);
+    }
+    if (game.climbing > 0) return { moveX: 0, moveZ: 0, jump: false };
 
     // A scout coming at the bot: jump, and come down on top of it. Landing on
     // an enemy strikes it on every difficulty, so this is walk and jump alone.
@@ -82,7 +88,10 @@ export class Bot {
       if (inside && (bossFighting(boss) || game.grounded)) return this.fightSafely(game, boss);
     }
 
-    const next = level.solids.find((s) => s.id === level.route[this.index + 1]);
+    // A pool next on the route: head for what comes after it, and the edge ahead takes the bot in.
+    const isWater = (id: string | undefined): boolean => (level.water ?? []).some((w) => w.id === id);
+    const nextId = isWater(level.route[this.index + 1]) ? level.route[this.index + 2] : level.route[this.index + 1];
+    const next = level.solids.find((s) => s.id === nextId);
     let aim = next ? aimPoint(next, game.x, game.z) : { x: level.leaf.x, z: level.leaf.z };
     let easing = true;
     // Where the route turns a corner, the straight line to the next piece
@@ -158,6 +167,49 @@ export class Bot {
     else if (game.vy <= 0) this.holdingJump = false;
 
     return { moveX, moveZ, jump: this.holdingJump };
+  }
+
+  /**
+   * In the water: swim for the next solid on the route. Something in the way
+   * at this depth means dive (the move button) until under it; with nothing
+   * in the way and nothing overhead, swim back up. At the surface beside the
+   * next solid, press Jump to climb out.
+   */
+  private swim(game: Game): Input {
+    const level = game.level;
+    const water = game.water as Water;
+    const next = level.solids.find((s) => s.id === level.route[this.index + 1]);
+    const aim = next ? aimPoint(next, game.x, game.z) : { x: level.leaf.x, z: level.leaf.z };
+    const dx = aim.x - game.x;
+    const dz = aim.z - game.z;
+    const distance = Math.hypot(dx, dz) || 1e-6;
+    const way = { x: dx / distance, z: dz / distance };
+    // What is in the way along the next couple of metres, at a given depth.
+    const inWay = (feet: number, height: number): Solid | undefined =>
+      level.solids.find((s) => {
+        if (s.gone || s === next) return false;
+        for (let ahead = 0.4; ahead <= 2.2; ahead += 0.3) {
+          if (touchesFromAbove(s, game.x + way.x * ahead, game.z + way.z * ahead, SWIM.radius) && feet < s.top && feet + height > s.bottom) return true;
+        }
+        return false;
+      });
+    const overhead = level.solids.some((s) => !s.gone && s !== next && s.bottom > game.y && s.bottom < water.surface + 0.5 && touchesFromAbove(s, game.x, game.z, SWIM.radius + 0.6));
+    const floatY = water.surface - SWIM.float;
+    const blockedHere = inWay(game.y, game.bodyHeight);
+    const blockedAtSurface = inWay(floatY, MOVE.bodyHeight);
+    let dive = false;
+    let up = false;
+    if (blockedHere) dive = true;
+    else if (game.under && !overhead && !blockedAtSurface) up = true;
+    // Beside the next solid at the surface: climb out (a fresh press of Jump).
+    let jump = up;
+    if (!game.under && next && distanceToEdge(next, game.x, game.z) < SWIM.radius + SWIM.climbReach - 0.1) {
+      jump = !this.holdingJump;
+      this.holdingJump = jump;
+      return { moveX: way.x, moveZ: way.z, jump };
+    }
+    this.holdingJump = jump;
+    return { moveX: way.x, moveZ: way.z, jump, move: dive };
   }
 
   private way: Way = 1;
