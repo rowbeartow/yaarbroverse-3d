@@ -305,6 +305,7 @@ const boot = (): void => {
       if (event.type === 'fall') screens.say('Back to safety…', 2);
       else if (event.type === 'hurt' && event.left > 0) news(`Oof! ${event.left} of ${level.hearts} hearts left.`, 2.5);
       else if (event.type === 'hurt') news('Out of hearts. Back to safety!', 2.5);
+      else if (event.type === 'breathless') news('Out of breath! Back to safety.', 2.5);
       else if (event.type === 'restored') news(`Safe again, with all ${level.hearts} hearts.`, 3);
       else if (event.type === 'enemy' && event.phase === 'idle' && event.kind === 'marmot' && !met.has(event.id)) {
         // The first time a scout notices the hero.
@@ -375,6 +376,7 @@ const boot = (): void => {
       }
       if (steps === 6) owed = 0;
       screens.setHearts(game.hearts, level.hearts);
+      screens.setBreath(Number.isFinite(game.maxBreath) && (game.under || game.breath < game.maxBreath) ? game.breath / game.maxBreath : null);
       showBoss();
       if (game.complete && mode === 'playing') {
         mode = 'ended';
