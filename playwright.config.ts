@@ -12,12 +12,15 @@ export default defineConfig({
   // Software 3D is slow: two browsers at once starve each other, so run one at
   // a time, keep the windows small, and give the game time to get where it is going.
   workers: 1,
+  // Each check stands alone, so a shard on GitHub (`--shard`) can take any of them, not only whole files.
+  fullyParallel: true,
   expect: { timeout: 20_000 },
   retries: process.env.CI ? 1 : 0,
   reporter: process.env.CI ? [['github'], ['list']] : 'list',
   use: { baseURL: 'http://localhost:4173', trace: 'off' },
   webServer: {
-    command: 'npm run build && npx vite preview --port 4173 --strictPort',
+    // On GitHub the game is built once and handed to every shard (PREBUILT): serve it as it is.
+    command: process.env.PREBUILT ? 'npx vite preview --port 4173 --strictPort' : 'npm run build && npx vite preview --port 4173 --strictPort',
     url: 'http://localhost:4173',
     reuseExistingServer: !process.env.CI,
     // The first build compresses every texture, which takes a minute or two.
