@@ -2,11 +2,16 @@
 #   1. No private terms: fails if a term from the repository secret PRIVATE_TERMS
 #      appears in a tracked file, the pull request's title or description, or a
 #      commit message.
-#   2. The game rule tests, a full build (which also checks the download size),
-#      then the browser checks in Chromium (Mac-sized with a keyboard, iPad-sized
-#      with touch).
-#   3. The browser checks in WebKit, the engine behind every iPad browser
-#      (iPad-sized with touch).
+#   2. The game rule tests and a full build (which also checks the download
+#      size). The built game is handed to the browser jobs, so it is built once.
+#   3. The browser checks, split into parallel shards so a pull request's checks
+#      finish in about ten minutes: Chromium (Mac-sized with a keyboard,
+#      iPad-sized with touch) in six, WebKit (iPad-sized with touch, the engine
+#      behind every iPad browser) in four. Every check runs; each shard runs
+#      its share one at a time, as the machines have no graphics card.
+#   4. Two summary jobs, named as the required checks always were ("Tests, build
+#      and browser checks" and "Browser checks in WebKit (iPad)"), pass only if
+#      every job before them passed.
 name: Checks
 
 on:
@@ -49,19 +54,17 @@ jobs:
           HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
         run: node scripts/check-private-terms.mjs
 
-  # The two browser jobs run inside Playwright's own container image, which
-  # already holds the test browsers and every system package they need. Nothing
-  # is installed from Ubuntu's servers during a run. The image's version must be
-  # the exact Playwright version in package.json: the first step of each job
-  # fails with a plain message if the two ever differ. To upgrade Playwright,
-  # change package.json, package-lock.json and both image lines together.
-  checks:
-    name: Tests, build and browser checks
+  # Every job but the private-terms check runs inside Playwright's own
+  # container image, which already holds the test browsers and every system
+  # package they need. Nothing is installed from Ubuntu's servers during a run.
+  # The image's version must be the exact Playwright version in package.json:
+  # `scripts/check-playwright-image.mjs` fails with a plain message if they
+  # differ. To upgrade Playwright, change package.json, package-lock.json and
+  # every image line below together.
+  build:
+    name: Rule tests and build
     runs-on: ubuntu-latest
-    # Rule tests, the build and every Chromium browser check took 30 minutes
-    # by November 2026 and the job was cut off with every check passing, so
-    # it has room to grow. A run that hangs is still stopped.
-    timeout-minutes: 45
+    timeout-minutes: 30
     container:
       image: mcr.microsoft.com/playwright:v1.63.0-noble
       # The user GitHub's own files belong to, and shared memory for Chromium.
@@ -79,13 +82,22 @@ jobs:
         run: npm test
       - name: Build and check the download size
         run: npm run build
-      - name: Browser checks in Chromium (keyboard, touch and the look)
-        run: npx playwright test --project=mac --project=ipad
+      - name: Hand the built game to the browser jobs
+        uses: actions/upload-artifact@v4
+        with:
+          name: game
+          path: dist
+          retention-days: 1
 
-  webkit:
-    name: Browser checks in WebKit (iPad)
+  chromium:
+    name: Browser checks in Chromium (${{ matrix.shard }}/6)
+    needs: build
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3, 4, 5, 6]
     container:
       image: mcr.microsoft.com/playwright:v1.63.0-noble
       options: --user 1001 --ipc=host
@@ -96,7 +108,63 @@ jobs:
           node-version-file: .nvmrc
           cache: npm
       - run: npm ci
-      - name: The container holds the browsers for this version of Playwright
-        run: node scripts/check-playwright-image.mjs
-      - name: Browser checks in WebKit (touch and the look, iPad size)
-        run: npx playwright test --project=ipad-webkit
+      - name: The built game
+        uses: actions/download-artifact@v4
+        with:
+          name: game
+          path: dist
+      - name: Browser checks in Chromium (keyboard, touch and the look), one sixth
+        env:
+          PREBUILT: '1'
+        run: npx playwright test --project=mac --project=ipad --shard=${{ matrix.shard }}/6
+
+  webkit-shards:
+    name: Browser checks in WebKit (${{ matrix.shard }}/4)
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3, 4]
+    container:
+      image: mcr.microsoft.com/playwright:v1.63.0-noble
+      options: --user 1001 --ipc=host
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      - name: The built game
+        uses: actions/download-artifact@v4
+        with:
+          name: game
+          path: dist
+      - name: Browser checks in WebKit (touch and the look, iPad size), one quarter
+        env:
+          PREBUILT: '1'
+        run: npx playwright test --project=ipad-webkit --shard=${{ matrix.shard }}/4
+
+  # The two names branch protection has always required. Each passes only if
+  # every job it stands for passed (a skipped or cancelled one fails it).
+  checks:
+    name: Tests, build and browser checks
+    needs: [build, chromium]
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: The rule tests, the build and every Chromium shard passed
+        run: test "${{ needs.build.result }}" = success && test "${{ needs.chromium.result }}" = success
+
+  webkit:
+    name: Browser checks in WebKit (iPad)
+    needs: [build, webkit-shards]
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Every WebKit shard passed
+        run: test "${{ needs.build.result }}" = success && test "${{ needs.webkit-shards.result }}" = success

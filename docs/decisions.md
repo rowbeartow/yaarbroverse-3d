@@ -468,3 +468,19 @@ Supersedes: none
 ## 2026-11-14 The Chromium checks job gets 45 minutes
 Reason: Claude's call. On pull request 52 every browser check passed (145 in 27 minutes), but with the rule tests and the build before them the job ran past its 30-minute limit and GitHub cancelled it. Milestone eight added browser checks, so the limit is now 45 minutes (`.github/workflows/checks.yml`). A run that hangs is still stopped. The WebKit job, at about 20 minutes, keeps its 30.
 Supersedes: none
+
+## 2026-11-14 Milestone eight, part two: the lake level, Cocolalla
+Reason: The owner's call. The lake is Cocolalla (the Caputo Mountain docs' first playable area is Cocolalla Lake). In order: faster checks; a route plan for his OK; crocodile model candidates through Meshy for his pick (at most 150 credits without asking); the level in pull requests of one or two sections, with lake scenery (shores, reeds, rocks, the dock, the Selkirk mountains across the water), its own CC0 music and lake sounds (lapping water, a distant loon) on the sound board for his OK first, and the crocodile stretches left empty; then the lake on the level picker. Rigging, animating and placing the crocodiles is a later session. The Mac must hold 60 fps on the high tier across the whole lake. He reported 60 fps in Safari on his Mac in the Sandbox pool, on the normal tier.
+Supersedes: none
+
+## 2026-11-14 Crocodiles are water enemies, and reach a swimmer underwater
+Reason: The owner's decision. Crocodiles can reach a hero at the surface and underwater; that is what makes them a threat. Land enemies still cannot reach a swimmer underwater. On Easy every crocodile can be avoided without diving or precise timing. Each hero's move must beat or get past a crocodile. The regen rule applies.
+Supersedes: "nothing reaches a hero whose head is underwater" in "How swimming works, and its numbers", for crocodiles only. It stands for every land enemy.
+
+## 2026-11-14 The lake level ends at a fishing dock
+Reason: The owner's decision. The monster pike fight goes there in milestone nine; until then the level ends at the dock with the usual finish.
+Supersedes: none
+
+## 2026-11-14 The browser checks run in parallel shards on GitHub
+Reason: The owner asked for a pull request's checks to finish in about ten minutes, keeping every check, with each job's time limit back at 30 minutes. Claude's calls: the rule tests and the build run in one job, and the built game is handed to the browser jobs so it is built once; Chromium's checks run in six shards and WebKit's in four, side by side, each shard one check at a time as before (the machines have no graphics card); checks are split one by one rather than by file (`fullyParallel`), so the shards come out even. Two summary jobs keep the names branch protection requires ("Tests, build and browser checks" and "Browser checks in WebKit (iPad)"), and fail if any job they stand for did not pass.
+Supersedes: "The Chromium checks job gets 45 minutes" (its time limit is 30 again).
