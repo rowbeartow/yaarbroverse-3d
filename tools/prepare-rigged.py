@@ -25,6 +25,8 @@
 #     body in the air is brought down to stand on the ground, and a body
 #     pushed into the ground is lifted out of it.
 #   - Lifts a hand that a clip pushes below the ground back onto it.
+#   - Carries over a clip made on a later Meshy rig of the same character
+#     (`"retarget": true` in the guide): same bones, different rest pose.
 #
 # What it does to the skin, when the guide has a "cleanup" part. Each fix is
 # for something seen to be wrong in a pose test (tools/pose-test.py), and
@@ -77,8 +79,13 @@ def open_body(path):
     return armature, mesh, action
 
 
-def borrow_clip(path, armature):
-    """Reads another file's clip. Its copy of the model is thrown away."""
+def borrow_clip(path, armature, retarget=False, hips='Hips'):
+    """
+    Reads another file's clip. Its copy of the model is thrown away. With
+    `retarget`, the file's skeleton has the same bones but a different rest
+    pose (a later Meshy rig of the same character): the clip is carried over
+    bone by bone (see `retarget_clip`).
+    """
     before = set(bpy.data.objects)
     actions_before = set(bpy.data.actions)
     bpy.ops.import_scene.gltf(filepath=path)
@@ -88,6 +95,8 @@ def borrow_clip(path, armature):
     names = {bone.name for bone in other.data.bones}
     if names != {bone.name for bone in armature.data.bones}:
         raise SystemExit(f"{os.path.basename(path)} has a different skeleton from the body file")
+    if retarget:
+        action = retarget_clip(other, action, armature, hips, os.path.basename(path))
     for obj in [o for o in bpy.data.objects if o not in before]:
         bpy.data.objects.remove(obj, do_unlink=True)
     # The copies of the mesh, skeleton and pictures that came with it.
@@ -96,6 +105,80 @@ def borrow_clip(path, armature):
             if item.users == 0:
                 block.remove(item)
     return action
+
+
+def retarget_clip(source, action, target, hips, label):
+    """
+    Carries a clip from one skeleton onto another with the same bones and a
+    different rest pose. For each bone, at each frame: how far it is turned
+    from its own rest pose, measured in the world, is applied to the target
+    bone's rest pose. The hips also move as they do in the clip, scaled by
+    how much taller the target's hips stand at rest. Returns the new clip,
+    keyed on the target's bones.
+    """
+    source.animation_data.action = action
+    start, end = (round(f) for f in action.frame_range)
+    src_world = source.matrix_world
+    tgt_world = target.matrix_world
+    tgt_world_rotation = tgt_world.to_quaternion()
+    rest = {}
+    for bone in target.data.bones:
+        rest[bone.name] = {
+            'source': (src_world @ source.data.bones[bone.name].matrix_local).to_quaternion(),
+            'target': (tgt_world @ bone.matrix_local).to_quaternion(),
+        }
+    src_hips_rest = src_world @ source.data.bones[hips].head_local
+    tgt_hips_rest = tgt_world @ target.data.bones[hips].head_local
+    ratio = tgt_hips_rest.z / src_hips_rest.z if abs(src_hips_rest.z) > 1e-6 else 1.0
+    # Parents before children, so each bone is placed after the one it hangs from.
+    order = []
+    def visit(bone):
+        order.append(bone.name)
+        for child in bone.children:
+            visit(child)
+    for bone in target.data.bones:
+        if bone.parent is None:
+            visit(bone)
+    if target.animation_data is None:
+        target.animation_data_create()
+    target.animation_data.action = None
+    baked = bpy.data.actions.new(f"{action.name}-retargeted")
+    baked.use_fake_user = True
+    frames = []
+    for frame in range(start, end + 1):
+        bpy.context.scene.frame_set(frame)
+        turned = {}
+        for name in order:
+            posed = (src_world @ source.pose.bones[name].matrix).to_quaternion()
+            turned[name] = posed @ rest[name]['source'].inverted()
+        hips_moved = (src_world @ source.pose.bones[hips].matrix.to_translation()) - src_hips_rest
+        frames.append((turned, hips_moved))
+    for bone in target.pose.bones:
+        bone.rotation_mode = 'QUATERNION'
+    for index, (turned, hips_moved) in enumerate(frames):
+        for bone in target.pose.bones:
+            bone.matrix_basis = Matrix.Identity(4)
+        bpy.context.view_layer.update()
+        for name in order:
+            bone = target.pose.bones[name]
+            world_rotation = turned[name] @ rest[name]['target']
+            own_rotation = tgt_world_rotation.inverted() @ world_rotation
+            if name == hips:
+                head = tgt_world.inverted() @ (tgt_hips_rest + hips_moved * ratio)
+            else:
+                head = bone.matrix.to_translation()
+            bone.matrix = Matrix.LocRotScale(head, own_rotation, Vector((1, 1, 1)))
+            bpy.context.view_layer.update()
+        for bone in target.pose.bones:
+            target.animation_data.action = baked
+            bone.keyframe_insert('rotation_quaternion', frame=start + index)
+            if bone.name == hips:
+                bone.keyframe_insert('location', frame=start + index)
+    target.animation_data.action = None
+    for bone in target.pose.bones:
+        bone.matrix_basis = Matrix.Identity(4)
+    say(f"retargeted {label}: {len(frames)} frames, hips scaled by {ratio:.3f}")
+    return baked
 
 
 # ---------- The skin: regions, weights and shading ----------
@@ -504,7 +587,7 @@ def main():
     sources = {guide['body']: own_action}
     for spec in guide['clips']:
         if spec['file'] not in sources:
-            sources[spec['file']] = borrow_clip(os.path.join(folder, spec['file']), armature)
+            sources[spec['file']] = borrow_clip(os.path.join(folder, spec['file']), armature, spec.get('retarget', False), guide['hips'])
     for action in sources.values():
         action.use_fake_user = True
 

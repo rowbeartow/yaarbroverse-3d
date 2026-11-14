@@ -25,6 +25,10 @@ export interface GhostSample {
   grounded: boolean;
   rolling: boolean;
   pouncing: boolean;
+  /** In deep water, with the head under, or climbing out (see swim.ts). Older recordings have none of these. */
+  swimming: boolean;
+  under: boolean;
+  climbing: boolean;
   /** The hero was put somewhere else since the sample before (a fall, or running out of hearts): do not glide between the two. */
   cut: boolean;
 }
@@ -66,7 +70,19 @@ export class GhostRecorder {
   }
 
   private sample(game: Game, cut: boolean): GhostSample {
-    return { x: game.x, y: game.y, z: game.z, facing: game.facing, grounded: game.grounded, rolling: game.rolling, pouncing: game.pouncing > 0, cut };
+    return {
+      x: game.x,
+      y: game.y,
+      z: game.z,
+      facing: game.facing,
+      grounded: game.grounded,
+      rolling: game.rolling,
+      pouncing: game.pouncing > 0,
+      swimming: game.swimming,
+      under: game.swimming && game.under,
+      climbing: game.climbing > 0,
+      cut,
+    };
   }
 
   step(game: Game): void {
@@ -121,7 +137,7 @@ export class GhostPlayer {
     const { samples, interval, steps } = this.ghost;
     const last = samples.length - 1;
     const step = Math.max(seconds, 0) / STEP;
-    if (step >= steps || last === 0) return { ...samples[last], grounded: true, rolling: false, pouncing: false, cut: false, pace: 0, rise: 0, done: step >= steps };
+    if (step >= steps || last === 0) return { ...samples[last], grounded: true, rolling: false, pouncing: false, swimming: false, under: false, climbing: false, cut: false, pace: 0, rise: 0, done: step >= steps };
     const i = Math.min(Math.floor(step / interval), last - 1);
     const a = samples[i];
     const b = samples[i + 1];
@@ -139,6 +155,9 @@ export class GhostPlayer {
       grounded: share < 0.5 ? a.grounded : b.grounded,
       rolling: share < 0.5 ? a.rolling : b.rolling,
       pouncing: share < 0.5 ? a.pouncing : b.pouncing,
+      swimming: share < 0.5 ? a.swimming : b.swimming,
+      under: share < 0.5 ? a.under : b.under,
+      climbing: share < 0.5 ? a.climbing : b.climbing,
       cut: false,
       pace: Math.min(Math.hypot(b.x - a.x, b.z - a.z) / span / MOVE.walkSpeed, 1),
       rise: (b.y - a.y) / span,
@@ -192,7 +211,7 @@ export const encodeGhost = (ghost: Ghost): string | null => {
     place.forEach((units, k) => view.setInt16(i * BYTES + k * 2, units));
     const turn = ((s.facing % (2 * Math.PI)) + 2 * Math.PI) % (2 * Math.PI);
     view.setUint8(i * BYTES + 6, Math.round((turn / (2 * Math.PI)) * 256) & 255);
-    view.setUint8(i * BYTES + 7, (s.grounded ? 1 : 0) | (s.rolling ? 2 : 0) | (s.pouncing ? 4 : 0) | (s.cut ? 8 : 0));
+    view.setUint8(i * BYTES + 7, (s.grounded ? 1 : 0) | (s.rolling ? 2 : 0) | (s.pouncing ? 4 : 0) | (s.cut ? 8 : 0) | (s.swimming ? 16 : 0) | (s.under ? 32 : 0) | (s.climbing ? 64 : 0));
   }
   return JSON.stringify({ v: 1, i: ghost.interval, n: ghost.steps, o: [origin.x, origin.y, origin.z], d: toText(bytes) });
 };
@@ -224,6 +243,10 @@ export const decodeGhost = (text: unknown): Ghost | null => {
         grounded: (flags & 1) !== 0,
         rolling: (flags & 2) !== 0,
         pouncing: (flags & 4) !== 0,
+        // Recordings from before swimming leave these three bits clear.
+        swimming: (flags & 16) !== 0,
+        under: (flags & 32) !== 0,
+        climbing: (flags & 64) !== 0,
         cut: (flags & 8) !== 0,
       });
     }

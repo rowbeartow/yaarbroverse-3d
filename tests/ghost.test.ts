@@ -178,8 +178,8 @@ describe('a ghost stays small', () => {
       interval: 4,
       steps: 4,
       samples: [
-        { x: 0, y: 0, z: 0, facing: 0, grounded: true, rolling: false, pouncing: false, cut: false },
-        { x: 0, y: 0, z: -900, facing: 0, grounded: true, rolling: false, pouncing: false, cut: false },
+        { x: 0, y: 0, z: 0, facing: 0, grounded: true, rolling: false, pouncing: false, swimming: false, under: false, climbing: false, cut: false },
+        { x: 0, y: 0, z: -900, facing: 0, grounded: true, rolling: false, pouncing: false, swimming: false, under: false, climbing: false, cut: false },
       ],
     };
     expect(encodeGhost(ghost)).toBeNull();
@@ -311,5 +311,31 @@ describe('whether the ghost is on', () => {
     const pip = new Players(storage).get('p-1')!;
     expect(pip.ghost).toEqual({ hard: false });
     expect(DIFFICULTIES.map((difficulty) => ghostOn(pip, difficulty))).toEqual([false, true, false]);
+  });
+});
+
+describe('a ghost in the water', () => {
+  it.each(DIFFICULTIES)('on %s, a run through the Sandbox pool replays swimming, underwater and climbing out, read back from storage', (difficulty) => {
+    const { ghost } = record(new Game(sandbox.build(difficulty), difficulty, 'Caputo'));
+    const player = new GhostPlayer(decodeGhost(encodeGhost(ghost))!);
+    const poses = Array.from({ length: Math.floor(player.seconds / STEP) }, (_, step) => player.at(step * STEP));
+    expect(poses.some((pose) => pose.swimming && !pose.under)).toBe(true);
+    expect(poses.some((pose) => pose.under)).toBe(true);
+    expect(poses.some((pose) => pose.climbing)).toBe(true);
+    // Underwater is always swimming, and nobody swims standing on the ground.
+    expect(poses.every((pose) => !pose.under || pose.swimming)).toBe(true);
+    expect(poses.every((pose) => !(pose.swimming && pose.grounded))).toBe(true);
+  });
+
+  it('a ghost saved before swimming reads back as never swimming', () => {
+    const { ghost } = record(new Game(sandbox.build('easy'), 'easy', 'Yaarbro'));
+    const saved = JSON.parse(encodeGhost(ghost)!) as { d: string };
+    // Clear the three swimming bits of every sample, as an older version wrote them.
+    const bytes = Uint8Array.from(atob(saved.d), (c) => c.charCodeAt(0));
+    for (let i = 7; i < bytes.length; i += 8) bytes[i] &= 15;
+    const old = JSON.stringify({ ...JSON.parse(encodeGhost(ghost)!), d: btoa(String.fromCharCode(...bytes)) });
+    const read = decodeGhost(old)!;
+    expect(read.samples.length).toBe(ghost.samples.length);
+    expect(read.samples.some((sample) => sample.swimming || sample.under || sample.climbing)).toBe(false);
   });
 });

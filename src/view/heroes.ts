@@ -19,6 +19,10 @@ export interface Pose {
   rolling?: boolean;
   /** How far through a pounce, 0 to 1, or null when not pouncing (Caputo). */
   pounce?: number | null;
+  /** In the water: at the surface, or with the head under. Left out on land. */
+  water?: 'surface' | 'under' | null;
+  /** How far through climbing out of the water, 0 to 1, or null when not climbing. */
+  climbing?: number | null;
 }
 
 /** What the browser checks can ask about the hero on screen. */
@@ -38,8 +42,8 @@ export interface HeroView {
   /** Where a portrait camera should look, and from how far. */
   portrait: { height: number; distance: number };
   animate(pose: Pose, dt: number): void;
-  /** Something just happened: a jump, a landing, or a bounce off a mushroom. */
-  react(event: 'jump' | 'land' | 'bounce'): void;
+  /** Something just happened: a jump, a landing, a bounce off a mushroom, or the end of climbing out of the water. */
+  react(event: 'jump' | 'land' | 'bounce' | 'out'): void;
   info(): HeroInfo;
   /** For a ghost: how much of it shows, from 0 (gone) to 1. */
   fade(share: number): void;

@@ -37,7 +37,7 @@ import type { HeroInfo, HeroView, Pose } from './heroes';
 /** How fast a roll clip turns at full rolling speed, against how it was made. */
 const ROLL_RATE = 1.6;
 
-export type ClipRole = 'idle' | 'walk' | 'trot' | 'run' | 'jump' | 'fall' | 'land' | 'roll';
+export type ClipRole = 'idle' | 'walk' | 'trot' | 'run' | 'jump' | 'fall' | 'land' | 'roll' | 'tread' | 'swim' | 'under' | 'climb' | 'shake';
 
 export interface HeroModelSpec {
   /** File name in assets/models/. */
@@ -57,6 +57,11 @@ export interface HeroModelSpec {
    *   no jump    the hero keeps its ground pose in the air, with a stretch
    *   no fall    the late part of the jump is held on the way down
    *   no land    a quick squash instead
+   *   no tread   the idle in the water
+   *   no swim    the walk in the water
+   *   no under   the swim underwater as well
+   *   no climb   the jump's push off the ground
+   *   no shake   nothing after climbing out
    */
   clips: Partial<Record<ClipRole, string[]>>;
   /**
@@ -89,6 +94,15 @@ export interface HeroModelSpec {
   shadow: { across: number; along: number };
   /** Where a portrait camera should look, and from how far. */
   portrait: { height: number; distance: number };
+  /**
+   * Swimming. The rules float a swimmer with its feet `SWIM.float` under the
+   * surface; each clip is raised (metres) so the hero sits in the water the
+   * way it should: `tread` and `swim` at the surface, `under` underwater.
+   * `strokes` is the ground (metres) one cycle of the swim clip covers, for
+   * its speed. `climb` is the part of the climb clip (shares, 0 to 1) played
+   * over climbing out.
+   */
+  swim?: { tread: number; swim: number; under: number; strokes: number; climb: [number, number] };
 }
 
 /** Each hero's model. */
@@ -110,7 +124,14 @@ export const HERO_MODELS: Record<HeroName, HeroModelSpec> = {
       fall: ['falling'],
       land: ['landing'],
       roll: ['roll'],
+      // From Meshy's animation library and Text to Motion, on a new rig of his model (tools/yaarbro.swim.json).
+      tread: ['tread'],
+      swim: ['swim'],
+      under: ['underwater'],
+      climb: ['climb'],
     },
+    // Measured in Blender: treading, the water is at his shoulders; crawling, at his back.
+    swim: { tread: -0.33, swim: 0.47, under: -0.25, strokes: 2.2, climb: [0.55, 1] },
     // The jump clip is already cut to the part where he is in the air.
     airborne: [0, 1],
     walkSpeed: 1.5,
@@ -138,7 +159,14 @@ export const HERO_MODELS: Record<HeroName, HeroModelSpec> = {
       fall: ['falling'],
       land: ['landing'],
       roll: ['pounce'],
+      tread: ['paddle'],
+      swim: ['paddle'],
+      under: ['underwater'],
+      climb: ['jump'],
+      shake: ['shake'],
     },
+    // Measured in Blender: paddling, his back is at the water and his head out of it.
+    swim: { tread: 0.2, swim: 0.2, under: -0.25, strokes: 1.6, climb: [0, 0.3] },
     // His jump opens with a crouch and a push from the hind legs.
     airborne: [0.2, 1],
     pushOff: { share: 0.2, seconds: 0.1 },
@@ -219,6 +247,9 @@ const footprint = (model: Object3D, meshes: Mesh[]): { ground: number; top: numb
   return { ground, top, x: middle.x, z: middle.z };
 };
 
+/** A share that rises from 0 at a gentle walk to 1 at a run: how much running cuts a shake short. */
+const smoothPace = (pace: number): number => Math.min(1, Math.max(0, (pace - 0.35) / 0.4));
+
 /** How solid a ghost looks: a little under half. */
 export const GHOST_OPACITY = 0.42;
 
@@ -244,6 +275,13 @@ export class ModelHero implements HeroView {
   private dropping = 0;
   /** Seconds left of the push off the ground at the start of a jump. */
   private pushing = 0;
+  /** How much of the swimming clips shows, 0 to 1, and of the underwater one among them. */
+  private wet = 0;
+  private deep = 0;
+  /** How much of the shake-off shows (Caputo, after climbing out). */
+  private shaking = 0;
+  /** The body's tip along a dive or a swim up, in radians. */
+  private tip = 0;
 
   /** Materials made for this hero alone (see `simple` and `ghost`), freed with it. */
   private readonly ownMaterials: Material[] = [];
@@ -298,7 +336,7 @@ export class ModelHero implements HeroView {
     this.root.add(this.body);
 
     this.mixer = new AnimationMixer(model);
-    for (const role of ['idle', 'walk', 'trot', 'run', 'jump', 'fall', 'land', 'roll'] as const) {
+    for (const role of ['idle', 'walk', 'trot', 'run', 'jump', 'fall', 'land', 'roll', 'tread', 'swim', 'under', 'climb', 'shake'] as const) {
       const clip = findClip(source.animations, spec.clips[role]);
       if (!clip) continue;
       const action = this.mixer.clipAction(clip);
@@ -319,6 +357,16 @@ export class ModelHero implements HeroView {
       land.setLoop(LoopOnce, 1);
       land.clampWhenFinished = true;
     }
+    // Swimming clips loop all the time too, mixed by weight; the climb is held as a pose; the shake plays once.
+    for (const role of ['tread', 'swim', 'under'] as const) this.actions[role]?.setLoop(LoopRepeat, Infinity).play();
+    if (this.actions.climb && this.actions.climb !== this.actions.jump) {
+      this.actions.climb.play();
+      this.actions.climb.paused = true;
+    }
+    if (this.actions.shake) {
+      this.actions.shake.setLoop(LoopOnce, 1);
+      this.actions.shake.clampWhenFinished = true;
+    }
     // The hero's own move: a roll loops for as long as it is held, and a
     // pounce is held as a pose that follows how far through the burst he is.
     this.actions.roll?.setLoop(LoopRepeat, Infinity).play();
@@ -335,7 +383,16 @@ export class ModelHero implements HeroView {
     this.body.rotation.y = spec.turn;
   }
 
-  react(event: 'jump' | 'land' | 'bounce'): void {
+  react(event: 'jump' | 'land' | 'bounce' | 'out'): void {
+    if (event === 'out') {
+      // Out of the water: shake it off, if this hero does.
+      const shake = this.actions.shake;
+      if (shake) {
+        shake.reset().play();
+        this.shaking = 1;
+      }
+      return;
+    }
     if (event === 'land') {
       const land = this.actions.land;
       if (land) {
@@ -462,6 +519,65 @@ export class ModelHero implements HeroView {
       }
       move.setEffectiveWeight(this.moving);
     }
+    // In the water: treading, swimming at the surface, or swimming underwater, by pace and depth.
+    // Climbing out is a held pose that follows how far through the climb the hero is.
+    const climbing = pose.climbing !== null && pose.climbing !== undefined;
+    this.wet = approach(this.wet, pose.water || climbing ? 1 : 0, pose.water ? 10 : 14, dt);
+    this.deep = approach(this.deep, pose.water === 'under' ? 1 : 0, 6, dt);
+    const tread = actions.tread ?? actions.idle;
+    const stroke = actions.swim ?? actions.walk;
+    const under = actions.under ?? stroke;
+    const swimSpec = spec.swim ?? { tread: 0, swim: 0, under: 0, strokes: 2, climb: [0, 1] as [number, number] };
+    if (this.wet > 0.001 && tread && stroke && under) {
+      for (const other of Object.values(actions)) {
+        if (other && other !== tread && other !== stroke && other !== under && other !== actions.climb) other.setEffectiveWeight(other.getEffectiveWeight() * (1 - this.wet));
+      }
+      const moving = movingShare(pose.pace);
+      const climb = actions.climb;
+      const climbShare = climbing ? 1 : 0;
+      const swimming = this.wet * (1 - climbShare);
+      const weights = new Map<AnimationAction, number>();
+      const add = (action: AnimationAction, weight: number): void => {
+        weights.set(action, (weights.get(action) ?? 0) + weight);
+      };
+      add(tread, swimming * (1 - this.deep) * (1 - moving));
+      add(stroke, swimming * (1 - this.deep) * moving);
+      add(under, swimming * this.deep);
+      for (const [action, weight] of weights) action.setEffectiveWeight(weight);
+      // Strokes keep pace with the water going by; treading keeps its own time.
+      const cycle = stroke.getClip().duration;
+      stroke.setEffectiveTimeScale(Math.min(2, Math.max(0.6, (pose.pace * MOVE.walkSpeed) / (swimSpec.strokes / cycle))));
+      if (under !== stroke) under.setEffectiveTimeScale(0.8 + 0.6 * moving);
+      if (climb) {
+        if (climbing) {
+          climb.paused = true;
+          const [from, to] = swimSpec.climb;
+          climb.time = climb.getClip().duration * (from + (to - from) * (pose.climbing ?? 0));
+        }
+        climb.setEffectiveWeight(this.wet * climbShare);
+      }
+    }
+    // Shaking off the water: once through, and cut short by running.
+    const shake = actions.shake;
+    if (shake) {
+      if (this.shaking > 0) {
+        const left = 1 - shake.time / Math.max(shake.getClip().duration, 0.001);
+        this.shaking = Math.min(this.shaking, Math.max(0, left * 4), pose.water || !pose.grounded ? 0 : 1, 1 - smoothPace(pose.pace));
+      }
+      if (this.shaking > 0.001) {
+        for (const other of Object.values(actions)) {
+          if (other && other !== shake) other.setEffectiveWeight(other.getEffectiveWeight() * (1 - this.shaking));
+        }
+      }
+      shake.setEffectiveWeight(this.shaking);
+    }
+    // Underwater the body tips along its way up or down.
+    const wantTip = pose.water === 'under' ? Math.max(-0.3, Math.min(0.3, 0.5 * Math.atan2(pose.rise, Math.max(1.5, pose.pace * MOVE.walkSpeed)))) : 0;
+    this.tip = approach(this.tip, wantTip, 6, dt);
+    this.body.rotation.x = -this.tip;
+    // Each clip sits at its own depth in the water.
+    const lift = this.wet * ((1 - this.deep) * (swimSpec.tread + (swimSpec.swim - swimSpec.tread) * movingShare(pose.pace)) + this.deep * swimSpec.under);
+    this.body.position.y = climbing ? 0 : lift;
     this.mixer.update(dt);
 
     this.squashed *= Math.exp(-dt * 10);
