@@ -48,6 +48,9 @@ import { BossView } from '../../src/view/boss';
 import { FIGHT_CAMERA, fightView } from '../../src/view/boss-camera';
 import { ENEMY_MODELS, EnemyView } from '../../src/view/enemies';
 import { HERO_MODELS, ModelHero } from '../../src/view/hero-model';
+import { WIND, type Materials } from '../../src/view/materials';
+import { UNDERWATER_FOG, WaterView, sightBlocked, underwaterCeiling, underwaterDepth } from '../../src/view/water';
+import { SWIM } from '../../src/game/swim';
 // The rule tests' own player. In "Watch", it is what fights a boss.
 import { Bot } from '../../tests/helpers/bot';
 
@@ -140,6 +143,20 @@ const PLACES: Place[] = [
     },
   },
   scoutPlace('climb', 'The scout at the foot of the climb', 'bank-5', 'scout-climb'),
+  {
+    // Milestone eight: the heroes swimming. The rule tests' own player crosses
+    // the Sandbox's pool: in off the bank, under the rock arch with the move
+    // button, up again and out. Then it starts again.
+    id: 'pool',
+    label: 'Swimming',
+    level: 'sandbox',
+    bot: true,
+    start: (level) => {
+      const bank = solid(level, 'bank-1');
+      return on(bank, 0, -bank.halfZ + 2);
+    },
+    script: () => [],
+  },
   {
     id: 'chief',
     label: 'The marmot chief',
@@ -327,6 +344,10 @@ const start = async (): Promise<void> => {
         const post = new Mesh(new CylinderGeometry(s.halfX, s.halfX * 0.9, depth, 24), wood);
         post.position.set(s.x, s.top - depth / 2, s.z);
         add(post);
+      } else if (s.kind === 'arch') {
+        const block = new Mesh(new BoxGeometry(s.halfX * 2 + 1.2, s.top - s.bottom, s.halfZ * 2), stone);
+        block.position.set(s.x, (s.top + s.bottom) / 2, s.z);
+        add(block);
       } else if (s.kind === 'bank') {
         const top = new MeshStandardMaterial({ map: tiled(turf, s.halfX * 2, s.halfZ * 2), normalMap: PLAIN ? null : tiled(turfNormal, s.halfX * 2, s.halfZ * 2), roughness: 0.95 });
         const sides = s.safe ? new MeshStandardMaterial({ color: 0x55704e, roughness: 1 }) : stone;
@@ -378,6 +399,14 @@ const start = async (): Promise<void> => {
   let lastPut: { x: number; y: number; z: number } | null = null;
   let bossView: BossView | null = null;
   let bot: Bot | null = null;
+  /** The level's water, drawn by the game's own code, and how far into the underwater look the picture is. */
+  let water: WaterView | null = null;
+  let under = 0;
+  let climbingOut = false;
+  let sinceOut = -1;
+  const fogAbove = new Color(0x9fc4b4);
+  const fogBelow = new Color(UNDERWATER_FOG);
+  const rock = new MeshStandardMaterial({ color: 0x7c8a7d, roughness: 0.95 });
   /** Seconds since the bot's fight was over, one way or the other. */
   let sinceOver = 0;
   let fight = 0;
@@ -432,6 +461,19 @@ const start = async (): Promise<void> => {
     level = entry.build(difficulty);
     game = new Game(level, difficulty, heroName);
     blocks = blockOut(level);
+    if (water) {
+      scene.remove(water.group);
+      water.dispose();
+      water = null;
+    }
+    if (level.water?.length) {
+      // The water needs only a rock surface from the game's materials.
+      water = new WaterView(level.water, { rock } as unknown as Materials, PLAIN);
+      scene.add(water.group);
+    }
+    under = 0;
+    climbingOut = false;
+    sinceOut = -1;
     hero = new ModelHero(HERO_MODELS[heroName], heroModels[heroName], PLAIN);
     scene.add(hero.root);
     enemies = (level.enemies ?? []).map((spot) => {
@@ -465,11 +507,15 @@ const start = async (): Promise<void> => {
       putHero(at);
       follow = { ...at };
       bot = new Bot(level);
-      caption.textContent = 'The rule tests’ own player has the hero. It keeps moving round the chief, steps out of the line of an attack, looks a moment ahead to dodge what is coming, and jumps on it when a hit will count. It uses walk and jump alone. When the fight is over it starts again.';
+      caption.textContent = place.id === 'pool'
+        ? 'The rule tests’ own player has the hero, at full speed. It walks off the bank into the pool, swims, holds the move button to dive under the rock, comes up, and climbs out with Jump. Then it starts again.'
+        : 'The rule tests’ own player has the hero. It keeps moving round the chief, steps out of the line of an attack, looks a moment ahead to dodge what is coming, and jumps on it when a hit will count. It uses walk and jump alone. When the fight is over it starts again.';
     } else startBeat(0);
     const seconds = ENEMY.warning * (level.enemyTuning?.warning ?? 1);
     const numbers = place.bot ? level.boss?.numbers : undefined;
-    tell.textContent = numbers
+    tell.textContent = place.id === 'pool'
+      ? Number.isFinite(game.maxBreath) ? `On ${DIFFICULTY_LABEL[difficulty]} breath lasts ${game.maxBreath} s underwater.` : 'On Easy breath never runs out.'
+      : numbers
       ? `On ${DIFFICULTY_LABEL[difficulty]}: ${numbers.health} hits to beat it, ${numbers.guarded ? 'and only a hit while it rests counts' : 'and any landing on top counts'}. It warns for ${numbers.warning} s before a throw and ${numbers.chargeWarning} s before a charge, and rests for ${numbers.rest} s.`
       : `On ${DIFFICULTY_LABEL[difficulty]} a warning lasts ${seconds.toFixed(2)} seconds.`;
     for (const button of document.querySelectorAll<HTMLButtonElement>('[data-place]')) button.setAttribute('aria-pressed', String(button.dataset.place === place.id));
@@ -496,8 +542,22 @@ const start = async (): Promise<void> => {
 
   const react = (events: GameEvent[]): void => {
     for (const event of events) {
-      if (event.type === 'jump' || event.type === 'land' || event.type === 'bounce') hero?.react(event.type);
-      else if (event.type === 'fall') {
+      if (event.type === 'jump' || event.type === 'land' || event.type === 'bounce') {
+        hero?.react(event.type);
+        if (event.type === 'land' && climbingOut) {
+          hero?.react('out');
+          sinceOut = 0;
+        }
+        if (event.type === 'land') climbingOut = false;
+      }
+      if (event.type === 'splash') water?.splash(game.x, game.z, Math.min(1, event.speed / 14));
+      else if (event.type === 'dive') water?.ring(game.x, game.z, 1.6);
+      else if (event.type === 'surface') water?.ring(game.x, game.z, 1.8);
+      else if (event.type === 'climb') {
+        climbingOut = true;
+        water?.drips(game.x, game.y + 0.5, game.z, 10);
+      } else if (event.type === 'breathless') say('Out of breath! Back to safety.');
+      if (event.type === 'fall') {
         blink = MOVE.returnPause;
         say('Fell: back to the last safe bank.');
       } else if (event.type === 'strike') {
@@ -550,9 +610,19 @@ const start = async (): Promise<void> => {
     turn = Math.atan2(Math.sin(turn), Math.cos(turn));
     hero.root.rotation.y += turn * (1 - Math.exp(-14 * dt));
     hero.animate(
-      { pace: Math.min(Math.hypot(game.vx, game.vz) / MOVE.walkSpeed, 1), grounded: game.grounded, rise: game.vy, rolling: game.rolling, pounce: game.pouncing > 0 ? 1 - game.pouncing / MOVE.pounceTime : null },
+      {
+        pace: Math.min(Math.hypot(game.vx, game.vz) / MOVE.walkSpeed, 1),
+        grounded: game.grounded,
+        rise: game.vy,
+        rolling: game.rolling,
+        pounce: game.pouncing > 0 ? 1 - game.pouncing / MOVE.pounceTime : null,
+        water: game.swimming ? (game.under ? 'under' : 'surface') : null,
+        climbing: game.climbing > 0 ? 1 - game.climbing / SWIM.climbTime : null,
+      },
       dt,
     );
+    WIND.time.value += dt;
+    water?.update(dt);
     blink = Math.max(0, blink - dt);
     const flicker = Math.max(blink, game.protectedFor);
     hero.root.visible = flicker <= 0 || Math.floor(flicker * 12) % 2 === 0;
@@ -585,18 +655,49 @@ const start = async (): Promise<void> => {
     const aim = fightView(fight, { x, z }, level.boss);
     follow.x = ease(follow.x, aim.x, 7, dt);
     follow.z = ease(follow.z, aim.z, 7, dt);
-    follow.y = ease(follow.y, Math.max(y, -4), game.grounded ? 5 : 2.6, dt);
+    under = Math.max(0, Math.min(1, under + (game.swimming && game.under ? dt * 3.5 : -dt * 3.5)));
+    follow.y = ease(follow.y, under > 0 ? y : Math.max(y, -4), game.grounded || game.swimming ? 5 : 2.6, dt);
     const out = fightView(fight, follow, level.boss);
     camera.position.set(follow.x * 0.85, follow.y + 8 * out.up, follow.z + 12 * out.back);
     camera.lookAt(follow.x * 0.92, follow.y + 1, follow.z - 4.5);
+    // Underwater, as in the game (grove-view.ts): the camera dips in close behind the swimmer, and the fog closes in, blue-green.
+    const pool = game.water ?? level.water?.[0];
+    const share = under * under * (3 - 2 * under);
+    if (share > 0 && pool) {
+      const behind = Math.min(follow.z + 4.6, pool.maxZ - 0.3);
+      const close = { x: follow.x, y: Math.min(follow.y + 0.9, underwaterCeiling(pool, level.solids, follow.x, behind)), z: behind };
+      const between = {
+        x: camera.position.x + (close.x - camera.position.x) * share,
+        y: camera.position.y + (close.y - camera.position.y) * share,
+        z: camera.position.z + (close.z - camera.position.z) * share,
+      };
+      // As in the game: never through rock on the way in or out.
+      if (!sightBlocked(level.solids, between, { x: follow.x, y: follow.y + 0.5, z: follow.z })) {
+        camera.position.set(between.x, between.y, between.z);
+        camera.lookAt(follow.x, follow.y + 0.4 + 0.6 * (1 - share), follow.z - 3 - 1.5 * (1 - share));
+      }
+    }
+    if (water) {
+      const p = camera.position;
+      const below = Math.min(1, underwaterDepth(level.water, p.x, p.y, p.z) / 0.15);
+      const fog = scene.fog as Fog;
+      fog.color.copy(fogAbove).lerp(fogBelow, below);
+      (scene.background as Color).copy(fog.color);
+      fog.near = 30 + (0.5 - 30) * below;
+      fog.far = 120 + (24 - 120) * below;
+      water.setUnder(below, WIND.time.value);
+    }
     sun.target.position.set(follow.x, follow.y, follow.z - 4);
     sun.position.set(follow.x - 14, follow.y + 26, follow.z + 8);
 
     // The read-out: hearts, and what the watched enemy is doing.
-    hearts.textContent = `${'♥'.repeat(game.hearts)}${'♡'.repeat(level.hearts - game.hearts)}`;
+    hearts.textContent = `${'♥'.repeat(game.hearts)}${'♡'.repeat(level.hearts - game.hearts)}${Number.isFinite(game.maxBreath) && (game.under || game.breath < game.maxBreath) ? `  breath ${Math.round((game.breath / game.maxBreath) * 100)}%` : ''}`;
     hearts.setAttribute('aria-label', `${game.hearts} of ${level.hearts} hearts`);
     const watched: Enemy | undefined = game.enemies.find((each) => each.spot.id === place.watch);
-    if (!place.watch && boss) {
+    if (place.id === 'pool') {
+      doing.textContent = game.climbing > 0 ? 'Climbing out' : game.swimming ? (game.under ? 'Swimming underwater' : Math.hypot(game.vx, game.vz) > 0.5 ? 'Swimming at the surface' : 'Treading water') : sinceOut >= 0 && sinceOut < 1.5 ? 'Out of the water' : game.grounded ? 'On the bank' : 'In the air';
+      doing.dataset.phase = game.swimming ? 'swim' : 'land';
+    } else if (!place.watch && boss) {
       doing.textContent = BOSS_DOING(boss);
       doing.dataset.phase = boss.phase;
     } else if (watched) {
@@ -622,8 +723,10 @@ const start = async (): Promise<void> => {
       steps += 1;
       if (!playing && bot) {
         // The bot's fight, over and over: a few seconds after the leaf is taken, it starts again.
-        if (game.complete) sinceOver += STEP;
-        if (sinceOver > 4) {
+        // In the pool: a few seconds after it climbs out, so the shake-off is seen.
+        if (sinceOut >= 0) sinceOut += STEP;
+        if (game.complete || (place.id === 'pool' && sinceOut >= 0)) sinceOver += STEP;
+        if (sinceOver > (place.id === 'pool' ? 2.6 : 4)) {
           setUp();
           return;
         }
