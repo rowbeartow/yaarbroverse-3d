@@ -441,3 +441,17 @@ export const underwaterDepth = (waters: readonly Water[] | undefined, x: number,
   }
   return 0;
 };
+
+/**
+ * The highest the camera may be at (x, z) underwater: just under the pool's
+ * surface, and under the underside of anything over the water there (an arch).
+ */
+export const underwaterCeiling = (water: Water, solids: readonly { x: number; z: number; halfX: number; halfZ: number; bottom: number; top: number; shape: string }[], x: number, z: number, margin = 0.35): number => {
+  let ceiling = water.surface - margin;
+  for (const s of solids) {
+    if (s.bottom >= water.surface || s.top < water.floor) continue;
+    const inside = s.shape === 'round' ? Math.hypot(x - s.x, z - s.z) < s.halfX + 0.6 : Math.abs(x - s.x) < s.halfX + 0.6 && Math.abs(z - s.z) < s.halfZ + 0.6;
+    if (inside) ceiling = Math.min(ceiling, s.bottom - margin);
+  }
+  return ceiling;
+};

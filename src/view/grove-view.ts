@@ -43,7 +43,7 @@ import { HERO_MODEL_FILES, buildHero, type HeroView } from './heroes';
 import { Materials, WIND, installMist } from './materials';
 import { seeded } from './noise';
 import { MIST_COLOR } from './pictures';
-import { UNDERWATER_FOG, WaterView, underwaterDepth } from './water';
+import { UNDERWATER_FOG, WaterView, underwaterCeiling, underwaterDepth } from './water';
 import { MIST_FAR, MIST_NEAR, inDetail, inView } from './route';
 import { TIERS, TierChooser, frameRateGoal, isTierName, startingTier, type Tier, type TierName } from './quality';
 import { MIST_BOTTOM, MIST_TOP, animateMushroom, blobShadow, buildSolids, placeMoving, type LevelSolids } from './scenery';
@@ -531,7 +531,8 @@ export class GroveView {
     const pool = game.water ?? level.water?.find((w) => this.follow.x >= w.minX && this.follow.x <= w.maxX && this.follow.z >= w.minZ && this.follow.z <= w.maxZ);
     if (share > 0 && pool) {
       const { x, y, z } = this.follow;
-      const close = new Vector3(x, Math.min(y + UNDERWATER.up, pool.surface - UNDERWATER.below), Math.min(z + UNDERWATER.back, pool.maxZ - 0.3));
+      const behind = Math.min(z + UNDERWATER.back, pool.maxZ - 0.3);
+      const close = new Vector3(x, Math.min(y + UNDERWATER.up, underwaterCeiling(pool, level.solids, x, behind, UNDERWATER.below)), behind);
       this.camera.position.lerp(close, share);
       const look = new Vector3(x * 0.92, y + CAMERA.lookUp, z - CAMERA.lookAhead).lerp(new Vector3(x, y + 0.4, z - UNDERWATER.lookAhead), share);
       this.camera.lookAt(look);
