@@ -63,6 +63,11 @@ const ENEMIES: Record<string, { title: string; hovers: boolean; note: string }> 
     hovers: true,
     note: 'Made from the “Hover” pose of the approved study: wings up, legs hanging.',
   },
+  crocodile: {
+    title: 'Crocodile',
+    hovers: false,
+    note: 'Each made from its own picture (Meshy Text to Image, then Image to 3D; the words are in tools/crocodile.candidates.json). Shown at one size here; its size in the lake is set when it is rigged.',
+  },
 };
 
 /** Reads a file that candidates.mjs wrote as base64 text. */
