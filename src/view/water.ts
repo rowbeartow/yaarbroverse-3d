@@ -463,3 +463,13 @@ export const insideSolid = (solids: readonly { x: number; z: number; halfX: numb
     if (s.shape === 'round') return Math.hypot(x - s.x, z - s.z) < s.halfX + margin;
     return Math.abs(x - s.x) < s.halfX + margin && Math.abs(z - s.z) < s.halfZ + margin;
   });
+
+/** True when the straight line between two points passes through a solid: a camera at one would not see the other. */
+export const sightBlocked = (solids: Parameters<typeof insideSolid>[0], from: { x: number; y: number; z: number }, to: { x: number; y: number; z: number }): boolean => {
+  const steps = 16;
+  for (let i = 0; i <= steps; i += 1) {
+    const t = i / steps;
+    if (insideSolid(solids, from.x + (to.x - from.x) * t, from.y + (to.y - from.y) * t, from.z + (to.z - from.z) * t, i === 0 ? 0.3 : 0)) return true;
+  }
+  return false;
+};

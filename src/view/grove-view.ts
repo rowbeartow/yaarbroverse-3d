@@ -43,7 +43,7 @@ import { HERO_MODEL_FILES, buildHero, type HeroView } from './heroes';
 import { Materials, WIND, installMist } from './materials';
 import { seeded } from './noise';
 import { MIST_COLOR } from './pictures';
-import { UNDERWATER_FOG, WaterView, insideSolid, underwaterCeiling, underwaterDepth } from './water';
+import { UNDERWATER_FOG, WaterView, sightBlocked, underwaterCeiling, underwaterDepth } from './water';
 import { MIST_FAR, MIST_NEAR, inDetail, inView } from './route';
 import { TIERS, TierChooser, frameRateGoal, isTierName, startingTier, type Tier, type TierName } from './quality';
 import { MIST_BOTTOM, MIST_TOP, animateMushroom, blobShadow, buildSolids, placeMoving, type LevelSolids } from './scenery';
@@ -534,8 +534,8 @@ export class GroveView {
       const behind = Math.min(z + UNDERWATER.back, pool.maxZ - 0.3);
       const close = new Vector3(x, Math.min(y + UNDERWATER.up, underwaterCeiling(pool, level.solids, x, behind, UNDERWATER.below)), behind);
       const between = this.camera.position.clone().lerp(close, share);
-      // On the way in or out, the camera never passes through rock (an arch over the water): it cuts instead.
-      if (!insideSolid(level.solids, between.x, between.y, between.z)) {
+      // On the way in or out, the camera never looks through rock (an arch over the water): it cuts instead.
+      if (!sightBlocked(level.solids, between, { x, y: y + 0.5, z })) {
         this.camera.position.copy(between);
         const look = new Vector3(x * 0.92, y + CAMERA.lookUp, z - CAMERA.lookAhead).lerp(new Vector3(x, y + 0.4, z - UNDERWATER.lookAhead), share);
         this.camera.lookAt(look);
