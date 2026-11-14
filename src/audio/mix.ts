@@ -32,6 +32,8 @@ export interface Speaker {
   /** Null stops a tune that is playing and brings the music back. */
   playTune(name: SoundName | null): void;
   setMuted(muted: boolean): void;
+  /** Underwater: everything muffled. Left out by a speaker that cannot do it. */
+  setUnderwater?(under: boolean): void;
 }
 
 /** Where the mute choice is kept: the browser's own storage, or a stand-in. */
@@ -116,6 +118,16 @@ export class Sound {
   /** Cuts a tune short: the player has moved on. */
   endTune(): void {
     if (this.unlocked) this.speaker.playTune(null);
+  }
+
+  /** True while the hero's head is underwater: the whole mix is muffled. */
+  underwater = false;
+
+  /** Muffles everything while the hero's head is underwater, and clears it at the surface. */
+  setUnderwater(under: boolean): void {
+    if (under === this.underwater) return;
+    this.underwater = under;
+    this.speaker.setUnderwater?.(under);
   }
 
   setMuted(muted: boolean): void {
