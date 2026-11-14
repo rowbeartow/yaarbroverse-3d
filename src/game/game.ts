@@ -6,7 +6,8 @@ import { BOSS, bossFighting, newBoss, resetBoss, stepBoss, type Boss, type BossA
 import type { Difficulty } from './difficulty';
 import { ENEMY, callSidekick, dismissSidekick, newEnemy, sendHome, stepEnemy, type Enemy, type EnemyPhase, type EnemyTuning } from './enemy';
 import { MOVE, STEP, knockSpeed, type HeroName } from './hero';
-import { pushOutside, surfaceBelow, touchesFromAbove, type Level, type Solid } from './level';
+import { pushOutside, surfaceBelow, topAt, touchesFromAbove, type Level, type Solid } from './level';
+import { ownPieces, resetPieces, stepPieces, type PieceEvent } from './moving';
 
 /** What the player is asking for during one step. */
 export interface Input {
@@ -52,6 +53,8 @@ export type GameEvent =
   /** Went back to the last safe bank with every heart again, after losing the last one. */
   | { type: 'restored' }
   | { type: 'safe'; solidId: string }
+  /** A moving piece (see moving.ts) began its tell, began to move, fell away or came back. */
+  | ({ type: 'piece' } & PieceEvent)
   | { type: 'goal' };
 
 /** The record of a run, shown on the end card. */
@@ -70,6 +73,8 @@ export interface Summary {
 }
 
 const EPSILON = 1e-4;
+/** How far down a hero walking on a tilted surface keeps to it in one step. */
+const STICK_DOWN = 0.3;
 
 export class Game {
   readonly level: Level;
@@ -133,7 +138,9 @@ export class Game {
   private canCutJump = false;
 
   constructor(level: Level, difficulty: Difficulty, hero: HeroName) {
-    this.level = level;
+    // Pieces that move are this game's own, so two games of one level never share them.
+    this.level = level.solids.some((s) => s.motion) ? { ...level, solids: ownPieces(level.solids) } : level;
+    level = this.level;
     this.difficulty = difficulty;
     this.hero = hero;
     this.x = level.spawn.x;
@@ -238,6 +245,8 @@ export class Game {
     this.stunned = 0;
     this.rolling = false;
     this.pouncing = 0;
+    // Tipping logs and crumbling moss are as they were at the start.
+    resetPieces(this.level.solids);
     // The older player's rule: every enemy that is not beaten starts over at
     // full health. Strikes landed before the hero was sent back are undone.
     for (const enemy of this.enemies) {
@@ -265,6 +274,17 @@ export class Game {
     this.events = this.pending;
     this.pending = [];
     if (!this.complete) this.seconds += dt;
+
+    // Pieces that move go first, and carry a hero standing on one.
+    const standingOn = this.grounded && this.groundId ? level.solids.find((s) => s.id === this.groundId) : undefined;
+    const forward = standingOn ? standingOn.z - this.z : 0;
+    for (const event of stepPieces(level.solids, standingOn ? standingOn.id : null, forward, dt)) this.events.push({ type: 'piece', ...event });
+    if (standingOn?.piece) {
+      if (standingOn.gone) {
+        this.grounded = false;
+        this.groundId = null;
+      } else this.y = topAt(standingOn, this.x, this.z);
+    }
 
     // After the leaf, while standing still after a fall, and for a moment
     // after being hurt, the buttons do nothing.
@@ -397,8 +417,11 @@ export class Game {
     let nextX = this.x + this.vx * dt;
     let nextZ = this.z + this.vz * dt;
     for (const s of level.solids) {
-      const feetWellBelowTop = this.y < s.top - level.ledgeHelp - EPSILON;
-      const headAboveUnderside = this.y + this.bodyHeight > s.bottom + EPSILON;
+      if (s.gone) continue;
+      // A tilted top is measured at the nearest point of it.
+      const top = s.slopeZ ? topAt(s, nextX, nextZ) : s.top;
+      const feetWellBelowTop = this.y < top - level.ledgeHelp - EPSILON;
+      const headAboveUnderside = this.y + this.bodyHeight > s.bottom + (top - s.top) + EPSILON;
       if (!feetWellBelowTop || !headAboveUnderside) continue;
       const out = pushOutside(s, nextX, nextZ, MOVE.bodyRadius);
       if (out) {
@@ -414,9 +437,9 @@ export class Game {
     this.grounded = false;
     this.groundId = null;
     if (this.vy <= 0) {
-      const ground = this.landingSurface(nextX, nextZ, previousY, nextY);
+      const ground = this.landingSurface(nextX, nextZ, previousY, nextY, wasGrounded ? standingOn?.id ?? null : null);
       if (ground) {
-        nextY = ground.top;
+        nextY = topAt(ground, nextX, nextZ);
         if (ground.bounce) {
           this.vy = ground.bounce;
           this.coyote = 0;
@@ -436,10 +459,12 @@ export class Game {
     } else {
       // Rising: stop at the underside of anything overhead.
       for (const s of level.solids) {
-        const headWasBelow = previousY + this.bodyHeight <= s.bottom + EPSILON;
-        const headNowInside = nextY + this.bodyHeight > s.bottom;
+        if (s.gone) continue;
+        const bottom = s.bottom + (topAt(s, nextX, nextZ) - s.top);
+        const headWasBelow = previousY + this.bodyHeight <= bottom + EPSILON;
+        const headNowInside = nextY + this.bodyHeight > bottom;
         if (headWasBelow && headNowInside && touchesFromAbove(s, nextX, nextZ, MOVE.bodyRadius)) {
-          nextY = s.bottom - this.bodyHeight;
+          nextY = bottom - this.bodyHeight;
           this.vy = 0;
         }
       }
@@ -572,13 +597,21 @@ export class Game {
    * The surface the hero's feet come to rest on when moving from previousY
    * down to nextY: the highest one they cross, or are within ledge help of.
    */
-  private landingSurface(x: number, z: number, previousY: number, nextY: number): Solid | null {
+  private landingSurface(x: number, z: number, previousY: number, nextY: number, stickTo: string | null): Solid | null {
     let best: Solid | null = null;
+    let bestTop = -Infinity;
     for (const s of this.level.solids) {
-      if (s.top < nextY - EPSILON) continue;
-      if (s.top > previousY + this.level.ledgeHelp + EPSILON) continue;
+      if (s.gone) continue;
+      const top = topAt(s, x, z);
+      // Walking down a tilted log, the feet keep to it rather than stepping off into the air.
+      const below = s.id === stickTo ? STICK_DOWN : 0;
+      if (top < nextY - below - EPSILON) continue;
+      if (top > previousY + this.level.ledgeHelp + EPSILON) continue;
       if (!touchesFromAbove(s, x, z, MOVE.footRadius)) continue;
-      if (!best || s.top > best.top) best = s;
+      if (!best || top > bestTop) {
+        best = s;
+        bestTop = top;
+      }
     }
     return best;
   }

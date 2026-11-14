@@ -167,6 +167,26 @@ export const SOUNDS = {
     what: 'Three bright chime notes on reaching a safe mossy bank.',
     source: { files: ['checkpoint.wav'] },
   },
+  creak: {
+    group: 'World', label: 'Tipping log creak', mix: 'cue', level: -3, vary: 0.06,
+    what: 'A slow wooden creak when a hero lands on a tipping log (its tell), and again as it starts to tip. The owner picked choice A.',
+    source: { files: ['creak.wav'] },
+  },
+  mossRustle: {
+    group: 'World', label: 'Moss about to crumble', mix: 'cue', level: -3, vary: 0.06,
+    what: 'A dry rustle the moment a hero lands on crumbling moss: its tell. The owner picked choice B.',
+    source: { files: ['moss-rustle.wav'] },
+  },
+  mossFall: {
+    group: 'World', label: 'Moss falling away', mix: 'action', level: 0, vary: 0.05,
+    what: 'Wood and bark tumbling as crumbling moss gives way into the mist. The owner picked choice A.',
+    source: { files: ['moss-fall.wav'] },
+  },
+  gust: {
+    group: 'World', label: 'Wind before a bough moves', mix: 'cue', level: -3, vary: 0.04,
+    what: 'A gust that swells just before a windy bough rises or sinks: its tell. The owner picked choice B.',
+    source: { files: ['gust.wav'] },
+  },
   leafTune: {
     group: 'Music', label: 'Golden leaf tune', mix: 'music', level: 6,
     what: 'A ten-second victory fanfare in a bright key when the golden leaf is found. The grove music stops for it.',

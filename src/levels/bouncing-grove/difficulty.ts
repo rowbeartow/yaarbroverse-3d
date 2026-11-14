@@ -38,10 +38,31 @@ export interface GroveNumbers {
   shelfStep: number;
   /** How big each mushroom cap is, measured from its middle to its edge. */
   mushroomRadius: number;
-  /** The open air on each side of the mushrooms near the end. */
+  /** The open air on each side of the mushrooms of the last climb. */
   mushroomGap: number;
-  /** How many mushrooms in a row you bounce across to reach the high ledge. */
-  mushroomChain: number;
+  /**
+   * THE TIPPING LOGS (section 4): logs balanced on a snag at their middle,
+   * across open air from the high log to the high ledge, each a little
+   * higher than the last. A moment after a hero lands one creaks and wobbles
+   * (the tell), then the end the hero stands on sinks, further the further
+   * out the hero stands. Lingering at the end makes the next jump higher.
+   *   tipCount    how many.
+   *   tipLength   how long each is. The width is `logWidth`.
+   *   tipGap      the open air between one and the next, and before the ledge.
+   *   tipRise     how much higher each is than the one before.
+   *   tipTell     seconds it creaks and wobbles before it tips.
+   *   tipDip      how far an end sinks, at most, with a hero standing on it.
+   *   tipRate     how fast it sinks, in metres a second.
+   * On Easy it dips so little, so slowly, that the next log is always a small
+   * hop up: no timing needed.
+   */
+  tipCount: number;
+  tipLength: number;
+  tipGap: number;
+  tipRise: number;
+  tipTell: number;
+  tipDip: number;
+  tipRate: number;
   /** How wide the high boughs are. */
   boughWidth: number;
   /** The open air at a corner of the high boughs, where one bough ends and the next begins. */
@@ -191,7 +212,7 @@ export const GROVE_DIFFICULTY: Record<Difficulty, GroveNumbers> = {
     shelfStep: 0.4,
     mushroomRadius: 1.5,
     mushroomGap: 0.8,
-    mushroomChain: 1,
+    tipCount: 2, tipLength: 5.0, tipGap: 0.8, tipRise: 0.6, tipTell: 0.8, tipDip: 0.35, tipRate: 0.4,
     boughWidth: 2.4,
     boughGap: 1.2,
     boughGapCount: 1,
@@ -232,7 +253,7 @@ export const GROVE_DIFFICULTY: Record<Difficulty, GroveNumbers> = {
     shelfStep: 0.8,
     mushroomRadius: 1.15,
     mushroomGap: 1.6,
-    mushroomChain: 4,
+    tipCount: 3, tipLength: 5.5, tipGap: 1.6, tipRise: 0.5, tipTell: 0.45, tipDip: 0.8, tipRate: 0.9,
     boughWidth: 1.6,
     boughGap: 2.0,
     boughGapCount: 4,
@@ -273,7 +294,7 @@ export const GROVE_DIFFICULTY: Record<Difficulty, GroveNumbers> = {
     shelfStep: 1.2,
     mushroomRadius: 0.8,
     mushroomGap: 2.6,
-    mushroomChain: 5,
+    tipCount: 4, tipLength: 5, tipGap: 2.4, tipRise: 0.4, tipTell: 0.3, tipDip: 1.2, tipRate: 1.5,
     boughWidth: 1.0,
     boughGap: 3.0,
     boughGapCount: 4,

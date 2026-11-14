@@ -7,7 +7,7 @@ import { bossDangerous, bossFighting, bossOpen, type Boss } from '../../src/game
 import type { Enemy } from '../../src/game/enemy';
 import { Game, type Input } from '../../src/game/game';
 import { MOVE, STEP } from '../../src/game/hero';
-import { surfaceBelow, type Level, type Solid } from '../../src/game/level';
+import { surfaceBelow, topAt, type Level, type Solid } from '../../src/game/level';
 
 /** The spot on a solid the bot heads for: its middle if round, else the nearest point well inside. */
 const aimPoint = (s: Solid, x: number, z: number): { x: number; z: number } => {
@@ -36,11 +36,13 @@ export class Bot {
   /** The enemy the bot is in the air over, on its way to landing on it. */
   private stomping: Enemy | null = null;
 
-  constructor(private readonly level: Level) {}
+  /** The level is read from the game on every step, so moving pieces are where they are now. */
+  constructor(_level?: Level) {}
 
   /** Decides this step's input from what the game looks like right now. */
   input(game: Game): Input {
-    const { level } = this;
+    // The game's own copy of the level: its moving pieces are where the rules have them now.
+    const level = game.level;
     for (const event of game.events) {
       if (event.type === 'bounce') this.index = level.route.indexOf(event.solidId);
     }
@@ -118,9 +120,10 @@ export class Bot {
       const aheadX = game.x + (dx / distance) * 0.35;
       const aheadZ = game.z + (dz / distance) * 0.35;
       const groundAhead = surfaceBelow(level, aheadX, aheadZ, game.y + level.ledgeHelp, MOVE.footRadius);
-      const edgeAhead = !groundAhead || groundAhead.top < game.y - 0.05;
+      // Walking down a tipping log is not an edge: only a drop onto something else, or into the air, is.
+      const edgeAhead = !groundAhead || (groundAhead.id !== game.groundId && topAt(groundAhead, aheadX, aheadZ) < game.y - 0.05);
       // Jump at a step too high to walk up, once close to it.
-      const tooHighToStep = next !== undefined && next.top > game.y + level.ledgeHelp;
+      const tooHighToStep = next !== undefined && topAt(next, aim.x, aim.z) > game.y + level.ledgeHelp;
       const closeToStep = next !== undefined && distanceToEdge(next, game.x, game.z) < 1.3;
       // Never while still running to a corner: the turn comes first.
       pressJump = easing && (edgeAhead || (tooHighToStep && closeToStep));

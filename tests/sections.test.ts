@@ -115,7 +115,7 @@ describe('the seven sections', () => {
         'The Broken Logs',
         'The Stump Steps',
         'The Ravine',
-        'The Mushroom Springs',
+        'The Tipping Logs',
         'The High Boughs',
         'The Climb',
         'The Marmot Chief',

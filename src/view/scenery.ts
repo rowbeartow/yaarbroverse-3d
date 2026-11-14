@@ -742,6 +742,57 @@ export const goldenLeaf = (level: Level, materials: Materials): LeafView => {
 
 // ---------- Putting the level together ----------
 
+// ---------- Pieces that move ----------
+
+/**
+ * A piece that moves (src/game/moving.ts), drawn from the rules' own solid
+ * every frame, so the drawn top is where a hero can stand while it moves.
+ */
+export interface MovingView {
+  solid: Solid;
+  /** Sits at the piece's middle, at the height of its top, and tilts with it. */
+  holder: Group;
+  /** The shape itself, its top at 0 in the holder. */
+  body: Group;
+}
+
+/**
+ * A tipping log: a log balanced on a snag at its middle. It is drawn with its
+ * top at the holder's origin, so turning the holder turns it about the middle
+ * of its top, which is where the rules tilt it.
+ */
+const tippingLog = (s: Solid, materials: Materials): { shape: Group; view: MovingView } => {
+  const shape = new Group();
+  const thickness = s.top - s.bottom;
+  const holder = new Group();
+  const body = log({ ...s, x: 0, z: 0, top: 0, bottom: -thickness }, materials);
+  holder.add(body);
+  shape.add(holder);
+  // The snag it rests on, standing still under its middle.
+  const post = trunk(materials, 0.42, 0.66, UNDER, s.bottom + 0.2, s.z * 0.37 + s.x, { mossAtTop: 0.6 });
+  post.position.set(s.x, 0, s.z);
+  shape.add(post);
+  const view = { solid: s, holder, body };
+  placeMoving(view, 0);
+  return { shape, view };
+};
+
+/** Puts a moving piece where the rules say it is now. `time` drives the shake of a tell. */
+export const placeMoving = (view: MovingView, time: number): void => {
+  const { solid: s, holder, body } = view;
+  holder.position.set(s.x, s.top, s.z);
+  if (s.motion?.kind === 'tip') {
+    // The rules' top rises `slopeZ` for each metre toward the camera. Turning
+    // the log by this angle puts its top on that line; stretching it by
+    // 1 / cos keeps its ends exactly where the rules' ends are.
+    const angle = Math.atan(s.slopeZ ?? 0);
+    holder.rotation.x = -angle;
+    body.scale.z = 1 / Math.cos(angle);
+    // The tell: it rocks from side to side about its length.
+    holder.rotation.z = s.piece?.phase === 'tell' ? Math.sin(time * 38) * 0.03 : 0;
+  }
+};
+
 export interface LevelSolids {
   group: Group;
   /**
@@ -751,16 +802,23 @@ export interface LevelSolids {
    */
   pieces: Array<{ shape: Object3D; near: number; far: number; fine: Object3D[] }>;
   mushrooms: Map<string, MushroomView>;
+  /** Pieces that move, to be put where the rules say each frame. */
+  moving: MovingView[];
   leaf: LeafView;
 }
 
 export const buildSolids = (level: Level, materials: Materials, decor: Decor, random: () => number): LevelSolids => {
   const group = new Group();
   const mushrooms = new Map<string, MushroomView>();
+  const moving: MovingView[] = [];
   const pieces: LevelSolids['pieces'] = [];
   for (const s of level.solids) {
     const shape = new Group();
-    if (s.kind === 'mushroom') {
+    if (s.motion?.kind === 'tip') {
+      const made = tippingLog(s, materials);
+      shape.add(made.shape);
+      moving.push(made.view);
+    } else if (s.kind === 'mushroom') {
       const made = mushroom(s, materials);
       shape.add(made.group);
       mushrooms.set(s.id, made.view);
@@ -787,7 +845,7 @@ export const buildSolids = (level: Level, materials: Materials, decor: Decor, ra
   }
   const leaf = goldenLeaf(level, materials);
   group.add(leaf.group);
-  return { group, pieces, mushrooms, leaf };
+  return { group, pieces, mushrooms, moving, leaf };
 };
 
 /** The soft dark spot under the hero that shows where a jump will land. */
