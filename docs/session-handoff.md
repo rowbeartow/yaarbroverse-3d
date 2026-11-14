@@ -340,7 +340,7 @@ Milestone four (sound and music) is done, in the pull requests listed under "Sta
 
 ## Known limits
 
-- The test bot's fight with the chief on Normal and Hard turns out differently with where it walks into the arena: from the middle of the bank on Hard it needed three fights. The chief's bank sits 0.8 m to the left of the route (`chiefAside`) because there, and a few tenths of a metre either side, it wins first time. The bot's fighting, not the chief, is what is fragile; a change to the climb before the chief can tip it over again.
+- Milestone eight, pull request 1: the test bot looks ahead in a boss fight and wins its first fight from any of seven places across the arena's near side, standing or running in, on every difficulty as each hero, with no heart lost (`tests/boss-entry.test.ts`). The chief's bank is back on the route's line (`chiefAside` is gone).
 - The windy boughs keep the wind's rhythm from the start of a run, and their rhythm (`windStart`) was set so the bot's perfect run meets the first bough as it comes down. A player who arrives at another moment waits on the solid log up to a full rhythm (6.8, 5.6 and 3.6 seconds).
 - A crumbling moss pad pops back whole when it grows back; it does not grow.
 

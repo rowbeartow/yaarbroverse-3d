@@ -82,7 +82,7 @@ Any level can end with a boss. The rules are in `src/game/boss.ts` (read its top
 7. **The regen rule** needs nothing from the level: when the hero is sent back to a safe bank, the boss goes home at full health and the fight starts over.
 8. A new boss is canon: its name and what it is come from the owner. It goes on the arena preview page (`tools/preview/arena.mjs`) for his OK before it merges.
 
-The test bot fights any boss built this way: it keeps moving round it, steps out of the line of an attack, and jumps on it when a hit would count. If the bot cannot beat a boss without losing a heart, look at the boss's numbers before the bot.
+The test bot fights any boss built this way: it keeps moving round it, steps out of the line of an attack, and jumps on it when a hit would count. Before it acts it plays its plan forward on a copy of the game for under two seconds, and if that gets it hurt it dodges first (`fightSafely` in `tests/helpers/bot.ts`). `tests/boss-entry.test.ts` runs over every level with a boss with no change: the bot walks in from seven places across the arena's near side, standing or already running, and must win its first fight on every difficulty as each hero. If the bot cannot beat a boss, look at the boss's numbers before the bot.
 
 ## Checks
 

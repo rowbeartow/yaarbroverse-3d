@@ -408,3 +408,27 @@ Supersedes: none
 ## 2026-11-14 Ghosts are kept in the browser's database
 Reason: The owner asked for the check: if ghosts will not fit, move them to IndexedDB and carry over the ghosts already saved. Worked out: four players across the roadmap's five levels, both heroes and three difficulties are 120 ghosts of up to about 25,700 characters, about 3.1 million characters, which Safari counts as about 6.2 MB, over the roughly 5 MB local storage gives a whole site (and `rowbeartow.github.io` is shared with every GitHub Pages project on the account). Claude's calls within it: the game keeps reading and writing ghosts without waiting, through a store that holds a copy in memory and writes to the database behind the scenes (`src/save/ghost-store.ts`); ghosts in local storage are moved on first opening and removed only once the database holds them, and a ghost already in the database wins; with no database, it falls back to local storage as before. Players and bests stay in local storage.
 Supersedes: "each ghost is its own storage entry" in "The ghost is the recording of the best time, drawn only, and kept apart from the progress", for where the entry lives. Each ghost is still its own entry, kept apart from the progress.
+
+## 2026-11-14 Milestone eight, part one: swimming, in five pull requests
+Reason: The owner's call. In order: the test bot's boss fights made to work from any reasonable way in; swimming rules any level can use, proved in a sandbox pool; how water looks; swimming sounds (on the sound board for his OK before they go in); and the heroes' swimming clips (on a preview page for his OK). Part two (the lake level, its scenery and music, and crocodiles) is a later session.
+Supersedes: none
+
+## 2026-11-14 Both heroes swim, on the surface and underwater, and deep water is never a fall
+Reason: The owner's decision. A hero in deep water swims. The controls stay the same: move to swim, Jump to swim up or to climb out at an edge, and the move button (X, Shift, or the round touch button) dives.
+Supersedes: none
+
+## 2026-11-14 Underwater there is a breath meter; on Easy breath never runs out
+Reason: The owner's decision. On Normal and Hard breath refills at the surface, and running out sends the hero back to the last checkpoint, the same as losing all hearts.
+Supersedes: none
+
+## 2026-11-14 Caputo shakes the water off when he climbs out, if it looks good
+Reason: The owner's word: a nice touch, not a requirement.
+Supersedes: none
+
+## 2026-11-14 Backup branches while checks run
+Reason: The owner's standing permission, also in `CLAUDE.md`: while one pull request's checks run, Claude may push the next one's work to a backup branch named `claude/backup-<topic>`, so no work exists only on the session's machine. Each report says which backup branches can be deleted.
+Supersedes: none
+
+## 2026-11-14 The test bot looks ahead in a boss fight, and the chief's bank is back on the route's line
+Reason: The owner's instruction: the chief fight must succeed from any reasonable way in, not one tuned spot. Claude's calls: before it acts in a fight, the bot plays its own plan forward on a copy of the game for 1.8 seconds (the rules have no chance in them, so the copy plays out exactly); if the plan gets it hurt or off the bank, it tries standing still and each of eight ways, walking or jumping, for a quarter of a second followed by the plan again, and takes the safest. It also keeps a hit's throw and a step from the arena's edge. `tests/boss-entry.test.ts` has it walk into every boss's arena from seven places across the near side, standing or already running, on every difficulty as each hero: it wins every first fight, and in the grove loses no heart in any of the 84. The bot plays with walk and jump alone, as before. With the bot no longer fragile, the chief's bank sits on the route's line again; the chief's numbers and rules are unchanged.
+Supersedes: "the chief's bank 0.8 m to the left of the route (`chiefAside` ...)" in "A solid log to wait on before the windy boughs, and the chief's bank a little to the left". The solid log stands.

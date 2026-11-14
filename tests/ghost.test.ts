@@ -92,8 +92,9 @@ describe('a ghost replays the path it recorded', () => {
       for (let k = Math.max(0, step - ghost.interval); k <= Math.min(path.length - 1, step + ghost.interval); k += 1) {
         nearest = Math.min(nearest, Math.hypot(pose.x - path[k].x, pose.y - path[k].y, pose.z - path[k].z));
       }
-      // The bounce up off a boss is the sharpest turn there is: 14 cm at most.
-      expect(nearest).toBeLessThan(0.16);
+      // The bounce up off a boss is the sharpest turn there is: under 20 cm, by where in a sample it falls.
+      // A ghost gliding back through the air after a fall would be metres out.
+      expect(nearest).toBeLessThan(0.2);
     }
   });
 

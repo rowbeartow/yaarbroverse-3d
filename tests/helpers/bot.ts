@@ -3,7 +3,7 @@
 // the stick and when to press Jump. It follows the level's route, so the same
 // bot plays any level built from solids.
 
-import { bossDangerous, bossFighting, bossOpen, type Boss } from '../../src/game/boss';
+import { bossDangerous, bossFighting, bossOpen, type Boss, type BossSpot } from '../../src/game/boss';
 import type { Enemy } from '../../src/game/enemy';
 import { Game, type Input } from '../../src/game/game';
 import { MOVE, STEP } from '../../src/game/hero';
@@ -79,7 +79,7 @@ export class Bot {
     if (boss && boss.phase !== 'defeated') {
       const a = boss.spot.arena;
       const inside = game.x >= a.minX - 1 && game.x <= a.maxX + 1 && game.z >= a.minZ - 1 && game.z <= a.maxZ + 3 && Math.abs(game.y - boss.spot.y) < 8;
-      if (inside && (bossFighting(boss) || game.grounded)) return this.fight(game, boss);
+      if (inside && (bossFighting(boss) || game.grounded)) return this.fightSafely(game, boss);
     }
 
     const next = level.solids.find((s) => s.id === level.route[this.index + 1]);
@@ -161,6 +161,58 @@ export class Bot {
   }
 
   private way: Way = 1;
+  /** Seconds until the bot next looks ahead in a fight. */
+  private lookIn = 0;
+  /** A way out of trouble the bot has picked, and for how much longer it keeps to it. */
+  private escape: { input: Input; left: number } | null = null;
+
+  /**
+   * Fighting a boss, looking ahead first. Every tenth of a second the bot
+   * plays its own plan (`fight`) forward on a copy of the game, for a little
+   * under two seconds. If the plan gets the hero hurt (a dive aimed at where it is
+   * about to leap, a charge it would run into), it tries each way it could go
+   * instead for a moment, walking or jumping, each followed by the plan again,
+   * and keeps to the safest for that moment before looking again. The copy runs the game's own rules, so this answers to
+   * whatever the boss and its sidekicks really do, from wherever the hero
+   * walked in, rather than to one rehearsed fight.
+   */
+  private fightSafely(game: Game, boss: Boss): Input {
+    if (this.escape && this.escape.left > 0) {
+      this.escape.left -= STEP;
+      return this.escape.input;
+    }
+    this.escape = null;
+    this.lookIn -= STEP;
+    if (this.lookIn > 0) return this.fight(game, boss);
+    this.lookIn = RETHINK;
+    const plan = copyBot(this);
+    const planned = trouble(copyGame(game), (copy) => plan.fight(copy, copy.boss as Boss), LOOK_AHEAD);
+    if (planned === null) return this.fight(game, boss);
+    // The plan runs into trouble. Find a way that does not, or that puts it off longest.
+    let best: { input: Input; score: number } | null = null;
+    for (const input of ESCAPES) {
+      // Go this way for a moment, then carry on with the plan.
+      const copy = copyGame(game);
+      const after = copyBot(this);
+      after.escape = null;
+      let steps = 0;
+      const when = trouble(copy, (c) => (steps++ < ESCAPE_FOR / STEP ? input : after.fight(c, c.boss as Boss)), LOOK_AHEAD);
+      const b = copy.boss as Boss;
+      const off = Math.hypot(b.x - copy.x, b.z - copy.z);
+      const room = roomIn(boss.spot.arena, game.level.knockback);
+      const inside = copy.x > room.minX && copy.x < room.maxX && copy.z > room.minZ && copy.z < room.maxZ;
+      // Safe beats unsafe; then later trouble beats sooner; then a good distance from the boss, inside the arena.
+      const score = (when === null ? 100 : when * 10) - Math.abs(off - 5.2) * 0.2 - (inside ? 0 : 3) - (input.jump ? 0.5 : 0);
+      if (!best || score > best.score) best = { input, score };
+    }
+    if (!best || best.score <= planned * 10 - 4) return this.fight(game, boss);
+    this.escape = { input: best.input, left: ESCAPE_FOR - STEP };
+    this.holdingJump = best.input.jump;
+    this.leaping = false;
+    this.dodge = 0;
+    return best.input;
+  }
+
   /** Which side of an aimed attack the bot is getting clear to: 1, -1, or 0 when nothing is aimed. */
   private dodge = 0;
   private leaping = false;
@@ -202,9 +254,9 @@ export class Bot {
       return { moveX: (dx / distance) * push, moveZ: (dz / distance) * push, jump: this.holdingJump };
     }
 
-    // Otherwise keep moving round it, about five metres off, inside the arena.
-    const { arena } = spot;
-    const room = { minX: arena.minX + 0.8, maxX: arena.maxX - 0.8, minZ: arena.minZ + 0.8, maxZ: arena.maxZ - 0.8 };
+    // Otherwise keep moving round it, about five metres off, inside the arena,
+    // and far enough from its edge that a hit cannot throw the hero off.
+    const room = roomIn(spot.arena, game.level.knockback);
     const want = 5.2;
     const step = (way: Way): { x: number; z: number } => {
       // A little way round the circle, pulled in or out toward the distance wanted.
@@ -292,6 +344,46 @@ export class Bot {
     return size > 1e-6 ? { moveX: heading.x / size, moveZ: heading.z / size, jump: false } : { moveX: 0, moveZ: 0, jump: false };
   }
 }
+
+/** In a fight, how far ahead the bot looks, how often, and how long it keeps to a way out once picked. */
+const LOOK_AHEAD = 1.8;
+const RETHINK = 0.1;
+const ESCAPE_FOR = 0.25;
+
+/** The ways out the bot tries: standing still, and each of eight directions walking or with a full jump. */
+const ESCAPES: Input[] = [
+  { moveX: 0, moveZ: 0, jump: false },
+  ...[false, true].flatMap((jump) =>
+    Array.from({ length: 8 }, (_, i) => ({ moveX: Math.sin((i * Math.PI) / 4), moveZ: Math.cos((i * Math.PI) / 4), jump })),
+  ),
+];
+
+/** The part of an arena the bot keeps to: in from its edge by a hit's throw and a step more. */
+const roomIn = (arena: BossSpot['arena'], knockback: number): BossSpot['arena'] => {
+  const inset = Math.max(0.8, knockback + 0.6);
+  return { minX: arena.minX + inset, maxX: arena.maxX - inset, minZ: arena.minZ + inset, maxZ: arena.maxZ - inset };
+};
+
+/** A copy of a game that can be played forward without touching the real one. The rules have no randomness, so it plays out exactly as the real one would. */
+const copyGame = (game: Game): Game => Object.assign(Object.create(Game.prototype) as Game, structuredClone({ ...game }));
+
+/** A copy of the bot, for playing its plan forward. */
+const copyBot = (bot: Bot): Bot => Object.assign(Object.create(Bot.prototype) as Bot, { ...bot, stomping: null, escape: null });
+
+/**
+ * Plays a copy of a game (see `copyGame`) forward for up to `seconds` with `choose` deciding
+ * each step's input, and returns how many seconds in the hero was hurt, fell
+ * or lost the fight, or null if none of that happened.
+ */
+const trouble = (copy: Game, choose: (copy: Game) => Input, seconds: number): number | null => {
+  const { heartsLost, falls } = copy;
+  for (let i = 1; i <= seconds / STEP; i += 1) {
+    copy.step(choose(copy));
+    if (copy.heartsLost > heartsLost || copy.falls > falls) return i * STEP;
+    if (copy.boss?.phase === 'defeated') return null;
+  }
+  return null;
+};
 
 /** Which way round the boss the bot is circling: 1 or -1. */
 type Way = 1 | -1;
