@@ -8,8 +8,8 @@ import { LIST, Turns, buildMix, loadBuffers, strike, type Buffers, type MixGraph
 import { VOICE, gainOf, type Group, type SoundDef, type SoundName } from '../../src/audio/sounds';
 import { evenOut } from '../../src/audio/synth';
 
-interface Extra { label: string; what: string; file: string; credit: string; loop: boolean; level: number }
-interface Board { credits: Record<string, string>; extras: Extra[] }
+interface Extra { label: string; what: string; file: string; credit: string; loop: boolean; level: number; mix?: 'cue' | 'action' | 'step' | 'menu' | 'music' }
+interface Board { credits: Record<string, string>; extras: Extra[]; extrasTitle?: string; extrasNote?: string }
 
 const board = (await (await fetch('media/board.json')).json()) as Board;
 const list = LIST;
@@ -146,10 +146,10 @@ for (const group of ORDER) {
 }
 if (board.extras.length) {
   const section = el('section', 'group');
-  section.append(el('h2', '', 'Other choices'));
-  section.append(el('p', 'note', 'Not picked, but ready if you like one better. Say its name and it replaces the pick above.'));
+  section.append(el('h2', '', board.extrasTitle ?? 'Other choices'));
+  section.append(el('p', 'note', board.extrasNote ?? 'Not picked, but ready if you like one better. Say its name and it replaces the pick above.'));
   for (const extra of board.extras) {
-    section.append(row(`extra-${extra.file}`, extra.label, extra.what, extra.credit, { file: extra.file, mix: extra.file.endsWith('.mp3') ? 'music' : 'action', level: extra.level, loop: extra.loop }, 'yaarbro', true));
+    section.append(row(`extra-${extra.file}`, extra.label, extra.what, extra.credit, { file: extra.file, mix: extra.mix ?? (extra.file.endsWith('.mp3') ? 'music' : 'action'), level: extra.level, loop: extra.loop }, 'yaarbro', true));
   }
   groups.append(section);
 }
