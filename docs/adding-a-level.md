@@ -18,7 +18,8 @@ Make `src/levels/<id>/` with three files:
 2. **`layout.ts`**: one function, `build<Name>(difficulty)`, that returns a `Level` (`src/game/level.ts`) built from those numbers. No drawing code.
    - `solids`: everything to stand on. Kinds that already draw: `bank`, `log`, `stump`, `shelf`, `mushroom` (give it `bounce`), `bough`, `moss` (crumbling moss only). Mark checkpoints `safe: true`. A solid can also move: see "Pieces that move" below.
    - `spawn` must be on a safe solid. `leaf` is the goal.
-   - `route`: the ids of the solids in the order a run crosses them. The test bot follows it, so it must be complete and in order.
+   - `route`: the ids of the solids in the order a run crosses them, and of any pool where a run swims across it. The test bot follows it, so it must be complete and in order.
+   - `water` and `breath`: see "Water" below.
    - `sections`, `hints` (shown the first time a hero stands on that solid) and `goalLine` are optional.
    - `enemies`: see how the grove places its scouts and mosquito at the end of its `layout.ts`.
    - `boss`: see "Ending a level with a boss" below.
@@ -64,6 +65,20 @@ Every moving piece has a tell before it moves (it shakes, and a sound plays), ca
 The grove's section 6, The Windy Climb, has both: `moss*` and `wind*` in its `difficulty.ts`.
 
 The test bot copes with moving pieces on its own: it reads each piece where it is now, never lingers, does not take walking down a tilted log for an edge, and waits at the edge (or on the bough) until a windy bough is resting level with where it is going, for long enough to get across.
+
+## Water
+
+Any level can have deep water: give the `Level` a `water` list of pools, each a box seen from above (`minX`, `maxX`, `minZ`, `maxZ`) with a `surface` and a `floor` height, and an `id`. The rules are in `src/game/swim.ts` (its top says how swimming goes), and `tests/swim.test.ts` holds the tests. The Sandbox's pool is the example.
+
+- Deep water is never a fall: a hero who walks, jumps or drops into a pool swims. Keep the `floor` above `fallY` and the pool at least 2.5 m deep.
+- Put the pool's id in `route` where a run swims across it, between the solid before it and the solid after it. The test bot walks off the edge into it, swims for the next solid, dives under anything in the way, and climbs out.
+- A swimmer floats with head and shoulders out, swims slower than walking, dives with the move button, swims up with Jump, and drifts up with neither. The heroes' own moves (the roll and the pounce) do nothing in water.
+- The sides of a pool hold a swimmer in: the only way out is to climb. Jump at the surface next to a solid whose top is no more than 1.35 m above the water climbs out onto it; a top no higher than 0.35 m above the water is a shore, walked out on. So the solid after a pool must be within that reach, and anything a player should not climb onto must be higher.
+- Something across the water with deep water under it (the Sandbox's `pool-arch`: a `bank` whose `bottom` is above the pool's floor) can only be passed underwater. Leave at least 1 m of water between its underside and the floor. Put it well past where a running jump into the pool lands (about 5 m), or the plunge carries a hero under it without a dive.
+- **Breath:** `breath` on the `Level`, in seconds, from the level's `difficulty.ts`. Leave it out on Easy: breath never runs out there (the owner's rule). It fills again at the surface. Running out underwater is the same as losing the last heart: back to the last checkpoint with every heart. Make the longest swim under anything well under half the breath there is.
+- **Checkpoints:** water is never one. Make the solid a hero climbs out onto `safe` if losing breath on the next swim should not cost what came before.
+- **Enemies:** nothing reaches a hero whose head is underwater (acorns and dives stop at the surface). A mosquito whose patch is over a pool can dive at a swimmer at the surface: give it a `floor` just above the water. Scouts and bosses stay on their banks.
+- Pieces that move and water have not been tried together.
 
 ## New enemies
 

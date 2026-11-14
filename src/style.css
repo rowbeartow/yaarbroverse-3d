@@ -101,6 +101,32 @@ body {
   animation: heart-hit 0.45s ease;
 }
 
+/* Breath: a bar under the hearts, shown only while it is running down or
+   filling again. It turns red in its last quarter. */
+#breath {
+  position: absolute;
+  top: calc(max(12px, env(safe-area-inset-top)) + 92px);
+  left: max(16px, env(safe-area-inset-left));
+  width: clamp(120px, 18vw, 190px);
+  height: 16px;
+  padding: 4px;
+  border-radius: 999px;
+  background: var(--shade);
+}
+
+#breath-left {
+  display: block;
+  height: 100%;
+  width: 100%;
+  border-radius: 999px;
+  background: #8fd3ff;
+  transform-origin: left center;
+}
+
+#breath.low #breath-left {
+  background: #e5484d;
+}
+
 @keyframes heart-hit {
   30% {
     transform: scale(1.18);

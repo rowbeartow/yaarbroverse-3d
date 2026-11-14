@@ -233,6 +233,23 @@ export class Screens {
     }
   }
 
+  /**
+   * Shows how much breath is left, as a share of full (0 to 1), or hides the
+   * bar (null): it is shown only while breath is running down or filling again.
+   */
+  setBreath(share: number | null): void {
+    const bar = el('#breath');
+    if (share === null) {
+      bar.hidden = true;
+      return;
+    }
+    bar.hidden = false;
+    el('#breath-left').style.transform = `scaleX(${Math.max(0, Math.min(1, share)).toFixed(3)})`;
+    bar.classList.toggle('low', share < 0.25);
+    bar.setAttribute('aria-label', `Breath ${Math.round(share * 100)} percent`);
+    bar.dataset.share = share.toFixed(2);
+  }
+
   /** Names the touch button for the hero's own move: Roll or Pounce. */
   setMove(name: string): void {
     const button = el('#move-button');
