@@ -2,6 +2,7 @@
 // the "turn sideways" card and the short messages while playing. Plain web
 // page elements over the canvas, so text stays sharp and screen readers work.
 
+import { showControls } from './controls-help';
 import { DIFFICULTIES, DIFFICULTY_LABEL, isDifficulty, type Difficulty } from '../game/difficulty';
 import type { Summary } from '../game/game';
 import { HEROES, isHeroName, type HeroName } from '../game/hero';
@@ -98,9 +99,6 @@ export class Screens {
         difficulty,
       })),
     );
-    el('#controls-note').textContent = isTouchDevice()
-      ? 'Left thumb moves. Right thumb jumps: hold for a higher jump. The smaller button above Jump is Yaarbro’s roll or Caputo’s pounce.'
-      : 'Arrow keys or W A S D to move. Space to jump: hold for a higher jump. X or Shift for Yaarbro’s roll or Caputo’s pounce. Esc to pause. M turns sound off and on.';
   }
 
   /** The picked level's name on the end card, and its line for each difficulty. */
@@ -284,6 +282,11 @@ export class Screens {
       button.setAttribute('aria-label', this.moveName);
       button.classList.remove('pulse');
     }
+  }
+
+  /** The controls on the pause screen, for this device and hero. */
+  setControls(hero: HeroName): void {
+    showControls(el('#paused-controls'), isTouchDevice(), hero);
   }
 
   /** Makes the round button pulse for a few seconds, to show where diving is. */

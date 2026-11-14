@@ -160,6 +160,9 @@ const boot = (): void => {
     who ? { playerId: who.id, levelId: entry.id, hero: choice.hero, difficulty: choice.difficulty } : null;
   /** The ghost switch on the picked card follows the player, hero and difficulty picked now. */
   const showGhostSwitch = (): void => {
+    // The controls on the picked card follow the hero picked now (and the pause screen's with them).
+    picker.showControls(isTouchDevice(), choice.hero);
+    screens.setControls(choice.hero);
     const slot = ghostSlot();
     if (who && slot) picker.showGhost(ghostOn(who, choice.difficulty), loadGhost(ghosts, slot) !== null);
   };
@@ -178,6 +181,7 @@ const boot = (): void => {
     showGhostSwitch();
   });
   picker.mark(entry.id);
+  showGhostSwitch();
 
   // "Who's playing?": picking a player brings up the start screen with their own hero and difficulty.
   const whoScreen = new Who(

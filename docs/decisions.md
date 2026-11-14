@@ -460,3 +460,7 @@ Supersedes: none
 ## 2026-11-14 The way under an arch shows from above
 Reason: The owner's word: make the gap under the arch visible from above, with a dark opening at the waterline and light showing through underneath. Claude's calls within it: each face of an arch over water has a dark half-oval opening from the waterline up (about four fifths of the arch's width, at most 0.6 m tall), with a pale sliver low in it, daylight from the far end; a pale lane of light lies on the water in front of each opening, about 3 m long. A first try with the light under the surface did not show through the water from the game's camera. All of it is drawn by `arch` in `src/view/scenery.ts` from the arch and the pool's own numbers, so any level's arch over water gets it.
 Supersedes: none
+
+## 2026-11-14 The controls show on the level card and the pause screen
+Reason: The owner's word: show the controls (move, jump, roll or pounce, dive) on the level card before a run starts, and on the pause screen, for both keyboard and touch. Claude's calls within it: each device shows its own set (keys at a keyboard, where to touch on a touch screen), with the picked hero's own move by name, as a list of what to press in a key-like badge beside what it does; the keyboard set adds Esc to pause and M for sound. Only the picked card shows its controls, below the ghost switch, in two columns on a wide screen so the start screen stays short. The one-line controls note under Play is gone, since the card now says it.
+Supersedes: none

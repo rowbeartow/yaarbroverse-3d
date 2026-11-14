@@ -1009,7 +1009,7 @@ dl div.is-new .best {
 
 .area {
   display: grid;
-  grid-template-rows: 1fr auto;
+  grid-template-rows: 1fr auto auto;
   gap: 6px;
 }
 
@@ -1087,4 +1087,71 @@ dl div.is-new .best {
   .ghost-toggle input::after {
     transition: none;
   }
+}
+
+/* ---------- Controls: on the picked level card, and on the pause screen ---------- */
+
+/* What to press, in a key-like badge, beside what it does. Only the picked
+   card shows its controls, as with the ghost switch. */
+.controls dl {
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr);
+  gap: 6px 12px;
+  align-items: center;
+  margin: 0;
+  text-align: left;
+}
+
+.controls dt {
+  justify-self: start;
+  padding: 2px 9px;
+  border: 2px solid var(--paper-edge);
+  border-bottom-width: 4px;
+  border-radius: 8px;
+  background: #fffdf4;
+  color: var(--moss-deep);
+  font-size: 14px;
+  font-weight: 800;
+  letter-spacing: 0;
+  text-transform: none;
+  white-space: nowrap;
+}
+
+.controls dd {
+  margin: 0;
+  color: var(--ink);
+  font-size: 15px;
+}
+
+.area-controls {
+  display: none;
+  padding: 10px 12px;
+  border: 2px solid var(--paper-edge);
+  border-radius: 14px;
+  background: #fffdf4;
+}
+
+.area.picked .area-controls {
+  display: block;
+}
+
+/* On a wide screen the card's controls sit in two columns, so the start screen stays short. */
+@media (min-width: 720px) {
+  .area-controls dl {
+    grid-template-columns: max-content minmax(0, 1fr) max-content minmax(0, 1fr);
+  }
+}
+
+.area-controls dt {
+  background: var(--paper);
+}
+
+.controls-title {
+  margin: 14px 0 6px;
+  font-size: 18px;
+}
+
+#paused .controls {
+  max-width: 360px;
+  margin: 0 auto;
 }

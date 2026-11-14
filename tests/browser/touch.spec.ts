@@ -74,7 +74,7 @@ test('shows the stick and the Jump button while playing', async ({ page }) => {
   await play(page);
   await expect(page.locator('#stick-base')).toBeVisible();
   await expect(page.locator('#jump-button')).toBeVisible();
-  await expect(page.locator('#controls-note')).toContainText('thumb');
+  await expect(page.locator('.area.picked .area-controls')).toContainText('Drag on the left');
 });
 
 test('dragging the left thumb walks the hero that way', async ({ page, browserName }) => {
