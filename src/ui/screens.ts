@@ -45,6 +45,10 @@ export const formatTime = (seconds: number): string => {
 };
 
 /** True on phones and tablets, where the game shows touch controls. */
+/** An arrow going down into waves: the dive mark on the round button. */
+const DIVE_MARK =
+  '<svg viewBox="0 0 32 32" width="26" height="26"><path d="M16 3v14m-6-6 6 6 6-6" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/><path d="M3 23c3-2.5 5.5-2.5 8.5 0s5.5 2.5 8.5 0 5.5-2.5 8.5 0M3 29c3-2.5 5.5-2.5 8.5 0s5.5 2.5 8.5 0 5.5-2.5 8.5 0" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg>';
+
 export const isTouchDevice = (): boolean =>
   navigator.maxTouchPoints > 0 || window.matchMedia('(pointer: coarse)').matches;
 
@@ -252,9 +256,44 @@ export class Screens {
 
   /** Names the touch button for the hero's own move: Roll or Pounce. */
   setMove(name: string): void {
+    this.moveName = name;
+    this.moveShown = '';
+    this.setSwimming(false);
+  }
+
+  private moveName = '';
+  private moveShown = '';
+  private pulseTimer = 0;
+
+  /**
+   * In the water the round button dives, so it says so: a dive mark (an
+   * arrow going down into waves) and "Dive". Out of the water it is the
+   * hero's own move again. The page only changes when this does.
+   */
+  setSwimming(swimming: boolean): void {
+    const key = swimming ? 'dive' : this.moveName;
+    if (key === this.moveShown) return;
+    this.moveShown = key;
     const button = el('#move-button');
-    button.textContent = name;
-    button.setAttribute('aria-label', name);
+    button.dataset.dive = String(swimming);
+    if (swimming) {
+      button.innerHTML = `<span class="dive-mark" aria-hidden="true">${DIVE_MARK}</span><span>Dive</span>`;
+      button.setAttribute('aria-label', 'Dive');
+    } else {
+      button.textContent = this.moveName;
+      button.setAttribute('aria-label', this.moveName);
+      button.classList.remove('pulse');
+    }
+  }
+
+  /** Makes the round button pulse for a few seconds, to show where diving is. */
+  pulseMove(seconds = 4): void {
+    const button = el('#move-button');
+    button.classList.remove('pulse');
+    void button.offsetWidth;
+    button.classList.add('pulse');
+    window.clearTimeout(this.pulseTimer);
+    this.pulseTimer = window.setTimeout(() => button.classList.remove('pulse'), seconds * 1000);
   }
 
   /**

@@ -357,6 +357,40 @@ body {
   -webkit-user-select: none;
 }
 
+/* In the water the round button dives: a dive mark over the word. */
+#move-button[data-dive='true'] {
+  align-content: center;
+  gap: 2px;
+  background: rgba(36, 88, 92, 0.7);
+  font-size: clamp(13px, 2.1vmin, 17px);
+}
+
+#move-button .dive-mark {
+  display: block;
+  line-height: 0;
+}
+
+/* The dive hint: the round button swells and glows a few times. */
+#move-button.pulse {
+  animation: move-pulse 1s ease-in-out infinite;
+}
+
+@keyframes move-pulse {
+  50% {
+    transform: scale(1.18);
+    border-color: #fff6dd;
+    box-shadow: 0 0 0 10px rgba(143, 211, 255, 0.35);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #move-button.pulse {
+    animation: none;
+    border-color: #fff6dd;
+    box-shadow: 0 0 0 8px rgba(143, 211, 255, 0.45);
+  }
+}
+
 #move-button.down {
   background: rgba(47, 107, 63, 0.92);
   transform: scale(0.94);

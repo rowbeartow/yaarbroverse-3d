@@ -124,3 +124,19 @@ export const climbOut = (
   }
   return best ? { solid: best.solid, x: best.x, z: best.z } : null;
 };
+
+/**
+ * True when something a swimmer at the surface can only get past underwater
+ * is near (x, z): a solid reaching down into the water from above the
+ * surface, with room for a swimmer under it (the Sandbox's arch). The
+ * screens use it to say how to dive; the rules never do.
+ */
+export const passageNear = (solids: readonly Solid[], water: Water, x: number, z: number, reach = 1.6): boolean =>
+  solids.some(
+    (s) =>
+      !s.gone &&
+      s.top > water.surface &&
+      s.bottom < water.surface - 0.2 &&
+      s.bottom > water.floor + SWIM.underHeight + 0.2 &&
+      touchesFromAbove(s, x, z, SWIM.radius + reach),
+  );
