@@ -43,6 +43,7 @@ const STEP_SOUND: Record<SolidKind, SoundName> = {
   bough: 'stepWood',
   mushroom: 'stepMushroom',
   moss: 'stepMoss',
+  arch: 'stepMoss',
 };
 
 /** Metres between footsteps. Caputo has four paws and a shorter step. */

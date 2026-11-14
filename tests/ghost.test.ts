@@ -130,7 +130,9 @@ describe('a ghost is only looked at', () => {
     }
     expect(watched.summary()).toEqual(plain.summary());
     expect(watched.enemies).toEqual(plain.enemies);
-  });
+    // Three whole runs of the grove on Hard, chief fight included, played by the bot: about
+    // 2.5 seconds here and twice that on GitHub's machines, over the default 5.
+  }, 30_000);
 
   it('the rules have no way to be told about a ghost', () => {
     // A Game is built from a level, a difficulty and a hero, and stepped with the player's input. Nothing else goes in.

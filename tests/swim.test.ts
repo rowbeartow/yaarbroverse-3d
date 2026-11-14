@@ -7,7 +7,7 @@ import { describe, expect, it } from 'vitest';
 import { DIFFICULTIES } from '../src/game/difficulty';
 import type { EnemySpot } from '../src/game/enemy';
 import { Game, IDLE, type Input } from '../src/game/game';
-import { HEROES, MOVE, STEP } from '../src/game/hero';
+import { HEROES, MOVE, STEP, jumpReach } from '../src/game/hero';
 import type { Level, Solid } from '../src/game/level';
 import { SWIM, climbOut, waterAt, type Water } from '../src/game/swim';
 import { POOL, buildSandbox } from '../src/levels/sandbox/layout';
@@ -191,6 +191,10 @@ describe('underwater', () => {
     const level = buildSandbox('normal');
     const arch = level.solids.find((s) => s.id === 'pool-arch')!;
     const pool = level.water![0];
+    // Not climbed onto from the water, nor jumped onto from the bank before the pool.
+    expect(arch.top - pool.surface).toBeGreaterThan(SWIM.climbHeight + 0.2);
+    const bank = level.solids.find((s) => s.id === 'bank-1')!;
+    expect(bank.z - bank.halfZ - (arch.z + arch.halfZ)).toBeGreaterThan(jumpReach(arch.top - bank.top) + 1);
     const game = new Game(level, 'normal', 'Yaarbro');
     game.x = 0;
     game.z = arch.z + arch.halfZ + 2;

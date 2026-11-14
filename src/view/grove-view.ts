@@ -8,6 +8,7 @@
 import {
   ACESFilmicToneMapping,
   DirectionalLight,
+  Color,
   Fog,
   Group,
   HalfFloatType,
@@ -42,6 +43,7 @@ import { HERO_MODEL_FILES, buildHero, type HeroView } from './heroes';
 import { Materials, WIND, installMist } from './materials';
 import { seeded } from './noise';
 import { MIST_COLOR } from './pictures';
+import { UNDERWATER_FOG, WaterView, sightBlocked, underwaterCeiling, underwaterDepth } from './water';
 import { MIST_FAR, MIST_NEAR, inDetail, inView } from './route';
 import { TIERS, TierChooser, frameRateGoal, isTierName, startingTier, type Tier, type TierName } from './quality';
 import { MIST_BOTTOM, MIST_TOP, animateMushroom, blobShadow, buildSolids, placeMoving, type LevelSolids } from './scenery';
@@ -98,7 +100,16 @@ interface LevelView extends LevelSolids {
   root: Group;
   forest: Forest;
   scatter: Scatter;
+  /** The level's pools, if it has any. */
+  water: WaterView | null;
 }
+
+/**
+ * Underwater: the camera comes in close behind the swimmer and just under the
+ * surface, and the fog closes in and turns blue-green. How far back and up it
+ * sits, how near and far the fog is, and how quickly the look comes and goes.
+ */
+const UNDERWATER = { back: 4.6, up: 0.9, lookAhead: 3, fogNear: 0.5, fogFar: 24, below: 0.35, ease: 3.5 };
 
 export class GroveView {
   private readonly scene = new Scene();
@@ -134,6 +145,15 @@ export class GroveView {
   private sinceGoal = -1;
   private blink = 0;
   private size = { width: 1, height: 1 };
+  /** Water events waiting for the next frame, which knows where the hero is. */
+  private swimEvents: GameEvent[] = [];
+  /** How far into the underwater look the picture is, 0 to 1. */
+  private under = 0;
+  /** Seconds until the next ring behind a swimmer at the surface, and the next bubbles from one underwater. */
+  private nextWake = 0;
+  private nextBubbles = 0;
+  private readonly fogAbove = new Color(MIST_COLOR);
+  private readonly fogBelow = new Color(UNDERWATER_FOG);
   private lastFrame = 0;
   private smoothedRate = 0;
   private drawn = { calls: 0, triangles: 0 };
@@ -244,7 +264,12 @@ export class GroveView {
     const forest = SURROUNDINGS[scenery](level, this.materials, scatter, random);
     const root = new Group();
     root.add(solids.group, forest.group, scatter.build(this.materials));
-    this.levelView = { ...solids, root, forest, scatter };
+    const water = level.water?.length ? new WaterView(level.water, this.materials, this.tier.simple) : null;
+    if (water) root.add(water.group);
+    this.levelView?.water?.dispose();
+    this.levelView = { ...solids, root, forest, scatter, water };
+    this.swimEvents = [];
+    this.under = 0;
     this.hero = buildHero(heroName, this.assets, this.tier.simple);
     this.scene.add(root, this.hero.root);
     this.lowestGround = Math.min(...level.solids.map((s) => s.top));
@@ -281,6 +306,14 @@ export class GroveView {
     return { shown: this.ghostShown, x, y, z };
   }
 
+  /** What the browser checks can ask about the water: what is drawn, and how far into the underwater look the picture is (0 to 1). */
+  waterInfo(): { pools: number; drops: number; rings: number; underwater: number } | null {
+    const water = this.levelView?.water;
+    if (!water) return null;
+    const fog = this.scene.fog as Fog;
+    return { ...water.info(), underwater: Math.max(0, Math.min(1, (MIST_FAR - fog.far) / (MIST_FAR - UNDERWATER.fogFar))) };
+  }
+
   /** Reacts to what just happened in the rules: squash a mushroom, stretch the hero, and so on. */
   handle(events: GameEvent[]): void {
     for (const event of events) {
@@ -298,6 +331,7 @@ export class GroveView {
       } else if (event.type === 'boss' && event.what === 'hit') this.boss?.strike();
       else if (event.type === 'boss' && event.what === 'beaten') this.sinceOpen = 0;
       else if (event.type === 'goal') this.sinceGoal = 0;
+      else if (event.type === 'splash' || event.type === 'dive' || event.type === 'surface' || event.type === 'climb') this.swimEvents.push(event);
     }
   }
 
@@ -387,6 +421,33 @@ export class GroveView {
       this.shadow.scale.set(hero.shadow.across * shrink, hero.shadow.along * shrink, 1);
     }
 
+    // Water: splashes, rings behind a swimmer, bubbles from one underwater, drips from one climbing out.
+    if (levelView.water) {
+      const water = levelView.water;
+      for (const event of this.swimEvents) {
+        if (event.type === 'splash') water.splash(x, z, Math.min(1, event.speed / 14));
+        else if (event.type === 'dive') water.ring(x, z, 1.6);
+        else if (event.type === 'surface') {
+          water.ring(x, z, 1.8);
+          water.splash(x, z, 0.05);
+        } else if (event.type === 'climb') water.drips(x, y + 0.5, z, 10);
+      }
+      this.swimEvents = [];
+      const speed = Math.hypot(game.vx, game.vz);
+      this.nextWake -= dt;
+      if (game.swimming && !game.under && this.nextWake <= 0) {
+        // A ring every so often while treading water, and more often while swimming.
+        water.ring(x, z, speed > 0.5 ? 1.3 : 0.9, speed > 0.5 ? 0.9 : 1.4);
+        this.nextWake = speed > 0.5 ? 0.42 : 1.1;
+      }
+      this.nextBubbles -= dt;
+      if (game.under && this.nextBubbles <= 0) {
+        water.bubbles(x, y + game.bodyHeight * 0.8, z, speed > 0.5 ? 2 : 1);
+        this.nextBubbles = 0.3 + ((this.clock * 7.3) % 1) * 0.4;
+      }
+      water.update(dt);
+    }
+
     // Pieces that move, where the rules have them now.
     for (const piece of levelView.moving) placeMoving(piece, this.clock, dt);
 
@@ -415,15 +476,18 @@ export class GroveView {
 
     // Camera: follow smoothly, slower up and down so jumps do not shake the view,
     // and never chase a falling hero into the mist.
-    const followY = Math.max(y, this.lowestGround - 0.5);
+    // A swimmer underwater is followed down: the camera dips under the surface with it.
+    this.under = Math.max(0, Math.min(1, this.under + (game.swimming && game.under ? dt * UNDERWATER.ease : -dt * UNDERWATER.ease)));
+    const followY = this.under > 0 ? y : Math.max(y, this.lowestGround - 0.5);
     // While a boss fight is on, the camera follows a point between the hero and the middle of the arena.
     const fighting = game.boss !== null && bossFighting(game.boss);
     this.fight = Math.max(0, Math.min(1, this.fight + (fighting ? dt / FIGHT_CAMERA.easeIn : -dt / FIGHT_CAMERA.easeOut)));
     const aim = fightView(this.fight, { x, z }, level.boss);
     this.follow.x = ease(this.follow.x, aim.x, 7, dt);
     this.follow.z = ease(this.follow.z, aim.z, 7, dt);
-    this.follow.y = ease(this.follow.y, followY, game.grounded ? 5 : 2.6, dt);
+    this.follow.y = ease(this.follow.y, followY, game.grounded || game.swimming ? 5 : 2.6, dt);
     this.aimCamera();
+    this.aimUnderwater(game);
     this.aimSun();
     // Only the stretch of the grove near the camera is drawn: the mist hides the rest.
     levelView.forest.update(WIND.time.value, this.follow.z);
@@ -451,6 +515,45 @@ export class GroveView {
     const { back, up } = fightView(this.fight, { x, z }, this.level?.boss);
     this.camera.position.set(x * 0.85, y + CAMERA.up * up, z + CAMERA.back * back);
     this.camera.lookAt(x * 0.92, y + CAMERA.lookUp, z - CAMERA.lookAhead);
+  }
+
+  /**
+   * The look underwater. While the swimmer's head is under, the camera eases
+   * in close behind it and just under the surface; and whenever the camera is
+   * under a pool's surface the fog closes in and turns blue-green, and shafts
+   * of light come down from above.
+   */
+  private aimUnderwater(game: Game): void {
+    const level = this.level;
+    const water = this.levelView?.water;
+    if (!level || !water) return;
+    const share = this.under * this.under * (3 - 2 * this.under);
+    const pool = game.water ?? level.water?.find((w) => this.follow.x >= w.minX && this.follow.x <= w.maxX && this.follow.z >= w.minZ && this.follow.z <= w.maxZ);
+    if (share > 0 && pool) {
+      const { x, y, z } = this.follow;
+      const behind = Math.min(z + UNDERWATER.back, pool.maxZ - 0.3);
+      const close = new Vector3(x, Math.min(y + UNDERWATER.up, underwaterCeiling(pool, level.solids, x, behind, UNDERWATER.below)), behind);
+      // On the way in or out, the camera never looks at the swimmer through rock (an arch over the water):
+      // where the spot between the two views cannot see it, it cuts to whichever end can, the nearer first.
+      const swimmer = { x, y: y + 0.5, z };
+      const above = this.camera.position.clone();
+      let spot = share;
+      if (sightBlocked(level.solids, above.clone().lerp(close, share), swimmer)) {
+        const order = share >= 0.5 ? [1, 0] : [0, 1];
+        spot = order.find((end) => !sightBlocked(level.solids, end === 1 ? close : above, swimmer)) ?? 1;
+      }
+      this.camera.position.copy(above.lerp(close, spot));
+      const look = new Vector3(x * 0.92, y + CAMERA.lookUp, z - CAMERA.lookAhead).lerp(new Vector3(x, y + 0.4, z - UNDERWATER.lookAhead), spot);
+      this.camera.lookAt(look);
+    }
+    const p = this.camera.position;
+    const depth = underwaterDepth(level.water, p.x, p.y, p.z);
+    const below = Math.min(1, depth / 0.15);
+    const fog = this.scene.fog as Fog;
+    fog.color.copy(this.fogAbove).lerp(this.fogBelow, below);
+    fog.near = MIST_NEAR + (UNDERWATER.fogNear - MIST_NEAR) * below;
+    fog.far = MIST_FAR + (UNDERWATER.fogFar - MIST_FAR) * below;
+    water.setUnder(below, WIND.time.value);
   }
 
   /**
