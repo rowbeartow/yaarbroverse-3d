@@ -8,6 +8,7 @@ import { ENEMY, callSidekick, dismissSidekick, newEnemy, sendHome, stepEnemy, ty
 import { MOVE, STEP, knockSpeed, type HeroName } from './hero';
 import { pushOutside, surfaceBelow, topAt, touchesFromAbove, type Level, type Solid } from './level';
 import { ownPieces, resetPieces, stepPieces, type PieceEvent } from './moving';
+import { SWIM, climbOut, inWater, waterAt, type Water } from './swim';
 
 /** What the player is asking for during one step. */
 export interface Input {
@@ -53,6 +54,15 @@ export type GameEvent =
   /** Went back to the last safe bank with every heart again, after losing the last one. */
   | { type: 'restored' }
   | { type: 'safe'; solidId: string }
+  /** Went into deep water, this fast (metres a second, downward). */
+  | { type: 'splash'; waterId: string; speed: number }
+  /** The swimmer's head went under, or came back up. */
+  | { type: 'dive' }
+  | { type: 'surface' }
+  /** Began climbing out of the water onto a solid. */
+  | { type: 'climb'; solidId: string }
+  /** Ran out of breath underwater: a moment down, then back to the last safe bank. */
+  | { type: 'breathless' }
   /** A moving piece (see moving.ts) began its tell, began to move, fell away or came back. */
   | ({ type: 'piece' } & PieceEvent)
   | { type: 'goal' };
@@ -123,6 +133,18 @@ export class Game {
   fainting = 0;
   /** What happened during the most recent step. */
   events: GameEvent[] = [];
+  /** In deep water (see swim.ts), and which pool. */
+  swimming = false;
+  waterId: string | null = null;
+  /** Swimming with the head underwater. */
+  under = false;
+  /** Seconds of breath left underwater. Infinite where the level's breath never runs out. */
+  breath: number;
+  /** Seconds left of climbing out of the water, and where from and to. */
+  climbing = 0;
+  private climb: { fromX: number; fromY: number; fromZ: number; solidId: string; x: number; y: number; z: number } | null = null;
+  /** Ran out of breath: going back to the last safe bank counts as running out of hearts. */
+  private breathOut = false;
 
   private safeSpot: { x: number; y: number; z: number; id: string | null };
   private pending: GameEvent[] = [];
@@ -147,6 +169,7 @@ export class Game {
     this.y = level.spawn.y;
     this.z = level.spawn.z;
     this.hearts = level.hearts;
+    this.breath = this.maxBreath;
     this.tuning = level.enemyTuning ?? { warning: 1, speed: 1, rest: 1 };
     this.enemies = (level.enemies ?? []).map((spot) => newEnemy(spot, this.tuning));
     this.boss = level.boss ? newBoss(level.boss) : null;
@@ -155,9 +178,20 @@ export class Game {
     this.safeSpot = { ...level.spawn, id: under?.safe ? under.id : null };
   }
 
-  /** How tall the hero is right now: shorter while rolling. */
+  /** How tall the hero is right now: shorter while rolling, and while swimming underwater. */
   get bodyHeight(): number {
+    if (this.swimming && this.under) return SWIM.underHeight;
     return this.rolling ? MOVE.rollHeight : MOVE.bodyHeight;
+  }
+
+  /** Seconds of breath when full: the level's, or never running out. */
+  get maxBreath(): number {
+    return this.level.breath ?? Infinity;
+  }
+
+  /** The pool the hero is swimming in, if any. */
+  get water(): Water | null {
+    return this.swimming ? this.level.water?.find((w) => w.id === this.waterId) ?? null : null;
   }
 
   /** True while the hero's move would beat an enemy it touches: rolling faster than a walk, or in a pounce. */
@@ -213,7 +247,8 @@ export class Game {
     const thrown = knockSpeed(this.level.knockback);
     this.vx = awayX * thrown;
     this.vz = awayZ * thrown;
-    this.vy = MOVE.hurtKnockUp;
+    // In the water a hit pushes the swimmer away along the surface, not up out of it.
+    this.vy = this.swimming ? 0 : MOVE.hurtKnockUp;
     this.grounded = false;
     this.groundId = null;
     this.coyote = 0;
@@ -245,6 +280,12 @@ export class Game {
     this.stunned = 0;
     this.rolling = false;
     this.pouncing = 0;
+    this.swimming = false;
+    this.waterId = null;
+    this.under = false;
+    this.breath = this.maxBreath;
+    this.climbing = 0;
+    this.climb = null;
     // Tipping logs and crumbling moss are as they were at the start.
     resetPieces(this.level.solids);
     // The older player's rule: every enemy that is not beaten starts over at
@@ -258,7 +299,8 @@ export class Game {
       this.events.push({ type: 'boss', id: this.boss.spot.id, what: 'reset', healed });
     }
     // No hearts left: start again from here with all of them, protected for a moment.
-    if (this.hearts <= 0) {
+    if (this.hearts <= 0 || this.breathOut) {
+      this.breathOut = false;
       this.hearts = this.level.hearts;
       this.fainting = 0;
       this.protectedFor = MOVE.returnProtection * this.level.protection;
@@ -306,6 +348,11 @@ export class Game {
     if (jumpHeld && !this.jumpWasHeld) this.buffer = MOVE.jumpBuffer;
     this.jumpWasHeld = input.jump;
 
+    const previousY = this.y;
+    if (this.swimming || this.climbing > 0) {
+      this.swim(moveX, moveZ, jumpHeld, frozen ? false : Boolean(input.move), dt);
+      this.moveWasHeld = Boolean(input.move);
+    } else {
     // The move button: Yaarbro rolls while it is held, Caputo pounces when it is pressed.
     const moveHeld = frozen ? false : Boolean(input.move);
     const movePressed = moveHeld && !this.moveWasHeld;
@@ -432,7 +479,6 @@ export class Game {
 
     // Move up or down.
     const wasGrounded = this.grounded;
-    const previousY = this.y;
     let nextY = this.y + this.vy * dt;
     this.grounded = false;
     this.groundId = null;
@@ -450,10 +496,7 @@ export class Game {
           this.grounded = true;
           this.groundId = ground.id;
           if (!wasGrounded) this.events.push({ type: 'land' });
-          if (ground.safe && this.safeSpot.id !== ground.id) {
-            this.safeSpot = { x: ground.safeAt?.x ?? ground.x, y: ground.top, z: ground.safeAt?.z ?? ground.z, id: ground.id };
-            this.events.push({ type: 'safe', solidId: ground.id });
-          }
+          this.reachSafe(ground);
         }
       }
     } else {
@@ -472,12 +515,14 @@ export class Game {
     this.x = nextX;
     this.y = nextY;
     this.z = nextZ;
+    this.enterWater();
+    }
 
     if (this.complete) return;
 
     // The enemies move, and anything they touch is settled.
     for (const enemy of this.enemies) {
-      const canBeHurt = this.protectedFor <= 0 && this.hearts > 0;
+      const canBeHurt = this.protectedFor <= 0 && this.hearts > 0 && !this.under;
       const outcome = stepEnemy(enemy, this, MOVE.bodyRadius, previousY, this.tuning, canBeHurt, dt);
       for (const phase of outcome.entered) this.events.push({ type: 'enemy', id: enemy.spot.id, kind: enemy.kind, phase });
       if (outcome.struck) {
@@ -514,7 +559,7 @@ export class Game {
     if (boss) {
       const id = boss.spot.id;
       const sidekicks = this.enemies.filter((enemy) => enemy.spot.sidekickOf === id);
-      const canBeHurt = this.protectedFor <= 0 && this.hearts > 0;
+      const canBeHurt = this.protectedFor <= 0 && this.hearts > 0 && !this.under;
       const outcome = stepBoss(boss, this, MOVE.bodyRadius, previousY, canBeHurt, level.ledgeHelp, sidekicks, dt);
       if (outcome.began) this.events.push({ type: 'boss', id, what: 'begin' });
       for (const phase of outcome.entered) this.events.push({ type: 'boss', id, what: 'phase', phase, attack: boss.attack });
@@ -591,6 +636,189 @@ export class Game {
       this.fainting = Math.max(0, this.fainting - dt);
       if (this.fainting === 0) this.toSafeSpot();
     }
+  }
+
+  /** Standing on a safe solid makes it the place a fall returns the hero to. */
+  private reachSafe(ground: Solid): void {
+    if (ground.safe && this.safeSpot.id !== ground.id) {
+      this.safeSpot = { x: ground.safeAt?.x ?? ground.x, y: ground.top, z: ground.safeAt?.z ?? ground.z, id: ground.id };
+      this.events.push({ type: 'safe', solidId: ground.id });
+    }
+  }
+
+  /** Dropped into deep water: from now on the hero swims. */
+  private enterWater(): void {
+    if (this.grounded) return;
+    const water = waterAt(this.level.water, this.x, this.z);
+    if (!water || !inWater(water, this.y)) return;
+    this.swimming = true;
+    this.waterId = water.id;
+    this.rolling = false;
+    this.pouncing = 0;
+    this.knocked = false;
+    this.canCutJump = false;
+    this.coyote = 0;
+    this.events.push({ type: 'splash', waterId: water.id, speed: Math.max(0, -this.vy) });
+  }
+
+  /** One step in the water: swimming, diving, coming up, breath, and climbing out (see swim.ts). */
+  private swim(moveX: number, moveZ: number, jumpHeld: boolean, moveHeld: boolean, dt: number): void {
+    // Climbing out: up over the edge, then onto it, with the controls taken for the moment it lasts.
+    if (this.climbing > 0 && this.climb) {
+      const c = this.climb;
+      this.climbing = Math.max(0, this.climbing - dt);
+      const t = 1 - this.climbing / SWIM.climbTime;
+      // Up first, then across.
+      const up = Math.min(1, t / 0.6);
+      const across = Math.max(0, (t - 0.35) / 0.65);
+      this.x = c.fromX + (c.x - c.fromX) * across;
+      this.z = c.fromZ + (c.z - c.fromZ) * across;
+      this.y = c.fromY + (c.y + 0.25 * Math.sin(Math.PI * Math.min(1, t)) - c.fromY) * up * (2 - up);
+      this.vx = 0;
+      this.vy = 0;
+      this.vz = 0;
+      if (this.climbing === 0) {
+        const solid = this.level.solids.find((s) => s.id === c.solidId);
+        this.x = c.x;
+        this.z = c.z;
+        this.y = solid ? topAt(solid, c.x, c.z) : c.y;
+        this.climb = null;
+        this.grounded = true;
+        this.groundId = c.solidId;
+        this.events.push({ type: 'land' });
+        if (solid) this.reachSafe(solid);
+      }
+      return;
+    }
+    const water = this.water;
+    if (!water) {
+      this.swimming = false;
+      this.waterId = null;
+      this.under = false;
+      return;
+    }
+    const floatY = water.surface - SWIM.float;
+    const stick = Math.hypot(moveX, moveZ);
+
+    // Climb out: Jump at the surface, next to something low enough to reach. Holding it while swimming up to the edge does too.
+    if (!this.under && (this.buffer > 0 || jumpHeld)) {
+      const aim = stick > 0.2 ? { x: moveX / stick, z: moveZ / stick } : null;
+      const edge = climbOut(this.level.solids, water, this.x, this.z, aim);
+      if (edge) {
+        this.buffer = 0;
+        this.startClimb(edge.solid, edge.x, edge.z);
+        return;
+      }
+    }
+    this.buffer = 0;
+
+    // Across: the way the stick points, slower than on land.
+    const top = this.under ? SWIM.underSpeed : SWIM.surfaceSpeed;
+    const wantX = moveX * top;
+    const wantZ = moveZ * top;
+    const change = SWIM.accel * dt;
+    const gapX = wantX - this.vx;
+    const gapZ = wantZ - this.vz;
+    const gap = Math.hypot(gapX, gapZ);
+    if (gap <= change) {
+      this.vx = wantX;
+      this.vz = wantZ;
+    } else {
+      this.vx += (gapX / gap) * change;
+      this.vz += (gapZ / gap) * change;
+    }
+    if (Math.hypot(this.vx, this.vz) > 0.5) this.facing = Math.atan2(this.vx, this.vz);
+
+    // Up and down: the move button dives, Jump swims up, and with neither the swimmer drifts up to float.
+    const atSurface = this.y >= floatY - 0.05;
+    let wantVy: number;
+    if (moveHeld) wantVy = -SWIM.diveSpeed;
+    else if (atSurface) wantVy = Math.max(-2, Math.min(3, (floatY - this.y) * 6));
+    else wantVy = jumpHeld ? SWIM.upSpeed : SWIM.driftUp;
+    // Water is thick: speed comes to what is asked smoothly, and a plunge from a height is slowed hard.
+    const rate = this.vy < wantVy - 4 ? SWIM.plungeDrag : SWIM.verticalAccel / 2;
+    this.vy = wantVy + (this.vy - wantVy) * Math.exp(-rate * dt);
+
+    let nextX = this.x + this.vx * dt;
+    let nextZ = this.z + this.vz * dt;
+    let nextY = this.y + this.vy * dt;
+    // Never up out of the water: the swimmer floats at the surface.
+    if (nextY > floatY && this.vy > 0) {
+      nextY = floatY;
+      this.vy = 0;
+    }
+    if (nextY < water.floor + SWIM.aboveFloor) {
+      nextY = water.floor + SWIM.aboveFloor;
+      this.vy = Math.max(0, this.vy);
+    }
+    // The sides of the pool hold the swimmer in.
+    nextX = Math.max(water.minX + SWIM.radius, Math.min(water.maxX - SWIM.radius, nextX));
+    nextZ = Math.max(water.minZ + SWIM.radius, Math.min(water.maxZ - SWIM.radius, nextZ));
+
+    // Bumping into solids: pushed out sideways from anything at body height, stopped by anything above or below.
+    const height = nextY < floatY - 0.3 ? SWIM.underHeight : MOVE.bodyHeight;
+    for (const s of this.level.solids) {
+      if (s.gone) continue;
+      const sTop = topAt(s, nextX, nextZ);
+      const sBottom = s.bottom + (sTop - s.top);
+      if (!touchesFromAbove(s, nextX, nextZ, SWIM.radius)) continue;
+      const overlaps = nextY < sTop - EPSILON && nextY + height > sBottom + EPSILON;
+      if (!overlaps) continue;
+      const wasBelow = this.y + height <= sBottom + 0.05;
+      const wasAbove = this.y >= sTop - 0.05;
+      if (wasBelow) {
+        nextY = sBottom - height;
+        this.vy = Math.min(0, this.vy);
+      } else if (wasAbove) {
+        nextY = sTop;
+        this.vy = Math.max(0, this.vy);
+      } else {
+        // A shore no higher than the water: swimming into it walks the hero out.
+        if (sTop - water.surface <= SWIM.shoreHeight && !s.bounce && stick > 0.2 && !this.under) {
+          const edge = climbOut([s], water, this.x, this.z, null, SWIM.shoreHeight);
+          if (edge) {
+            this.startClimb(s, edge.x, edge.z);
+            return;
+          }
+        }
+        const out = pushOutside(s, nextX, nextZ, SWIM.radius);
+        if (out) {
+          nextX = out.x;
+          nextZ = out.z;
+        }
+      }
+    }
+    this.x = nextX;
+    this.y = nextY;
+    this.z = nextZ;
+
+    // Head under, or back up.
+    const under = this.y < floatY - 0.3;
+    if (under && !this.under) this.events.push({ type: 'dive' });
+    if (!under && this.under) this.events.push({ type: 'surface' });
+    this.under = under;
+
+    // Breath: held underwater, filled again at the surface.
+    if (this.under) {
+      this.breath = Math.max(0, this.breath - dt);
+      if (this.breath === 0 && this.fainting === 0 && !this.complete) {
+        this.breathOut = true;
+        this.fainting = MOVE.faintPause;
+        this.events.push({ type: 'breathless' });
+      }
+    } else this.breath = Math.min(this.maxBreath, this.breath + SWIM.refill * dt);
+  }
+
+  private startClimb(solid: Solid, x: number, z: number): void {
+    this.climbing = SWIM.climbTime;
+    this.climb = { fromX: this.x, fromY: this.y, fromZ: this.z, solidId: solid.id, x, y: topAt(solid, x, z), z };
+    this.swimming = false;
+    this.waterId = null;
+    this.under = false;
+    this.vx = 0;
+    this.vy = 0;
+    this.vz = 0;
+    this.events.push({ type: 'climb', solidId: solid.id });
   }
 
   /**

@@ -1,13 +1,18 @@
 // THE SANDBOX: where everything is. A bank, two logs with a break between
-// them, a bank, a mushroom, and a high, wide bank that is the arena of the
+// them, a bank, a pool with a rock arch across it that only a swimmer
+// underwater gets past, a bank, a mushroom, and a high, wide bank that is the arena of the
 // practice boss, with the golden leaf on a ledge beyond it. The leaf cannot
 // be taken until the boss is beaten. Development only: see difficulty.ts.
 
 import type { Difficulty } from '../../game/difficulty';
 import type { Level, Solid } from '../../game/level';
+import type { Water } from '../../game/swim';
 import { SANDBOX_DIFFICULTY, type SandboxNumbers } from './difficulty';
 
 export const SANDBOX_NAME = 'The Sandbox';
+
+/** The pool's heights: its water's top and bottom, and the rock arch over it. The banks either side stand at 0. */
+export const POOL = { surface: -0.7, floor: -4.6, archTop: 2.6, archBottom: -1.9 } as const;
 
 export function buildSandbox(difficulty: Difficulty, numbers: SandboxNumbers = SANDBOX_DIFFICULTY[difficulty]): Level {
   const n = numbers;
@@ -25,6 +30,15 @@ export function buildSandbox(difficulty: Difficulty, numbers: SandboxNumbers = S
   at += 5;
   box('bank-1', 'bank', at, at + 6, 3.5, 0, -40, { safe: true });
   at += 6;
+  // The pool: deep water between two banks, the same width as them. Its sides hold a swimmer in.
+  const poolLength = 16;
+  const water: Water[] = [{ id: 'pool', minX: -3.5, maxX: 3.5, minZ: -(at + poolLength), maxZ: -at, surface: POOL.surface, floor: POOL.floor }];
+  // A rock arch across the pool, well past where a jump in lands, too high to climb onto from the water or to jump onto
+  // from the bank, with deep water under it: the way on is to dive.
+  box('pool-arch', 'bank', at + 9.5, at + 11.1, 3.5, POOL.archTop, POOL.archBottom);
+  at += poolLength;
+  box('bank-pool', 'bank', at, at + 5, 3.5, 0, -40, { safe: true });
+  at += 5;
   // A mushroom growing from just below the bank's height bounces the hero up to the last bank.
   at += 0.6 + n.mushroomRadius;
   solids.push({ id: 'mushroom-1', kind: 'mushroom', shape: 'round', x: 0, z: -at, halfX: n.mushroomRadius, halfZ: n.mushroomRadius, top: 1, bottom: -40, bounce: 15 });
@@ -58,15 +72,17 @@ export function buildSandbox(difficulty: Difficulty, numbers: SandboxNumbers = S
       height: 1.6,
       numbers: n.boss,
     },
+    water,
+    breath: n.breath,
     fallY: -6,
     coyoteTime: n.coyoteTime,
     ledgeHelp: n.ledgeHelp,
     hearts: n.hearts,
     protection: n.protection,
     knockback: n.knockback,
-    route: solids.map((s) => s.id),
-    sections: [{ name: 'The Sandbox', solids: solids.map((s) => s.id) }],
-    hints: { 'bank-1': 'Jump onto the mushroom and bounce up high.' },
+    route: [...solids.filter((s) => s.id !== 'pool-arch').map((s) => s.id).flatMap((id) => (id === 'bank-pool' ? ['pool', id] : [id]))],
+    sections: [{ name: 'The Sandbox', solids: solids.filter((s) => s.id !== 'pool-arch').map((s) => s.id) }],
+    hints: { 'bank-1': 'Swim across. Hold the move button to dive under the rock.', 'bank-pool': 'Jump onto the mushroom and bounce up high.' },
     goalLine: 'The golden leaf!',
   };
 }

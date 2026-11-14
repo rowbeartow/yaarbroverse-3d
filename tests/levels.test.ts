@@ -62,9 +62,16 @@ describe.each(LEVELS.map((level) => [level.id, level] as const))('the level %s',
       const level = entry.build(difficulty);
       expect(level.name).toBe(entry.name);
       const ids = level.solids.map((s) => s.id);
-      expect(new Set(ids).size).toBe(ids.length);
+      const pools = (level.water ?? []).map((w) => w.id);
+      expect(new Set([...ids, ...pools]).size).toBe(ids.length + pools.length);
       expect(level.route.length).toBeGreaterThan(0);
-      for (const id of level.route) expect(ids).toContain(id);
+      for (const id of level.route) expect([...ids, ...pools]).toContain(id);
+      // Every pool is deep, above the height a fall counts from, and crossed on the way.
+      for (const water of level.water ?? []) {
+        expect(water.surface - water.floor).toBeGreaterThan(2.5);
+        expect(water.floor).toBeGreaterThan(level.fallY);
+        expect(level.route).toContain(water.id);
+      }
       for (const section of level.sections ?? []) for (const id of section.solids) expect(ids).toContain(id);
       for (const id of Object.keys(level.hints ?? {})) expect(ids).toContain(id);
       for (const spot of level.enemies ?? []) expect(spot.id.trim()).not.toBe('');
@@ -104,6 +111,7 @@ describe.each(LEVELS.map((level) => [level.id, level] as const))('the level %s',
       for (let i = 0; i < 300 / STEP && !game.complete; i += 1) {
         game.step(bot.input(game));
         touch(game.groundId);
+        touch(game.waterId);
         for (const event of game.events) if (event.type === 'bounce') touch(event.solidId);
       }
       expect(game.complete).toBe(true);
