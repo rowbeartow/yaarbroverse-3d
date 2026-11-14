@@ -38,7 +38,7 @@ Each texture is a colour picture (`_diff_`) and a picture of fine bumps (`_nor_g
 
 ## Sound and music
 
-Recorded files, in `assets/audio/`. All are CC0, from OpenGameArt, downloaded on 2026-11-12. Nothing came from the 2D game, which has no sound files, and no recording here is of a voice. Each short sound was made mono, cut to its sounding part and given a clean start and end; nothing else was changed unless the table says so.
+Recorded files, in `assets/audio/`. All are CC0, from OpenGameArt, downloaded on 2026-11-12 (the four marked 2026-11-14 on that day). Nothing came from the 2D game, which has no sound files, and no recording here is of a voice. Each short sound was made mono, cut to its sounding part and given a clean start and end; nothing else was changed unless the table says so.
 
 | File in this repo | What it is | Source | License |
 | --- | --- | --- | --- |
@@ -57,6 +57,10 @@ Recorded files, in `assets/audio/`. All are CC0, from OpenGameArt, downloaded on
 | `grove-music.mp3` | The grove's music: a calm track of 1 minute 22 seconds that loops (`Forest Whisper.wav`), evened to a steady loudness and saved as MP3. | "Forest Whisper Theme" by Cleyton Kauffman (https://soundcloud.com/cleytonkauffman): https://opengameart.org/content/forest-whisper-theme | CC0 |
 | `boss-music.mp3` | The music of a boss fight: 40 seconds from the middle of the track (8 to 48 seconds in), joined end to start so it loops, set to the grove music's loudness and saved as MP3. | "Battle Theme" by Wolfgang_: https://opengameart.org/content/battle-theme-0 | CC0 |
 | `boss-beaten.wav` | A boss is beaten (`PositiveChoice`), with a longer fade out. | "Short Jingle" by OO: https://opengameart.org/content/short-jingle | CC0 |
+| `creak.wav` | A tipping log's creak: 1.1 seconds of `tree_creak.flac` from 0.3 seconds in, with the bass under 120 hertz taken out. Added 2026-11-14. | "Tree Creaking" by AntumDeluge: https://opengameart.org/content/tree-creaking | CC0 |
+| `moss-rustle.wav` | Moss about to crumble: 0.8 seconds of `rustle07.flac`, with the bass under 150 hertz taken out. Added 2026-11-14. | "20 Rustles of dry leaves" by qubodup: https://opengameart.org/content/20-rustles-dry-leaves | CC0 |
+| `moss-fall.wav` | Moss falling away (`bfh1_wood_falling_01.ogg`). Added 2026-11-14. | "75 CC0 breaking / falling / hit sfx" by rubberduck: https://opengameart.org/content/75-cc0-breaking-falling-hit-sfx | CC0 |
+| `gust.wav` | The gust before a windy bough moves: 1.6 seconds of `wind3.wav` from 20 seconds in, faded in over 0.6 seconds and out over 0.7, with the bass under 150 hertz taken out. Added 2026-11-14. | "wind1" by Luke.RUSTLTD: https://opengameart.org/content/wind1 | CC0 |
 
 The giant mosquito's three sounds and the low thump under a landing are made in code by this project (`src/audio/synth.ts`): there is no file, and nothing to credit. A jump and a landing have no files of their own: they play the moss and wood footsteps above.
 
@@ -79,6 +83,10 @@ SHA-256 of each download, as OpenGameArt served it:
 | `forest_whisper_theme.zip` | `11516801f38f4b004fa9e3641ff287fa39cb998fc805d376b372cc03db4d573f` |
 | `Battle.mp3` ("Battle Theme") | `dde7bd4f10bde031800ba8e22151fad591b7c13e1c9ae51920341b4e4ae37be5` |
 | `PositiveChoice_0.ogg` ("Short Jingle") | `9a2288c29f9edfc1ab67869a00e84314f7343324f52a0c987baf2de9d7d38177` |
+| `tree_creak.flac` ("Tree Creaking") | `9bab7c7f68850136c43fb91216c7c1760ac2bda22b2a31659905c559a464d422` |
+| `qubodup-rustle.7z` ("20 Rustles of dry leaves") | `c5d7458085e9b208009388b832184bddc0045482f6fa67a1eb6ea09335bb7a43` |
+| `sfx_breaking_and_falling.zip` ("75 CC0 breaking / falling / hit sfx") | `e6ee04d91c5f4d30cfda1260d2c9d1faf96fda36319287215fbd07bcb1a80451` |
+| `wind3.wav` ("wind1") | `8def85e8546fb4850f017ede32b938593aeca5dfd3a9361cbabd80d455ff954d` |
 
 ## Stand-in model
 

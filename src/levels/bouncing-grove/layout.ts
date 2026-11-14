@@ -6,8 +6,8 @@
 //   2. The Stump Steps: tree stumps that climb, left and right, to a clearing.
 //   3. The Ravine: root shelves step down and to the right, a low log with a
 //      break crosses the bottom, root shelves climb out.
-//   4. The Mushroom Springs: a mushroom, a high log, mushrooms over open air,
-//      up to a mossy ledge.
+//   4. The Tipping Logs: a mushroom, a high log, logs that tip under the hero
+//      across open air, up to a mossy ledge.
 //   5. The High Boughs: narrow boughs that turn left twice, with a gap at the corners.
 //   6. The Climb: a mushroom, a high log, tall snags, mushrooms over open air,
 //      up to a wide mossy bank at the top.
@@ -28,7 +28,7 @@ export const GROVE_HINTS: Record<string, string> = {
   'bank-1': 'Hop from stump to stump.',
   'bank-2': 'Step down the roots into the ravine.',
   'bank-3': 'Jump onto the mushroom and bounce up high.',
-  'high-log': 'Bounce across the mushrooms.',
+  'high-log': 'These logs tip under you. Keep moving!',
   'bank-4': 'Follow the boughs. They turn!',
   'bank-5': 'One more climb. The golden leaf is close.',
   'bank-6': 'This is the marmot chief’s bank. Step in when you are ready.',
@@ -83,6 +83,8 @@ export const GROVE_SHAPE = {
   highLogRise: 2.4,
   highLogLength: 5,
   boughRise: 2.6,
+  /** How far above the high log the high ledge is, at the top of the tipping logs. */
+  ledgeAboveHighLog: 2,
   /**
    * The marmot chief's bank, at the top of the climb: how wide and long it
    * is, how far in from its near edge a hero sent back stands, and how far in
@@ -244,8 +246,8 @@ export function buildGrove(
   });
   at += shape.restBankLength;
 
-  // ---- Section 4: The Mushroom Springs ----
-  section('The Mushroom Springs');
+  // ---- Section 4: The Tipping Logs ----
+  section('The Tipping Logs');
   // A mushroom at the far end of the bank.
   let capTop = bank3.top + shape.mushroomCapHeight;
   round('mushroom-1', 'mushroom', at - 1.8, side, n.mushroomRadius, capTop, bank3.top, {
@@ -258,25 +260,20 @@ export function buildGrove(
   box('high-log', 'log', at, at + shape.highLogLength, side, n.logWidth / 2 + 0.2, highTop, highTop - shape.logThickness);
   at += shape.highLogLength;
 
-  // Mushrooms over open air, a little below the high log, stepping left and right.
-  capTop = highTop - 0.6;
-  let mushroomX = side;
-  let mushroomAt = at + n.mushroomGap + n.mushroomRadius;
-  for (let i = 0; i < n.mushroomChain; i += 1) {
-    if (i > 0) {
-      const nextX = mushroomX === side ? side + shape.mushroomSideStep : 2 * side - mushroomX;
-      const between = 2 * n.mushroomRadius + n.mushroomGap;
-      mushroomAt += Math.sqrt(Math.max(between * between - (nextX - mushroomX) ** 2, 0));
-      mushroomX = nextX;
-    }
-    round(`mushroom-${i + 2}`, 'mushroom', mushroomAt, mushroomX, n.mushroomRadius, capTop, shape.depth, {
-      bounce: shape.mushroomBounce,
+  // Tipping logs across open air, each balanced on a snag at its middle and a little higher than the last.
+  let tipTop = highTop;
+  for (let i = 0; i < n.tipCount; i += 1) {
+    at += n.tipGap;
+    tipTop += n.tipRise;
+    box(`tip-log-${i + 1}`, 'log', at, at + n.tipLength, side, n.logWidth / 2, tipTop, tipTop - shape.logThickness, {
+      motion: { kind: 'tip', tell: n.tipTell, dip: n.tipDip, rate: n.tipRate },
     });
+    at += n.tipLength;
   }
-  at = mushroomAt + n.mushroomRadius + n.mushroomGap;
+  at += n.tipGap;
 
-  // A mossy ledge high up, reached by the last bounce.
-  top = capTop + shape.boughRise;
+  // A mossy ledge high up, level with where the mushroom hops used to reach.
+  top = highTop + shape.ledgeAboveHighLog;
   box('bank-4', 'bank', at, at + shape.ledgeLength, side, shape.bankHalfWidth, top, shape.depth, { safe: safe(4) });
   at += shape.ledgeLength;
 
@@ -344,8 +341,8 @@ export function buildGrove(
 
   // Mushrooms over open air, a little below the last snag.
   capTop = top - 0.6;
-  mushroomX = side;
-  mushroomAt = snagAt + n.stumpRadius + n.mushroomGap + n.mushroomRadius;
+  let mushroomX = side;
+  let mushroomAt = snagAt + n.stumpRadius + n.mushroomGap + n.mushroomRadius;
   for (let i = 0; i < n.climbMushrooms; i += 1) {
     if (i > 0) {
       const nextX = mushroomX === side ? side + shape.mushroomSideStep : 2 * side - mushroomX;

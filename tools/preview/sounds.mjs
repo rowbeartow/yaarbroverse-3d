@@ -7,7 +7,11 @@
 //   extras folder   optional: other choices that are not in the game, to
 //                   offer beside the picks. It holds the sound files and an
 //                   extras.json listing them:
-//                   [{ "label", "what", "file", "credit", "loop", "level" }]
+//                   [{ "label", "what", "file", "credit", "loop", "level", "mix" }]
+//                   ("mix" is the group it plays in, as in sounds.ts; left
+//                   out, it is "action", or "music" for an MP3). In place of
+//                   the list it may be { "title", "note", "sounds": [...] }
+//                   to head the extras with words of their own.
 //
 // The page is made from the game's own list (src/audio/sounds.ts) and plays
 // the game's own recipes (src/audio/synth.ts) and files (assets/audio/).
@@ -64,14 +68,17 @@ for (const file of readdirSync('assets/audio').sort()) {
   credits[file] = CREDIT.find(([pattern]) => pattern.test(file))?.[1] ?? 'See CREDITS.md.';
 }
 let extras = [];
+let heading = {};
 if (extrasFolder && existsSync(join(extrasFolder, 'extras.json'))) {
-  extras = JSON.parse(readFileSync(join(extrasFolder, 'extras.json'), 'utf8'));
+  const given = JSON.parse(readFileSync(join(extrasFolder, 'extras.json'), 'utf8'));
+  extras = Array.isArray(given) ? given : given.sounds;
+  if (!Array.isArray(given)) heading = { extrasTitle: given.title, extrasNote: given.note };
   for (const extra of extras) {
     writeFileSync(join(media, `${extra.file}.txt`), readFileSync(join(extrasFolder, extra.file)).toString('base64'));
     files.push(`media/${extra.file}.txt`);
   }
 }
-writeFileSync(join(media, 'board.json'), `${JSON.stringify({ credits, extras }, null, 2)}\n`);
+writeFileSync(join(media, 'board.json'), `${JSON.stringify({ credits, extras, ...heading }, null, 2)}\n`);
 
 await build({
   configFile: false,

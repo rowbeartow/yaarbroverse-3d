@@ -70,8 +70,8 @@ describe('Bouncing Grove difficulty numbers', () => {
     }
   });
 
-  it('gives Easy the fewest stumps and mushrooms to cross and Hard the most', () => {
-    for (const key of ['stumpCount', 'mushroomChain', 'snagCount', 'climbMushrooms'] as const) {
+  it('gives Easy the fewest stumps, tipping logs and mushrooms to cross and Hard the most', () => {
+    for (const key of ['stumpCount', 'tipCount', 'snagCount', 'climbMushrooms'] as const) {
       expect(easy[key]).toBeLessThan(normal[key]);
       expect(normal[key]).toBeLessThan(hard[key]);
     }
@@ -106,8 +106,8 @@ describe.each(DIFFICULTIES)('the grove built on %s', (difficulty) => {
 
   it('uses the numbers from the difficulty file', () => {
     expect(byId(level, 'log-1').halfX * 2).toBeCloseTo(numbers.logWidth, 5);
-    // The opening logs, two along the bottom of the ravine, and the two high logs.
-    expect(count(level, 'log')).toBe(numbers.logCount + 4);
+    // The opening logs, two along the bottom of the ravine, the two high logs and the tipping logs.
+    expect(count(level, 'log')).toBe(numbers.logCount + 4 + numbers.tipCount);
     expect(airBetween(byId(level, 'log-1'), byId(level, 'log-2'))).toBeCloseTo(numbers.firstLogGap, 5);
     expect(airBetween(byId(level, 'log-2'), byId(level, 'log-3'))).toBeCloseTo(numbers.logGap, 5);
     // Stumps low down, and tall snags on the last climb.
@@ -125,10 +125,16 @@ describe.each(DIFFICULTIES)('the grove built on %s', (difficulty) => {
     expect(clearing.z - clearing.halfZ - (firstShelf.z + firstShelf.halfZ)).toBeCloseTo(numbers.shelfGap, 5);
     expect(clearing.top - firstShelf.top).toBeCloseTo(numbers.shelfStep, 5);
     expect(byId(level, 'bank-3').top).toBeCloseTo(clearing.top, 5);
-    // One mushroom always grows on the bank after the ravine; the rest are the chain.
-    expect(count(level, 'mushroom')).toBe(numbers.mushroomChain + 1 + numbers.climbMushrooms + 1);
-    expect(byId(level, 'mushroom-2').halfX).toBe(numbers.mushroomRadius);
-    expect(airBetween(byId(level, 'high-log'), byId(level, 'mushroom-2'))).toBeCloseTo(numbers.mushroomGap, 5);
+    // One mushroom springs up to each high log; the last climb has a chain as well.
+    expect(count(level, 'mushroom')).toBe(1 + numbers.climbMushrooms + 1);
+    expect(byId(level, 'mushroom-1').halfX).toBe(numbers.mushroomRadius);
+    // The tipping logs: as many, as long and as far apart as the numbers say, each a little higher.
+    const tips = level.solids.filter((s) => s.motion?.kind === 'tip');
+    expect(tips.map((s) => s.id)).toEqual(Array.from({ length: numbers.tipCount }, (_, i) => `tip-log-${i + 1}`));
+    expect(tips[0].halfZ * 2).toBeCloseTo(numbers.tipLength, 5);
+    expect(airBetween(byId(level, 'high-log'), tips[0])).toBeCloseTo(numbers.tipGap, 5);
+    expect(airBetween(tips[tips.length - 1], byId(level, 'bank-4'))).toBeCloseTo(numbers.tipGap, 5);
+    for (let i = 1; i < tips.length; i += 1) expect(tips[i].top - tips[i - 1].top).toBeCloseTo(numbers.tipRise, 5);
     // The first bank is always safe, and so is the chief's at the top; the others are safe when the list names them.
     const banks = level.solids.filter((s) => s.kind === 'bank');
     expect(banks.map((s) => s.safe === true)).toEqual(banks.map((s, i) => i === 0 || s.id === 'bank-6' || numbers.checkpoints.includes(i)));

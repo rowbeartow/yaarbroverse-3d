@@ -6,6 +6,7 @@
 
 import type { BossSpot } from './boss';
 import type { EnemySpot, EnemyTuning } from './enemy';
+import type { Motion, Piece } from './moving';
 
 export type SolidKind = 'bank' | 'log' | 'stump' | 'shelf' | 'mushroom' | 'bough';
 
@@ -30,7 +31,25 @@ export interface Solid {
   safe?: boolean;
   /** Where on a safe solid a fall returns you to, when that is not its middle: the doorstep of a boss's arena, say. */
   safeAt?: { x: number; z: number };
+  /** A piece that moves: tips, crumbles or sways (see moving.ts). Left out, it stays put. */
+  motion?: Motion;
+  /** A moving piece as it is now. The rules keep this; a level leaves it out. */
+  piece?: Piece;
+  /** How much the top rises for each metre toward the camera (+z): a tipping log's tilt. `top` is the height at its middle. */
+  slopeZ?: number;
+  /** A piece that has crumbled away: nothing to stand on or bump into until it grows back. */
+  gone?: boolean;
 }
+
+/** The height of a solid's top at (x, z): its `top`, unless it is tilted. */
+export const topAt = (s: Solid, _x: number, z: number): number => {
+  if (!s.slopeZ) return s.top;
+  const along = Math.max(-s.halfZ, Math.min(s.halfZ, z - s.z));
+  return s.top + s.slopeZ * along;
+};
+
+/** The highest point of a solid's top anywhere. */
+export const highestTop = (s: Solid): number => s.top + Math.abs(s.slopeZ ?? 0) * s.halfZ;
 
 export interface Leaf {
   x: number;
@@ -141,10 +160,16 @@ export const surfaceBelow = (
   radius: number,
 ): Solid | null => {
   let best: Solid | null = null;
+  let bestTop = -Infinity;
   for (const s of level.solids) {
-    if (s.top > y + 1e-6) continue;
+    if (s.gone) continue;
+    const top = topAt(s, x, z);
+    if (top > y + 1e-6) continue;
     if (!touchesFromAbove(s, x, z, radius)) continue;
-    if (!best || s.top > best.top) best = s;
+    if (!best || top > bestTop) {
+      best = s;
+      bestTop = top;
+    }
   }
   return best;
 };

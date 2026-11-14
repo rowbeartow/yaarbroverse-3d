@@ -16,7 +16,7 @@ Make `src/levels/<id>/` with three files:
 
 1. **`difficulty.ts`**: every Easy, Normal and Hard number for the level, in one table, with a comment on each number saying what it does. Also the three one-line blurbs for the start screen. Every level needs `hearts`, `protection`, `knockback`, `coyoteTime` and `ledgeHelp`; if it has enemies, `enemyWarning`, `enemySpeed` and `enemyRest` too, and if its scouts walk a beat and give chase or its mosquito keeps up, the grove's `scoutPatrol`, `scoutChase`, `mosquitoFollow`, `mosquitoHover` and `mosquitoPause`. Start from the grove's values for those.
 2. **`layout.ts`**: one function, `build<Name>(difficulty)`, that returns a `Level` (`src/game/level.ts`) built from those numbers. No drawing code.
-   - `solids`: everything to stand on. Kinds that already draw: `bank`, `log`, `stump`, `shelf`, `mushroom` (give it `bounce`), `bough`. Mark checkpoints `safe: true`.
+   - `solids`: everything to stand on. Kinds that already draw: `bank`, `log`, `stump`, `shelf`, `mushroom` (give it `bounce`), `bough`. Mark checkpoints `safe: true`. A solid can also move: see "Pieces that move" below.
    - `spawn` must be on a safe solid. `leaf` is the goal.
    - `route`: the ids of the solids in the order a run crosses them. The test bot follows it, so it must be complete and in order.
    - `sections`, `hints` (shown the first time a hero stands on that solid) and `goalLine` are optional.
@@ -49,6 +49,16 @@ A new kind of solid needs a name in `SolidKind` (`src/game/level.ts`) and a shap
 1. Put the MP3 in `assets/audio/` and credit it in `CREDITS.md` (`tests/sound-files.test.ts` fails otherwise). Sound and music together must stay under 4 MB.
 2. Add it to `SOUNDS` beside `groveMusic`, with `mix: 'music'` and `loop: true`.
 3. It goes on the sound board for the owner's OK before it merges (`node tools/preview/sounds.mjs`).
+
+## Pieces that move
+
+Any solid can move: give it a `motion` in `layout.ts`. The rules are in `src/game/moving.ts` (its top says how each kind behaves), the drawing in `src/view/scenery.ts` (`placeMoving`), the sounds in `src/audio/game-sounds.ts`, and `tests/moving.test.ts` holds the tests. Each game keeps its own copy of a level's moving pieces, so the level as built never changes.
+
+Every moving piece has a tell before it moves (it shakes, and a sound plays), carries a hero standing on it, and is drawn from the rules' own numbers every frame, so its drawn top is where a hero can stand while it moves. Put its numbers in the level's `difficulty.ts` like any other, and on Easy choose numbers that need no precise timing.
+
+- **Tipping log**: `motion: { kind: 'tip', tell, dip, rate }` on a `log` that runs along the route (longer front to back than side to side). It rests on a snag at its middle. A moment after a hero lands (`tell` seconds of creaking and rocking), the end the hero stands on sinks, up to `dip` metres at the very end, at `rate` metres a second. With nobody on it, it settles back level. A fall puts it back level. The grove's section 4, The Tipping Logs, is the example: `tip*` in its `difficulty.ts`. Keep `dip` plus the rise to the next piece well under a full jump (about 2 metres), and on Easy under half of one.
+
+The test bot copes with moving pieces on its own: it reads each piece where it is now, never lingers, and does not take walking down a tilted log for an edge.
 
 ## New enemies
 

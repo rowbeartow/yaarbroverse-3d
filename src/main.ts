@@ -128,7 +128,8 @@ const boot = (): void => {
     // A fight that was on is over: the level's own music again, and no health bar.
     sound.setMusic(entry.music);
     screens.setBoss(null);
-    view?.show(level, choice.hero, entry.scenery);
+    // The game's own copy of the level: its moving pieces are the ones the rules move.
+    view?.show(game.level, choice.hero, entry.scenery);
     view?.snapCamera(game);
   };
 

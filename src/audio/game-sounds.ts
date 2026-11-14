@@ -105,6 +105,17 @@ export class GameSounds {
         else if (event.what === 'phase' && event.phase === 'attack' && event.attack === 'charge') sound.play('pounce');
         else if (event.what === 'phase' && (event.phase === 'intro' || event.phase === 'roar')) sound.play('marmotTell', big);
       }
+      else if (event.type === 'piece') {
+        // A moving piece is heard from where it is, like an enemy.
+        const piece = game.level.solids.find((solid) => solid.id === event.id);
+        const volume = piece ? byDistance(Math.hypot(piece.x - game.x, piece.top - game.y, piece.z - game.z)) : 1;
+        if (volume <= 0) continue;
+        if (event.kind === 'tip' && event.what === 'tell') sound.play('creak', { volume });
+        else if (event.kind === 'tip' && event.what === 'move') sound.play('creak', { volume: volume * 0.7 });
+        else if (event.kind === 'crumble' && event.what === 'tell') sound.play('mossRustle', { volume });
+        else if (event.kind === 'crumble' && event.what === 'fall') sound.play('mossFall', { volume });
+        else if (event.kind === 'sway' && event.what === 'tell') sound.play('gust', { volume });
+      }
       else if (event.type === 'enemy') {
         const enemy = game.enemies.find((candidate) => candidate.spot.id === event.id);
         const volume = enemy ? byDistance(distanceTo(game, enemy)) : 1;

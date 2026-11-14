@@ -29,7 +29,7 @@ import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPass.js';
 import type { Game, GameEvent } from '../game/game';
 import { MOVE, type HeroName } from '../game/hero';
-import { surfaceBelow, type Level } from '../game/level';
+import { surfaceBelow, topAt, type Level } from '../game/level';
 import { loadAssets, type Assets } from './assets';
 import type { GhostPose } from '../game/ghost';
 import type { SceneryName } from '../levels/entry';
@@ -44,7 +44,7 @@ import { seeded } from './noise';
 import { MIST_COLOR } from './pictures';
 import { MIST_FAR, MIST_NEAR, inDetail, inView } from './route';
 import { TIERS, TierChooser, frameRateGoal, isTierName, startingTier, type Tier, type TierName } from './quality';
-import { MIST_BOTTOM, MIST_TOP, animateMushroom, blobShadow, buildSolids, type LevelSolids } from './scenery';
+import { MIST_BOTTOM, MIST_TOP, animateMushroom, blobShadow, buildSolids, placeMoving, type LevelSolids } from './scenery';
 
 /** Where the camera sits relative to the hero: behind, above, looking ahead and down. */
 const CAMERA = { back: 12, up: 8, lookAhead: 4.5, lookUp: 1, fieldOfView: 50 };
@@ -379,12 +379,16 @@ export class GroveView {
     const ground = surfaceBelow(level, x, z, y + level.ledgeHelp, MOVE.footRadius);
     this.shadow.visible = ground !== null;
     if (ground) {
-      const height = Math.max(y - ground.top, 0);
+      const groundY = topAt(ground, x, z);
+      const height = Math.max(y - groundY, 0);
       const shrink = 1 / (1 + height * 0.12);
-      this.shadow.position.set(x, ground.top + 0.03, z);
+      this.shadow.position.set(x, groundY + 0.03, z);
       this.shadow.rotation.z = hero.root.rotation.y;
       this.shadow.scale.set(hero.shadow.across * shrink, hero.shadow.along * shrink, 1);
     }
+
+    // Pieces that move, where the rules have them now.
+    for (const piece of levelView.moving) placeMoving(piece, this.clock);
 
     // Mushrooms and the golden leaf.
     for (const mushroom of levelView.mushrooms.values()) animateMushroom(mushroom, dt);
