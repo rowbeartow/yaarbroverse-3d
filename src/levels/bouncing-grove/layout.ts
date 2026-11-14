@@ -10,9 +10,12 @@
 //      up to a mossy ledge.
 //   5. The High Boughs: narrow boughs that turn left twice, with a gap at the corners.
 //   6. The Climb: a mushroom, a high log, tall snags, mushrooms over open air,
-//      then the big bough where the golden leaf is tucked in the canopy.
+//      up to a wide mossy bank at the top.
+//   7. The Marmot Chief: the wide bank is the chief's. Beat it, and the way
+//      is open to the big bough where the golden leaf is tucked in the canopy.
 
 import type { Difficulty } from '../../game/difficulty';
+import type { BossSpot } from '../../game/boss';
 import type { EnemySpot } from '../../game/enemy';
 import type { Level, Section, Solid } from '../../game/level';
 import { GROVE_DIFFICULTY, type GroveNumbers } from './difficulty';
@@ -28,6 +31,7 @@ export const GROVE_HINTS: Record<string, string> = {
   'high-log': 'Bounce across the mushrooms.',
   'bank-4': 'Follow the boughs. They turn!',
   'bank-5': 'One more climb. The golden leaf is close.',
+  'bank-6': 'This is the marmot chief’s bank. Step in when you are ready.',
 };
 
 export const GROVE_GOAL_LINE = 'A golden leaf, tucked in the canopy!';
@@ -79,6 +83,21 @@ export const GROVE_SHAPE = {
   highLogRise: 2.4,
   highLogLength: 5,
   boughRise: 2.6,
+  /**
+   * The marmot chief's bank, at the top of the climb: how wide and long it
+   * is, how far in from its near edge a hero sent back stands, and how far in
+   * the fight begins.
+   */
+  chiefHalfWidth: 8,
+  chiefLength: 19,
+  chiefDoorstep: 1.5,
+  chiefBegins: 4.8,
+  /** The chief: 2.3 times a scout's size and darker. How far out its body reaches, how tall it is, and how far from the far edge it waits. */
+  chiefScale: 2.3,
+  chiefTint: 0x6f6a86,
+  chiefRadius: 1.25,
+  chiefHeight: 1.7,
+  chiefHome: 5,
   boughHalfWidth: 2.5,
   boughLength: 6,
   /** Mist level, and the height below which a hero has fallen. */
@@ -340,8 +359,19 @@ export function buildGrove(
   }
   at = mushroomAt + n.mushroomRadius + n.mushroomGap;
 
-  // The big bough of the great cedar, and the golden leaf.
+  // The wide bank at the top: the marmot chief's. It is safe on every
+  // difficulty, and a hero sent back stands on its doorstep, outside the fight.
   const boughTop = capTop + shape.boughRise;
+  const chiefFrom = at;
+  box('bank-6', 'bank', at, at + shape.chiefLength, mushroomX, shape.chiefHalfWidth, boughTop, shape.depth, {
+    safe: true,
+    safeAt: { x: mushroomX, z: -(at + shape.chiefDoorstep) },
+  });
+  at += shape.chiefLength;
+
+  // ---- Section 7: The Marmot Chief ----
+  section('The Marmot Chief');
+  // The big bough of the great cedar, reaching out from the far side of the chief's bank, and the golden leaf.
   box('bough', 'bough', at, at + shape.boughLength, mushroomX, shape.boughHalfWidth, boughTop, boughTop - 1.2);
   const leafX = mushroomX;
 
@@ -359,6 +389,20 @@ export function buildGrove(
   const clearing = byId('bank-2');
   const foot = byId('bank-5');
   const [third, fifth] = [byId('bough-3'), byId('bough-5')];
+  const chiefBank = byId('bank-6');
+  // The chief's sidekicks wait over the far corners and the middle of its bank until it calls.
+  const sidekickSides = [-1, 1, 0];
+  const sidekicks: EnemySpot[] = Array.from({ length: n.chiefSidekicks }, (_, i) => ({
+    id: `sidekick-${i + 1}`,
+    kind: 'mosquito' as const,
+    sidekickOf: 'marmot-chief',
+    x: chiefBank.x + sidekickSides[i % 3] * (shape.chiefHalfWidth - 2),
+    y: chiefBank.top + shape.mosquitoHover,
+    z: chiefBank.z - chiefBank.halfZ + 2 + Math.floor(i / 3) * 3,
+    arena: patch(chiefBank, 0.4),
+    floor: chiefBank.top + shape.mosquitoFloor,
+    ceiling: chiefBank.top + shape.mosquitoCeiling,
+  }));
   const enemies: EnemySpot[] = [
     // A marmot scout in the clearing, off to the left of the way through.
     {
@@ -396,12 +440,29 @@ export function buildGrove(
       arena: patch(foot, shape.scoutInset),
       notice: shape.scoutInset,
     },
+    ...sidekicks,
   ];
+  // The marmot chief: the scout's model, much larger and darker. It waits toward the far end of its bank.
+  const boss: BossSpot = {
+    id: 'marmot-chief',
+    name: 'The Marmot Chief',
+    look: { model: 'marmot', scale: shape.chiefScale, tint: shape.chiefTint },
+    x: chiefBank.x,
+    y: chiefBank.top,
+    z: -(chiefFrom + shape.chiefLength - shape.chiefHome),
+    // Its whole body stays on the bank, and the fight begins a few steps in from the doorstep.
+    patch: patch(chiefBank, shape.chiefRadius + 0.2),
+    arena: { minX: chiefBank.x - chiefBank.halfX, maxX: chiefBank.x + chiefBank.halfX, minZ: chiefBank.z - chiefBank.halfZ, maxZ: -(chiefFrom + shape.chiefBegins) },
+    radius: shape.chiefRadius,
+    height: shape.chiefHeight,
+    numbers: n.chief,
+  };
 
   return {
     name: GROVE_NAME,
     solids,
     enemies,
+    boss,
     enemyTuning: {
       warning: n.enemyWarning,
       speed: n.enemySpeed,

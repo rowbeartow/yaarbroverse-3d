@@ -11,17 +11,20 @@ import { buildGrove } from '../src/levels/bouncing-grove/layout';
 import { Bot, playWithBot } from './helpers/bot';
 
 describe.each(DIFFICULTIES)('a full run of the Bouncing Grove on %s', (difficulty) => {
-  it.each(HEROES)('reaches the golden leaf as %s without a fall', (hero) => {
-    const game = playWithBot(new Game(buildGrove(difficulty), difficulty, hero));
+  it.each(HEROES)('beats the marmot chief and reaches the golden leaf as %s, without a fall', (hero) => {
+    const game = playWithBot(new Game(buildGrove(difficulty), difficulty, hero), 300);
     const summary = game.summary();
     expect(summary.complete).toBe(true);
     expect(summary.falls).toBe(0);
     // With walk and jump alone: the level never needs a roll or a pounce.
     expect(game.movesUsed).toBe(0);
-    expect(summary.heartsLost).toBe(0);
+    // The chief is beaten in its first fight: the bot is never sent back, so it never runs out of hearts.
+    expect(game.boss?.phase).toBe('defeated');
+    expect(game.boss?.fights).toBe(1);
+    expect(summary.heartsLost).toBeLessThan(game.level.hearts);
     expect(summary).toMatchObject({ level: 'The Bouncing Grove', difficulty, hero });
-    expect(summary.seconds).toBeGreaterThan(30);
-    expect(summary.seconds).toBeLessThan(90);
+    expect(summary.seconds).toBeGreaterThan(40);
+    expect(summary.seconds).toBeLessThan(150);
   });
 
   it('crosses every part of the route in order', () => {
@@ -32,7 +35,7 @@ describe.each(DIFFICULTIES)('a full run of the Bouncing Grove on %s', (difficult
     const touch = (id: string | null): void => {
       if (id && touched[touched.length - 1] !== id) touched.push(id);
     };
-    for (let i = 0; i < 120 / STEP && !game.complete; i += 1) {
+    for (let i = 0; i < 300 / STEP && !game.complete; i += 1) {
       game.step(bot.input(game));
       touch(game.groundId);
       for (const event of game.events) if (event.type === 'bounce') touch(event.solidId);
@@ -102,7 +105,7 @@ describe('falling in the Bouncing Grove', () => {
 
   it('a hero can finish after falling', () => {
     const game = fallFrom('normal', 'stump-2');
-    playWithBot(game);
+    playWithBot(game, 300);
     expect(game.complete).toBe(true);
     expect(game.summary().falls).toBe(1);
   });

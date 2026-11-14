@@ -7,7 +7,8 @@
 // trigger anything, and it makes no sound.
 //
 // A recording is kept small so a few dozen fit in a browser's storage: eight
-// bytes a sample, at most 1,200 samples however long the run. It starts at 15
+// bytes a sample, at most 2,400 samples however long the run (160 seconds at
+// full rate: a run of the grove with its boss fits). It starts at 15
 // samples a second, and each time it fills up it drops every other sample and
 // carries on at half the rate. No browser code here.
 
@@ -46,7 +47,7 @@ export interface GhostPose extends GhostSample {
   done: boolean;
 }
 
-export const GHOST_MAX_SAMPLES = 1200;
+export const GHOST_MAX_SAMPLES = 2400;
 export const GHOST_FIRST_INTERVAL = 4;
 /** Places are kept to the nearest 2 cm, measured from the first sample. */
 const UNIT = 50;

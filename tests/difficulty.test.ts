@@ -43,7 +43,9 @@ describe('Bouncing Grove difficulty numbers', () => {
       const numbers = GROVE_DIFFICULTY[difficulty];
       expect(Object.keys(numbers).sort()).toEqual(names);
       // Every number is above zero, but for the two that switch a scout's walking and chasing off.
-      const { scoutPatrol, scoutChase, enemyAimLine, ...rest } = numbers;
+      const { scoutPatrol, scoutChase, enemyAimLine, chief, ...rest } = numbers;
+      // The chief's numbers have their own tests (tests/chief.test.ts).
+      expect(chief.health).toBeGreaterThan(0);
       expect(typeof enemyAimLine).toBe('boolean');
       for (const value of Object.values(rest).flat()) {
         expect(Number.isFinite(value)).toBe(true);
@@ -127,9 +129,9 @@ describe.each(DIFFICULTIES)('the grove built on %s', (difficulty) => {
     expect(count(level, 'mushroom')).toBe(numbers.mushroomChain + 1 + numbers.climbMushrooms + 1);
     expect(byId(level, 'mushroom-2').halfX).toBe(numbers.mushroomRadius);
     expect(airBetween(byId(level, 'high-log'), byId(level, 'mushroom-2'))).toBeCloseTo(numbers.mushroomGap, 5);
-    // The first bank is always safe; the others are safe when the list names them.
+    // The first bank is always safe, and so is the chief's at the top; the others are safe when the list names them.
     const banks = level.solids.filter((s) => s.kind === 'bank');
-    expect(banks.map((s) => s.safe === true)).toEqual(banks.map((_, i) => i === 0 || numbers.checkpoints.includes(i)));
+    expect(banks.map((s) => s.safe === true)).toEqual(banks.map((s, i) => i === 0 || s.id === 'bank-6' || numbers.checkpoints.includes(i)));
     expect(level.coyoteTime).toBe(numbers.coyoteTime);
     expect(level.ledgeHelp).toBe(numbers.ledgeHelp);
   });
@@ -176,13 +178,17 @@ describe.each(DIFFICULTIES)('the grove built on %s', (difficulty) => {
     expect(boughs[4].x + boughs[4].halfX).toBeLessThanOrEqual(boughs[3].x - boughs[3].halfX + 1e-9);
   });
 
-  it('ends with a climb from the last bank to the bough with the leaf', () => {
+  it('ends with a climb to the chief’s wide bank, and the bough with the leaf reaching out from its far side', () => {
     const bank = byId(level, 'bank-5');
+    const top = byId(level, 'bank-6');
     const bough = byId(level, 'bough');
     expect(byId(level, 'climb-log').top).toBeGreaterThan(bank.top + fullJumpHeight());
     expect(byId(level, `snag-${numbers.snagCount}`).top).toBeGreaterThan(byId(level, 'climb-log').top);
-    expect(bough.top).toBeGreaterThan(byId(level, `snag-${numbers.snagCount}`).top);
-    expect(level.solids.filter((s) => s.kind === 'bank').length).toBe(6);
+    expect(top.top).toBeGreaterThan(byId(level, `snag-${numbers.snagCount}`).top);
+    expect(bough.top).toBe(top.top);
+    // The bough starts where the bank ends: no gap to jump between the chief and the leaf.
+    expect(bough.z + bough.halfZ).toBeCloseTo(top.z - top.halfZ, 5);
+    expect(level.solids.filter((s) => s.kind === 'bank').length).toBe(7);
   });
 
   it('lists every solid once in the route', () => {

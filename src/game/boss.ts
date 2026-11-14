@@ -55,7 +55,7 @@ export const BOSS = {
   /** A landing that bounces off its guard also throws the hero sideways, clear of it, at this speed. */
   bounceOff: 5,
   /** After a hit, or a landing that bounced off, the hero cannot be hurt for this long. */
-  strikeProtection: 0.5,
+  strikeProtection: 1,
   /** A hero has to be falling at least this fast for landing on it to count. */
   stompSpeed: 0.8,
   /** A beaten boss is gone from the level this long after it is beaten. */

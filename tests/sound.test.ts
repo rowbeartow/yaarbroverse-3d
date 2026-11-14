@@ -5,7 +5,7 @@
 import { describe, expect, it } from 'vitest';
 import { GameSounds, FAR, NEAR, byDistance } from '../src/audio/game-sounds';
 import { MUTE_KEY, Sound, type Memory, type PlayOptions, type Speaker } from '../src/audio/mix';
-import type { SoundName } from '../src/audio/sounds';
+import { VOICE, type SoundName } from '../src/audio/sounds';
 import { Game } from '../src/game/game';
 import { buildGrove } from '../src/levels/bouncing-grove/layout';
 import { JUMP, RIGHT, hold, solid, yard } from './helpers/yard';
@@ -354,6 +354,13 @@ describe('in the grove', () => {
     run(idle, 0.6);
     expect(speaker.names()).toContain('checkpoint');
 
+    // The leaf is out of reach until the marmot chief is beaten.
+    game.x = game.level.leaf.x;
+    game.y = game.level.leaf.y;
+    game.z = game.level.leaf.z;
+    run(idle, 0.1);
+    expect(game.complete).toBe(false);
+    Object.assign(game.boss!, { phase: 'defeated', health: 0 });
     game.x = game.level.leaf.x;
     game.y = game.level.leaf.y;
     game.z = game.level.leaf.z;
@@ -425,5 +432,71 @@ describe('in the grove', () => {
     game.events = [{ type: 'strike', id: 'x', kind: 'marmot', how: 'stomp', left: 1 }];
     sounds.step(game);
     expect(speaker.names()).toContain('strike');
+  });
+
+  it('a boss: its warning, its throw, its charge, a hit, a landing that bounces off, and being beaten', () => {
+    const game = grove();
+    const { speaker, sounds } = listening(game);
+    const heard = (event: (typeof game.events)[number]): string[] => {
+      const before = speaker.names().length;
+      game.events = [event];
+      sounds.step(game);
+      return speaker.names().slice(before);
+    };
+    const id = 'marmot-chief';
+    expect(heard({ type: 'boss', id, what: 'phase', phase: 'warning', attack: 'throw' })).toEqual(['marmotTell']);
+    expect(heard({ type: 'boss', id, what: 'phase', phase: 'attack', attack: 'throw' })).toEqual(['marmotThrow']);
+    expect(heard({ type: 'boss', id, what: 'phase', phase: 'attack', attack: 'charge' })).toEqual(['pounce']);
+    expect(heard({ type: 'boss', id, what: 'hit', how: 'stomp', left: 3 })).toEqual(['strike']);
+    expect(heard({ type: 'boss', id, what: 'blocked' })).toEqual(['bounce']);
+    expect(heard({ type: 'boss', id, what: 'beaten' })).toEqual(['bossBeaten']);
+    // Resting and going back on watch make no sound.
+    expect(heard({ type: 'boss', id, what: 'phase', phase: 'rest', attack: 'throw' })).toEqual([]);
+    expect(heard({ type: 'boss', id, what: 'phase', phase: 'idle', attack: null })).toEqual([]);
+  });
+
+  it("a boss's warnings, throws and hits are the scout's sounds played lower, and nothing else is", () => {
+    const game = grove();
+    const { speaker, sounds } = listening(game);
+    const id = 'marmot-chief';
+    game.events = [
+      { type: 'boss', id, what: 'phase', phase: 'intro', attack: null },
+      { type: 'boss', id, what: 'phase', phase: 'warning', attack: 'throw' },
+      { type: 'boss', id, what: 'phase', phase: 'attack', attack: 'throw' },
+      { type: 'boss', id, what: 'phase', phase: 'roar', attack: null },
+      { type: 'boss', id, what: 'hit', how: 'stomp', left: 3 },
+      { type: 'boss', id, what: 'phase', phase: 'attack', attack: 'charge' },
+      { type: 'boss', id, what: 'blocked' },
+      { type: 'boss', id, what: 'beaten' },
+      { type: 'strike', id: 'x', kind: 'marmot', how: 'stomp', left: 1 },
+    ];
+    sounds.step(game);
+    expect(speaker.played.map((entry) => [entry.name, entry.options.voice])).toEqual([
+      ['marmotTell', 'chief'],
+      ['marmotTell', 'chief'],
+      ['marmotThrow', 'chief'],
+      ['marmotTell', 'chief'],
+      ['strike', 'chief'],
+      ['pounce', undefined],
+      ['bounce', undefined],
+      ['bossBeaten', undefined],
+      ['strike', undefined],
+    ]);
+    expect(VOICE.chief.rate).toBeLessThan(VOICE.yaarbro.rate);
+  });
+
+  it('a sidekick its boss has not called makes no whine', () => {
+    const game = grove();
+    const { speaker, sounds } = listening(game);
+    const sidekick = game.enemies.find((enemy) => enemy.spot.sidekickOf)!;
+    expect(sidekick.dormant).toBe(true);
+    for (const enemy of game.enemies) if (enemy !== sidekick) enemy.phase = 'defeated';
+    Object.assign(game, { x: sidekick.x, z: sidekick.z + 2 });
+    game.events = [];
+    sounds.step(game);
+    expect(speaker.loops.get('mosquitoHover') ?? 0).toBe(0);
+    sidekick.dormant = false;
+    sounds.step(game);
+    expect(speaker.loops.get('mosquitoHover')).toBeGreaterThan(0);
   });
 });

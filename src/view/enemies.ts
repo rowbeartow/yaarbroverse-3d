@@ -204,7 +204,8 @@ export class EnemyView {
   /** Matches the picture to the rules. `near` is false for an enemy too far off to matter. */
   update(enemy: Enemy, tuning: EnemyTuning, heroZ: number, dt: number): void {
     const near = Math.abs(enemy.z - heroZ) < SEEN_WITHIN;
-    const hidden = enemy.phase === 'concealed' || (enemy.phase === 'defeated' && enemy.timer > ENEMY.fade);
+    // Hidden: a scout that has not come out, a sidekick its boss has not called, and a beaten enemy once it has faded.
+    const hidden = enemy.phase === 'concealed' || enemy.dormant || (enemy.phase === 'defeated' && enemy.timer > ENEMY.fade);
     this.root.visible = near && !hidden;
     this.acorn.visible = false;
     this.lane.visible = false;

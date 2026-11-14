@@ -17,7 +17,7 @@
 // warning, hit or checkpoint, and one that takes it away for the leaf tune.
 
 import type { PlayOptions } from './mix';
-import { MIX, SOFTEN, SOUNDS, STEP_VOICE, gainOf, type Group, type SoundDef, type SoundName } from './sounds';
+import { MIX, SOFTEN, SOUNDS, VOICE, gainOf, type Group, type SoundDef, type SoundName } from './sounds';
 import { evenOut, renderSynth, type SynthName } from './synth';
 
 export const LIST = SOUNDS as Record<SoundName, SoundDef>;
@@ -202,7 +202,7 @@ export const strike = (
 ): number => {
   const { ctx } = graph;
   const def = LIST[name];
-  const voice = options.voice ? STEP_VOICE[options.voice] : STEP_VOICE.yaarbro;
+  const voice = options.voice ? VOICE[options.voice] : VOICE.yaarbro;
   const out = graph.groups[def.mix];
   const volume = options.volume ?? 1;
   let longest = 0;

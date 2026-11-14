@@ -494,7 +494,7 @@ export class Game {
       if (outcome.began) this.events.push({ type: 'boss', id, what: 'begin' });
       for (const phase of outcome.entered) this.events.push({ type: 'boss', id, what: 'phase', phase, attack: boss.attack });
       if (outcome.called) {
-        for (const sidekick of sidekicks) callSidekick(sidekick);
+        sidekicks.forEach((sidekick, i) => callSidekick(sidekick, i * 0.7));
         this.events.push({ type: 'boss', id, what: 'call' });
       }
       if (outcome.struck || outcome.blocked) {

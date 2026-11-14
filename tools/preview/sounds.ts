@@ -5,7 +5,7 @@
 // (src/audio/synth.ts), so what is heard here is what the game will play.
 
 import { LIST, Turns, buildMix, loadBuffers, strike, type Buffers, type MixGraph } from '../../src/audio/graph';
-import { STEP_VOICE, gainOf, type Group, type SoundDef, type SoundName } from '../../src/audio/sounds';
+import { VOICE, gainOf, type Group, type SoundDef, type SoundName } from '../../src/audio/sounds';
 import { evenOut } from '../../src/audio/synth';
 
 interface Extra { label: string; what: string; file: string; credit: string; loop: boolean; level: number }
@@ -51,7 +51,7 @@ const extraBuffer = async (file: string, even: boolean): Promise<AudioBuffer> =>
   return buffer;
 };
 
-type Voice = keyof typeof STEP_VOICE;
+type Voice = keyof typeof VOICE;
 /** What a row plays: a sound from the game's list, or another choice with its own file. */
 type Item = { name: SoundName } | { file: string; mix: Group; level: number; loop: boolean };
 const playing = new Map<string, { source: AudioBufferSourceNode; gain: GainNode }>();

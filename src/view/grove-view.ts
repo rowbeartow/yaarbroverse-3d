@@ -34,7 +34,9 @@ import { loadAssets, type Assets } from './assets';
 import type { GhostPose } from '../game/ghost';
 import type { SceneryName } from '../levels/entry';
 import { Scatter, buildForest, type Forest } from './forest';
+import { bossFighting } from '../game/boss';
 import { BossView } from './boss';
+import { FIGHT_CAMERA, fightView } from './boss-camera';
 import { ENEMY_MODELS, ENEMY_MODEL_FILES, EnemyView } from './enemies';
 import { HERO_MODEL_FILES, buildHero, type HeroView } from './heroes';
 import { Materials, WIND, installMist } from './materials';
@@ -122,6 +124,8 @@ export class GroveView {
   private boss: BossView | null = null;
   /** Seconds since the goal came within reach (a boss was beaten), or -1. */
   private sinceOpen = -1;
+  /** How far into its boss-fight place the camera is, 0 to 1. */
+  private fight = 0;
   private heroName: HeroName | null = null;
   private level: Level | null = null;
   private follow = { x: 0, y: 0, z: 0 };
@@ -215,6 +219,7 @@ export class GroveView {
       this.boss = null;
     }
     this.sinceOpen = -1;
+    this.fight = 0;
     if (level.boss) {
       const loaded = this.assets.models.get(ENEMY_MODELS[level.boss.look.model].file);
       if (!loaded) throw new Error(`The model file for ${level.boss.name} was not loaded`);
@@ -407,8 +412,12 @@ export class GroveView {
     // Camera: follow smoothly, slower up and down so jumps do not shake the view,
     // and never chase a falling hero into the mist.
     const followY = Math.max(y, this.lowestGround - 0.5);
-    this.follow.x = ease(this.follow.x, x, 7, dt);
-    this.follow.z = ease(this.follow.z, z, 7, dt);
+    // While a boss fight is on, the camera follows a point between the hero and the middle of the arena.
+    const fighting = game.boss !== null && bossFighting(game.boss);
+    this.fight = Math.max(0, Math.min(1, this.fight + (fighting ? dt / FIGHT_CAMERA.easeIn : -dt / FIGHT_CAMERA.easeOut)));
+    const aim = fightView(this.fight, { x, z }, level.boss);
+    this.follow.x = ease(this.follow.x, aim.x, 7, dt);
+    this.follow.z = ease(this.follow.z, aim.z, 7, dt);
     this.follow.y = ease(this.follow.y, followY, game.grounded ? 5 : 2.6, dt);
     this.aimCamera();
     this.aimSun();
@@ -434,7 +443,9 @@ export class GroveView {
 
   private aimCamera(): void {
     const { x, y, z } = this.follow;
-    this.camera.position.set(x * 0.85, y + CAMERA.up, z + CAMERA.back);
+    // In a boss fight the camera sits further back and higher, so the whole arena shows (see boss-camera.ts).
+    const { back, up } = fightView(this.fight, { x, z }, this.level?.boss);
+    this.camera.position.set(x * 0.85, y + CAMERA.up * up, z + CAMERA.back * back);
     this.camera.lookAt(x * 0.92, y + CAMERA.lookUp, z - CAMERA.lookAhead);
   }
 

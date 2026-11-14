@@ -218,9 +218,42 @@ export class Bot {
         const nearer = side >= 0 ? 1 : -1;
         this.dodge = roomFor(nearer) ? nearer : roomFor(-nearer) ? -nearer : nearer;
       }
-      heading = side * this.dodge < lane ? out(this.dodge) : { x: 0, z: 0 };
+      if (side * this.dodge < lane) heading = out(this.dodge);
+      else {
+        // Clear of it. With sidekicks about, standing still is asking for a dive: keep going,
+        // further out if there is room, else along beside the line.
+        const about = game.enemies.some((enemy) => enemy.spot.sidekickOf === spot.id && !enemy.dormant && enemy.phase !== 'defeated');
+        const beside = { x: -lx / length, z: -lz / length };
+        heading = !about ? { x: 0, z: 0 } : !blocked(out(this.dodge)) ? out(this.dodge) : !blocked(beside) ? beside : { x: -beside.x, z: -beside.z };
+      }
+    }
+    // A sidekick has fixed its dive on a spot, or is on the way down to it: keep clear of that spot.
+    for (const enemy of game.enemies) {
+      if (enemy.spot.sidekickOf !== spot.id || enemy.dormant || (enemy.phase !== 'warning' && enemy.phase !== 'attack')) continue;
+      const fromX = game.x - enemy.target.x;
+      const fromZ = game.z - enemy.target.z;
+      const off = Math.hypot(fromX, fromZ);
+      if (off < 2.2) {
+        const size = Math.hypot(heading.x, heading.z) || 1;
+        const away = off > 0.05 ? { x: fromX / off, z: fromZ / off } : { x: heading.x / size, z: heading.z / size };
+        heading = { x: heading.x / size + away.x * 1.5, z: heading.z / size + away.z * 1.5 };
+      }
+    }
+    // A sidekick down low (resting where it dived, or just rising from there) is not to be walked into.
+    for (const enemy of game.enemies) {
+      if (enemy.spot.sidekickOf !== spot.id || enemy.dormant || (enemy.phase !== 'idle' && enemy.phase !== 'rest')) continue;
+      if (enemy.y > game.y + MOVE.bodyHeight + 0.8) continue;
+      const fromX = game.x - enemy.x;
+      const fromZ = game.z - enemy.z;
+      const off = Math.hypot(fromX, fromZ);
+      if (off < 2.4 && off > 0.05) {
+        const size = Math.hypot(heading.x, heading.z) || 1;
+        heading = { x: heading.x / size + (fromX / off) * 2, z: heading.z / size + (fromZ / off) * 2 };
+      }
     }
     // Never off the edge of the arena.
+    const pushed = Math.hypot(heading.x, heading.z);
+    if (pushed > 1) heading = { x: heading.x / pushed, z: heading.z / pushed };
     if (blocked(heading)) {
       const cx = (room.minX + room.maxX) / 2 - game.x;
       const cz = (room.minZ + room.maxZ) / 2 - game.z;

@@ -10,7 +10,7 @@ import { HEROES, MOVE, STEP } from '../src/game/hero';
 import { surfaceBelow } from '../src/game/level';
 import { existsSync, statSync } from 'node:fs';
 import { LEVELS, findLevel, levelFromAddress, listedLevels, shownLevels } from '../src/levels';
-import { Bot, playWithBot } from './helpers/bot';
+import { Bot } from './helpers/bot';
 
 describe('the level list', () => {
   it('gives every level its own id, in lower case and dashes', () => {
@@ -74,10 +74,22 @@ describe.each(LEVELS.map((level) => [level.id, level] as const))('the level %s',
       expect(level.fallY).toBeLessThan(Math.min(...level.solids.map((s) => s.top)));
     });
 
-    it.each(HEROES)('the bot reaches the golden leaf as %s, without a fall or a lost heart, on walk and jump alone', (hero) => {
-      const game = playWithBot(new Game(entry.build(difficulty), difficulty, hero), 300);
-      expect(game.summary()).toMatchObject({ level: entry.name, difficulty, hero, complete: true, falls: 0, heartsLost: 0 });
+    it.each(HEROES)('the bot reaches the golden leaf as %s on walk and jump alone: no fall, no heart lost on the way, and any boss beaten in its first fight', (hero) => {
+      const game = new Game(entry.build(difficulty), difficulty, hero);
+      const bot = new Bot(game.level);
+      let lostOnTheWay = -1;
+      for (let i = 0; i < 300 / STEP && !game.complete; i += 1) {
+        game.step(bot.input(game));
+        if (lostOnTheWay < 0 && game.events.some((event) => event.type === 'boss' && event.what === 'begin')) lostOnTheWay = game.heartsLost;
+      }
+      expect(game.summary()).toMatchObject({ level: entry.name, difficulty, hero, complete: true, falls: 0 });
       expect(game.movesUsed).toBe(0);
+      if (game.boss) {
+        // A level with a boss: nothing lost before the fight, the boss beaten first time, and never out of hearts.
+        expect(lostOnTheWay).toBe(0);
+        expect([game.boss.phase, game.boss.fights]).toEqual(['defeated', 1]);
+        expect(game.heartsLost).toBeLessThan(game.level.hearts);
+      } else expect(game.heartsLost).toBe(0);
     });
 
     it('the bot crosses every part of the route in order', () => {

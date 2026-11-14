@@ -8,7 +8,7 @@ Read first: `docs/session-handoff.md` (what exists, what's next, open questions)
 
 ## Status
 
-In development. One playable area, the Bouncing Grove: a full level in six sections, with three enemies, hearts, a move for each hero, and sound and music. Around it: up to four players on a device, a level picker, saved best times and a ghost of each player's best run to race (milestone five, done). The next step is a second level, by the recipe in `docs/adding-a-level.md`. `docs/session-handoff.md` says what the owner has still to check on a real device.
+In development. One playable area, the Bouncing Grove: a full level in six sections that ends with a boss, the marmot chief. It has three enemies on the way (tougher on Normal and Hard), hearts, a move for each hero, and sound and music. Around it: up to four players on a device, a level picker, saved best times and a ghost of each player's best run to race. Milestone six (tougher enemies, enemy health and the regen rule, the boss system, the marmot chief) is done. The next step is grove variety; the roadmap after it is in `docs/session-handoff.md`, which also says what the owner has still to check on a real device.
 Live at: https://rowbeartow.github.io/yaarbroverse-3d/ . Every merge to `main` publishes there, straight to the kids' devices.
 
 ## Architecture
