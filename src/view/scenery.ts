@@ -520,9 +520,12 @@ const shelf = (s: Solid, materials: Materials): Group => {
 /**
  * A rock arch across a pool: a slab of rock from its top down to its
  * underside, with deep water under it, mossy on top. It rests on the pool's
- * sides (drawn by water.ts).
+ * sides (drawn by water.ts). So a player can see there is a way through,
+ * each face has a dark opening at the waterline, a cave mouth with the gap
+ * going on below it, and light shows through the water underneath: a pale
+ * glow under the surface, under the arch and a little way either side.
  */
-const arch = (s: Solid, materials: Materials): Group => {
+const arch = (s: Solid, materials: Materials, level: Level): Group => {
   const group = new Group();
   const height = s.top - s.bottom;
   const body = new Mesh(new BoxGeometry(s.halfX * 2 + 1.2, height, s.halfZ * 2), materials.rock);
@@ -533,6 +536,44 @@ const arch = (s: Solid, materials: Materials): Group => {
   top.position.set(s.x, s.top - 0.05, s.z);
   top.receiveShadow = true;
   group.add(body, top);
+  const pool = level.water?.find((w) => s.x >= w.minX && s.x <= w.maxX && s.z >= w.minZ && s.z <= w.maxZ);
+  if (pool && s.bottom < pool.surface) {
+    // The opening: the top half of an oval, from the waterline up, on both faces,
+    // with daylight from the far end showing low in it, just over the water.
+    const across = s.halfX * 0.82;
+    const rise = Math.min(0.6, s.top - pool.surface - 0.15);
+    const mouth = new CircleGeometry(1, 40, 0, Math.PI);
+    const dark = new MeshBasicMaterial({ color: 0x07110e, fog: true });
+    const daylight = new MeshBasicMaterial({ color: 0xbff5e8, transparent: true, opacity: 0.85, fog: true });
+    for (const side of [1, -1]) {
+      const opening = new Mesh(mouth, dark);
+      opening.name = 'arch-opening';
+      opening.scale.set(across, rise, 1);
+      opening.position.set(s.x, pool.surface - 0.02, s.z + side * (s.halfZ + 0.012));
+      const through = new Mesh(mouth, daylight);
+      through.name = 'arch-daylight';
+      through.scale.set(across * 0.62, rise * 0.28, 1);
+      through.position.set(s.x, pool.surface - 0.02, s.z + side * (s.halfZ + 0.02));
+      if (side < 0) {
+        opening.rotation.y = Math.PI;
+        through.rotation.y = Math.PI;
+      }
+      group.add(opening, through);
+    }
+    // The light coming through: a pale lane on the water, spilling out of each opening.
+    const glow = glowPicture('arch-light', 'rgba(255,255,255,1)', 'rgba(255,255,255,0)');
+    for (const side of [1, -1]) {
+      const light = new Mesh(
+        new PlaneGeometry(across * 1.7, 3),
+        new MeshBasicMaterial({ map: glow, color: 0xd6fff4, transparent: true, opacity: 0.5, blending: AdditiveBlending, depthWrite: false, fog: false }),
+      );
+      light.name = 'arch-light';
+      light.rotation.x = -Math.PI / 2;
+      light.position.set(s.x, pool.surface + 0.03, s.z + side * (s.halfZ + 0.6));
+      light.renderOrder = 3;
+      group.add(light);
+    }
+  }
   return group;
 };
 
@@ -989,7 +1030,7 @@ export const buildSolids = (level: Level, materials: Materials, decor: Decor, ra
     } else if (s.kind === 'bank') shape.add(bank(s, materials, decor, random));
     else if (s.kind === 'stump') shape.add(stump(s, materials));
     else if (s.kind === 'shelf') shape.add(shelf(s, materials));
-    else if (s.kind === 'arch') shape.add(arch(s, materials));
+    else if (s.kind === 'arch') shape.add(arch(s, materials, level));
     else if (s.kind === 'bough') {
       // The last bough is the great cedar's, with the leaf. The others are limbs to walk along.
       shape.add(s.id === level.route[level.route.length - 1] ? bough(s, materials) : limb(s, materials, level));
