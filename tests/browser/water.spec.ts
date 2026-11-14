@@ -55,3 +55,18 @@ test('a level with no water draws none', async ({ page }) => {
   expect(await water(page)).toBeNull();
   expect(problems).toEqual([]);
 });
+
+test('the way under the arch shows from above: a dark opening at the waterline on each face, daylight low in it, and light on the water', async ({ page }) => {
+  const problems = await open(page, 'level=sandbox');
+  await play(page, 'Caputo', 'normal');
+  const parts = await page.evaluate(() => {
+    const view = (window as unknown as { __grove: { view: { scene: { traverse(visit: (node: { name: string }) => void): void } } } }).__grove.view;
+    const names: string[] = [];
+    view.scene.traverse((node) => {
+      if (node.name.startsWith('arch-')) names.push(node.name);
+    });
+    return names.sort();
+  });
+  expect(parts).toEqual(['arch-daylight', 'arch-daylight', 'arch-light', 'arch-light', 'arch-opening', 'arch-opening']);
+  expect(problems).toEqual([]);
+});
