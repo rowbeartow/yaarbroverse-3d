@@ -38,8 +38,6 @@ export interface GroveNumbers {
   shelfStep: number;
   /** How big each mushroom cap is, measured from its middle to its edge. */
   mushroomRadius: number;
-  /** The open air on each side of the mushrooms of the last climb. */
-  mushroomGap: number;
   /**
    * THE TIPPING LOGS (section 4): logs balanced on a snag at their middle,
    * across open air from the high log to the high ledge, each a little
@@ -69,10 +67,44 @@ export interface GroveNumbers {
   boughGap: number;
   /** How many of the four corners have a gap. At the others the boughs touch. */
   boughGapCount: number;
-  /** How many tall snags to hop across on the last climb. */
-  snagCount: number;
-  /** How many mushrooms in a row you bounce across to reach the bough with the leaf. */
-  climbMushrooms: number;
+  /**
+   * THE WINDY CLIMB (section 6), first half: pads of crumbling moss in a
+   * straight line across open air, level with the high log. The moment a
+   * hero lands one shivers and sheds crumbs (the tell), and `mossTell`
+   * seconds later it falls into the mist, growing back `mossBack` seconds
+   * after. On Easy (`mossFalls` false) it only sags `mossSag` metres, holds,
+   * and rises back: no timing needed.
+   *   mossCount, mossSize, mossGap   how many, how big (square), how far apart.
+   */
+  mossCount: number;
+  mossSize: number;
+  mossGap: number;
+  mossTell: number;
+  mossFalls: boolean;
+  mossSag: number;
+  mossBack: number;
+  /**
+   * THE WINDY CLIMB, second half: windy boughs that carry the hero up to the
+   * chief's bank. Each rests low (level with what comes before it), rises
+   * `windRise` metres, rests high (level with what comes after), and sinks
+   * back. The last `windTell` seconds of each rest are the tell: a gust, and
+   * its needles shiver. Boughs in a row take turns. On Easy each rests long
+   * enough to step on and off at leisure: no timing needed. Its width is
+   * `boughWidth`.
+   *   windCount, windLength, windGap   how many, how long, and the open air
+   *                                    before each and before the chief's bank.
+   *   windRest, windMove               seconds resting at each end, and moving.
+   *   windStart                        how far into its rhythm the first bough
+   *                                    is when a run begins, as a share of it.
+   */
+  windCount: number;
+  windLength: number;
+  windGap: number;
+  windRise: number;
+  windRest: number;
+  windMove: number;
+  windTell: number;
+  windStart: number;
   /**
    * Which mossy banks are checkpoints, counting the banks after the first one
    * (which is always safe). A fall returns you to the last safe bank you stood
@@ -211,13 +243,25 @@ export const GROVE_DIFFICULTY: Record<Difficulty, GroveNumbers> = {
     shelfGap: 0.4,
     shelfStep: 0.4,
     mushroomRadius: 1.5,
-    mushroomGap: 0.8,
     tipCount: 2, tipLength: 5.0, tipGap: 0.8, tipRise: 0.6, tipTell: 0.8, tipDip: 0.35, tipRate: 0.4,
     boughWidth: 2.4,
     boughGap: 1.2,
     boughGapCount: 1,
-    snagCount: 2,
-    climbMushrooms: 1,
+    mossCount: 2,
+    mossSize: 3.0,
+    mossGap: 0.6,
+    mossTell: 2.5,
+    mossFalls: false,
+    mossSag: 0.3,
+    mossBack: 3,
+    windCount: 1,
+    windLength: 4,
+    windGap: 0.6,
+    windRise: 1.6,
+    windRest: 2.0,
+    windMove: 1.4,
+    windTell: 0.8,
+    windStart: 0.31,
     checkpoints: [1, 2, 3, 4, 5],
     hearts: 5,
     protection: 1.5,
@@ -252,13 +296,25 @@ export const GROVE_DIFFICULTY: Record<Difficulty, GroveNumbers> = {
     shelfGap: 1.6,
     shelfStep: 0.8,
     mushroomRadius: 1.15,
-    mushroomGap: 1.6,
     tipCount: 3, tipLength: 5.5, tipGap: 1.6, tipRise: 0.5, tipTell: 0.45, tipDip: 0.8, tipRate: 0.9,
     boughWidth: 1.6,
     boughGap: 2.0,
     boughGapCount: 4,
-    snagCount: 4,
-    climbMushrooms: 3,
+    mossCount: 3,
+    mossSize: 2.4,
+    mossGap: 1.4,
+    mossTell: 1.0,
+    mossFalls: true,
+    mossSag: 0,
+    mossBack: 3,
+    windCount: 2,
+    windLength: 4.5,
+    windGap: 1.0,
+    windRise: 1.8,
+    windRest: 1.4,
+    windMove: 1.4,
+    windTell: 0.5,
+    windStart: 0.2,
     checkpoints: [1, 2, 3, 4, 5],
     hearts: 3,
     protection: 1,
@@ -293,13 +349,25 @@ export const GROVE_DIFFICULTY: Record<Difficulty, GroveNumbers> = {
     shelfGap: 2.6,
     shelfStep: 1.2,
     mushroomRadius: 0.8,
-    mushroomGap: 2.6,
     tipCount: 4, tipLength: 5, tipGap: 2.4, tipRise: 0.4, tipTell: 0.3, tipDip: 1.2, tipRate: 1.5,
     boughWidth: 1.0,
     boughGap: 3.0,
     boughGapCount: 4,
-    snagCount: 5,
-    climbMushrooms: 4,
+    mossCount: 4,
+    mossSize: 1.8,
+    mossGap: 2.2,
+    mossTell: 0.6,
+    mossFalls: true,
+    mossSag: 0,
+    mossBack: 3,
+    windCount: 2,
+    windLength: 4,
+    windGap: 1.4,
+    windRise: 2.2,
+    windRest: 0.8,
+    windMove: 1.0,
+    windTell: 0.35,
+    windStart: 0.89,
     checkpoints: [2, 4],
     hearts: 2,
     protection: 0.6,

@@ -32,6 +32,9 @@ export const byDistance = (metres: number): number => {
   return falling ** 0.8 * edge;
 };
 
+/** Metres within which a windy bough's gust is heard. Two boughs taking turns gust often, so far-off ones stay quiet. */
+const GUST_NEAR = 18;
+
 const STEP_SOUND: Record<SolidKind, SoundName> = {
   bank: 'stepMoss',
   log: 'stepWood',
@@ -39,6 +42,7 @@ const STEP_SOUND: Record<SolidKind, SoundName> = {
   shelf: 'stepWood',
   bough: 'stepWood',
   mushroom: 'stepMushroom',
+  moss: 'stepMoss',
 };
 
 /** Metres between footsteps. Caputo has four paws and a shorter step. */
@@ -80,10 +84,10 @@ export class GameSounds {
     for (const event of events) {
       if (event.type === 'jump') {
         // A quiet push-off from whatever the hero was standing on. There is no jump sound of its own.
-        sound.play(this.underfoot === 'bank' ? 'pushMoss' : 'pushWood', { voice });
+        sound.play(this.underfoot === 'bank' || this.underfoot === 'moss' ? 'pushMoss' : 'pushWood', { voice });
       } else if (event.type === 'land') {
         // A landing sounds like the surface: two soft footsteps with a low thump under them.
-        sound.play(this.kindOf(game) === 'bank' ? 'landMoss' : 'landWood', { voice });
+        sound.play(this.kindOf(game) === 'bank' || this.kindOf(game) === 'moss' ? 'landMoss' : 'landWood', { voice });
         // The landing is the step: the next footstep is a full stride away.
         this.walked = 0;
       } else if (event.type === 'bounce') sound.play('bounce');
@@ -114,7 +118,8 @@ export class GameSounds {
         else if (event.kind === 'tip' && event.what === 'move') sound.play('creak', { volume: volume * 0.7 });
         else if (event.kind === 'crumble' && event.what === 'tell') sound.play('mossRustle', { volume });
         else if (event.kind === 'crumble' && event.what === 'fall') sound.play('mossFall', { volume });
-        else if (event.kind === 'sway' && event.what === 'tell') sound.play('gust', { volume });
+        // Windy boughs gust over and over: only the ones close by are heard.
+        else if (event.kind === 'sway' && event.what === 'tell' && piece && Math.hypot(piece.x - game.x, piece.z - game.z) < GUST_NEAR) sound.play('gust', { volume });
       }
       else if (event.type === 'enemy') {
         const enemy = game.enemies.find((candidate) => candidate.spot.id === event.id);

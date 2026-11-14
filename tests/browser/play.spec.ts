@@ -43,17 +43,19 @@ test.describe('start screen', () => {
 
   test('builds a different grove for each difficulty', async ({ page }) => {
     await open(page);
-    const stumps = async (difficulty: string): Promise<number> => {
+    const count = async (difficulty: string): Promise<[number, number]> => {
       await page.locator(`[data-difficulty="${difficulty}"]`).click();
-      return page.evaluate(
-        () =>
-          (window as unknown as { __grove: { game: any } }).__grove.game.level.solids.filter(
-            (s: { kind: string }) => s.kind === 'stump',
-          ).length,
-      );
+      return page.evaluate(() => {
+        const solids = (window as unknown as { __grove: { game: { level: { solids: Array<{ kind: string; motion?: unknown }> } } } }).__grove.game.level.solids;
+        return [solids.filter((s) => s.kind === 'stump').length, solids.filter((s) => s.motion).length];
+      });
     };
-    // Stumps low down plus tall snags on the last climb: 4 + 2, 7 + 4 and 8 + 5.
-    expect([await stumps('easy'), await stumps('normal'), await stumps('hard')]).toEqual([6, 11, 13]);
+    // Stumps (4, 7 and 8), and pieces that move: tipping logs, crumbling moss and windy boughs (2 + 2 + 1, 3 + 3 + 2, 4 + 4 + 2).
+    expect([await count('easy'), await count('normal'), await count('hard')]).toEqual([
+      [4, 5],
+      [7, 8],
+      [8, 10],
+    ]);
   });
 });
 

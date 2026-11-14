@@ -8,6 +8,7 @@ import type { Enemy } from '../../src/game/enemy';
 import { Game, type Input } from '../../src/game/game';
 import { MOVE, STEP } from '../../src/game/hero';
 import { surfaceBelow, topAt, type Level, type Solid } from '../../src/game/level';
+import { steadyFor } from '../../src/game/moving';
 
 /** The spot on a solid the bot heads for: its middle if round, else the nearest point well inside. */
 const aimPoint = (s: Solid, x: number, z: number): { x: number; z: number } => {
@@ -104,6 +105,30 @@ export class Bot {
           aim = corner;
           easing = false;
         }
+      }
+    }
+    // A windy bough (here or next) has to be resting, level with where the bot is going, for
+    // long enough to get across. Until then, wait: on the bough, or at the edge before it.
+    if (game.grounded && here && next && (next.motion?.kind === 'sway' || here.motion?.kind === 'sway')) {
+      const toNext = distanceToEdge(next, game.x, game.z);
+      const needed = toNext / MOVE.walkSpeed + 0.2;
+      const even = Math.abs(topAt(next, next.x, next.z) - game.y) <= game.level.ledgeHelp + 0.05;
+      const ready = even && steadyFor(next) > needed && steadyFor(here) > needed;
+      if (!ready) {
+        // Just inside the edge nearest the next piece.
+        const inset = here.shape === 'box' ? { x: Math.min(0.35, here.halfX * 0.8), z: Math.min(0.35, here.halfZ * 0.8) } : { x: 0, z: 0 };
+        const edge =
+          here.shape === 'box'
+            ? {
+                x: Math.max(here.x - here.halfX + inset.x, Math.min(here.x + here.halfX - inset.x, aim.x)),
+                z: Math.max(here.z - here.halfZ + inset.z, Math.min(here.z + here.halfZ - inset.z, aim.z)),
+              }
+            : { x: here.x, z: here.z };
+        const toward = { x: edge.x - game.x, z: edge.z - game.z };
+        // Walk to the edge nearest the next piece and wait there.
+        const far = Math.hypot(toward.x, toward.z);
+        const push = far > 0.15 ? Math.min(far / 1.2, 1) : 0;
+        return { moveX: far > 0 ? (toward.x / far) * push : 0, moveZ: far > 0 ? (toward.z / far) * push : 0, jump: false };
       }
     }
     const dx = aim.x - game.x;

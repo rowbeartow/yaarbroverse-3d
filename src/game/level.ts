@@ -8,7 +8,7 @@ import type { BossSpot } from './boss';
 import type { EnemySpot, EnemyTuning } from './enemy';
 import type { Motion, Piece } from './moving';
 
-export type SolidKind = 'bank' | 'log' | 'stump' | 'shelf' | 'mushroom' | 'bough';
+export type SolidKind = 'bank' | 'log' | 'stump' | 'shelf' | 'mushroom' | 'bough' | 'moss';
 
 /** Something a hero can stand on and bump into. */
 export interface Solid {

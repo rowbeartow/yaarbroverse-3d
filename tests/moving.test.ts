@@ -235,3 +235,237 @@ describe('the grove’s tipping logs', () => {
     }
   });
 });
+
+/** A pad of crumbling moss off the far edge of the yard's floor: z from -5 to -7.4, level with it. */
+const mossYard = (motion: Partial<Extract<NonNullable<Solid['motion']>, { kind: 'crumble' }>> = {}): ReturnType<typeof yard> =>
+  yard([solid('pad', 0, -6.2, 1.2, 1.2, 0, { kind: 'moss', bottom: -0.5, motion: { kind: 'crumble', tell: 1, falls: true, sag: 0, back: 3, ...motion } })], {
+    route: ['floor', 'pad'],
+  });
+
+/** Walks onto the pad and stops in its middle. */
+const ontoPad = (game: Game): void => {
+  for (let i = 0; i < 600 && !(game.groundId === 'pad' && game.z < -6.1); i += 1) game.step({ ...IDLE, moveZ: -0.6 });
+};
+
+describe('crumbling moss', () => {
+  it('stays whole while nobody is on it', () => {
+    const game = new Game(mossYard(), 'normal', 'Yaarbro');
+    hold(game, {}, 5);
+    expect(own(game, 'pad').piece?.phase).toBe('rest');
+    expect(own(game, 'pad').top).toBe(0);
+  });
+
+  it('shivers the moment a hero lands (the tell), holds for `tell` seconds, then falls away with the hero on it', () => {
+    const game = new Game(mossYard(), 'normal', 'Yaarbro');
+    const events: GameEvent[] = [];
+    for (let i = 0; i < 600 && game.groundId !== 'pad'; i += 1) {
+      game.step({ ...IDLE, moveZ: -0.6 });
+      events.push(...game.events);
+    }
+    hold(game, {}, 0.05, () => events.push(...game.events));
+    expect(events.some((e) => e.type === 'piece' && e.what === 'tell' && e.kind === 'crumble')).toBe(true);
+    // Through the tell it holds, and the hero on it is safe.
+    hold(game, {}, 0.8);
+    expect(own(game, 'pad').top).toBe(0);
+    expect(game.groundId).toBe('pad');
+    // Then it drops, carrying the hero down into the mist: a fall.
+    hold(game, {}, 3, () => events.push(...game.events));
+    expect(events.some((e) => e.type === 'piece' && e.what === 'fall')).toBe(true);
+    expect(game.falls).toBe(1);
+  });
+
+  it('can be left in time: a hero who keeps moving is never taken down', () => {
+    const game = new Game(mossYard({ tell: 0.4 }), 'normal', 'Yaarbro');
+    // Over the pad and back onto the floor without stopping.
+    hold(game, { moveZ: -1 }, 0.95);
+    hold(game, { moveZ: 1 }, 1.2);
+    hold(game, {}, 2);
+    expect(game.falls).toBe(0);
+    expect(game.groundId).toBe('floor');
+  });
+
+  it('is not there to stand on once it has fallen, and grows back `back` seconds later', () => {
+    const game = new Game(mossYard({ tell: 0.2, back: 2 }), 'normal', 'Yaarbro');
+    for (let i = 0; i < 600 && game.groundId !== 'pad'; i += 1) game.step({ ...IDLE, moveZ: -0.6 });
+    // Off it straight away, back to the floor, and watch it go.
+    hold(game, { moveZ: 1 }, 0.6);
+    let goneFor = 0;
+    for (let i = 0; i < 6 * 60; i += 1) {
+      game.step(IDLE);
+      if (own(game, 'pad').gone) goneFor += 1 / 60;
+    }
+    expect(goneFor).toBeGreaterThan(1.8);
+    expect(own(game, 'pad').gone).toBe(false);
+    expect(own(game, 'pad').top).toBe(0);
+  });
+
+  it('on Easy only sags, holds a hero safely as long as it likes, and rises back when left', () => {
+    const game = new Game(mossYard({ tell: 0.5, falls: false, sag: 0.3 }), 'easy', 'Yaarbro');
+    ontoPad(game);
+    hold(game, {}, 6);
+    expect(game.falls).toBe(0);
+    expect(game.groundId).toBe('pad');
+    expect(own(game, 'pad').top).toBeCloseTo(-0.3, 5);
+    expect(game.y).toBeCloseTo(-0.3, 5);
+    hold(game, { moveZ: 1 }, 1);
+    hold(game, {}, 4);
+    expect(own(game, 'pad').top).toBe(0);
+  });
+
+  it('is whole again after a fall sends the hero back', () => {
+    const game = new Game(mossYard(), 'normal', 'Yaarbro');
+    ontoPad(game);
+    hold(game, {}, 4);
+    expect(game.falls).toBe(1);
+    expect(own(game, 'pad').piece?.phase).toBe('rest');
+    expect(own(game, 'pad').gone).toBe(false);
+  });
+
+  it('rustles, then is heard falling away', () => {
+    const played: SoundName[] = [];
+    const speaker: Speaker = { wake: () => undefined, play: (name: SoundName) => void played.push(name), setLoop: () => undefined, setMusic: () => undefined, playTune: () => undefined, setMuted: () => undefined };
+    const sound = new Sound(speaker, { getItem: () => null, setItem: () => undefined });
+    sound.unlock();
+    const sounds = new GameSounds(sound);
+    const game = new Game(mossYard(), 'normal', 'Yaarbro');
+    for (let i = 0; i < 5 * 60; i += 1) {
+      game.step(game.groundId === 'pad' ? IDLE : { ...IDLE, moveZ: -0.6 });
+      sounds.step(game);
+    }
+    expect(played).toContain('mossRustle');
+    expect(played).toContain('mossFall');
+    expect(played.indexOf('mossRustle')).toBeLessThan(played.indexOf('mossFall'));
+  });
+});
+
+/** A windy bough off the far edge of the yard's floor, resting low level with it, and a ledge beyond at the height it rises to. */
+const windYard = (): ReturnType<typeof yard> =>
+  yard(
+    [
+      solid('windy', 0, -7.5, 0.8, 2.5, 0, { kind: 'bough', bottom: -1, motion: { kind: 'sway', rise: 1.8, rest: 1.5, move: 1.2, tell: 0.5, start: 0 } }),
+      solid('ledge', 0, -13, 3, 3, 1.8, { safe: true }),
+    ],
+    { route: ['floor', 'windy', 'ledge'] },
+  );
+
+describe('a windy bough', () => {
+  it('keeps its rhythm whether anyone is on it or not: rests low, rises, rests high, sinks', () => {
+    const game = new Game(windYard(), 'normal', 'Yaarbro');
+    const tops: number[] = [];
+    for (let i = 0; i < 6 * 60; i += 1) {
+      game.step(IDLE);
+      tops.push(own(game, 'windy').top);
+    }
+    // Rests low for 1.5 s, rises over 1.2 s, rests high for 1.5 s, sinks over 1.2 s.
+    expect(tops[60]).toBeCloseTo(0, 6);
+    expect(tops[Math.round(3.5 * 60)]).toBeCloseTo(1.8, 6);
+    expect(tops[Math.round(2.1 * 60)]).toBeGreaterThan(0.2);
+    expect(tops[Math.round(2.1 * 60)]).toBeLessThan(1.6);
+    expect(tops[Math.round(5.8 * 60)]).toBeCloseTo(0, 1);
+  });
+
+  it('gives a tell (a gust) before every move, and never moves without one', () => {
+    const game = new Game(windYard(), 'normal', 'Yaarbro');
+    const said: string[] = [];
+    for (let i = 0; i < 11 * 60; i += 1) {
+      game.step(IDLE);
+      for (const e of game.events) if (e.type === 'piece' && e.id === 'windy') said.push(e.what);
+    }
+    expect(said.length).toBeGreaterThanOrEqual(6);
+    for (let i = 0; i < said.length; i += 1) if (said[i] === 'move') expect(said[i - 1]).toBe('tell');
+  });
+
+  it('carries a hero up and down, always on its top', () => {
+    const game = new Game(windYard(), 'normal', 'Yaarbro');
+    // On while it rests low.
+    for (let i = 0; i < 120 && !(game.groundId === 'windy' && game.z < -6.5); i += 1) game.step({ ...IDLE, moveZ: -1 });
+    expect(game.groundId).toBe('windy');
+    let highest = 0;
+    for (let i = 0; i < 5 * 60; i += 1) {
+      game.step(IDLE);
+      expect(game.groundId).toBe('windy');
+      expect(game.y).toBeCloseTo(own(game, 'windy').top, 6);
+      highest = Math.max(highest, game.y);
+    }
+    expect(highest).toBeCloseTo(1.8, 6);
+    expect(game.falls).toBe(0);
+  });
+
+  it('lets a hero who waits on it step off at the top, with no jump', () => {
+    const game = new Game(windYard(), 'normal', 'Yaarbro');
+    for (let i = 0; i < 120 && !(game.groundId === 'windy' && game.z < -6.5); i += 1) game.step({ ...IDLE, moveZ: -1 });
+    // Wait until it rests high, then walk off onto the ledge.
+    for (let i = 0; i < 6 * 60 && own(game, 'windy').piece?.phase !== 'high'; i += 1) game.step(IDLE);
+    hold(game, { moveZ: -1 }, 1.2);
+    expect(game.groundId).toBe('ledge');
+    expect(game.falls).toBe(0);
+  });
+
+  it('gusts only close by: a far-off bough is not heard', () => {
+    const played: SoundName[] = [];
+    const speaker: Speaker = { wake: () => undefined, play: (name: SoundName) => void played.push(name), setLoop: () => undefined, setMusic: () => undefined, playTune: () => undefined, setMuted: () => undefined };
+    const sound = new Sound(speaker, { getItem: () => null, setItem: () => undefined });
+    sound.unlock();
+    const near = new GameSounds(sound);
+    const game = new Game(windYard(), 'normal', 'Yaarbro');
+    for (let i = 0; i < 4 * 60; i += 1) {
+      game.step(IDLE);
+      near.step(game);
+    }
+    expect(played).toContain('gust');
+    played.length = 0;
+    const far = new Game(buildGrove('normal'), 'normal', 'Yaarbro');
+    const sounds = new GameSounds(sound);
+    for (let i = 0; i < 6 * 60; i += 1) {
+      far.step(IDLE);
+      sounds.step(far);
+    }
+    expect(played).not.toContain('gust');
+  });
+});
+
+describe('the grove’s Windy Climb', () => {
+  it('needs no timing on Easy: the moss never falls, and the bough rests long at each end', () => {
+    const n = GROVE_DIFFICULTY.easy;
+    expect(n.mossFalls).toBe(false);
+    expect(n.mossSag).toBeLessThanOrEqual(n.ledgeHelp);
+    expect(n.windRest).toBeGreaterThanOrEqual(2);
+    expect(n.mossGap).toBeLessThan(1);
+    expect(n.windGap).toBeLessThan(1);
+  });
+
+  it('has a solid log to wait on before the first bough, so nobody has to wait on moss', () => {
+    for (const difficulty of DIFFICULTIES) {
+      const level = buildGrove(difficulty);
+      const at = level.route.indexOf('wind-bough-1');
+      const before = level.solids.find((s) => s.id === level.route[at - 1]);
+      expect(before?.id).toBe('wind-perch');
+      expect(before?.motion).toBeUndefined();
+    }
+  });
+
+  it('takes turns: when one bough rests high, the next rests low beside it, level with it', () => {
+    for (const difficulty of DIFFICULTIES) {
+      const game = new Game(buildGrove(difficulty), difficulty, 'Yaarbro');
+      const boughs = game.level.solids.filter((s) => s.motion?.kind === 'sway');
+      if (boughs.length < 2) continue;
+      for (let i = 0; i < 20 * 60; i += 1) {
+        game.step(IDLE);
+        if (boughs[0].piece?.phase === 'high') {
+          expect(boughs[1].piece?.phase, difficulty).toBe('rest');
+          expect(boughs[1].top).toBeCloseTo(boughs[0].top, 6);
+        }
+      }
+    }
+  });
+
+  it('has no enemy over the moss or the boughs', () => {
+    for (const difficulty of DIFFICULTIES) {
+      const level = buildGrove(difficulty);
+      const moving = level.solids.filter((s) => s.motion?.kind === 'crumble' || s.motion?.kind === 'sway');
+      for (const enemy of (level.enemies ?? []).filter((e) => !e.sidekickOf)) {
+        for (const piece of moving) expect(Math.hypot(enemy.x - piece.x, enemy.z - piece.z), `${enemy.id} on ${difficulty}`).toBeGreaterThan(6);
+      }
+    }
+  });
+});
