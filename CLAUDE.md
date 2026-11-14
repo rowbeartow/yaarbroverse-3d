@@ -86,6 +86,7 @@ Node 22 (`.nvmrc`).
 - Every level has Easy, Normal and Hard, with all its numbers in that level's `difficulty.ts`. After changing numbers run `npm test`: a bot plays each difficulty start to finish.
 - Keep rules out of `src/view` and drawing out of `src/game`.
 - Small pull requests with plain-words descriptions: what changed, how it was tested. Claude merges its own once the checks pass (see `docs/decisions.md`).
+- Standing permission (the owner's, 2026-11-14): while one pull request's checks run, push the next one's work to a backup branch named `claude/backup-<topic>`, so no work exists only on the session's machine. Each report says which backup branches can be deleted.
 - Backlog lives in GitHub Issues. New ideas become a one-line issue labeled `inbox`.
 - Record settled decisions in `docs/decisions.md`. Append only.
 - Keep `docs/session-handoff.md` true: what exists now, not plans written as if done.

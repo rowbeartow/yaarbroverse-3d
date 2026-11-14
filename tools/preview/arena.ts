@@ -465,7 +465,7 @@ const start = async (): Promise<void> => {
       putHero(at);
       follow = { ...at };
       bot = new Bot(level);
-      caption.textContent = 'The rule tests’ own player has the hero. It keeps moving round the chief, steps out of the line of an attack, and jumps on it when a hit will count. It uses walk and jump alone. When the fight is over it starts again.';
+      caption.textContent = 'The rule tests’ own player has the hero. It keeps moving round the chief, steps out of the line of an attack, looks a moment ahead to dodge what is coming, and jumps on it when a hit will count. It uses walk and jump alone. When the fight is over it starts again.';
     } else startBeat(0);
     const seconds = ENEMY.warning * (level.enemyTuning?.warning ?? 1);
     const numbers = place.bot ? level.boss?.numbers : undefined;

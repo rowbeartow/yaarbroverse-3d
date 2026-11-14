@@ -99,13 +99,6 @@ export const GROVE_SHAPE = {
   chiefHalfWidth: 8,
   chiefLength: 19,
   chiefDoorstep: 1.5,
-  /**
-   * The chief's bank sits this far to the left of the route, so a hero walks
-   * in a little right of its middle. The test bot's fight on Normal and Hard
-   * turns out differently with where it walks in: at this offset, and for
-   * a few tenths of a metre either side, it wins its first fight.
-   */
-  chiefAside: -0.8,
   chiefBegins: 4.8,
   /** The chief: 2.3 times a scout's size and darker. How far out its body reaches, how tall it is, and how far from the far edge it waits. */
   chiefScale: 2.3,
@@ -369,7 +362,7 @@ export function buildGrove(
   // difficulty, and a hero sent back stands on its doorstep, outside the fight.
   const boughTop = top;
   const chiefFrom = at;
-  box('bank-6', 'bank', at, at + shape.chiefLength, side + shape.chiefAside, shape.chiefHalfWidth, boughTop, shape.depth, {
+  box('bank-6', 'bank', at, at + shape.chiefLength, side, shape.chiefHalfWidth, boughTop, shape.depth, {
     safe: true,
     safeAt: { x: side, z: -(at + shape.chiefDoorstep) },
   });
