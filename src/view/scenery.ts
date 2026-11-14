@@ -10,7 +10,9 @@
 import {
   AdditiveBlending,
   BufferGeometry,
+  BoxGeometry,
   CircleGeometry,
+  ConeGeometry,
   CylinderGeometry,
   DoubleSide,
   Float32BufferAttribute,
@@ -754,7 +756,118 @@ export interface MovingView {
   holder: Group;
   /** The shape itself, its top at 0 in the holder. */
   body: Group;
+  /** Crumbling moss: bits that drop from under it during its tell. */
+  crumbs?: Array<{ mesh: Mesh; speed: number }>;
+  /** Windy bough: tufts of needles that shiver during its tell. */
+  needles?: Mesh[];
+  /** The phase it was in last frame, to notice when something begins. */
+  lastPhase?: string;
 }
+
+/**
+ * A pad of crumbling moss: a thick mat with a ragged edge that never reaches
+ * past where a hero can stand, lying on two thin rotten sticks that stay put
+ * when it falls.
+ */
+const mossPad = (s: Solid, materials: Materials): { shape: Group; view: MovingView } => {
+  const shape = new Group();
+  const holder = new Group();
+  const body = new Group();
+  const thickness = s.top - s.bottom;
+  const seed = bankSeed(s.x, s.z);
+  const outline = bankOutline(s.halfX, s.halfZ, MOVE.footRadius, seed);
+  const around = Math.max(28, Math.round(outline.length / 0.3));
+  const top = surface(4, around, (across, down, point) => {
+    const edge = outline.at(across);
+    const share = Math.sqrt(down);
+    point.x = edge.x * share;
+    // A little lumpy, never above the rules' top.
+    point.y = -0.04 * (1 - share) * Math.abs(noise(edge.x * 2 + seed, edge.z * 2));
+    point.z = edge.z * share;
+    point.s = (point.x + s.x) / 2;
+    point.t = (point.z + s.z) / 2;
+    point.moss = 1;
+  });
+  body.add(solid(top, materials.bark));
+  // The underside: moss and rotten wood hanging in tufts, narrowing as it goes down.
+  const sides = surface(4, around, (across, down, point) => {
+    const edge = outline.at(across);
+    const angle = Math.atan2(edge.z, edge.x);
+    const hang = 1 + 0.6 * Math.max(0, Math.sin(angle * 7 + seed));
+    const depth = down * thickness * hang;
+    const pull = 1 - 0.45 * down;
+    point.x = edge.x * pull;
+    point.y = -depth;
+    point.z = edge.z * pull;
+    point.s = across * 4;
+    point.t = depth;
+    point.moss = 1 - 0.6 * down;
+  }, { closed: true });
+  body.add(solid(sides, materials.bark));
+  holder.add(body);
+  shape.add(holder);
+  // Two thin rotten sticks under it, standing still.
+  for (const side of [-1, 1]) {
+    const stick = trunk(materials, 0.12, 0.2, UNDER, s.bottom - 0.05, s.z + side, { lean: side * 0.01 });
+    stick.position.set(s.x + side * s.halfX * 0.35, 0, s.z - side * s.halfZ * 0.3);
+    shape.add(stick);
+  }
+  // Crumbs, hidden until the tell.
+  const crumbs: MovingView['crumbs'] = [];
+  const bit = new BoxGeometry(0.09, 0.07, 0.09);
+  for (let i = 0; i < 10; i += 1) {
+    const mesh = new Mesh(bit, materials.bark);
+    mesh.visible = false;
+    shape.add(mesh);
+    crumbs.push({ mesh, speed: 0 });
+  }
+  const view: MovingView = { solid: s, holder, body, crumbs };
+  placeMoving(view, 0);
+  return { shape, view };
+};
+
+/**
+ * A windy bough: a mossy limb with tufts of needles, growing from a great
+ * trunk beside the route. Only the limb moves; the trunk stands still.
+ */
+const windyBough = (s: Solid, materials: Materials): { shape: Group; view: MovingView } => {
+  const shape = new Group();
+  const holder = new Group();
+  const thickness = s.top - s.bottom;
+  const body = log({ ...s, x: 0, z: 0, top: 0, bottom: -thickness }, materials, { mossiness: 1 });
+  // A short arm back to the trunk on the left, below the walking surface so it never looks like footing.
+  const armLength = 1.6;
+  const arm = trunk(materials, 0.22, 0.32, -armLength / 2, armLength / 2, s.z, { mossAtTop: 0.3 });
+  arm.rotation.z = Math.PI / 2;
+  arm.position.set(-s.halfX - armLength / 2 + 0.2, -thickness * 0.55, 0);
+  body.add(arm);
+  // Tufts of needles hanging off both sides, below the top.
+  const needles: Mesh[] = [];
+  const tuft = new ConeGeometry(0.32, 1.1, 7);
+  const count = Math.max(4, Math.round(s.halfZ * 1.6));
+  for (let i = 0; i < count; i += 1) {
+    for (const side of [-1, 1]) {
+      const mesh = new Mesh(tuft, materials.foliage);
+      const along = -s.halfZ + 0.4 + ((s.halfZ * 2 - 0.8) * (i + (side > 0 ? 0.5 : 0))) / count;
+      mesh.position.set(side * (s.halfX + 0.15), -thickness * 0.45, along);
+      mesh.rotation.z = side * 2.4;
+      mesh.userData.rest = mesh.rotation.z;
+      body.add(mesh);
+      needles.push(mesh);
+    }
+  }
+  holder.add(body);
+  shape.add(holder);
+  // The great trunk it grows from.
+  const motion = s.motion?.kind === 'sway' ? s.motion : null;
+  const reach = (motion?.rise ?? 0) + 9;
+  const great = trunk(materials, 0.9, 1.3, UNDER, s.top + reach, s.x + s.z, { mossAtTop: 0 });
+  great.position.set(s.x - s.halfX - armLength - 0.5, 0, s.z);
+  shape.add(great);
+  const view: MovingView = { solid: s, holder, body, needles };
+  placeMoving(view, 0);
+  return { shape, view };
+};
 
 /**
  * A tipping log: a log balanced on a snag at its middle. It is drawn with its
@@ -777,8 +890,8 @@ const tippingLog = (s: Solid, materials: Materials): { shape: Group; view: Movin
   return { shape, view };
 };
 
-/** Puts a moving piece where the rules say it is now. `time` drives the shake of a tell. */
-export const placeMoving = (view: MovingView, time: number): void => {
+/** Puts a moving piece where the rules say it is now. `time` drives the shake of a tell; `dt` is the seconds since the last frame. */
+export const placeMoving = (view: MovingView, time: number, dt = 0): void => {
   const { solid: s, holder, body } = view;
   holder.position.set(s.x, s.top, s.z);
   if (s.motion?.kind === 'tip') {
@@ -790,6 +903,38 @@ export const placeMoving = (view: MovingView, time: number): void => {
     body.scale.z = 1 / Math.cos(angle);
     // The tell: it rocks from side to side about its length.
     holder.rotation.z = s.piece?.phase === 'tell' ? Math.sin(time * 38) * 0.03 : 0;
+  } else if (s.motion?.kind === 'crumble') {
+    const phase = s.piece?.phase ?? 'rest';
+    holder.visible = phase !== 'gone';
+    // The tell: it shivers, and crumbs drop from under it.
+    const telling = phase === 'tell';
+    holder.position.x = s.x + (telling ? Math.sin(time * 70) * 0.025 : 0);
+    if (view.crumbs) {
+      if ((telling || phase === 'fall') && view.lastPhase !== phase) {
+        view.crumbs.forEach((crumb, i) => {
+          const a = i * 2.39996;
+          const r = 0.25 + ((i * 0.37) % 1) * 0.7;
+          crumb.mesh.position.set(s.x + Math.cos(a) * s.halfX * r, s.bottom - 0.05, s.z + Math.sin(a) * s.halfZ * r);
+          crumb.speed = -0.4 * (i % 3);
+          crumb.mesh.visible = true;
+        });
+      }
+      for (const crumb of view.crumbs) {
+        if (!crumb.mesh.visible) continue;
+        crumb.speed += 9 * dt;
+        crumb.mesh.position.y -= crumb.speed * dt;
+        crumb.mesh.rotation.x += 12 * dt;
+        if (crumb.mesh.position.y < MIST_BOTTOM) crumb.mesh.visible = false;
+      }
+    }
+    view.lastPhase = phase;
+  } else if (s.motion?.kind === 'sway') {
+    // The tell: the needles shiver and the bough trembles.
+    const telling = s.piece?.telling ?? false;
+    holder.position.x = s.x + (telling ? Math.sin(time * 55) * 0.02 : 0);
+    view.needles?.forEach((tuft, i) => {
+      tuft.rotation.z = tuft.userData.rest + (telling ? Math.sin(time * 45 + i) * 0.25 : Math.sin(time * 1.3 + i) * 0.04);
+    });
   }
 };
 
@@ -814,8 +959,8 @@ export const buildSolids = (level: Level, materials: Materials, decor: Decor, ra
   const pieces: LevelSolids['pieces'] = [];
   for (const s of level.solids) {
     const shape = new Group();
-    if (s.motion?.kind === 'tip') {
-      const made = tippingLog(s, materials);
+    if (s.motion) {
+      const made = s.motion.kind === 'tip' ? tippingLog(s, materials) : s.motion.kind === 'crumble' ? mossPad(s, materials) : windyBough(s, materials);
       shape.add(made.shape);
       moving.push(made.view);
     } else if (s.kind === 'mushroom') {

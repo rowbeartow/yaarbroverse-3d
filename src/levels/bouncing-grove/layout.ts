@@ -9,8 +9,8 @@
 //   4. The Tipping Logs: a mushroom, a high log, logs that tip under the hero
 //      across open air, up to a mossy ledge.
 //   5. The High Boughs: narrow boughs that turn left twice, with a gap at the corners.
-//   6. The Climb: a mushroom, a high log, tall snags, mushrooms over open air,
-//      up to a wide mossy bank at the top.
+//   6. The Windy Climb: a mushroom, a high log, crumbling moss, a log to wait
+//      on, then boughs that rise and sink in the wind, up to a wide mossy bank.
 //   7. The Marmot Chief: the wide bank is the chief's. Beat it, and the way
 //      is open to the big bough where the golden leaf is tucked in the canopy.
 
@@ -31,6 +31,8 @@ export const GROVE_HINTS: Record<string, string> = {
   'high-log': 'These logs tip under you. Keep moving!',
   'bank-4': 'Follow the boughs. They turn!',
   'bank-5': 'One more climb. The golden leaf is close.',
+  'climb-log': 'The moss crumbles. Keep moving!',
+  'wind-bough-1': 'Ride the bough. Step off when it stops.',
   'bank-6': 'This is the marmot chief’s bank. Step in when you are ready.',
 };
 
@@ -57,6 +59,10 @@ export const GROVE_SHAPE = {
   boughAcross: 10,
   boughAcrossShort: 8,
   logThickness: 1,
+  /** The solid log between the crumbling moss and the windy boughs, where a hero can wait. */
+  perchLength: 3,
+  /** How thick a pad of crumbling moss is. */
+  mossThickness: 0.5,
   /**
    * The enemies. The first scout waits to the left of the way through the
    * clearing, in its far half. The second waits to the left on the bank at the
@@ -93,6 +99,13 @@ export const GROVE_SHAPE = {
   chiefHalfWidth: 8,
   chiefLength: 19,
   chiefDoorstep: 1.5,
+  /**
+   * The chief's bank sits this far to the left of the route, so a hero walks
+   * in a little right of its middle. The test bot's fight on Normal and Hard
+   * turns out differently with where it walks in: at this offset, and for
+   * a few tenths of a metre either side, it wins its first fight.
+   */
+  chiefAside: -0.8,
   chiefBegins: 4.8,
   /** The chief: 2.3 times a scout's size and darker. How far out its body reaches, how tall it is, and how far from the far edge it waits. */
   chiefScale: 2.3,
@@ -313,8 +326,8 @@ export function buildGrove(
   });
   at += shape.restBankLength;
 
-  // ---- Section 6: The Climb ----
-  section('The Climb');
+  // ---- Section 6: The Windy Climb ----
+  section('The Windy Climb');
   // A mushroom at the far end of the bank, and a high log reached by bouncing.
   capTop = bank5.top + shape.mushroomCapHeight;
   round('climb-mushroom-1', 'mushroom', at - 1.8, side, n.mushroomRadius, capTop, bank5.top, {
@@ -325,52 +338,48 @@ export function buildGrove(
   box('climb-log', 'log', at, at + shape.highLogLength, side, n.logWidth / 2 + 0.2, top, top - shape.logThickness);
   at += shape.highLogLength;
 
-  // Tall snags, stepping left and right and climbing, like the stumps but high up.
-  let snagX = side - shape.stumpSideStep;
-  let snagAt = at + n.stumpGap + n.stumpRadius;
-  for (let i = 0; i < n.snagCount; i += 1) {
-    if (i > 0) {
-      const nextX = 2 * side - snagX;
-      const between = 2 * n.stumpRadius + n.stumpGap;
-      snagAt += Math.sqrt(Math.max(between * between - (nextX - snagX) ** 2, 0));
-      snagX = nextX;
-    }
-    top += n.stumpRise;
-    round(`snag-${i + 1}`, 'stump', snagAt, snagX, n.stumpRadius, top, shape.depth);
+  // Crumbling moss in a straight line, level with the high log.
+  for (let i = 0; i < n.mossCount; i += 1) {
+    at += n.mossGap;
+    box(`moss-${i + 1}`, 'moss', at, at + n.mossSize, side, n.mossSize / 2, top, top - shape.mossThickness, {
+      motion: { kind: 'crumble', tell: n.mossTell, falls: n.mossFalls, sag: n.mossSag, back: n.mossBack },
+    });
+    at += n.mossSize;
   }
 
-  // Mushrooms over open air, a little below the last snag.
-  capTop = top - 0.6;
-  let mushroomX = side;
-  let mushroomAt = snagAt + n.stumpRadius + n.mushroomGap + n.mushroomRadius;
-  for (let i = 0; i < n.climbMushrooms; i += 1) {
-    if (i > 0) {
-      const nextX = mushroomX === side ? side + shape.mushroomSideStep : 2 * side - mushroomX;
-      const between = 2 * n.mushroomRadius + n.mushroomGap;
-      mushroomAt += Math.sqrt(Math.max(between * between - (nextX - mushroomX) ** 2, 0));
-      mushroomX = nextX;
-    }
-    round(`climb-mushroom-${i + 2}`, 'mushroom', mushroomAt, mushroomX, n.mushroomRadius, capTop, shape.depth, {
-      bounce: shape.mushroomBounce,
+  // A short, solid log after the moss: somewhere to wait for the first bough to come down.
+  at += n.mossGap;
+  box('wind-perch', 'log', at, at + shape.perchLength, side, n.logWidth / 2 + 0.2, top, top - shape.logThickness);
+  at += shape.perchLength;
+
+  // Windy boughs that rise and sink, each starting where the one before stops,
+  // and taking turns: when one rests high, the next rests low beside it.
+  const windPeriod = 2 * (n.windRest + n.windMove);
+  for (let i = 0; i < n.windCount; i += 1) {
+    at += n.windGap;
+    box(`wind-bough-${i + 1}`, 'bough', at, at + n.windLength, side, n.boughWidth / 2, top, top - shape.logThickness, {
+      motion: { kind: 'sway', rise: n.windRise, rest: n.windRest, move: n.windMove, tell: n.windTell, start: (n.windStart + i * 0.5) * windPeriod },
     });
+    top += n.windRise;
+    at += n.windLength;
   }
-  at = mushroomAt + n.mushroomRadius + n.mushroomGap;
+  at += n.windGap;
 
   // The wide bank at the top: the marmot chief's. It is safe on every
   // difficulty, and a hero sent back stands on its doorstep, outside the fight.
-  const boughTop = capTop + shape.boughRise;
+  const boughTop = top;
   const chiefFrom = at;
-  box('bank-6', 'bank', at, at + shape.chiefLength, mushroomX, shape.chiefHalfWidth, boughTop, shape.depth, {
+  box('bank-6', 'bank', at, at + shape.chiefLength, side + shape.chiefAside, shape.chiefHalfWidth, boughTop, shape.depth, {
     safe: true,
-    safeAt: { x: mushroomX, z: -(at + shape.chiefDoorstep) },
+    safeAt: { x: side, z: -(at + shape.chiefDoorstep) },
   });
   at += shape.chiefLength;
 
   // ---- Section 7: The Marmot Chief ----
   section('The Marmot Chief');
   // The big bough of the great cedar, reaching out from the far side of the chief's bank, and the golden leaf.
-  box('bough', 'bough', at, at + shape.boughLength, mushroomX, shape.boughHalfWidth, boughTop, boughTop - 1.2);
-  const leafX = mushroomX;
+  box('bough', 'bough', at, at + shape.boughLength, side, shape.boughHalfWidth, boughTop, boughTop - 1.2);
+  const leafX = side;
 
   // ---- The enemies ----
   // Only where the route left room for them (see docs/decisions.md): the

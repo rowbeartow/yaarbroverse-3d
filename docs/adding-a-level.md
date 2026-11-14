@@ -16,7 +16,7 @@ Make `src/levels/<id>/` with three files:
 
 1. **`difficulty.ts`**: every Easy, Normal and Hard number for the level, in one table, with a comment on each number saying what it does. Also the three one-line blurbs for the start screen. Every level needs `hearts`, `protection`, `knockback`, `coyoteTime` and `ledgeHelp`; if it has enemies, `enemyWarning`, `enemySpeed` and `enemyRest` too, and if its scouts walk a beat and give chase or its mosquito keeps up, the grove's `scoutPatrol`, `scoutChase`, `mosquitoFollow`, `mosquitoHover` and `mosquitoPause`. Start from the grove's values for those.
 2. **`layout.ts`**: one function, `build<Name>(difficulty)`, that returns a `Level` (`src/game/level.ts`) built from those numbers. No drawing code.
-   - `solids`: everything to stand on. Kinds that already draw: `bank`, `log`, `stump`, `shelf`, `mushroom` (give it `bounce`), `bough`. Mark checkpoints `safe: true`. A solid can also move: see "Pieces that move" below.
+   - `solids`: everything to stand on. Kinds that already draw: `bank`, `log`, `stump`, `shelf`, `mushroom` (give it `bounce`), `bough`, `moss` (crumbling moss only). Mark checkpoints `safe: true`. A solid can also move: see "Pieces that move" below.
    - `spawn` must be on a safe solid. `leaf` is the goal.
    - `route`: the ids of the solids in the order a run crosses them. The test bot follows it, so it must be complete and in order.
    - `sections`, `hints` (shown the first time a hero stands on that solid) and `goalLine` are optional.
@@ -58,7 +58,12 @@ Every moving piece has a tell before it moves (it shakes, and a sound plays), ca
 
 - **Tipping log**: `motion: { kind: 'tip', tell, dip, rate }` on a `log` that runs along the route (longer front to back than side to side). It rests on a snag at its middle. A moment after a hero lands (`tell` seconds of creaking and rocking), the end the hero stands on sinks, up to `dip` metres at the very end, at `rate` metres a second. With nobody on it, it settles back level. A fall puts it back level. The grove's section 4, The Tipping Logs, is the example: `tip*` in its `difficulty.ts`. Keep `dip` plus the rise to the next piece well under a full jump (about 2 metres), and on Easy under half of one.
 
-The test bot copes with moving pieces on its own: it reads each piece where it is now, never lingers, and does not take walking down a tilted log for an edge.
+- **Crumbling moss**: `motion: { kind: 'crumble', tell, falls, sag, back }` on a `moss` solid (a mossy pad on thin rotten sticks). The moment a hero lands it shivers and drops crumbs (`tell` seconds), then falls into the mist and grows back `back` seconds later. With `falls: false` it only sags `sag` metres, holds a hero as long as they like, and rises back once left: that is the Easy version. A fall puts it back whole. Never make a hero wait on crumbling moss: put something solid before anything that has to be waited for.
+- **Windy bough**: `motion: { kind: 'sway', rise, rest, move, tell, start }` on a `bough`. It keeps the wind's rhythm whether anyone is on it or not: rests low, rises `rise` metres over `move` seconds, rests high, sinks back. The last `tell` seconds of each rest are the tell (a gust, its needles shiver). `start` is how far into its rhythm it is when a run begins, in seconds; boughs in a row take turns when each starts half a rhythm after the one before. Make its low rest level with what comes before it and its high rest level with what comes after, so a hero steps on and off without a jump.
+
+The grove's section 6, The Windy Climb, has both: `moss*` and `wind*` in its `difficulty.ts`.
+
+The test bot copes with moving pieces on its own: it reads each piece where it is now, never lingers, does not take walking down a tilted log for an edge, and waits at the edge (or on the bough) until a windy bough is resting level with where it is going, for long enough to get across.
 
 ## New enemies
 

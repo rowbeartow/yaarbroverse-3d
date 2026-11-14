@@ -94,9 +94,9 @@ describe('falling in the Bouncing Grove', () => {
   });
 
   it('a fall on the last climb returns to the bank below it on Easy and Normal, and to the ledge on Hard', () => {
-    expect(fallFrom('easy', 'snag-1').groundId).toBe('bank-5');
-    expect(fallFrom('normal', 'snag-2').groundId).toBe('bank-5');
-    expect(fallFrom('hard', 'snag-2').groundId).toBe('bank-4');
+    expect(fallFrom('easy', 'moss-1').groundId).toBe('bank-5');
+    expect(fallFrom('normal', 'wind-perch').groundId).toBe('bank-5');
+    expect(fallFrom('hard', 'wind-perch').groundId).toBe('bank-4');
   });
 
   it('a fall in the ravine returns to the clearing', () => {

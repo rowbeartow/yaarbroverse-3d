@@ -388,7 +388,7 @@ export class GroveView {
     }
 
     // Pieces that move, where the rules have them now.
-    for (const piece of levelView.moving) placeMoving(piece, this.clock);
+    for (const piece of levelView.moving) placeMoving(piece, this.clock, dt);
 
     // Mushrooms and the golden leaf.
     for (const mushroom of levelView.mushrooms.values()) animateMushroom(mushroom, dt);

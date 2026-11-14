@@ -117,7 +117,7 @@ describe('the seven sections', () => {
         'The Ravine',
         'The Tipping Logs',
         'The High Boughs',
-        'The Climb',
+        'The Windy Climb',
         'The Marmot Chief',
       ]);
     }

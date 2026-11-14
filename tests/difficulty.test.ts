@@ -42,8 +42,13 @@ describe('Bouncing Grove difficulty numbers', () => {
     for (const difficulty of DIFFICULTIES) {
       const numbers = GROVE_DIFFICULTY[difficulty];
       expect(Object.keys(numbers).sort()).toEqual(names);
-      // Every number is above zero, but for the two that switch a scout's walking and chasing off.
-      const { scoutPatrol, scoutChase, enemyAimLine, chief, ...rest } = numbers;
+      // Every other number is above zero, but for the two that switch a scout's walking and chasing off.
+      const { scoutPatrol, scoutChase, enemyAimLine, chief, mossFalls, mossSag, windStart, ...rest } = numbers;
+      // Whether moss falls is a switch; how far it sags is 0 where it falls; the boughs' rhythm may start anywhere.
+      expect(typeof mossFalls).toBe('boolean');
+      expect(mossSag).toBeGreaterThanOrEqual(0);
+      expect(windStart).toBeGreaterThanOrEqual(0);
+      expect(windStart).toBeLessThan(1);
       // The chief's numbers have their own tests (tests/chief.test.ts).
       expect(chief.health).toBeGreaterThan(0);
       expect(typeof enemyAimLine).toBe('boolean');
@@ -64,14 +69,14 @@ describe('Bouncing Grove difficulty numbers', () => {
   });
 
   it('gives Easy the shortest jumps and Hard the longest', () => {
-    for (const key of ['firstLogGap', 'logGap', 'stumpGap', 'stumpRise', 'shelfGap', 'shelfStep', 'mushroomGap', 'boughGap'] as const) {
+    for (const key of ['firstLogGap', 'logGap', 'stumpGap', 'stumpRise', 'shelfGap', 'shelfStep', 'tipGap', 'mossGap', 'windGap', 'boughGap'] as const) {
       expect(easy[key]).toBeLessThan(normal[key]);
       expect(normal[key]).toBeLessThan(hard[key]);
     }
   });
 
-  it('gives Easy the fewest stumps, tipping logs and mushrooms to cross and Hard the most', () => {
-    for (const key of ['stumpCount', 'tipCount', 'snagCount', 'climbMushrooms'] as const) {
+  it('gives Easy the fewest stumps, tipping logs and moss pads to cross and Hard the most', () => {
+    for (const key of ['stumpCount', 'tipCount', 'mossCount'] as const) {
       expect(easy[key]).toBeLessThan(normal[key]);
       expect(normal[key]).toBeLessThan(hard[key]);
     }
@@ -106,13 +111,12 @@ describe.each(DIFFICULTIES)('the grove built on %s', (difficulty) => {
 
   it('uses the numbers from the difficulty file', () => {
     expect(byId(level, 'log-1').halfX * 2).toBeCloseTo(numbers.logWidth, 5);
-    // The opening logs, two along the bottom of the ravine, the two high logs and the tipping logs.
-    expect(count(level, 'log')).toBe(numbers.logCount + 4 + numbers.tipCount);
+    // The opening logs, two along the bottom of the ravine, the two high logs, the tipping logs and the log before the windy boughs.
+    expect(count(level, 'log')).toBe(numbers.logCount + 5 + numbers.tipCount);
     expect(airBetween(byId(level, 'log-1'), byId(level, 'log-2'))).toBeCloseTo(numbers.firstLogGap, 5);
     expect(airBetween(byId(level, 'log-2'), byId(level, 'log-3'))).toBeCloseTo(numbers.logGap, 5);
-    // Stumps low down, and tall snags on the last climb.
-    expect(count(level, 'stump')).toBe(numbers.stumpCount + numbers.snagCount);
-    expect(byId(level, 'snag-1').halfX).toBe(numbers.stumpRadius);
+    // Stumps low down, and none anywhere else.
+    expect(count(level, 'stump')).toBe(numbers.stumpCount);
     expect(byId(level, 'stump-1').halfX).toBe(numbers.stumpRadius);
     expect(airBetween(byId(level, 'stump-1'), byId(level, 'stump-2'))).toBeCloseTo(numbers.stumpGap, 5);
     expect(byId(level, 'stump-2').top - byId(level, 'stump-1').top).toBeCloseTo(numbers.stumpRise, 5);
@@ -125,8 +129,8 @@ describe.each(DIFFICULTIES)('the grove built on %s', (difficulty) => {
     expect(clearing.z - clearing.halfZ - (firstShelf.z + firstShelf.halfZ)).toBeCloseTo(numbers.shelfGap, 5);
     expect(clearing.top - firstShelf.top).toBeCloseTo(numbers.shelfStep, 5);
     expect(byId(level, 'bank-3').top).toBeCloseTo(clearing.top, 5);
-    // One mushroom springs up to each high log; the last climb has a chain as well.
-    expect(count(level, 'mushroom')).toBe(1 + numbers.climbMushrooms + 1);
+    // One mushroom springs up to each high log, and there are no others.
+    expect(count(level, 'mushroom')).toBe(2);
     expect(byId(level, 'mushroom-1').halfX).toBe(numbers.mushroomRadius);
     // The tipping logs: as many, as long and as far apart as the numbers say, each a little higher.
     const tips = level.solids.filter((s) => s.motion?.kind === 'tip');
@@ -135,6 +139,20 @@ describe.each(DIFFICULTIES)('the grove built on %s', (difficulty) => {
     expect(airBetween(byId(level, 'high-log'), tips[0])).toBeCloseTo(numbers.tipGap, 5);
     expect(airBetween(tips[tips.length - 1], byId(level, 'bank-4'))).toBeCloseTo(numbers.tipGap, 5);
     for (let i = 1; i < tips.length; i += 1) expect(tips[i].top - tips[i - 1].top).toBeCloseTo(numbers.tipRise, 5);
+    // Crumbling moss, level with the high log of the last climb, then a log to wait on, then the windy boughs.
+    const moss = level.solids.filter((s) => s.motion?.kind === 'crumble');
+    expect(moss.length).toBe(numbers.mossCount);
+    expect(moss[0].halfZ * 2).toBeCloseTo(numbers.mossSize, 5);
+    expect(airBetween(byId(level, 'climb-log'), moss[0])).toBeCloseTo(numbers.mossGap, 5);
+    for (const pad of moss) expect(pad.top).toBeCloseTo(byId(level, 'climb-log').top, 5);
+    expect(airBetween(moss[moss.length - 1], byId(level, 'wind-perch'))).toBeCloseTo(numbers.mossGap, 5);
+    const boughs = level.solids.filter((s) => s.motion?.kind === 'sway');
+    expect(boughs.length).toBe(numbers.windCount);
+    expect(airBetween(byId(level, 'wind-perch'), boughs[0])).toBeCloseTo(numbers.windGap, 5);
+    expect(boughs[0].halfX * 2).toBeCloseTo(numbers.boughWidth, 5);
+    // Each windy bough rests low level with what comes before it, and rests high level with what comes after.
+    const after = [...boughs.slice(1), byId(level, 'bank-6')];
+    boughs.forEach((bough, i) => expect(bough.top + numbers.windRise).toBeCloseTo(after[i].top, 5));
     // The first bank is always safe, and so is the chief's at the top; the others are safe when the list names them.
     const banks = level.solids.filter((s) => s.kind === 'bank');
     expect(banks.map((s) => s.safe === true)).toEqual(banks.map((s, i) => i === 0 || s.id === 'bank-6' || numbers.checkpoints.includes(i)));
@@ -189,8 +207,8 @@ describe.each(DIFFICULTIES)('the grove built on %s', (difficulty) => {
     const top = byId(level, 'bank-6');
     const bough = byId(level, 'bough');
     expect(byId(level, 'climb-log').top).toBeGreaterThan(bank.top + fullJumpHeight());
-    expect(byId(level, `snag-${numbers.snagCount}`).top).toBeGreaterThan(byId(level, 'climb-log').top);
-    expect(top.top).toBeGreaterThan(byId(level, `snag-${numbers.snagCount}`).top);
+    // The windy boughs carry the hero the rest of the way up.
+    expect(top.top).toBeCloseTo(byId(level, 'climb-log').top + numbers.windCount * numbers.windRise, 5);
     expect(bough.top).toBe(top.top);
     // The bough starts where the bank ends: no gap to jump between the chief and the leaf.
     expect(bough.z + bough.halfZ).toBeCloseTo(top.z - top.halfZ, 5);
@@ -219,7 +237,9 @@ describe.each(DIFFICULTIES)('the grove built on %s', (difficulty) => {
       if (from.bounce) continue; // Leaving a mushroom is a bounce, checked below.
       const air = airBetween(from, to);
       if (air <= 0) continue; // Touching or overlapping: a walk or a hop up.
-      expect(air, `${from.id} to ${to.id}`).toBeLessThanOrEqual(jumpReach(to.top - from.top) * 0.8);
+      // A windy bough is left from where it rests high, and is reached where it rests low.
+      const fromTop = from.motion?.kind === 'sway' ? from.top + from.motion.rise : from.top;
+      expect(air, `${from.id} to ${to.id}`).toBeLessThanOrEqual(jumpReach(to.top - fromTop) * 0.8);
     }
   });
 
