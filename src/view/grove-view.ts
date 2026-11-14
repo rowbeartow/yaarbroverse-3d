@@ -30,6 +30,7 @@ import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPass.js';
 import type { Game, GameEvent } from '../game/game';
 import { MOVE, type HeroName } from '../game/hero';
+import { SWIM } from '../game/swim';
 import { surfaceBelow, topAt, type Level } from '../game/level';
 import { loadAssets, type Assets } from './assets';
 import type { GhostPose } from '../game/ghost';
@@ -147,6 +148,8 @@ export class GroveView {
   private size = { width: 1, height: 1 };
   /** Water events waiting for the next frame, which knows where the hero is. */
   private swimEvents: GameEvent[] = [];
+  /** Climbing out of the water, until the hero stands on what it climbed onto. */
+  private climbingOut = false;
   /** How far into the underwater look the picture is, 0 to 1. */
   private under = 0;
   /** Seconds until the next ring behind a swimmer at the surface, and the next bubbles from one underwater. */
@@ -322,7 +325,12 @@ export class GroveView {
         if (mushroom) mushroom.sinceBounce = 0;
         this.hero?.react('bounce');
       } else if (event.type === 'jump') this.hero?.react('jump');
-      else if (event.type === 'land') this.hero?.react('land');
+      else if (event.type === 'land') {
+        this.hero?.react('land');
+        // Landing at the end of climbing out of the water: shake it off.
+        if (this.climbingOut) this.hero?.react('out');
+        this.climbingOut = false;
+      } else if (event.type === 'climb') this.climbingOut = true;
       else if (event.type === 'fall') {
         this.blink = MOVE.returnPause;
       } else if (event.type === 'strike') {
@@ -331,7 +339,7 @@ export class GroveView {
       } else if (event.type === 'boss' && event.what === 'hit') this.boss?.strike();
       else if (event.type === 'boss' && event.what === 'beaten') this.sinceOpen = 0;
       else if (event.type === 'goal') this.sinceGoal = 0;
-      else if (event.type === 'splash' || event.type === 'dive' || event.type === 'surface' || event.type === 'climb') this.swimEvents.push(event);
+      if (event.type === 'splash' || event.type === 'dive' || event.type === 'surface' || event.type === 'climb') this.swimEvents.push(event);
     }
   }
 
@@ -380,6 +388,8 @@ export class GroveView {
         rise: game.vy,
         rolling: game.rolling,
         pounce: game.pouncing > 0 ? 1 - game.pouncing / MOVE.pounceTime : null,
+        water: game.swimming ? (game.under ? 'under' : 'surface') : null,
+        climbing: game.climbing > 0 ? 1 - game.climbing / SWIM.climbTime : null,
       },
       dt,
     );
@@ -392,7 +402,16 @@ export class GroveView {
         this.ghost.root.position.set(ghostPose.x, ghostPose.y, ghostPose.z);
         this.ghost.root.rotation.y = ghostPose.facing;
         this.ghost.animate(
-          { pace: ghostPose.pace, grounded: ghostPose.grounded, rise: ghostPose.rise, rolling: ghostPose.rolling, pounce: ghostPose.pouncing ? 0.5 : null },
+          {
+            pace: ghostPose.pace,
+            grounded: ghostPose.grounded,
+            rise: ghostPose.rise,
+            rolling: ghostPose.rolling,
+            pounce: ghostPose.pouncing ? 0.5 : null,
+            // A ghost swims with the hero's own swimming clips.
+            water: ghostPose.swimming ? (ghostPose.under ? 'under' : 'surface') : null,
+            climbing: ghostPose.climbing ? 0.5 : null,
+          },
           dt,
         );
         const apart = Math.hypot(ghostPose.x - x, ghostPose.y - y, ghostPose.z - z);

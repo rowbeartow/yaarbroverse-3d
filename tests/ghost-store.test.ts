@@ -24,13 +24,16 @@ const biggest = (): Ghost => ({
     grounded: i % 2 === 0,
     rolling: i % 3 === 0,
     pouncing: i % 5 === 0,
+    swimming: i % 7 === 0,
+    under: i % 14 === 0,
+    climbing: i % 11 === 0,
     cut: false,
   })),
 });
 const small = (steps = 120): Ghost => ({
   interval: 4,
   steps,
-  samples: Array.from({ length: steps / 4 + 1 }, (_, i) => ({ x: i * 0.1, y: 0, z: -i, facing: 0, grounded: true, rolling: false, pouncing: false, cut: false })),
+  samples: Array.from({ length: steps / 4 + 1 }, (_, i) => ({ x: i * 0.1, y: 0, z: -i, facing: 0, grounded: true, rolling: false, pouncing: false, swimming: false, under: false, climbing: false, cut: false })),
 });
 
 /** Lets the stand-in database finish what it was asked to do. */

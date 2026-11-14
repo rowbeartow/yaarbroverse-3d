@@ -42,8 +42,8 @@ describe('the hero model files', () => {
     });
   }
 
-  it('Yaarbro: holds one clip from each of his Meshy files', () => {
-    expect(clipNames('yaarbro.glb').sort()).toEqual(['idle', 'jump', 'landing', 'roll', 'run', 'walk']);
+  it('Yaarbro: holds one clip from each of his Meshy files, and his four swimming clips', () => {
+    expect(clipNames('yaarbro.glb').sort()).toEqual(['climb', 'idle', 'jump', 'landing', 'roll', 'run', 'swim', 'tread', 'underwater', 'walk']);
   });
 
   it('Yaarbro: every clip happens on the spot, because the rules own where he is', () => {
@@ -87,7 +87,7 @@ describe('the hero model files', () => {
   });
 
   it('Caputo: holds every clip the rig script writes', () => {
-    expect(clipNames('caputo.glb').sort()).toEqual(['falling', 'idle', 'jump', 'landing', 'pounce', 'run', 'trot', 'walk']);
+    expect(clipNames('caputo.glb').sort()).toEqual(['falling', 'idle', 'jump', 'landing', 'paddle', 'pounce', 'run', 'shake', 'trot', 'underwater', 'walk']);
   });
 
   it('Caputo: has a spine, neck and head, shoulder blades, ears, four legs of three bones, and a tail of at least five', () => {

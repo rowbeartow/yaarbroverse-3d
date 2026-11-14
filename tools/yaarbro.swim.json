@@ -1,0 +1,17 @@
+{
+  "about": "Yaarbro's swimming clips, made by tools/meshy-rig-animate.mjs. The rig is Meshy's default skeleton, the same his other Meshy files have. tread, surface and climb_out come from Meshy's animation library; underwater was made from these words with Text to Motion, because the library has no underwater swim.",
+  "model_url": "https://github.com/rowbeartow/yaarbroverse-3d/releases/download/hero-models/Meshy_AI_Animation_Idle_11_withSkin.glb",
+  "height_meters": 1.8,
+  "library": [
+    { "name": "tread", "action_id": 568, "library_name": "Swim Idle" },
+    { "name": "surface", "action_id": 569, "library_name": "Swim Forward" },
+    { "name": "climb_out", "action_id": 570, "library_name": "Swimming to Edge" }
+  ],
+  "motions": [
+    {
+      "name": "underwater",
+      "prompt": "A person swims underwater with the body stretched out level and face down, doing a slow, steady breaststroke: arms sweep forward together, out and back to the sides, while the legs do a frog kick, then a short glide. Smooth and calm, staying in place, loops cleanly.",
+      "duration": 3
+    }
+  ]
+}

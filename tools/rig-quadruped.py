@@ -1122,8 +1122,77 @@ class Quadruped:
         seconds = self.LANDING_SECONDS
         self.shape(keyed(self.LANDING, phase), time=phase * seconds, lag=0.04, tail=lambda at: keyed(self.LANDING, max(0.0, at) / seconds)['tail'])
 
+    # ----- Swimming (milestone eight) -----
+
+    def paddle(self, phase):
+        """
+        The dog-paddle, at the surface. The body is tipped nose up with the
+        head held high out of the water. The front paws work in turn in tight
+        circles under the chest, reaching forward high and pulling down and
+        back, and the hind legs kick back in turn, slower and lower. The tail
+        streams out behind and swings a little to steady him.
+        """
+        bob = wave(phase * 2, 0.0)
+        self.trunk(rise=0.015 * bob, lean=16 + 1.5 * bob, arch=-4, hips_roll=2 * wave(phase, 0.0), chest_roll=-2 * wave(phase, 0.0))
+        self.blade('l', rise=0.03 * max(0.0, wave(phase, 0.0)))
+        self.blade('r', rise=0.03 * max(0.0, wave(phase, 0.5)))
+        self.head(follow=0.2, turn=pitch(-14 + 2 * bob), shift=Vector((0, 0, 0.04)))
+        for leg, offset in (('front_l', 0.0), ('front_r', 0.5)):
+            a = (phase + offset) * 2 * math.pi
+            # A circle: forward and up, then down and back under the chest.
+            self.paw(leg, forward=0.24 + 0.17 * math.cos(a), lift=0.26 + 0.13 * math.sin(a), toes=-25 + 35 * math.sin(a), out=0.03)
+        for leg, offset in (('hind_l', 0.25), ('hind_r', 0.75)):
+            a = (phase + offset) * 2 * math.pi
+            self.paw(leg, forward=-0.16 + 0.1 * math.cos(a), lift=0.08 + 0.05 * math.sin(a), toes=-40 + 15 * math.cos(a), out=0.05)
+        self.tail_curve(phase, sway=lambda at: 14 * wave(at, 0.0), lift=lambda at: -105 + 6 * wave(at * 2, 0.25), lag=0.06)
+
+    def underwater(self, phase):
+        """
+        Swimming underwater: long and level, head forward along the body. The
+        front legs reach ahead together and sweep back along his sides, the
+        hind legs kick back together half a stroke later, and the body flexes
+        with each push while the tail waves behind like a rudder.
+        """
+        a = phase * 2 * math.pi
+        sweep = math.cos(a)
+        kick = math.cos(a - math.pi * 0.6)
+        self.trunk(rise=0.01 * math.sin(a), lean=-2 + 3 * math.sin(a), arch=-10 + 6 * kick)
+        self.blade('l', rise=0.03 * max(0.0, sweep))
+        self.blade('r', rise=0.03 * max(0.0, sweep))
+        self.head(follow=0.55, turn=pitch(-6))
+        for leg in ('front_l', 'front_r'):
+            self.paw(leg, forward=0.14 + 0.16 * sweep, lift=0.12 + 0.06 * math.sin(a), toes=-30 + 25 * sweep, out=0.04 + 0.04 * max(0.0, -sweep))
+        for leg in ('hind_l', 'hind_r'):
+            self.paw(leg, forward=-0.3 + 0.14 * kick, lift=0.12 + 0.03 * math.sin(a), toes=-60 + 20 * kick, out=0.05)
+        self.tail_curve(phase, sway=lambda at: 22 * wave(at, 0.0), lift=lambda at: -120 + 4 * wave(at, 0.3), lag=0.08)
+
+    SHAKE_SECONDS = 1.3
+
+    def shake(self, phase):
+        """
+        The shake-off, after climbing out. Standing with his paws planted and
+        a little lower, he twists fast about his own length, about seven times
+        a second: it starts at the head, runs back over the shoulders to the
+        hips and down the tail, and dies away. His ears flap with it.
+        """
+        t = phase * self.SHAKE_SECONDS
+        rate = 7.0
+        envelope = lambda start: bump(t, start, start + 0.85, 0.25)
+        twist = lambda start, peak: peak * envelope(start) * math.sin(2 * math.pi * rate * (t - start))
+        head_roll = twist(0.0, 26)
+        chest = twist(0.08, 18)
+        hips = twist(0.18, 12)
+        self.trunk(rise=-0.06 * bump(t, 0.0, 1.05, 0.25), lean=-1, arch=4 * bump(t, 0.0, 1.05, 0.3), chest_roll=chest, hips_roll=hips, chest_yaw=chest * 0.3, hips_yaw=-hips * 0.3)
+        self.head(follow=0.6, turn=roll(head_roll) @ pitch(6 * envelope(0.0)))
+        for leg in self.legs:
+            self.paw(leg, forward=0.03 if leg.startswith('hind') else 0.0, out=0.03)
+        self.ear('l', flick=30 * abs(math.sin(2 * math.pi * rate * t)) * envelope(0.0))
+        self.ear('r', flick=30 * abs(math.cos(2 * math.pi * rate * t)) * envelope(0.0))
+        self.tail_curve(t, sway=lambda at: 35 * envelope(0.3) * math.sin(2 * math.pi * rate * (at - 0.3)), lift=lambda at: -20, lag=0.025)
+
     # Clips in which a paw on the ground may be asked for more than its leg's length.
-    stretched = ('jump', 'falling', 'pounce')
+    # In the water no paw is on the ground.
+    stretched = ('jump', 'falling', 'pounce', 'paddle', 'underwater')
 
     def clips(self):
         """Every clip: its name, the function that poses it, and how long it lasts in seconds."""
@@ -1136,6 +1205,9 @@ class Quadruped:
             ('falling', self.falling, 1.0),
             ('landing', self.landing, self.LANDING_SECONDS),
             ('pounce', self.pounce, 0.3),
+            ('paddle', self.paddle, self.setting('paddle', 'seconds', 0.6)),
+            ('underwater', self.underwater, self.setting('underwater', 'seconds', 0.9)),
+            ('shake', self.shake, self.SHAKE_SECONDS),
         ]
 
     def report(self, lasts):

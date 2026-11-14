@@ -11,7 +11,11 @@
     { "name": "run", "file": "Meshy_AI_Animation_Running_withSkin.glb", "loop": true },
     { "name": "jump", "file": "Meshy_AI_Animation_Regular_Jump_withSkin.glb", "from": 0.57, "to": 1.07, "stay": true, "airborne": true },
     { "name": "landing", "file": "Meshy_AI_Animation_Dive_Down_and_Land_2_withSkin.glb", "parts": [[0.47, 0.67], [1.6, 2.4]], "stay": true, "hands_on_ground": ["RightArm", "LeftArm"] },
-    { "name": "roll", "file": "Meshy_AI_Animation_Run_Jump_and_Roll_withSkin.glb", "from": 1.85, "to": 2.85, "stay": true, "lift": true }
+    { "name": "roll", "file": "Meshy_AI_Animation_Run_Jump_and_Roll_withSkin.glb", "from": 1.85, "to": 2.85, "stay": true, "lift": true },
+    { "name": "tread", "file": "Meshy_API_Swim_tread.glb", "retarget": true, "loop": true, "stay": true },
+    { "name": "swim", "file": "Meshy_API_Swim_surface.glb", "retarget": true, "loop": true, "stay": true },
+    { "name": "underwater", "file": "Meshy_API_Swim_underwater.glb", "retarget": true, "loop": true, "stay": true },
+    { "name": "climb", "file": "Meshy_API_Swim_climb_out.glb", "retarget": true, "stay": true }
   ],
 
   "cleanup_about": "Each part fixes something seen to be wrong in a pose test. belt: the belt and buckle stay with the hips. beard: the lower beard stays on the chest, and the cloth in front of the chest stays off the head. shading: smooth, with edges kept sharp on the buckle and the boot soles, and at any fold sharper than smooth_up_to degrees.",

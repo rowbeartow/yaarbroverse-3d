@@ -1,4 +1,4 @@
-<title>Marmot Chief Preview</title>
+<title>Swimming Preview</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <style>
   /* Layout: one column. Each enemy gets a window into the grove, its clip
@@ -98,9 +98,9 @@
 
 <main class="page">
   <header>
-    <p class="eyebrow">Yaarbroverse 3D · milestone six, pull request 4</p>
-    <h1>The marmot chief</h1>
-    <p class="lede">The grove’s boss: the marmot scout’s model, much larger and darker, on a wide mossy bank at the top of the last climb, between the hero and the golden leaf. This page runs the whole fight on the game’s own rules and numbers at full speed. Nothing here is on the live site until you say OK.</p>
+    <p class="eyebrow">Yaarbroverse 3D · milestone eight, pull request 5</p>
+    <h1>Swimming</h1>
+    <p class="lede">Both heroes in the Sandbox’s pool, on the game’s own rules, at full speed: in off the bank, swimming, diving under the rock arch, coming up, and climbing out. Yaarbro’s clips came from Meshy; Caputo’s are written by his rig script, with a shake-off when he climbs out. Nothing here is on the live site until you say OK.</p>
   </header>
 
   <p id="status" role="status">Loading the models…</p>
@@ -111,7 +111,7 @@
   </div>
 
   <div class="window">
-    <canvas id="view" aria-label="The hero and the marmot chief in a blocked-out copy of the grove, moving at the game's speed"></canvas>
+    <canvas id="view" aria-label="The hero swimming in a blocked-out copy of the Sandbox's pool, moving at the game's speed"></canvas>
     <div id="hearts"></div>
     <div id="news" aria-live="polite"></div>
     <div id="boss" hidden><p id="boss-name"></p><div id="boss-health" role="img" aria-label="The boss's health"></div></div>
@@ -128,68 +128,43 @@
     <div><span class="label">Who has the hero</span><div class="row" id="modes" role="group" aria-label="Watch or play"></div></div>
     <div><span class="label">Hero</span><div class="row" id="heroes" role="group" aria-label="Hero"></div></div>
   </div>
-  <p class="note">“Watch” is the rule tests’ own player fighting the chief, start to finish, over and over. “Play it yourself” gives you the hero on the chief’s doorstep with the game’s own controls; click the picture first if the keys do nothing. Walk in to start the fight. The scenery is a stand-in: plain blocks where the game has its forest, and a gold disc where it has the leaf. The chief, its sidekicks, the heroes, the health bar, the speeds and the timing are the game’s own. This page has no sound; in the game the boss music you picked takes over when the fight begins.</p>
+  <p class="note">Pick Yaarbro or Caputo under “Hero”. “Watch” is the rule tests’ own player crossing the pool, over and over. “Play it yourself” gives you the hero on the bank before the pool with the game’s own controls; click the picture first if the keys do nothing. In the water: move to swim, hold X or Shift (or the round button) to dive, hold Space to swim up, and press Space beside the far bank to climb out. The water, the splashes, the underwater view and the heroes are the game’s own; the banks and the arch are plain blocks. The other places on the page are earlier previews, left as they were. This page has no sound.</p>
 
   <hr class="rule">
 
   <!-- Hand-written for each change: bring it up to date before publishing. -->
   <section class="words">
-    <h2>How the fight goes</h2>
+    <h2>What the clips are</h2>
     <ul>
-      <li><b>It begins when the hero walks in.</b> The bank is a checkpoint on every difficulty. A hero sent back stands on its near edge, outside the fight, and steps in when ready.</li>
-      <li><b>It throws, then it charges too, then it calls its sidekicks as well.</b> Each third of its health changes its attacks, and it roars at each change. Every attack has a warning first: it rears up before a throw or a call, and lowers itself before a charge.</li>
-      <li><b>After every attack it rests.</b> That is the opening. A landing on top, Yaarbro’s roll or Caputo’s pounce is a hit. The pips on its bar glow while a hit will count.</li>
-      <li><b>On Easy any landing on top counts</b>, resting or not, so it can be beaten by jumping on it alone. On Normal and Hard only a hit while it rests counts: at other times a landing bounces off and does no harm.</li>
-      <li><b>The older player’s rule.</b> Fall off its bank or run out of hearts, and it is back at full health when the hero returns.</li>
-      <li><b>Beat it</b> and its sidekicks give up, the golden leaf appears on the bough beyond, and nothing can hurt the hero for three seconds.</li>
+      <li><b>Yaarbro: treading water, a front crawl at the surface, a breaststroke underwater, and the climb out.</b> I rigged a copy of his model with Meshy’s Rigging API, the same skeleton his other Meshy files have. Treading (“Swim Idle”), the crawl (“Swim Forward”) and the climb (the end of “Swimming to Edge”) are from Meshy’s animation library. The library has no underwater swim, so that one was made from words with Meshy’s Text to Motion. Each was carried over onto his current model in Blender, bone by bone, because the new rig stands a little differently; his belt and beard cleanup is kept. 27 credits.</li>
+      <li><b>Caputo: a dog-paddle, an underwater swim and a shake-off,</b> written in his rig script like his other clips. Paddling, his front paws work in turn in circles under his chest, his hind legs kick, his head is held high and his tail streams out. Underwater he goes long and level, front legs sweeping back together, tail waving. When he climbs out he shakes, head first, then shoulders, hips and tail, about seven times a second, and his ears flap. Running cuts the shake short.</li>
+      <li><b>In the game,</b> each hero treads water when still and swims when moving, swims underwater with the head under, and tips a little along a dive or a swim up.</li>
     </ul>
-  </section>
-
-  <section class="words">
-    <h2>The numbers</h2>
-    <div class="scroll">
-    <table>
-      <tr><th></th><th>Easy</th><th>Normal</th><th>Hard</th></tr>
-      <tr><td>Hits to beat it</td><td>4</td><td>6</td><td>8</td></tr>
-      <tr><td>When a hit counts</td><td>any time</td><td>while it rests</td><td>while it rests</td></tr>
-      <tr><td>Warning before a throw</td><td>1.3 s</td><td>0.7 s</td><td>0.45 s</td></tr>
-      <tr><td>Warning before a charge</td><td>1.5 s</td><td>0.9 s</td><td>0.6 s</td></tr>
-      <tr><td>Rest after an attack</td><td>3 s</td><td>2.2 s</td><td>1.5 s</td></tr>
-      <tr><td>Acorns in a throw</td><td>1</td><td>3, fanned</td><td>5, fanned</td></tr>
-      <tr><td>Charge</td><td>7 m/s</td><td>10 m/s</td><td>13.5 m/s</td></tr>
-      <tr><td>Sidekicks</td><td>1, slow</td><td>2</td><td>2</td></tr>
-      <tr><td>Lines showing where attacks go</td><td>yes</td><td>no</td><td>no</td></tr>
-    </table>
-    </div>
-    <p>A hero runs at 6 metres a second. Every number is in the grove’s <code>difficulty.ts</code>, under <code>chief</code>.</p>
   </section>
 
   <section class="words">
     <h2>What to look for</h2>
     <ul>
-      <li><b>Does it read as the chief?</b> It is the scout’s model at 2.3 times the size, with a dark colour laid over its fur. Nothing else is added.</li>
-      <li><b>The warnings on Normal and Hard</b>, with no lines drawn. Rearing up means acorns or a call. Lowering itself means a charge. On Hard the charge warning is 0.6 seconds: is that fair?</li>
-      <li><b>The fan of acorns.</b> Three on Normal, five on Hard, spread to either side of where the hero stood. Running sideways clears them.</li>
-      <li><b>The sidekicks.</b> They fly as the mosquito over the boughs does on that difficulty. On Easy there is one and it is slow. In “Watch” on Easy the test player wins in about ten seconds, before the chief ever calls: to see Easy’s sidekick, play it yourself and take your time.</li>
-      <li><b>Hard.</b> Eight hits, each needing an opening, with two mosquitoes about from the sixth. The test player takes about 48 seconds. Is that work enough for the older player, or too much with the regen rule?</li>
+      <li><b>Does Yaarbro’s crawl read as swimming</b> at the surface, with his back at the water? Does his treading look like treading?</li>
+      <li><b>Does Caputo’s paddle read as a dog-paddle</b>, and his underwater swim as swimming? These were written by hand, as his walk and gallop were.</li>
+      <li><b>The shake-off.</b> Is it worth keeping? It plays after every climb out.</li>
+      <li><b>The climb out</b> is quick (under half a second): Yaarbro reaches up and over, Caputo uses the push from his jump.</li>
     </ul>
   </section>
 
   <section class="words">
     <h2>What is not checked</h2>
     <ul>
-      <li><b>I cannot watch this move.</b> I checked it in still frames and with the rule tests, where the test player beats the chief first time on every difficulty as each hero. You are the first to see it at speed.</li>
-      <li><b>Its clips are the scout’s.</b> The charge is its shuffle played fast, and the wind-up for a charge is the start of its hop. It has no clips of its own.</li>
-      <li><b>The test player loses one heart on Normal</b> and none on Easy or Hard. It never runs out.</li>
-      <li><b>Nobody has heard the fight.</b> Its warnings, throws and hits use the scout’s sounds.</li>
+      <li><b>I cannot watch this move.</b> I checked it in still frames, side and front, and in the page run forward step by step. You are the first to see it at speed.</li>
+      <li><b>The ghost swims too,</b> with the same clips, at your word after the first version of this page.</li>
     </ul>
   </section>
 
   <section class="words">
     <h2>Your call</h2>
-    <p>Reply OK and I will merge the chief into the live game. Or tell me what is off: its colour, its size, a warning too short, too many hits, the sidekicks too much.</p>
+    <p>Reply OK and I will merge the swimming clips. Or tell me which clip is off and how: I can try another of Meshy’s, or build that clip by hand in Blender on his rig.</p>
   </section>
 </main>
 
-<script>document.documentElement.dataset.first = 'chief';</script>
+<script>document.documentElement.dataset.first = 'pool';</script>
 <script type="module" src="arena.js"></script>
