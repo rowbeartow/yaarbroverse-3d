@@ -10,8 +10,11 @@ import type { LevelEntry } from '../levels';
 import { progressOn, type Player } from '../save/players';
 import { formatTime } from './screens';
 
+import type { HeroName } from '../game/hero';
+import { showControls } from './controls-help';
+
 export class Picker {
-  private readonly cards = new Map<string, { root: HTMLElement; pick: HTMLButtonElement; marks: HTMLElement; ghost: HTMLInputElement; ghostNote: HTMLElement }>();
+  private readonly cards = new Map<string, { root: HTMLElement; pick: HTMLButtonElement; marks: HTMLElement; ghost: HTMLInputElement; ghostNote: HTMLElement; controls: HTMLElement }>();
 
   constructor(
     container: HTMLElement,
@@ -70,9 +73,13 @@ export class Picker {
       words.append(title, ghostNote);
       foot.append(ghost, words);
       ghost.addEventListener('change', () => this.onGhost(ghost.checked));
-      root.append(pick, foot);
+      // The controls, before a run starts. Only the picked card shows them.
+      const controls = document.createElement('div');
+      controls.className = 'area-controls controls';
+      controls.setAttribute('aria-label', 'Controls');
+      root.append(pick, foot, controls);
       container.append(root);
-      this.cards.set(level.id, { root, pick, marks, ghost, ghostNote });
+      this.cards.set(level.id, { root, pick, marks, ghost, ghostNote, controls });
     });
   }
 
@@ -109,6 +116,12 @@ export class Picker {
       : recorded
         ? 'A see-through copy of your best run runs beside you.'
         : 'Finish a run this way first, then race it.';
+  }
+
+  /** Shows the controls on the picked card: for a keyboard or for touch, with the hero's own move by name. */
+  showControls(touch: boolean, hero: HeroName): void {
+    const card = this.cards.get(this.picked);
+    if (card) showControls(card.controls, touch, hero);
   }
 
   /** Fills every card's marks for a player: finished difficulties and best times. */

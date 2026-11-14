@@ -1,10 +1,12 @@
 # Session handoff
 
-Last updated: 2026-11-14 (milestone eight, part one: swimming)
+Last updated: 2026-11-14 (milestone eight, part one: swimming, and the fixes after the owner's playtest)
 
 ## Start here
 
-**Milestone eight, part one is swimming: both heroes swim, on the surface and underwater, in water any level can have.** The game is live at https://rowbeartow.github.io/yaarbroverse-3d/ . Only the Sandbox (`?level=sandbox`) has water so far, so players see nothing new yet. **The next step is part two: the lake level itself, its scenery and music, and crocodiles** (see "What's next"). The owner's decisions are in `docs/decisions.md` (2026-11-14).
+**Milestone eight, part one is done: both heroes swim, on the surface and underwater, in water any level can have, and the game tells players how to dive.** The game is live at https://rowbeartow.github.io/yaarbroverse-3d/ . Only the Sandbox (`?level=sandbox`) has water so far. The controls (move, jump, roll or pounce, dive) now show on the level card and the pause screen, which every player sees.
+
+**Next: the lake level, milestone eight part two, in a new session.** The lake level itself, its scenery and music, and crocodiles. Start with a route plan for the owner (see "What's next"). The owner's decisions so far are in `docs/decisions.md` (2026-11-14).
 
 Milestone eight, part one, in order:
 
@@ -21,9 +23,10 @@ Milestone eight, part one, in order:
 
 **After the owner played the pool (2026-11-14):** diving worked, but nobody knew it was X or Shift. Three fixes, each its own pull request:
 
-1. **The dive hint: pull request 52, merged 2026-11-14.** The first time in a run a hero goes into the water: "Press X to dive" on a keyboard; on touch "Tap the round button to dive", with the round button pulsing. Again after three seconds at the surface by an underwater-only passage. In the water the round button shows a dive mark and "Dive". Rules: `passageNear` in `src/game/swim.ts`; when: `src/ui/dive-hint.ts`; tests: `tests/dive-hint.test.ts` and `swim.spec.ts`.
-2. **The gap under the arch, visible from above: the pull request this version of the handoff arrived in. If you are reading this on `main`, it has merged.** Each face of an arch over water has a dark opening at the waterline with daylight showing low in it, and a pale lane of light on the water in front (`arch` in `src/view/scenery.ts`; checked by `water.spec.ts`).
-3. **The controls on the level card and the pause screen:** not built yet. It changes screens players see, so it goes on a preview page for the owner's OK first.
+1. **The dive hint: pull request 52, merged 2026-11-14.** The first time in a run a hero goes into the water: "Press X to dive" on a keyboard; on touch "Tap the round button to dive", with the round button pulsing. Again after three seconds at the surface by an underwater-only passage. In the water the round button shows a dive mark and "Dive". Rules: `passageNear` in `src/game/swim.ts`; when: `src/ui/dive-hint.ts`; tests: `tests/dive-hint.test.ts` and `swim.spec.ts`. The Chromium checks job now has 45 minutes, not 30: with this milestone's browser checks it ran past 30 and was cut off with every check passing.
+2. **The gap under the arch, visible from above: pull request 53, merged 2026-11-14.** Each face of an arch over water has a dark opening at the waterline with daylight showing low in it, and a pale lane of light on the water in front (`arch` in `src/view/scenery.ts`; checked by `water.spec.ts`).
+3. **The controls on the level card and the pause screen: the pull request this version of the handoff arrived in, after the owner's OK on the preview page** (https://claude.ai/artifact/5f6MKjojBtx6VjedwqCPhF ). **If you are reading this on `main`, it has merged.** Move, jump, the hero's own move by name, and dive, for a keyboard or for touch as the device has (`src/ui/controls-help.ts`; checked by `tests/controls-help.test.ts` and `controls.spec.ts`). The one-line controls note under Play is gone.
+
 
 **What nobody has checked yet in milestone eight, and the owner is the one who can:**
 
@@ -344,7 +347,7 @@ Milestone four (sound and music) is done, in the pull requests listed under "Sta
 - **Difficulty.** Easy, Normal, Hard on the start screen. All numbers are in `src/levels/bouncing-grove/difficulty.ts`: the route's sizes and gaps, the checkpoints, hearts, how long a hit protects, how far it throws, and the enemies' warning, speed and rest.
 - **Falls.** A fall returns the hero to the last safe mossy bank and is counted. It costs no heart.
 - **End card.** Difficulty, hero, time, falls, hearts lost, date, and the player's best time and fewest falls with a new best marked. "Play again" returns to the start screen.
-- **Controls.** Mac: arrows or W A S D, Space, X or Shift for the hero's own move, Esc, M for sound off and on. Touch: drag the left half to move, press the right half to jump, and a smaller round button above Jump for the hero's own move.
+- **Controls.** Mac: arrows or W A S D, Space, X or Shift for the hero's own move (and to dive in water), Esc, M for sound off and on. Touch: drag the left half to move, press the right half to jump, and a smaller round button above Jump for the hero's own move (in water it turns into a Dive button). The picked level card and the pause screen list them for the device in use.
 - **Turn sideways.** A touch device whose page is taller than wide gets a "Turn sideways to play" card.
 - **This device remembers** its players (see "Start here") and whether sound is off.
 - **Size.** The whole download is 11.45 MB (budget 20 MB), of which sound and music are 2.84 MB (budget 4 MB). The heroes' swimming clips added about 0.27 MB to their two files. Both are checked on every build.
@@ -366,8 +369,8 @@ Milestone four (sound and music) is done, in the pull requests listed under "Sta
 
 ## What's next
 
-1. **The lake, part two, in a new session:** the lake level (`docs/adding-a-level.md` has the recipe, "Water" included), its scenery and music, and crocodiles. The route plan goes to the owner first. Its own surroundings need a builder like `buildForest` (see "Scenery" in `docs/adding-a-level.md`); the water's look is already any level's. Crocodiles are a new enemy: rules in `src/game/enemy.ts`, a model made and rigged as the handoff describes for the enemies, and the owner's OK on the enemy preview page. A crocodile is the first enemy that goes in the water, so the rule that nothing reaches a swimmer underwater will need the owner's word for it.
-2. **The owner plays the Sandbox pool** (`?level=sandbox`) and says what is off: swimming speed, breath, the climb out, the camera underwater, the muffle. Each is one number: `SWIM` in `src/game/swim.ts`, `breath` in the level's `difficulty.ts`, `UNDERWATER` in `src/view/grove-view.ts`, `MUFFLE` in `src/audio/graph.ts`.
+1. **The lake level (milestone eight, part two), in a new session: next.** The lake level (`docs/adding-a-level.md` has the recipe, "Water" included), its scenery and music, and crocodiles. The route plan goes to the owner first. Its own surroundings need a builder like `buildForest` (see "Scenery" in `docs/adding-a-level.md`); the water's look is already any level's. Crocodiles are a new enemy: rules in `src/game/enemy.ts`, a model made and rigged as the handoff describes for the enemies, and the owner's OK on the enemy preview page. A crocodile is the first enemy that goes in the water, so the rule that nothing reaches a swimmer underwater will need the owner's word for it.
+2. **The owner says the frame rate in the pool** (Safari on the Mac, `?level=sandbox&fps`; the target is 60 on high), and anything else off about swimming: speed, breath, the climb out, the camera underwater, the muffle, the dive hint. Each is one number: `SWIM` in `src/game/swim.ts`, `breath` in the level's `difficulty.ts`, `UNDERWATER` in `src/view/grove-view.ts`, `MUFFLE` in `src/audio/graph.ts`.
 3. **The owner and the kids play milestones six and seven** and say what is off (see "What nobody has checked yet"). Tuning is numbers in `difficulty.ts`: `chief` for the boss, `enemyWarning`, `scoutChase` and the rest for the enemies, `tip*`, `moss*` and `wind*` for the new pieces.
 4. **Ideas that came up and were not asked for** are not in the code: a vine to swing from, a rolling log and logs drifting in a stream (drifting logs could be a new `motion` kind in `src/game/moving.ts`), a run clip for the scout and clips of its own for the chief, recorded sounds of its own for the chief, a hint on screen the first time a guarded boss is open, remembering the last area each player picked, a ghost of someone else's run, sound that moves left and right with what makes it, sounds for strokes underwater.
 
