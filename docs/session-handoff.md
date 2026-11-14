@@ -19,6 +19,12 @@ Milestone eight, part one, in order:
    - **The ghost swims too,** at the owner's word: a ghost records swimming, underwater and climbing out in three spare bits of each sample, so ghosts saved before still load.
    - The preview page is the arena page (`tools/preview/arena.mjs`) with a "Swimming" place, the Sandbox's pool drawn with the game's own water, and the rule tests' bot crossing it.
 
+**After the owner played the pool (2026-11-14):** diving worked, but nobody knew it was X or Shift. Three fixes, each its own pull request:
+
+1. **The dive hint: the pull request this version of the handoff arrived in. If you are reading this on `main`, it has merged.** The first time in a run a hero goes into the water: "Press X to dive" on a keyboard; on touch "Tap the round button to dive", with the round button pulsing. Again after three seconds at the surface by an underwater-only passage. In the water the round button shows a dive mark and "Dive". Rules: `passageNear` in `src/game/swim.ts`; when: `src/ui/dive-hint.ts`; tests: `tests/dive-hint.test.ts` and `swim.spec.ts`.
+2. **The gap under the arch, visible from above:** not built yet.
+3. **The controls on the level card and the pause screen:** not built yet. It changes screens players see, so it goes on a preview page for the owner's OK first.
+
 **What nobody has checked yet in milestone eight, and the owner is the one who can:**
 
 1. **Swimming in the game itself.** The owner watched it on the preview page. Nobody has played the Sandbox pool in Safari: `?level=sandbox` on the live link.

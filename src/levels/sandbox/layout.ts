@@ -83,7 +83,7 @@ export function buildSandbox(difficulty: Difficulty, numbers: SandboxNumbers = S
     knockback: n.knockback,
     route: [...solids.filter((s) => s.id !== 'pool-arch').map((s) => s.id).flatMap((id) => (id === 'bank-pool' ? ['pool', id] : [id]))],
     sections: [{ name: 'The Sandbox', solids: solids.filter((s) => s.id !== 'pool-arch').map((s) => s.id) }],
-    hints: { 'bank-1': 'Swim across. Hold the move button to dive under the rock.', 'bank-pool': 'Jump onto the mushroom and bounce up high.' },
+    hints: { 'bank-1': 'Swim across, and dive under the rock to get through.', 'bank-pool': 'Jump onto the mushroom and bounce up high.' },
     goalLine: 'The golden leaf!',
   };
 }

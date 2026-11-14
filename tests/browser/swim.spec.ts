@@ -87,3 +87,19 @@ test('on Easy breath never runs out, so there is no breath bar', async ({ page, 
   await dive(page, Boolean(hasTouch), false);
   expect(problems).toEqual([]);
 });
+
+test('the first time in the water, the game says how to dive: the key on a keyboard, the round button pulsing with a dive mark on touch', async ({ page, hasTouch }) => {
+  const problems = await open(page, 'level=sandbox');
+  await play(page, 'Yaarbro', 'normal');
+  // On land the round button is the hero's own move.
+  if (hasTouch) await expect(page.locator('#move-button')).toHaveAttribute('data-dive', 'false');
+  await intoPool(page);
+  if (hasTouch) {
+    await expect(page.locator('#move-button')).toHaveAttribute('data-dive', 'true');
+    await expect(page.locator('#move-button')).toHaveAccessibleName('Dive');
+    await expect(page.locator('#move-button .dive-mark svg')).toBeVisible();
+    await expect(page.locator('#move-button')).toHaveClass(/pulse/);
+    await expect(page.locator('#message')).toHaveText('Tap the round button to dive');
+  } else await expect(page.locator('#message')).toHaveText('Press X to dive');
+  expect(problems).toEqual([]);
+});

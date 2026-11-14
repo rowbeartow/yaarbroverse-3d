@@ -58,7 +58,10 @@ jobs:
   checks:
     name: Tests, build and browser checks
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    # Rule tests, the build and every Chromium browser check took 30 minutes
+    # by November 2026 and the job was cut off with every check passing, so
+    # it has room to grow. A run that hangs is still stopped.
+    timeout-minutes: 45
     container:
       image: mcr.microsoft.com/playwright:v1.63.0-noble
       # The user GitHub's own files belong to, and shared memory for Chromium.

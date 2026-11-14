@@ -25,12 +25,14 @@ import { bossFighting, bossOpen } from './game/boss';
 import { Game, IDLE, type GameEvent } from './game/game';
 import { GhostPlayer, GhostRecorder } from './game/ghost';
 import { MOVE_NAME, STEP } from './game/hero';
+import { passageNear } from './game/swim';
 import type { Level } from './game/level';
 import { Controls } from './input/controls';
 import { levelFromAddress, listedLevels, shownLevels } from './levels';
 import { GhostStore } from './save/ghost-store';
 import { loadGhost, saveGhost, type GhostSlot } from './save/ghosts';
 import { Players, endBests, ghostOn, type EndBests, type Player as SavedPlayer } from './save/players';
+import { DiveHint, diveHintText } from './ui/dive-hint';
 import { Picker } from './ui/picker';
 import { Screens, isTouchDevice, loadChoice, needsTurning, type Choice } from './ui/screens';
 import { Who, badge } from './ui/who';
@@ -226,6 +228,7 @@ const boot = (): void => {
     // it as a ghost, when the ghost is on and there is one. The ghost is only
     // drawn: the rules and the sounds never hear of it.
     recorder = new GhostRecorder(game);
+    diveHint.reset();
     const slot = ghostSlot();
     const best = who && slot && ghostOn(who, choice.difficulty) ? loadGhost(ghosts, slot) : null;
     ghost = best ? new GhostPlayer(best) : null;
@@ -349,6 +352,26 @@ const boot = (): void => {
     else if (hint) screens.say(hint, 4);
   };
 
+  // How to dive: the first time in the water in a run, and again when a swimmer
+  // waits at the surface by a passage it can only get through underwater.
+  const diveHint = new DiveHint();
+  const hintDive = (): void => {
+    const water = game.water;
+    const show = diveHint.step(
+      {
+        swimming: game.swimming,
+        under: game.under,
+        entered: game.events.some((event) => event.type === 'splash'),
+        nearPassage: water !== null && passageNear(game.level.solids, water, game.x, game.z),
+      },
+      STEP,
+    );
+    if (!show) return;
+    const touch = isTouchDevice();
+    screens.say(diveHintText(touch), 4);
+    if (touch) screens.pulseMove(4);
+  };
+
   // The frame counter, shown when the address ends in ?fps.
   const showRate = new URLSearchParams(window.location.search).has('fps');
   let sinceRate = 0;
@@ -369,6 +392,7 @@ const boot = (): void => {
         if (game.events.some((event) => event.type === 'fall' || event.type === 'restored')) before = { x: game.x, y: game.y, z: game.z };
         view.handle(game.events);
         narrate(game.events);
+        hintDive();
         gameSounds.step(game);
         recorder?.step(game);
         owed -= STEP;
@@ -376,6 +400,7 @@ const boot = (): void => {
       }
       if (steps === 6) owed = 0;
       screens.setHearts(game.hearts, level.hearts);
+      screens.setSwimming(game.swimming);
       screens.setBreath(Number.isFinite(game.maxBreath) && (game.under || game.breath < game.maxBreath) ? game.breath / game.maxBreath : null);
       showBoss();
       if (game.complete && mode === 'playing') {
