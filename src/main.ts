@@ -28,6 +28,7 @@ import { MOVE_NAME, STEP } from './game/hero';
 import type { Level } from './game/level';
 import { Controls } from './input/controls';
 import { levelFromAddress, listedLevels, shownLevels } from './levels';
+import { GhostStore } from './save/ghost-store';
 import { loadGhost, saveGhost, type GhostSlot } from './save/ghosts';
 import { Players, endBests, ghostOn, type EndBests, type Player as SavedPlayer } from './save/players';
 import { Picker } from './ui/picker';
@@ -68,8 +69,19 @@ const boot = (): void => {
     }
   })();
   const sound = new Sound(player, memory);
+  // Ghosts live in the browser's database, which has room for them all (src/save/ghost-store.ts).
+  const ghosts = new GhostStore(
+    ((): IDBFactory | null => {
+      try {
+        return window.indexedDB ?? null;
+      } catch {
+        return null;
+      }
+    })(),
+    memory,
+  );
   // The players on this device, and who is playing now. Null until someone is picked.
-  const players = new Players(memory);
+  const players = new Players(memory, ghosts);
   let who: SavedPlayer | null = null;
   /** The recording being made of this run, and the player's best run being replayed beside it (null when off, or none yet). */
   let recorder: GhostRecorder | null = null;
@@ -147,8 +159,10 @@ const boot = (): void => {
   /** The ghost switch on the picked card follows the player, hero and difficulty picked now. */
   const showGhostSwitch = (): void => {
     const slot = ghostSlot();
-    if (who && slot) picker.showGhost(ghostOn(who, choice.difficulty), loadGhost(memory, slot) !== null);
+    if (who && slot) picker.showGhost(ghostOn(who, choice.difficulty), loadGhost(ghosts, slot) !== null);
   };
+  // The database opens in a moment; then the ghost switch knows whether there is a ghost to race.
+  void ghosts.open().then(showGhostSwitch);
 
   // The level picker: a card for each area. Picking another builds that level and plays its music.
   const picker = new Picker(document.querySelector<HTMLElement>('#areas')!, shownLevels(window.location.search), (picked) => {
@@ -213,7 +227,7 @@ const boot = (): void => {
     // drawn: the rules and the sounds never hear of it.
     recorder = new GhostRecorder(game);
     const slot = ghostSlot();
-    const best = who && slot && ghostOn(who, choice.difficulty) ? loadGhost(memory, slot) : null;
+    const best = who && slot && ghostOn(who, choice.difficulty) ? loadGhost(ghosts, slot) : null;
     ghost = best ? new GhostPlayer(best) : null;
     view.setGhost(ghost ? choice.hero : null);
     screens.setPlace(level.name, choice.difficulty);
@@ -375,7 +389,7 @@ const boot = (): void => {
           endCard = endBests(outcome);
           // The ghost is the recording of the best time: a new best takes its place.
           const slot = ghostSlot();
-          if (outcome.bestTime && slot && recorder) saveGhost(memory, slot, recorder.finish(game));
+          if (outcome.bestTime && slot && recorder) saveGhost(ghosts, slot, recorder.finish(game));
         }
       }
       if (mode === 'ended' && screens.end.hidden) {

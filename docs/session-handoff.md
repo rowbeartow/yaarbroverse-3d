@@ -1,10 +1,59 @@
 # Session handoff
 
-Last updated: 2026-11-13 (milestone six, done)
+Last updated: 2026-11-14 (milestone seven, grove variety)
 
 ## Start here
 
-**Milestone six is done: tougher enemies, enemy health and the regen rule, the boss system, and the marmot chief at the end of the grove.** The game is live at https://rowbeartow.github.io/yaarbroverse-3d/ . **The next step is grove variety** (see "The roadmap" and "What's next"). The owner's decisions for milestone six, and what the kids asked for, are in `docs/decisions.md` (2026-11-13).
+**Milestone seven is grove variety: the grove no longer asks for the same left-right hop three times.** The game is live at https://rowbeartow.github.io/yaarbroverse-3d/ . **The next step is the lake** (see "The roadmap" and "What's next"). The owner's decisions for milestone seven are in `docs/decisions.md` (2026-11-14). He approved the plan on its preview page (https://claude.ai/artifact/PNCastENb5h534Ns7KRjN4 ) and picked the four new sounds on the sound board (https://claude.ai/artifact/WvtY9CjWaa5yTpwyJCferH ): creak A, rustle B, fall A, gust B.
+
+Milestone seven, in order:
+
+1. **The Tipping Logs: pull request 44, merged 2026-11-14.**
+   - Pieces may now move, at the owner's word. `src/game/moving.ts` lets any solid tip, crumble or sway; it carries a hero standing on it, and each game keeps its own copy of the level's moving pieces. The drawing (`placeMoving` in `src/view/scenery.ts`) reads the rules' own numbers every frame, so a moving piece's drawn top is where a hero can stand. `docs/adding-a-level.md` has the recipe ("Pieces that move"); `tests/moving.test.ts` has the tests.
+   - Section 4 keeps its mushroom spring up to the high log. After it, logs balanced on a snag at their middle (2, 3 and 4) cross open air, each a little higher, to the high ledge. A moment after a hero lands one creaks and rocks (the tell: 0.8, 0.45 and 0.3 seconds), then the end under the hero sinks, up to 0.35, 0.8 and 1.2 m at the very end. Lingering makes the next jump higher; on Easy it is always a small hop. Numbers: `tip*`.
+2. **The Windy Climb: pull request 45, merged 2026-11-14.**
+   - Section 6 keeps its mushroom spring up to the high log. After it: crumbling moss in a straight line (2, 3 and 4 pads), a short solid log to wait on (`wind-perch`), and windy boughs (1, 2 and 2) that carry the hero up to the chief's bank.
+   - Moss shivers and drops crumbs the moment a hero lands (the tell, with a rustle), then falls into the mist (1 second later on Normal, 0.6 on Hard) and grows back 3 seconds after. On Easy it only sags 0.3 m and never falls.
+   - A windy bough rests low, rises, rests high and sinks, on the wind's rhythm, whether anyone is on it or not. Before each move a gust sounds and its needles shiver (the tell). When one rests high the next rests low beside it, level with it. On Easy it rests 2 seconds at each end. The gust is heard only within 18 m. Numbers: `moss*` and `wind*`.
+   - Not in the plan, and recorded in `docs/decisions.md`: the solid log before the first bough (without it, a hero reaching the last moss pad while the bough was up could only fall), and the chief's bank 0.8 m to the left of the route (`chiefAside`), because the test bot's fight on Hard went badly when it walked in at the middle (see "Known limits").
+3. **Ghosts in the browser's database: the pull request this version of the handoff arrived in. If you are reading this on `main`, it has merged.**
+   - The worst case across the roadmap: 4 players × 5 levels (the grove, the lake, fishing and the pike, the Selkirks, climbing) × 2 heroes × 3 difficulties = 120 ghosts of up to about 25,700 characters each, about 3.1 million characters. Safari counts two bytes a character, so about 6.2 MB, over the roughly 5 MB local storage gives a whole site, and `rowbeartow.github.io` is shared by every GitHub Pages project on the account. It would not fit.
+   - So ghosts are kept in IndexedDB (`src/save/ghost-store.ts`). The game reads and writes them without waiting: the store holds a copy in memory and writes behind the scenes. On first opening, ghosts still in local storage are moved into the database and removed from local storage only once the database holds them; a newer ghost already in the database wins. Where there is no database (some private windows) it falls back to local storage, as before. Players and bests stay in local storage.
+   - `tests/ghost-store.test.ts` (with a stand-in database, `fake-indexeddb`, a development package only) checks keeping, carrying over, removing a player's ghosts, the fallback, and room for all 120 of the biggest. `tests/browser/ghost.spec.ts` checks the carry-over in a real browser.
+   - Found and left for the skiing milestone: a ghost only records places within about 650 m of the start (`REACH` in `src/game/ghost.ts`). A longer run would quietly keep no ghost.
+
+**How long a perfect run takes** (the test bot), before milestone seven and after:
+
+| | To the chief's bank | To the golden leaf |
+| --- | --- | --- |
+| Easy | 39.0 → 42.3 s (+8.5%) | 52.0 → 55.4 s |
+| Normal | 57.0 → 61.3 s (+7.5%) | 95.0 → 98.1 s |
+| Hard | 62.2 → 62.5 s | 109.8 → 108.3 s |
+
+The chief's fight is unchanged in its rules and numbers; the bot's time in it moves with how it walks in. On Hard the worst fall costs 24.1 seconds of a perfect run.
+
+**What nobody has checked yet in milestone seven, and the owner is the one who can:**
+
+1. **How the new pieces move and sound in the game.** A cloud session only sees still frames and cannot hear. The plan page's plain-block demos showed the intended motion; nobody has watched the real tipping logs, moss or boughs move, or heard the creak, rustle, fall or gust in the game.
+2. **Whether the tells read.** The rocking log, the shivering moss with its crumbs, and the gust with shivering needles are meant to be seen before anything moves. If the kids miss them, the tell times are numbers in `difficulty.ts` (`tipTell`, `mossTell`, `windTell`).
+3. **Whether Easy needs no timing for the younger player,** and whether waiting for a bough feels slow. Easy's bough rests 2 seconds at each end (`windRest`).
+4. **Whether Hard's new sections are work enough for the older player.**
+5. **Frame rate** at sections 4 and 6, in Safari on the Mac with `?fps`.
+
+**The roadmap, in the owner's order:**
+
+1. Milestone six: done.
+2. Grove variety: done (this milestone).
+3. **The lake: next.** Swimming, diving, a lake level and crocodiles. Lakes are central to the Yaarbroverse. Both heroes swim, on the surface and underwater. It would be nice, not required, if Caputo shakes the water off when he gets out.
+4. Fishing and the monster pike boss. The pike is fought both on the fishing line and in the water.
+5. Skiing in the Selkirks, with Caputo on a snowboard.
+6. Mountain climbing on rock, ice and trees.
+
+---
+
+Everything from "Milestone six" down to "Where things stand" is the record of earlier milestones, kept as it was written.
+
+**Milestone six (done 2026-11-13): tougher enemies, enemy health and the regen rule, the boss system, and the marmot chief.**
 
 Milestone six, in the order the owner set:
 
@@ -46,17 +95,6 @@ Milestone six, in the order the owner set:
 5. **Safari itself and a real iPad.** The checks pass in WebKit built for Linux.
 
 **The preview pages for behaviour** (new in milestone six). `tools/preview/arena.mjs` builds a page that runs the game's own rules, numbers, enemy and boss drawing and hero drawing in a blocked-out copy of the level, at full speed. "Watch" plays a script, or for a boss fight the rule tests' own bot; "Play it yourself" hands over the hero. Its places are the `PLACES` table in `tools/preview/arena.ts`; its hand-written words are in `arena.html`, which now holds the chief's page. It needs the four plain model files rebuilt from the originals on the `hero-models` release (the commands are in `CLAUDE.md`; Yaarbro's six files are named in `tools/yaarbro.guide.json`). `node tools/preview/arena-stills.mjs` takes still frames of it. The first version of the page did not load for the owner once; it now says what it is loading and reports its own errors on the page.
-
-**The roadmap, in the owner's order:**
-
-1. Milestone six: done.
-2. **Grove variety: next.** Keep the best vertical-log section and replace the other two with different obstacles. The kids said the grove repeats the same jump patterns: the vertical-log hops appear three times.
-3. The lake: swimming, diving, a lake level and crocodiles. Lakes are central to the Yaarbroverse. Both heroes swim, on the surface and underwater. It would be nice, not required, if Caputo shakes the water off when he gets out.
-4. Fishing and the monster pike boss. The pike is fought both on the fishing line and in the water.
-5. Skiing in the Selkirks, with Caputo on a snowboard.
-6. Mountain climbing on rock, ice and trees.
-
-Everything from "Milestone five" down to "Where things stand" is the record of earlier milestones, kept as it was written.
 
 ---
 
@@ -213,9 +251,9 @@ Milestone four (sound and music) is done, in the pull requests listed under "Sta
   5. **The High Boughs.** Five narrow boughs level with the ledge: forward, across the screen to the left, forward, across again, forward to a bank. Each corner is a gap on Normal and Hard: two are jumped away from the camera and two across the screen. On Easy only the first corner has a gap and the others are joined.
   6. **The Windy Climb** (milestone seven). A mushroom bounces the hero to a high log, then pads of crumbling moss in a straight line (two, three or four), a short solid log to wait on, and windy boughs (one, two or two) that rise and sink and carry the hero up to the wide mossy bank at the top. Moss shivers and drops crumbs when a hero lands, then falls into the mist (1 second later on Normal, 0.6 on Hard) and grows back 3 seconds after; on Easy it only sags 0.3 m. A bough gusts and its needles shiver before each move. Numbers: `moss*` and `wind*` in `difficulty.ts`.
   7. **The Marmot Chief.** The wide bank is the chief's (see "The marmot chief" below). Beyond it, the great cedar's bough with the golden leaf. The leaf is not there to take until the chief is beaten. Touch the leaf to finish.
-- **How long it takes.** The test bot's run to the chief's bank: 39.0 seconds on Easy, 57.0 on Normal, 62.2 on Hard. Its fight with the chief: 13, 38 and 48 seconds more. `GROVE_TIMES=1 npx vitest run tests/sections.test.ts --silent=false` prints the time to the end of each section. A first try will take a good deal longer.
-- **Checkpoints.** Every bank is a checkpoint on Easy and Normal, so a fall costs one section at most. On Hard only the clearing (bank 2), the high ledge (bank 4) and the chief's bank (bank 6) are; the other banks are bare stone. The worst fall on Hard, just short of the chief's bank, costs about 24 seconds of a perfect run. Which banks are checkpoints is the `checkpoints` list in `difficulty.ts`; the chief's bank is one on every difficulty. A hero sent back to it stands on its near edge, and the chief is at full health again.
-- **Platform kinds.** Banks, logs, stumps (the tall snags of section 6 are stumps too), mushrooms, root shelves (`shelf`: the flat top of a great root on a trunk rising from the mist) and boughs. A root shelf's top edge is drawn the way a bank's is, never past where a hero can stand, and the bank-outline tests cover it. The high boughs of section 5 are drawn as thick mossy limbs on snags, turned a quarter turn where they lie across; only the last bough of the route is the great cedar's. A log end that rests on no bank or shelf is held up by a snag.
+- **How long it takes.** The test bot's run to the chief's bank: 42.3 seconds on Easy, 61.3 on Normal, 62.5 on Hard. Its fight with the chief: 13, 36 and 45 seconds more. `GROVE_TIMES=1 npx vitest run tests/sections.test.ts --silent=false` prints the time to the end of each section. A first try will take a good deal longer.
+- **Checkpoints.** Every bank is a checkpoint on Easy and Normal, so a fall costs one section at most. On Hard only the clearing (bank 2), the high ledge (bank 4) and the chief's bank (bank 6) are; the other banks are bare stone. The worst fall on Hard, just short of the chief's bank, costs about 24 seconds of a perfect run (24.1). Which banks are checkpoints is the `checkpoints` list in `difficulty.ts`; the chief's bank is one on every difficulty. A hero sent back to it stands on its near edge, and the chief is at full health again.
+- **Platform kinds.** Banks, logs, stumps, mushrooms, crumbling moss (`moss`), tipping logs and windy boughs (a `log` and a `bough` with a `motion`), root shelves (`shelf`: the flat top of a great root on a trunk rising from the mist) and boughs. A root shelf's top edge is drawn the way a bank's is, never past where a hero can stand, and the bank-outline tests cover it. The high boughs of section 5 are drawn as thick mossy limbs on snags, turned a quarter turn where they lie across; only the last bough of the route is the great cedar's. A log end that rests on no bank or shelf is held up by a snag.
 - **Drawing by distance.** The forest, the ferns and grass, and the platforms are built in 36 m stretches of route. Only the stretches between the camera and 140 m ahead of the hero are drawn: past that the mist has hidden nineteen twentieths of anything. Past 85 m trees wear their lighter crowns, and ferns, grass and the boulders and roots on the sides of banks are left out. The forest follows the route's middle (`src/view/route.ts`), so the gully and the trees bend where the route does, and no tree stands closer than 3.5 m to anything a hero can stand on. Measured on the test machine at medium quality, standing at the start of each section on Normal: 280 to 375 thousand triangles and 179 to 301 draw calls a frame. The short level drew 322 thousand in 144. So the triangle count runs from 13% under to 17% over what it was, and draw calls are up to twice what they were. What that does to the frame rate on a real iPad is not known.
 - **The look.** The route crosses a misty gully in a fir forest. Logs and trunks have bark with moss growing over it, stumps have cut rings, mushrooms have glossy spotted caps. Ferns and grass sway. The golden leaf glows.
   - **Trees.** Firs and cedars are cones that narrow to a point: a straight trunk and tiers of boughs that leave it angled out and a little down, with a dark inner cone so they are solid from the side. The boughs sway.
@@ -277,14 +315,14 @@ Milestone four (sound and music) is done, in the pull requests listed under "Sta
 - **Controls.** Mac: arrows or W A S D, Space, X or Shift for the hero's own move, Esc, M for sound off and on. Touch: drag the left half to move, press the right half to jump, and a smaller round button above Jump for the hero's own move.
 - **Turn sideways.** A touch device whose page is taller than wide gets a "Turn sideways to play" card.
 - **This device remembers** its players (see "Start here") and whether sound is off.
-- **Size.** The whole download is 10.80 MB (budget 20 MB), of which sound and music are 2.48 MB (budget 4 MB). Both are checked on every build.
+- **Size.** The whole download is 11.06 MB (budget 20 MB), of which sound and music are 2.74 MB (budget 4 MB). Both are checked on every build.
 - **Credits.** `CREDITS.md` lists every third-party file. All are CC0, the sounds and music included. It also lists the hero and enemy models, which are not: the README says the characters, their art and the models are all rights reserved.
 - **Checks on every pull request.** `.github/workflows/checks.yml`, three jobs: the private-terms check; rule tests, build with size check and browser checks in Chromium; browser checks in WebKit. The two browser jobs run inside Playwright's container image, pinned to the Playwright version in `package.json` (1.63.0), so a run installs nothing from Ubuntu's servers. Before this, on 2026-11-11, four runs in a row failed before any test because GitHub's machines could not reach those servers.
 
 ## Checks on this state
 
-- `npm test`: 667 rule tests pass. New in milestone six: the scout's beat and chase, the shorter warnings, the mosquito keeping up, enemy health, the shove of a hit, the regen rule for enemies (`tests/enemies.test.ts`); how any boss fights, its stages, its guard, its sidekicks, the locked goal and the regen rule for a boss (`tests/boss.test.ts`); the marmot chief's place, look, numbers and sidekicks (`tests/chief.test.ts`). The test bot plays every level on every difficulty as each hero: no fall, no heart lost on the way to a boss, the boss beaten in its first fight, on walk and jump alone. It loses no heart to the chief on Easy and Hard and one on Normal.
-- `npm run test:browser`: 201 browser checks pass, in Chromium at Mac size with the keyboard, in Chromium at iPad size with touch, and in WebKit at iPad size with touch. New in milestone six: the scout hiding on Easy and walking its beat on Hard, the aim line on Easy only, a hit showing and a fall undoing it (`enemies.spec.ts`); a boss's bar, music, hit, regen, victory and locked leaf, on the practice boss and on the chief (`boss.spec.ts`). Checks about the end of a run count the boss as beaten (`skipBoss` in `helpers.ts`) and do not fight it.
+- `npm test`: 706 rule tests pass. New in milestone seven: tipping logs, crumbling moss and windy boughs on their own and as the grove uses them, the drawn top of a tipping log against the rules' (`tests/moving.test.ts`); the ghost store (`tests/ghost-store.test.ts`). New in milestone six: the scout's beat and chase, the shorter warnings, the mosquito keeping up, enemy health, the shove of a hit, the regen rule for enemies (`tests/enemies.test.ts`); how any boss fights, its stages, its guard, its sidekicks, the locked goal and the regen rule for a boss (`tests/boss.test.ts`); the marmot chief's place, look, numbers and sidekicks (`tests/chief.test.ts`). The test bot plays every level on every difficulty as each hero: no fall, no heart lost on the way to a boss, the boss beaten in its first fight, on walk and jump alone. It loses no heart to the chief on any difficulty with the current layout.
+- `npm run test:browser`: the browser checks pass on GitHub for every pull request of milestone seven (one more than before: a ghost saved by an earlier version carries over, in `ghost.spec.ts`), in Chromium at Mac size with the keyboard, in Chromium at iPad size with touch, and in WebKit at iPad size with touch. New in milestone six: the scout hiding on Easy and walking its beat on Hard, the aim line on Easy only, a hit showing and a fall undoing it (`enemies.spec.ts`); a boss's bar, music, hit, regen, victory and locked leaf, on the practice boss and on the chief (`boss.spec.ts`). Checks about the end of a run count the boss as beaten (`skipBoss` in `helpers.ts`) and do not fight it.
 - **Not checked:**
   - How anything moves or sounds in milestone six, beyond the owner's look at the tougher enemies on the preview page (see "Start here").
   - How anything sounds. Nobody can hear a test browser, and a cloud session cannot hear. The checks prove sound is asked for at the right moments and raises no error.
@@ -296,13 +334,15 @@ Milestone four (sound and music) is done, in the pull requests listed under "Sta
 
 ## What's next
 
-1. **Grove variety** (the owner's next milestone). The vertical-log hops appear three times in the grove: the stumps of section 2, the mushrooms over open air in section 4 and the snags and mushrooms of section 6 all step left and right and climb. Keep the best of them and replace the other two with different obstacles. What it needs from the owner first: which one is "the best" (or leave to pick), and an approved plan for the two replacements. Every piece of the grove comes from the Caputo Mountain forest or from what he says; nothing in the forest moves, so a moving platform needs his word. The route's numbers are in `src/levels/bouncing-grove/difficulty.ts`, its shape in `layout.ts`, and the bot and the rule tests check any change.
-2. **Check whether saved ghosts will outgrow browser storage** (the owner asked for this in the next milestone). A ghost is now up to about 26,000 characters, and each player keeps one for every level, hero and difficulty, so more levels and longer runs multiply it. A browser's storage (`localStorage`, where `src/save/ghosts.ts` keeps them) holds about 5 MB for the whole site, and Safari counts two bytes a character. Work out the worst case for four players across the levels on the roadmap. If it will not fit, move the ghosts to IndexedDB, which has room to spare, and carry over the ghosts already saved. Players and bests can stay where they are.
-3. **The owner and the kids play milestone six** and say what is off (see "What nobody has checked yet"). Tuning is numbers in `difficulty.ts`: `chief` for the boss, `enemyWarning`, `scoutChase` and the rest for the enemies.
-4. **Then the lake**, and the rest of the roadmap in "Start here". A level that is not the forest needs its own surroundings and music; `docs/adding-a-level.md` says where those go, and how to end a level with a boss.
-5. **Ideas that came up and were not asked for** are not in the code: a run clip for the scout and clips of its own for the chief, recorded sounds of its own for the chief, a hint on screen the first time a guarded boss is open, remembering the last area each player picked, a ghost of someone else's run, sound that moves left and right with what makes it.
+1. **The lake** (the owner's next milestone), and the rest of the roadmap in "Start here". Its water could reuse the moving-piece rules for drifting logs (`src/game/moving.ts`): a new `motion` kind.
+2. **The owner and the kids play milestones six and seven** and say what is off (see "What nobody has checked yet"). Tuning is numbers in `difficulty.ts`: `chief` for the boss, `enemyWarning`, `scoutChase` and the rest for the enemies, `tip*`, `moss*` and `wind*` for the new pieces. A level that is not the forest needs its own surroundings and music; `docs/adding-a-level.md` says where those go, and how to end a level with a boss.
+3. **Ideas that came up and were not asked for** are not in the code: a vine to swing from, a rolling log and logs drifting in a stream (the owner's list for grove variety, not built); a run clip for the scout and clips of its own for the chief, recorded sounds of its own for the chief, a hint on screen the first time a guarded boss is open, remembering the last area each player picked, a ghost of someone else's run, sound that moves left and right with what makes it.
 
 ## Known limits
+
+- The test bot's fight with the chief on Normal and Hard turns out differently with where it walks into the arena: from the middle of the bank on Hard it needed three fights. The chief's bank sits 0.8 m to the left of the route (`chiefAside`) because there, and a few tenths of a metre either side, it wins first time. The bot's fighting, not the chief, is what is fragile; a change to the climb before the chief can tip it over again.
+- The windy boughs keep the wind's rhythm from the start of a run, and their rhythm (`windStart`) was set so the bot's perfect run meets the first bough as it comes down. A player who arrives at another moment waits on the solid log up to a full rhythm (6.8, 5.6 and 3.6 seconds).
+- A crumbling moss pad pops back whole when it grows back; it does not grow.
 
 - One area, with three enemies and a boss in it.
 - Progress lives in one browser on one device. Another browser, a private window or cleared site data starts from nothing, and nothing carries between the Mac and the iPad.
