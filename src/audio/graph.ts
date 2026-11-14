@@ -9,6 +9,7 @@
 //              ->  its group's volume (warnings and hits, jumps and landings,
 //                  footsteps, menu, or music)
 //              ->  the master volume
+//              ->  the muffle (open, unless the hero's head is underwater)
 //              ->  the top end turned down (takes the edge off)
 //              ->  a soft limiter (nothing ever gets past seven tenths of full)
 //              ->  the speakers
@@ -45,6 +46,9 @@ export interface MixGraph {
   makeWay: GainNode;
   /** Mute: after everything else, so the mix underneath is untouched. */
   gate: GainNode;
+  /** Underwater: a low-pass and a small drop in level over the whole mix. See `setUnderwater`. */
+  muffle: BiquadFilterNode;
+  muffleLevel: GainNode;
   setLevels(levels: Levels): void;
 }
 
@@ -70,8 +74,15 @@ export const buildMix = (ctx: BaseAudioContext, levels: Levels = MIX): MixGraph 
   soften.gain.value = SOFTEN.by;
   soften.connect(intoLimiter);
 
+  // Open, the muffle passes everything; underwater it lets through only the low end (see MUFFLE).
+  const muffle = ctx.createBiquadFilter();
+  muffle.type = 'lowpass';
+  muffle.frequency.value = MUFFLE.open;
+  muffle.Q.value = MUFFLE.q;
+  const muffleLevel = ctx.createGain();
+  muffle.connect(muffleLevel).connect(soften);
   const master = ctx.createGain();
-  master.connect(soften);
+  master.connect(muffle);
 
   const dip = ctx.createGain();
   const makeWay = ctx.createGain();
@@ -89,6 +100,8 @@ export const buildMix = (ctx: BaseAudioContext, levels: Levels = MIX): MixGraph 
     dip,
     makeWay,
     gate,
+    muffle,
+    muffleLevel,
     setLevels(next) {
       master.gain.value = gainOf(next.master + LIFT);
       for (const group of GROUPS) groups[group].gain.value = gainOf(next[group]);
@@ -100,6 +113,21 @@ export const buildMix = (ctx: BaseAudioContext, levels: Levels = MIX): MixGraph 
 
 /** Where the limiter starts to act, and the most it ever lets through. 1 is full. */
 export const LIMIT = { from: 0.33, ceiling: 0.7 };
+
+/**
+ * Underwater, everything is muffled: the mix passes a low-pass filter at
+ * `under` hertz (two poles, as the sound board's demo was made) and drops
+ * `drop` decibels. At the surface it opens to `open`, where it changes
+ * nothing. It eases in and out over about `ease` seconds.
+ */
+export const MUFFLE = { under: 700, open: 20000, q: 0.707, drop: -3, ease: 0.08 };
+
+/** Muffles the whole mix, or clears it, starting now. */
+export const setUnderwater = (graph: MixGraph, under: boolean): void => {
+  const now = graph.ctx.currentTime;
+  graph.muffle.frequency.setTargetAtTime(under ? MUFFLE.under : MUFFLE.open, now, MUFFLE.ease);
+  graph.muffleLevel.gain.setTargetAtTime(under ? gainOf(MUFFLE.drop) : 1, now, MUFFLE.ease);
+};
 
 const limitCurve = (): Float32Array<ArrayBuffer> => {
   const points = 2049;

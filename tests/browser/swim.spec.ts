@@ -62,12 +62,16 @@ test('on Normal the move button dives, the breath bar runs down underwater, and 
   await dive(page, Boolean(hasTouch), true);
   await expect.poll(async () => (await state(page)).under).toBe(true);
   await expect(page.locator('#breath')).toBeVisible();
+  // Underwater, the game's sound is muffled.
+  const muffled = (): Promise<boolean> => page.evaluate(() => (window as unknown as { __grove: { sound: { underwater: boolean } } }).__grove.sound.underwater);
+  await expect.poll(muffled).toBe(true);
   const full = (await state(page)).breath;
   await expect.poll(async () => (await state(page)).breath).toBeLessThan(full - 0.3);
   await dive(page, Boolean(hasTouch), false);
   // Let go, and the swimmer drifts back up and breath fills again.
   await expect.poll(async () => (await state(page)).under, { timeout: 60_000 }).toBe(false);
   await expect(page.locator('#breath')).toBeHidden({ timeout: 60_000 });
+  expect(await muffled()).toBe(false);
   expect(problems).toEqual([]);
 });
 
