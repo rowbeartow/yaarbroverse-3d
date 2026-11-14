@@ -449,7 +449,8 @@ export const underwaterDepth = (waters: readonly Water[] | undefined, x: number,
 export const underwaterCeiling = (water: Water, solids: readonly { x: number; z: number; halfX: number; halfZ: number; bottom: number; top: number; shape: string }[], x: number, z: number, margin = 0.35): number => {
   let ceiling = water.surface - margin;
   for (const s of solids) {
-    if (s.bottom >= water.surface || s.top < water.floor) continue;
+    // Only something over the water with water under it (an arch): not a bank beside the pool.
+    if (s.bottom >= water.surface || s.bottom <= water.floor) continue;
     const inside = s.shape === 'round' ? Math.hypot(x - s.x, z - s.z) < s.halfX + 0.6 : Math.abs(x - s.x) < s.halfX + 0.6 && Math.abs(z - s.z) < s.halfZ + 0.6;
     if (inside) ceiling = Math.min(ceiling, s.bottom - margin);
   }
@@ -469,7 +470,7 @@ export const sightBlocked = (solids: Parameters<typeof insideSolid>[0], from: { 
   const steps = 16;
   for (let i = 0; i <= steps; i += 1) {
     const t = i / steps;
-    if (insideSolid(solids, from.x + (to.x - from.x) * t, from.y + (to.y - from.y) * t, from.z + (to.z - from.z) * t, i === 0 ? 0.3 : 0)) return true;
+    if (insideSolid(solids, from.x + (to.x - from.x) * t, from.y + (to.y - from.y) * t, from.z + (to.z - from.z) * t, i === 0 ? 0.1 : 0)) return true;
   }
   return false;
 };
