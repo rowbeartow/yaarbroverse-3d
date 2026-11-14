@@ -35,7 +35,7 @@ export function buildSandbox(difficulty: Difficulty, numbers: SandboxNumbers = S
   const water: Water[] = [{ id: 'pool', minX: -3.5, maxX: 3.5, minZ: -(at + poolLength), maxZ: -at, surface: POOL.surface, floor: POOL.floor }];
   // A rock arch across the pool, well past where a jump in lands, too high to climb onto from the water or to jump onto
   // from the bank, with deep water under it: the way on is to dive.
-  box('pool-arch', 'bank', at + 9.5, at + 11.1, 3.5, POOL.archTop, POOL.archBottom);
+  box('pool-arch', 'arch', at + 9.5, at + 11.1, 3.5, POOL.archTop, POOL.archBottom);
   at += poolLength;
   box('bank-pool', 'bank', at, at + 5, 3.5, 0, -40, { safe: true });
   at += 5;

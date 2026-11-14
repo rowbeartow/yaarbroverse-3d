@@ -517,6 +517,25 @@ const shelf = (s: Solid, materials: Materials): Group => {
 
 // ---------- Stumps ----------
 
+/**
+ * A rock arch across a pool: a slab of rock from its top down to its
+ * underside, with deep water under it, mossy on top. It rests on the pool's
+ * sides (drawn by water.ts).
+ */
+const arch = (s: Solid, materials: Materials): Group => {
+  const group = new Group();
+  const height = s.top - s.bottom;
+  const body = new Mesh(new BoxGeometry(s.halfX * 2 + 1.2, height, s.halfZ * 2), materials.rock);
+  body.position.set(s.x, s.bottom + height / 2, s.z);
+  body.castShadow = true;
+  body.receiveShadow = true;
+  const top = new Mesh(new BoxGeometry(s.halfX * 2 + 1.25, 0.12, s.halfZ * 2 + 0.05), materials.mossTop);
+  top.position.set(s.x, s.top - 0.05, s.z);
+  top.receiveShadow = true;
+  group.add(body, top);
+  return group;
+};
+
 const stump = (s: Solid, materials: Materials): Group => {
   const group = new Group();
   const seed = s.x * 1.7 + s.z * 0.31;
@@ -970,6 +989,7 @@ export const buildSolids = (level: Level, materials: Materials, decor: Decor, ra
     } else if (s.kind === 'bank') shape.add(bank(s, materials, decor, random));
     else if (s.kind === 'stump') shape.add(stump(s, materials));
     else if (s.kind === 'shelf') shape.add(shelf(s, materials));
+    else if (s.kind === 'arch') shape.add(arch(s, materials));
     else if (s.kind === 'bough') {
       // The last bough is the great cedar's, with the leaf. The others are limbs to walk along.
       shape.add(s.id === level.route[level.route.length - 1] ? bough(s, materials) : limb(s, materials, level));

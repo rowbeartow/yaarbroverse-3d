@@ -455,6 +455,10 @@ const boot = (): void => {
       get boss() {
         return view ? view.bossInfo() : null;
       },
+      /** The level's water, if it has any: pools drawn, splashes showing, and how far under the picture is. */
+      get water() {
+        return view ? view.waterInfo() : null;
+      },
       get leafShown() {
         return view ? view.leafShown() : false;
       },
