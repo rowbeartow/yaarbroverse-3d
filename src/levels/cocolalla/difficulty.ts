@@ -52,6 +52,32 @@ export interface LakeNumbers {
   postRadius: number;
   postGap: number;
   postRise: number;
+  /**
+   * THE CROCODILES, in the two long swims (The Reed Shallows and Cattail
+   * Cove). The owner's rules: on Easy every one can be avoided without
+   * diving or precise timing, and Normal and Hard make them a real threat.
+   *   crocCount    how many in each of the two swims.
+   *   crocAside    how far to the side of the way across each waits (they
+   *                take turns, right then left). On Easy far enough that a
+   *                hero swimming straight across never comes into its water.
+   *   crocPatch    how far either side of where it waits its water reaches:
+   *                a hero in that water is stalked.
+   *   crocSpeed    how fast it swims after a hero. A hero swims 3.6 at the surface.
+   *   crocReach    how far its lunge carries.
+   *   crocWarning  times how long its tell lasts (0.9 s): its eyes sinking and the wake.
+   *   crocRest     times how long it rests after a lunge (1.6 s): the opening to get past.
+   *   crocHits     strikes that beat it.
+   *   crocLine     whether a line shows where it will lunge, through its tell. Easy only, as with every enemy.
+   */
+  crocCount: number;
+  crocAside: number;
+  crocPatch: number;
+  crocSpeed: number;
+  crocReach: number;
+  crocWarning: number;
+  crocRest: number;
+  crocHits: number;
+  crocLine: boolean;
   /** Which banks are checkpoints, counted along the route: 1 the grassy point, 2 the rock island, 3 the gravel bar, 4 the reed bar. The beach always is. */
   checkpoints: number[];
   /** Seconds a hero can stay underwater. Left out, breath never runs out (Easy, by the owner's rule). */
@@ -76,6 +102,7 @@ export const LAKE_DIFFICULTY: Record<Difficulty, LakeNumbers> = {
     tunnelLength: 4,
     coveSwim: 34,
     postCount: 4, postRadius: 1, postGap: 0.9, postRise: 0.5,
+    crocCount: 1, crocAside: 11, crocPatch: 4, crocSpeed: 1.5, crocReach: 3.5, crocWarning: 2, crocRest: 1.6, crocHits: 1, crocLine: true,
     checkpoints: [1, 2, 3, 4],
     hearts: 5, protection: 1.5, knockback: 0.5, coyoteTime: 0.2, ledgeHelp: 0.5,
   },
@@ -86,6 +113,7 @@ export const LAKE_DIFFICULTY: Record<Difficulty, LakeNumbers> = {
     tunnelLength: 6,
     coveSwim: 48,
     postCount: 5, postRadius: 0.75, postGap: 1.6, postRise: 0.6,
+    crocCount: 1, crocAside: 0, crocPatch: 9, crocSpeed: 2.4, crocReach: 4.5, crocWarning: 1, crocRest: 1, crocHits: 1, crocLine: false,
     checkpoints: [1, 2, 3, 4],
     breath: 16,
     hearts: 3, protection: 1, knockback: 1.2, coyoteTime: 0.12, ledgeHelp: 0.3,
@@ -97,6 +125,7 @@ export const LAKE_DIFFICULTY: Record<Difficulty, LakeNumbers> = {
     tunnelLength: 9,
     coveSwim: 54,
     postCount: 6, postRadius: 0.55, postGap: 2.3, postRise: 0.6,
+    crocCount: 2, crocAside: 3, crocPatch: 10, crocSpeed: 2.9, crocReach: 5.5, crocWarning: 0.7, crocRest: 0.75, crocHits: 2, crocLine: false,
     checkpoints: [2, 4],
     breath: 11,
     hearts: 2, protection: 0.6, knockback: 2, coyoteTime: 0.06, ledgeHelp: 0.15,

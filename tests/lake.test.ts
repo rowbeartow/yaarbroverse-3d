@@ -76,12 +76,12 @@ describe.each(DIFFICULTIES)('the lake on %s', (difficulty) => {
     expect(seconds).toBeLessThan(RUN_TIME[difficulty][1]);
   });
 
-  it('every section is a few seconds long, and none takes over the run', () => {
+  it('every section is a few seconds long, and none takes over the run (a swim with crocodiles to get past may take longer)', () => {
     let last = 0;
     for (const section of sections) {
       const end = reached.get(section.solids[section.solids.length - 1]) ?? seconds;
       expect(end - last, section.name).toBeGreaterThan(3);
-      expect(end - last, section.name).toBeLessThan(20);
+      expect(end - last, section.name).toBeLessThan(25);
       last = end;
     }
   });
@@ -130,6 +130,85 @@ describe.each(DIFFICULTIES)('the lake on %s', (difficulty) => {
     expect(climbedOnto).toMatch(/^(island|log-|step-)/);
     expect(game.complete).toBe(true);
     expect(game.falls).toBe(0);
+  });
+});
+
+describe('the crocodiles', () => {
+  /** The way straight across a swim: the line from where it starts to where it ends, a swimmer's width either side. */
+  const wayAcross = (level: Level, before: string, after: string) => {
+    const a = byId(level, before);
+    const b = byId(level, after);
+    return { minX: Math.min(a.x, b.x) - 1.5, maxX: Math.max(a.x, b.x) + 1.5 };
+  };
+
+  it('wait in the two long swims, the Reed Shallows and Cattail Cove, on every difficulty', () => {
+    for (const difficulty of DIFFICULTIES) {
+      const level = buildLake(difficulty);
+      const crocs = level.enemies ?? [];
+      expect(crocs.length).toBe(2 * LAKE_DIFFICULTY[difficulty].crocCount);
+      for (const croc of crocs) {
+        expect(croc.kind).toBe('crocodile');
+        const pool = level.water!.find((w) => croc.z >= w.minZ && croc.z <= w.maxZ && croc.x >= w.minX && croc.x <= w.maxX)!;
+        expect(['reed-water', 'cove-water']).toContain(pool.id);
+        // Its whole water is inside the lake.
+        expect(croc.arena.minX).toBeGreaterThanOrEqual(pool.minX);
+        expect(croc.arena.maxX).toBeLessThanOrEqual(pool.maxX);
+      }
+    }
+  });
+
+  it('on Easy keep to the side: a hero swimming straight across never comes into a crocodile\'s water', () => {
+    const level = buildLake('easy');
+    for (const croc of level.enemies ?? []) {
+      const way = croc.id.includes('reed') ? wayAcross(level, 'point', 'island') : wayAcross(level, 'reed-bar', 'post-1');
+      expect(croc.arena.minX > way.maxX || croc.arena.maxX < way.minX, croc.id).toBe(true);
+    }
+    // And the bot, swimming straight across, never wakes one.
+    const game = new Game(level, 'easy', 'Caputo');
+    const bot = new Bot(level);
+    for (let i = 0; i < 300 / STEP && !game.complete; i += 1) {
+      game.step(bot.input(game));
+      for (const croc of game.enemies) expect(croc.phase).toBe('concealed');
+    }
+    expect(game.complete).toBe(true);
+    expect(game.heartsLost).toBe(0);
+  });
+
+  it('on Normal and Hard lie across the way: every one wakes, and the bot still gets past each with no heart lost', () => {
+    for (const difficulty of ['normal', 'hard'] as const) {
+      for (const hero of HEROES) {
+        const level = buildLake(difficulty);
+        const game = new Game(level, difficulty, hero);
+        const bot = new Bot(level);
+        const woke = new Set<string>();
+        let lunges = 0;
+        for (let i = 0; i < 300 / STEP && !game.complete; i += 1) {
+          game.step(bot.input(game));
+          for (const croc of game.enemies) if (croc.phase !== 'concealed') woke.add(croc.spot.id);
+          lunges += game.events.filter((e) => e.type === 'enemy' && e.phase === 'attack').length;
+        }
+        expect(game.complete, `${difficulty} ${hero}`).toBe(true);
+        expect(woke.size, `${difficulty} ${hero}`).toBe(level.enemies!.length);
+        expect(lunges, `${difficulty} ${hero}`).toBeGreaterThan(0);
+        expect(game.heartsLost, `${difficulty} ${hero}`).toBe(0);
+      }
+    }
+    // Four whole runs, each looking ahead around every crocodile.
+  }, 120_000);
+
+  it('get faster, reach further and give a shorter tell from Easy to Hard, and only Easy shows where one will lunge', () => {
+    const [e, n, h] = DIFFICULTIES.map((d) => LAKE_DIFFICULTY[d]);
+    for (const key of ['crocSpeed', 'crocReach'] as const) {
+      expect(e[key], key).toBeLessThan(n[key]);
+      expect(n[key], key).toBeLessThan(h[key]);
+    }
+    for (const key of ['crocWarning', 'crocRest'] as const) {
+      expect(e[key], key).toBeGreaterThan(n[key]);
+      expect(n[key], key).toBeGreaterThan(h[key]);
+    }
+    expect([e.crocLine, n.crocLine, h.crocLine]).toEqual([true, false, false]);
+    // A crocodile never out-swims a hero at the surface.
+    expect(h.crocSpeed).toBeLessThan(3.6);
   });
 });
 

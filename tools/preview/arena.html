@@ -1,4 +1,4 @@
-<title>Swimming Preview</title>
+<title>Crocodiles Preview</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <style>
   /* Layout: one column. Each enemy gets a window into the grove, its clip
@@ -98,9 +98,9 @@
 
 <main class="page">
   <header>
-    <p class="eyebrow">Yaarbroverse 3D · milestone eight, pull request 5</p>
-    <h1>Swimming</h1>
-    <p class="lede">Both heroes in the Sandbox’s pool, on the game’s own rules, at full speed: in off the bank, swimming, diving under the rock arch, coming up, and climbing out. Yaarbro’s clips came from Meshy; Caputo’s are written by his rig script, with a shake-off when he climbs out. Nothing here is on the live site until you say OK.</p>
+    <p class="eyebrow">Yaarbroverse 3D · milestone eight, part three</p>
+    <h1>The crocodiles, in the lake</h1>
+    <p class="lede">The crocodile in the lake’s two long swims, the Reed Shallows and Cattail Cove, on the game’s own rules, at full speed, on each difficulty. The rule tests’ own player swims across and gets past them. The water and the crocodiles are the game’s own; the banks and the rocks are plain blocks. Nothing here is on the live site until you say OK.</p>
   </header>
 
   <p id="status" role="status">Loading the models…</p>
@@ -111,7 +111,7 @@
   </div>
 
   <div class="window">
-    <canvas id="view" aria-label="The hero swimming in a blocked-out copy of the Sandbox's pool, moving at the game's speed"></canvas>
+    <canvas id="view" aria-label="The hero swimming in a blocked-out copy of the lake, with a crocodile, moving at the game's speed"></canvas>
     <div id="hearts"></div>
     <div id="news" aria-live="polite"></div>
     <div id="boss" hidden><p id="boss-name"></p><div id="boss-health" role="img" aria-label="The boss's health"></div></div>
@@ -128,43 +128,43 @@
     <div><span class="label">Who has the hero</span><div class="row" id="modes" role="group" aria-label="Watch or play"></div></div>
     <div><span class="label">Hero</span><div class="row" id="heroes" role="group" aria-label="Hero"></div></div>
   </div>
-  <p class="note">Pick Yaarbro or Caputo under “Hero”. “Watch” is the rule tests’ own player crossing the pool, over and over. “Play it yourself” gives you the hero on the bank before the pool with the game’s own controls; click the picture first if the keys do nothing. In the water: move to swim, hold X or Shift (or the round button) to dive, hold Space to swim up, and press Space beside the far bank to climb out. The water, the splashes, the underwater view and the heroes are the game’s own; the banks and the arch are plain blocks. The other places on the page are earlier previews, left as they were. This page has no sound.</p>
+  <p class="note">Pick a swim under “Where” and a difficulty. “Watch” is the rule tests’ own player crossing that swim, over and over. “Play it yourself” gives you the hero at the edge of the water with the game’s own controls; click the picture first if the keys do nothing. In the water: move to swim, hold X or Shift (or the round button) to dive, hold Space to swim up. The other places on the page are earlier previews, left as they were. This page has no sound.</p>
 
   <hr class="rule">
 
   <!-- Hand-written for each change: bring it up to date before publishing. -->
   <section class="words">
-    <h2>What the clips are</h2>
+    <h2>How a crocodile goes</h2>
     <ul>
-      <li><b>Yaarbro: treading water, a front crawl at the surface, a breaststroke underwater, and the climb out.</b> I rigged a copy of his model with Meshy’s Rigging API, the same skeleton his other Meshy files have. Treading (“Swim Idle”), the crawl (“Swim Forward”) and the climb (the end of “Swimming to Edge”) are from Meshy’s animation library. The library has no underwater swim, so that one was made from words with Meshy’s Text to Motion. Each was carried over onto his current model in Blender, bone by bone, because the new rig stands a little differently; his belt and beard cleanup is kept. 27 credits.</li>
-      <li><b>Caputo: a dog-paddle, an underwater swim and a shake-off,</b> written in his rig script like his other clips. Paddling, his front paws work in turn in circles under his chest, his hind legs kick, his head is held high and his tail streams out. Underwater he goes long and level, front legs sweeping back together, tail waving. When he climbs out he shakes, head first, then shoulders, hips and tail, about seven times a second, and his ears flap. Running cuts the shake short.</li>
-      <li><b>In the game,</b> each hero treads water when still and swims when moving, swims underwater with the head under, and tips a little along a dive or a swim up.</li>
+      <li><b>Lurking.</b> It waits low in the water with only its eyes and snout showing. Touching it then does nothing.</li>
+      <li><b>Swimming after you.</b> Once you are in its stretch of water it comes after you, back awash, at your depth: it follows you down if you dive. It is always slower than you swim.</li>
+      <li><b>Its tell.</b> Close enough, it fixes its aim on where you are. Its eyes sink under and it creeps at you, pushing a wake ahead of it. On Easy a line also shows where it will lunge; on Normal and Hard there is no line, as with every enemy.</li>
+      <li><b>The lunge.</b> It shoots along that line, jaws snapping. Only the lunge hurts, at the surface or underwater. Swim out of the line, or dive under it, and it misses: that is the move that gets you past.</li>
+      <li><b>Resting.</b> After a lunge it lies at the surface getting its breath back: the time to swim on past. Landing on it beats it, and so does Yaarbro’s roll or Caputo’s pounce from a log or the bank.</li>
+      <li><b>The regen rule.</b> Sent back to a safe bank, you find every crocodile you had not beaten back at home at full strength.</li>
     </ul>
   </section>
-
   <section class="words">
-    <h2>What to look for</h2>
+    <h2>On each difficulty</h2>
     <ul>
-      <li><b>Does Yaarbro’s crawl read as swimming</b> at the surface, with his back at the water? Does his treading look like treading?</li>
-      <li><b>Does Caputo’s paddle read as a dog-paddle</b>, and his underwater swim as swimming? These were written by hand, as his walk and gallop were.</li>
-      <li><b>The shake-off.</b> Is it worth keeping? It plays after every climb out.</li>
-      <li><b>The climb out</b> is quick (under half a second): Yaarbro reaches up and over, Caputo uses the push from his jump.</li>
+      <li><b>Easy:</b> one in each swim, well to the side. Swim straight across and it never wakes. Its tell lasts 1.8 s, with the line, and it is slow.</li>
+      <li><b>Normal:</b> one in each swim, right across the way. Its tell lasts 0.9 s, it swims 2.4 m a second (you swim 3.6), and lunges 4.5 m.</li>
+      <li><b>Hard:</b> two in each swim, faster (2.9), lunging further (5.5 m), a tell of 0.63 s, a shorter rest, and two hits to beat.</li>
+      <li><b>The bot gets past every one</b>, on every difficulty, as each hero, without losing a heart.</li>
     </ul>
   </section>
-
   <section class="words">
     <h2>What is not checked</h2>
     <ul>
-      <li><b>I cannot watch this move.</b> I checked it in still frames, side and front, and in the page run forward step by step. You are the first to see it at speed.</li>
-      <li><b>The ghost swims too,</b> with the same clips, at your word after the first version of this page.</li>
+      <li><b>I cannot watch this move.</b> I checked it in still frames and with the rule tests. You are the first to see it at speed.</li>
+      <li><b>Its sounds are not in yet.</b> They wait for your picks on the sound board.</li>
+      <li><b>Frame rate.</b> In the test browser the crocodiles add about 2 draw calls and 16 thousand triangles for each one in view, on a lake that draws 380 to 590 thousand. They cast no shadow, and only those near you are drawn or moved.</li>
     </ul>
   </section>
-
   <section class="words">
     <h2>Your call</h2>
-    <p>Reply OK and I will merge the swimming clips. Or tell me which clip is off and how: I can try another of Meshy’s, or build that clip by hand in Blender on his rig.</p>
+    <p>Reply OK, or tell me what is off: too easy, too hard, too hidden, too fast, on which difficulty. Every number is in the lake’s difficulty file.</p>
   </section>
 </main>
-
-<script>document.documentElement.dataset.first = 'pool';</script>
+<script>document.documentElement.dataset.first = 'reed';</script>
 <script type="module" src="arena.js"></script>
