@@ -4,6 +4,8 @@ Last updated: 2026-11-15 (milestone eight, part three: the crocodiles. Milestone
 
 ## Start here
 
+**Milestone nine is under way (2026-11-15): Cocolalla Lake reshaped.** The owner's playtest and his order are in `docs/decisions.md` (2026-11-15). The plan, in order: (1) the route rule, written down and measured: done, in the pull request this note arrived in (`src/game/route-shape.ts`, `tests/route-shape.test.ts`, `docs/adding-a-level.md`); (2) loading music, sounds and models level by level; (3) a route plan for the reshaped lake, for the owner's OK; (4) the camera that follows the route, the new layout, the rope swing, the crocodile stepping stones and the hunting crocodiles. Fishing and the monster pike come after milestone nine, then the grove reshaped by the route rule. Everything below this paragraph describes the game as milestone eight left it.
+
 **Milestone eight is done: Cocolalla Lake is playable from start to dock, with its crocodiles.** The game is live at https://rowbeartow.github.io/yaarbroverse-3d/ , the lake on the level picker after the Bouncing Grove.
 
 **Next: fishing and the monster pike, milestone nine, in a new session** (see "What's next"). The pike fight goes on the lake's fishing dock.

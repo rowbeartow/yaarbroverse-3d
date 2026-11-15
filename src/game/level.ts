@@ -64,6 +64,12 @@ export interface Leaf {
 export interface Section {
   name: string;
   solids: string[];
+  /**
+   * Which way the camera faces through this section, in degrees seen from
+   * above: 0 looks along -z, 90 along +x, 180 back along +z, 270 along -x
+   * (see route-shape.ts). Left out, 0.
+   */
+  facing?: number;
 }
 
 export interface Level {
