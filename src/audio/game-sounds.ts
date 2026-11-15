@@ -138,7 +138,7 @@ export class GameSounds {
       else if (event.type === 'breathless') sound.play('heartsOut');
       else if (event.type === 'hurt') sound.play(event.left > 0 ? 'hit' : 'heartsOut');
       else if (event.type === 'safe') sound.play('checkpoint');
-      else if (event.type === 'strike') sound.play('strike');
+      else if (event.type === 'strike') sound.play(event.kind === 'crocodile' ? 'crocHit' : 'strike');
       else if (event.type === 'goal') sound.playTune('leafTune');
       else if (event.type === 'boss') {
         // A boss is loud enough to be heard across its arena: no fading with distance.
@@ -167,7 +167,12 @@ export class GameSounds {
       else if (event.type === 'enemy') {
         const enemy = game.enemies.find((candidate) => candidate.spot.id === event.id);
         const volume = enemy ? byDistance(distanceTo(game, enemy)) : 1;
-        if (event.phase === 'warning') sound.play(event.kind === 'marmot' ? 'marmotTell' : 'mosquitoTell', { volume });
+        if (event.kind === 'crocodile') {
+          // Its tell, the bite as it lunges, and a splash as it comes down after, or goes under beaten.
+          if (event.phase === 'warning') sound.play('crocTell', { volume });
+          else if (event.phase === 'attack') sound.play('crocBite', { volume });
+          else if (event.phase === 'rest' || event.phase === 'defeated') sound.play('crocSplash', { volume });
+        } else if (event.phase === 'warning') sound.play(event.kind === 'marmot' ? 'marmotTell' : 'mosquitoTell', { volume });
         else if (event.phase === 'attack') sound.play(event.kind === 'marmot' ? 'marmotThrow' : 'mosquitoDive', { volume });
       }
     }
