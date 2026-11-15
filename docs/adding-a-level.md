@@ -5,8 +5,26 @@ A level is a folder of plain data plus one line in the level list. The rules, th
 ## Before any code
 
 1. The level's place, its name, what is in it and its goal come from the Caputo Mountain docs (the owner's private `digglesworth` repo) and from what the owner has said in a prompt (recorded in `docs/decisions.md`). Nothing else is canon. If neither says something you need, open an issue labeled `needs-decision` and ask the owner.
-2. The owner approves a route plan first: the sections in order, each built around one idea and ending on a safe place. The grove's plan is at the top of `src/levels/bouncing-grove/layout.ts`.
+2. The owner approves a route plan first: a map from above showing the sections in order, each built around one idea and ending on a safe place, which way the camera faces in each, and the route's numbers on the route rule (below). The grove's plan is at the top of `src/levels/bouncing-grove/layout.ts`.
 3. This repo is public. Copy no file and no wording from the private repo.
+
+## The route rule
+
+Routes turn (the owner's rule, 2026-11-15). A level winds, switches back and opens into wider areas, so the hero moves left, right and toward the camera, not only away from it, and the camera turns to follow the route. A level that is one line running up the screen is not allowed, however good its pieces are.
+
+`src/game/route-shape.ts` measures it and `tests/route-shape.test.ts` holds every level on the picker to it:
+
+- No more than 60% of the route runs away from the camera.
+- At least 10% runs left on the screen, and at least 10% runs right.
+- At least 8% comes back toward the camera.
+- At least 2 turns of 45 degrees or more for each 100 m.
+- The camera turns to a new facing at least twice.
+
+Each section of the level says which way the camera faces through it: `facing` on the section, in degrees seen from above (0 looks along -z, 90 along +x, 180 back along +z, 270 along -x). "Away", "left", "right" and "toward" are judged against that, so a camera that simply swings to keep the hero running up the screen does not pass: plan stretches that cross the screen and come back toward it.
+
+`ROUTE_SHAPE=1 npx vitest run tests/route-shape.test.ts --silent=false` prints every level's numbers. Put them on the route plan the owner approves.
+
+The Bouncing Grove and Cocolalla Lake were built before the rule and are on the test's waiting list until each is reshaped. The camera that turns to a section's `facing` is being built in milestone nine; until it is, the camera looks along -z everywhere. No new level goes on the waiting list.
 
 ## The files
 
@@ -23,7 +41,7 @@ Make `src/levels/<id>/` with three files:
    - `sections`, `hints` (shown the first time a hero stands on that solid) and `goalLine` are optional.
    - `enemies`: see how the grove places its scouts and mosquito at the end of its `layout.ts`.
    - `boss`: see "Ending a level with a boss" below.
-   - Directions: x is left and right, y is up, and the route runs away from the camera, which is -z. The camera always looks that way, so a route never comes back toward it.
+   - Directions: x is left and right, y is up, and a level starts out running along -z, away from the camera. From there the route must turn: see "The route rule" below.
 3. **`level.ts`**: the level's entry (`LevelEntry` in `src/levels/entry.ts`): `id`, `name`, `lead` (one line under the name on its card), `card`, `blurbs`, `build`, `scenery` and `music`.
 
 And one picture, `public/cards/<id>.jpg`, for the level's card on the picker: 480 by 270, under 60 KB. Take a picture of the level with `node scripts/screenshot.mjs` and shrink it (`sharp` is installed: resize to 480 by 270, JPEG quality about 72). A level that is `devOnly` may leave `card` out.
