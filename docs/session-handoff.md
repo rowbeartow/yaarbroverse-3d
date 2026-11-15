@@ -1,50 +1,66 @@
 # Session handoff
 
-Last updated: 2026-11-15 (milestone eight, part two: Cocolalla Lake, with its music and sounds, playable without crocodiles)
+Last updated: 2026-11-15 (milestone eight, part three: the crocodiles. Milestone eight is done.)
 
 ## Start here
 
-**Milestone eight, part two: Cocolalla Lake is playable from start to dock, with its own music and the sound of lapping water, without crocodiles.** It is on the level picker after the Bouncing Grove. The game is live at https://rowbeartow.github.io/yaarbroverse-3d/ .
+**Milestone eight is done: Cocolalla Lake is playable from start to dock, with its crocodiles.** The game is live at https://rowbeartow.github.io/yaarbroverse-3d/ , the lake on the level picker after the Bouncing Grove.
 
-**Next: the crocodiles, in a new session** (see "What's next"). **Frame rate budget:** the owner measured the lake at 75 to 81 frames a second in Safari on his Mac, against the grove's 120. The crocodiles must not push the lake under 60. Every crocodile is a skinned, animated model on top of an already heavier scene, so keep their triangle count low (the marmot and mosquito are about 1,024-texel, compressed models), share one model and its materials across all of them, draw only those near the hero, and measure the triangles and draw calls in the test browser against the lake's numbers below before asking the owner to check `?fps` again.
+**Next: fishing and the monster pike, milestone nine, in a new session** (see "What's next"). The pike fight goes on the lake's fishing dock.
 
-Milestone eight, part two, in order:
+**Frame rate budget, still in force:** the owner measured the lake at 75 to 81 frames a second in Safari on his Mac before the crocodiles (the grove runs at 120). It must stay at 60 or more. The owner checks the lake with the crocodiles next (see "What nobody has checked yet").
 
-1. **Faster checks: pull request 55, merged 2026-11-14.** The browser checks run in parallel shards on GitHub: rule tests and the build in one job, then Chromium in six shards and WebKit in four, side by side. A pull request's checks went from 24 to 30 minutes (Chromium) and 15 to 20 (WebKit) to about 10 minutes from start to finish. Every check still runs, and every job is limited to 30 minutes again.
-2. **The route plan: the owner said OK** (https://claude.ai/artifact/WzVaTX3yBGtw8qswMdqTY5 ).
-3. **Crocodile models: the owner picked C** (https://claude.ai/artifact/FMAkkG9cFaoNmu7hbGA5Jk ), the big crocodile with a broad head, bold stripes and green eyes. Made with Meshy's Text to Image and then Image to 3D (`tools/meshy-text-to-3d.mjs`, words in `tools/crocodile.candidates.json`): **117 credits** for all three (balance 1,043 to 926). **The kids picked that exact model. It is saved on the `hero-models` release; never make it again.**
-   - The crocodile (candidate C) is `crocodile-c.glb`, 4,880,312 bytes: https://github.com/rowbeartow/yaarbroverse-3d/releases/download/hero-models/crocodile-c.glb . Its SHA-256 is `3598bc12a93f52170ce796478be153bb7c9f7ba1afceacde5cf4ec7be838bf25` (starts `3598bc12a93f5217`). Downloaded from the release on 2026-11-15 and checked: same size and same checksum as the file the kids picked. Download it to a scratch folder, never into the repo.
-   - Its Meshy tasks, for the record: Image to 3D `01a1dc47-f78d-7479-af00-b87be42bfada` (the model), made from Text to Image `01a1dc47-77c3-754b-bd1b-187e4793413f` (the picture).
-4. **Sections 1 to 3: pull request 56, merged 2026-11-15.** The Shore Path, The Reed Shallows, The Sunken Logs.
-5. **Sections 4 to 6: pull request 57, merged 2026-11-15.** The Rock Tunnel, Cattail Cove, The Old Pier.
-6. **The lake's scenery: pull request 58, merged 2026-11-15.** `src/view/lake.ts` and `src/view/lake-solids.ts`.
-7. **The lake on the level picker: pull request 59, merged 2026-11-15.** Its card picture is `public/cards/cocolalla.jpg`.
-8. **The lake's music and sounds: the pull request this version of the handoff arrived in. If you are reading this on `main`, it has merged.** The owner's picks: music B, "Morning Sky" by Centurion_of_war (`assets/audio/lake-music.mp3`, `lakeMusic`); the lapping water OK (`lake-lapping.wav`, `lapping`), which plays at full volume within 3 m of any water and fades out by 20 m (`lappingAt` in `src/audio/game-sounds.ts`); the loon left out. Sound and music: 3.75 MB of the 4 MB budget.
+Milestone eight, part three (the crocodiles), in order:
 
-**The lake, as built** (`src/levels/cocolalla/`, id `cocolalla`):
+1. **The handoff's record of the model: pull request 61, merged 2026-11-15.** The crocodile the kids picked is `crocodile-c.glb` on the `hero-models` release (below). Never make it again.
+2. **Rig and clips: pull request 62, merged 2026-11-15**, after the owner's OK on the preview page (https://claude.ai/artifact/K5LovBcEE3786jU137sCzf ). `tools/rig-quadruped.py` has a `Crocodile` class and its guide is `tools/crocodile.rig.json`. Six clips: `lurk` (only eyes and snout above water), `swim`, `dive` (underwater), `lunge` (jaws snap shut 0.34 s in), `hit`, `defeated` (rolls over and sinks). Its curled tail is laid out straight before the clips are written (`straighten_tail`), and it has a jaw bone weighted along the line of the closed mouth (`weigh_jaw`). 8,000 triangles, a 1,024-pixel picture, 0.5 MB (`assets/enemies/crocodile.glb`).
+3. **Behaviour: pull request 63, merged 2026-11-15**, after the owner's OK on the arena preview (https://claude.ai/artifact/39XqeJ12kwpjJjdMtjTAZp ). `src/game/crocodile.ts`; drawn by `src/view/enemies.ts`.
+4. **Sounds: pull request 64, merged 2026-11-15.** The owner's picks on the sound board (https://claude.ai/artifact/WvtY9CjWaa5yTpwyJCferH ): warning B (`croc-warning.wav`), bite B (`croc-bite.wav`), splash A (`croc-splash.wav`), hit A (`croc-hit.wav`). All CC0 recordings. Sound and music: 4,095,111 of the 4,194,304 bytes allowed: about 99 KB to spare.
+5. **Placement and the bot: the pull request this version of the handoff arrived in. If you are reading this on `main`, it has merged.** The owner said OK to the arena preview of both swims.
 
-- The run, from a pebble beach to the fishing dock: boulder hops to a grassy point; a swim to a rock island (crocodile stretch); logs and boulders to a gravel bar too high to climb onto from the water; a dive under a rocky point that spans the lake (the passage is 4, 6 and 9 m long on Easy, Normal and Hard) to a reed bar; a long swim across Cattail Cove (crocodile stretch); posts up to the boardwalk and the dock, with the golden leaf at the dock's end.
-- The water is three pools, each the full width of the lake (36 m), parted by the gravel bar and the reed bar. A missed jump anywhere lands in the water and is never a fall. A pool's id may appear only once in a route, which is why a lake is several pools (`docs/adding-a-level.md`, "Water").
-- A perfect run (the test bot): **50.5 s on Easy, 59.5 s on Normal, 67.5 s on Hard.** The longest time underwater is 2.5, 3.0 and 3.7 s; breath is unlimited on Easy, 16 s on Normal and 11 s on Hard.
-- The crocodile stretches are the open water of `reed-water` (the swim from the grassy point to the rock island) and `cove-water` (from the reed bar to the first post). Both are 36 m wide, so on Easy a crocodile can sit to one side and be swum round at the surface.
-- Every number is in `src/levels/cocolalla/difficulty.ts`; `tests/lake.test.ts` checks the lake's own rules. `LAKE_TIMES=1 npx vitest run tests/lake.test.ts --silent=false` prints the section times.
-- The surroundings (`scenery: 'lake'`): a wooded shore along the left with pines, rocks and reeds, which bends away past the dock; a log boom along the right, where the swimming stops; open water all round over one lake bed; a clearer haze than the forest's; the Selkirks as a dark wooded band with snow on the high tops. Boulders, the rocky point's crags and the pier's boards are new kinds of solid (`boulder`, `crag`, `deck`).
+**The crocodile, as built:**
 
-**What nobody has checked yet in the lake, and the owner is the one who can:**
+- It lurks at home with only its eyes and snout above water; touching it then does nothing. A hero in its water is stalked at their depth (at the surface with its back awash), always slower than a hero swims. Close enough, it gives its tell: it fixes its aim, its eyes sink under and it creeps along the aim, pushing a wake. Then it lunges along exactly that line, a metre past where the hero was. Only the lunge hurts, at the surface or underwater: it is the one enemy that reaches a swimmer whose head is under. Afterwards it rests at the surface.
+- Getting past: swim out of the line, or dive under it (the move button). Beating it: land on it, or Yaarbro's roll or Caputo's pounce from a log or the bank. The regen rule applies.
+- On Easy a line shows where it will lunge; on Normal and Hard there is none.
+- Its numbers per difficulty are `croc*` in `src/levels/cocolalla/difficulty.ts`: Easy, one in each long swim, 11 m to the side of the way (a hero swimming straight across never wakes it), tell 1.8 s; Normal, one in each, across the way, tell 0.9 s, swims 2.4 m/s, lunges 4.5 m; Hard, two in each, tell 0.63 s, swims 2.9 m/s, lunges 5.5 m, two hits to beat.
+- The test bot swims past them by looking ahead on a copy of the game, as it does in a boss fight, and swimming or diving out of a lunge's line (`swimSafely` in `tests/helpers/bot.ts`). It finishes the lake on every difficulty as each hero with no heart lost. A perfect run now takes 50.5 s on Easy, 59.9 on Normal and 73.4 on Hard.
+- Cost to draw: it casts no shadow, and only crocodiles within 70 m of the hero are drawn or moved. Each shares the model's shape; each has its own copy of the materials, so it can flash when struck.
 
-1. **Frame rate on the iPad.** The owner measured the Mac: 75 to 81 frames a second across the lake in Safari, against 120 in the grove. In the test browser the lake draws about 340 to 650 thousand triangles in 140 to 165 draw calls, against about 380 thousand in 300 at the start of the grove. If it needs to be lighter, the first things to cut are the near pines (`nearPines` in `LAKE_LOOK`, `src/view/lake.ts`) and the water's points (`22000` in `WaterView`, `src/view/water.ts`).
-2. **How the lake looks and plays on a real screen.** Judged from still pictures only.
-3. **Whether Easy's swims and dive need no timing for the younger player,** and whether Hard's 11 s of breath and 9 m tunnel are right (`breath` and `tunnelLength` in the lake's `difficulty.ts`).
-4. **Swimming in the Sandbox, the sounds in the game, and the muffle**, still open from part one.
-5. **How the lake music and the lapping sound in the game.** Heard on the board only.
+**The crocodile's original model:**
+
+- The crocodile (candidate C) is `crocodile-c.glb`, 4,880,312 bytes: https://github.com/rowbeartow/yaarbroverse-3d/releases/download/hero-models/crocodile-c.glb . Its SHA-256 is `3598bc12a93f52170ce796478be153bb7c9f7ba1afceacde5cf4ec7be838bf25` (starts `3598bc12a93f5217`). Downloaded from the release on 2026-11-15 and checked: same size and checksum as the file the kids picked. Download it to a scratch folder, never into the repo. The kids picked this exact model: never make it again.
+- Its Meshy tasks, for the record: Image to 3D `01a1dc47-f78d-7479-af00-b87be42bfada`, made from Text to Image `01a1dc47-77c3-754b-bd1b-187e4793413f`.
+
+**Triangles and draw calls on the lake** (the test browser, high tier, Hard, at the grassy point, the rock island, the reed bar and the first post of the pier):
+
+| Place | Before the crocodiles | With crocodiles, shadows on | With crocodiles, no shadows (as built) |
+| --- | --- | --- | --- |
+| Grassy point | 125 draw calls, 565,592 triangles | 129, 597,588 | 127, 581,590 |
+| Rock island | 142, 584,888 | 146, 616,884 | 144, 600,886 |
+| Reed bar | 144, 485,942 | 148, 517,938 | 146, 501,940 |
+| First post | 166, 378,944 | 171, 410,942 | 169, 394,944 |
+
+Two crocodiles in view cost 2 draw calls and 16,000 triangles, about 3% more triangles. The start of the grove draws about 300 draw calls and 380,000 triangles.
+
+**What nobody has checked yet, and the owner is the one who can:**
+
+1. **The frame rate on the Mac with the crocodiles**, in Safari with `?fps` on Hard, swimming both crocodile stretches. It must stay at 60 or more.
+2. **The crocodiles in motion and in the game's full light.** Judged here from still frames in flat light, and by the owner on the preview pages.
+3. **How they sound in the game.** Heard on the board only.
+4. **Whether Easy is easy enough and Hard a real threat**, played by the kids on the iPad.
+5. Still open from parts one and two: swimming in the Sandbox, the lake's music and lapping in the game, the iPad's frame rate on the lake.
 
 **The roadmap, in the owner's order:**
 
-1. Milestones six and seven: done. Milestone eight, part one (swimming): done.
-2. **The lake, part two: the level, its scenery, music and sounds are done.** Next: the crocodiles, rigging, animating and placing them, in a new session.
-3. Fishing and the monster pike boss, on the fishing dock (milestone nine). The pike is fought both on the fishing line and in the water.
-4. Skiing in the Selkirks, with Caputo on a snowboard.
-5. Mountain climbing on rock, ice and trees.
+1. Milestones six, seven and eight (the lake: swimming, the level, the crocodiles): done.
+2. **Fishing and the monster pike boss, on the fishing dock (milestone nine): next.** The pike is fought both on the fishing line and in the water.
+3. Skiing in the Selkirks, with Caputo on a snowboard.
+4. Mountain climbing on rock, ice and trees.
+
+---
+
+**Milestone eight, part two (done 2026-11-15): Cocolalla Lake.** Pull requests 55 to 60, all merged: the browser checks in parallel shards, about 10 minutes a pull request (55); the route plan (owner's OK: https://claude.ai/artifact/WzVaTX3yBGtw8qswMdqTY5 ); sections 1 to 3 (56) and 4 to 6 (57); the lake's scenery (58); the lake on the level picker (59); its music, "Morning Sky", and lapping water (60). The level is `src/levels/cocolalla/` (id `cocolalla`): a pebble beach, boulder hops, a swim to a rock island, sunken logs to a gravel bar, a dive under a rocky point, a swim across Cattail Cove, and posts up to the boardwalk and the fishing dock. The water is three pools the full width of the lake, parted by the gravel bar and the reed bar, so a missed jump lands in the water and is never a fall. `tests/lake.test.ts` checks the lake's own rules; `LAKE_TIMES=1 npx vitest run tests/lake.test.ts --silent=false` prints the section times. The surroundings are `scenery: 'lake'` (`src/view/lake.ts`, `src/view/lake-solids.ts`).
 
 ---
 
@@ -364,7 +380,7 @@ Milestone four (sound and music) is done, in the pull requests listed under "Sta
 
 ## Checks on this state
 
-- `npm test`: 971 rule tests pass. New in milestone eight, part two: Cocolalla Lake's sections, run times, the dive against the breath, the rocky point only passable underwater, the banks that cannot be climbed from the water, a missed jump landing in the water, and what each difficulty changes (`tests/lake.test.ts`); the bot finishes the lake on every difficulty as each hero (`tests/levels.test.ts`). New in milestone eight, part one: the bot wins every boss's first fight from 14 ways in on every difficulty as each hero (`tests/boss-entry.test.ts`); swimming, diving, swimming up, the floor, the pool's sides, breath, running out of it, climbing out, shores, checkpoints and enemies in water, and the bot crossing the Sandbox pool with the dive button on every difficulty as each hero (`tests/swim.test.ts`, and `tests/levels.test.ts` for every pool in every level); the swimming sounds and the muffle (`tests/sound.test.ts`); a ghost that swims, and old ghosts still loading (`tests/ghost.test.ts`); the heroes' new clips (`tests/hero-files.test.ts`). New in milestone seven: tipping logs, crumbling moss and windy boughs on their own and as the grove uses them, the drawn top of a tipping log against the rules' (`tests/moving.test.ts`); the ghost store (`tests/ghost-store.test.ts`). New in milestone six: the scout's beat and chase, the shorter warnings, the mosquito keeping up, enemy health, the shove of a hit, the regen rule for enemies (`tests/enemies.test.ts`); how any boss fights, its stages, its guard, its sidekicks, the locked goal and the regen rule for a boss (`tests/boss.test.ts`); the marmot chief's place, look, numbers and sidekicks (`tests/chief.test.ts`). The test bot plays every level on every difficulty as each hero: no fall, no heart lost on the way to a boss, the boss beaten in its first fight, on walk and jump alone. It loses no heart to the chief on any difficulty with the current layout.
+- `npm test`: 995 rule tests pass. New in milestone eight, part three: the crocodile's lurking, stalking at the surface and underwater, its tell, its bite at the surface and underwater, getting past by swimming out of its line or diving, beating it, and the regen rule (`tests/crocodile.test.ts`); where the crocodiles wait on each difficulty, and the bot getting past every one on Normal and Hard with no heart lost (`tests/lake.test.ts`); its sounds (`tests/sound.test.ts`); its model file and clips (`tests/enemy-files.test.ts`). New in milestone eight, part two: Cocolalla Lake's sections, run times, the dive against the breath, the rocky point only passable underwater, the banks that cannot be climbed from the water, a missed jump landing in the water, and what each difficulty changes (`tests/lake.test.ts`); the bot finishes the lake on every difficulty as each hero (`tests/levels.test.ts`). New in milestone eight, part one: the bot wins every boss's first fight from 14 ways in on every difficulty as each hero (`tests/boss-entry.test.ts`); swimming, diving, swimming up, the floor, the pool's sides, breath, running out of it, climbing out, shores, checkpoints and enemies in water, and the bot crossing the Sandbox pool with the dive button on every difficulty as each hero (`tests/swim.test.ts`, and `tests/levels.test.ts` for every pool in every level); the swimming sounds and the muffle (`tests/sound.test.ts`); a ghost that swims, and old ghosts still loading (`tests/ghost.test.ts`); the heroes' new clips (`tests/hero-files.test.ts`). New in milestone seven: tipping logs, crumbling moss and windy boughs on their own and as the grove uses them, the drawn top of a tipping log against the rules' (`tests/moving.test.ts`); the ghost store (`tests/ghost-store.test.ts`). New in milestone six: the scout's beat and chase, the shorter warnings, the mosquito keeping up, enemy health, the shove of a hit, the regen rule for enemies (`tests/enemies.test.ts`); how any boss fights, its stages, its guard, its sidekicks, the locked goal and the regen rule for a boss (`tests/boss.test.ts`); the marmot chief's place, look, numbers and sidekicks (`tests/chief.test.ts`). The test bot plays every level on every difficulty as each hero: no fall, no heart lost on the way to a boss, the boss beaten in its first fight, on walk and jump alone. It loses no heart to the chief on any difficulty with the current layout.
 - `npm run test:browser`: the browser checks pass on GitHub for every pull request of milestones seven and eight, now in parallel shards, about 10 minutes a pull request (new in part two: the lake opens, draws its water, shore and mountains, and plays to its end card, in `levels.spec.ts`; its card on the picker, in `picker.spec.ts`; new in part one: new in eight: diving with the keyboard and the touch button, the breath bar on Normal and never on Easy, and the sound muffled underwater, in `swim.spec.ts`; the pool drawn, splashes, and the underwater look coming and going, in `water.spec.ts`), in Chromium at Mac size with the keyboard, in Chromium at iPad size with touch, and in WebKit at iPad size with touch. New in milestone six: the scout hiding on Easy and walking its beat on Hard, the aim line on Easy only, a hit showing and a fall undoing it (`enemies.spec.ts`); a boss's bar, music, hit, regen, victory and locked leaf, on the practice boss and on the chief (`boss.spec.ts`). Checks about the end of a run count the boss as beaten (`skipBoss` in `helpers.ts`) and do not fight it.
 - **Not checked:**
   - How anything moves or sounds in milestone six, beyond the owner's look at the tougher enemies on the preview page (see "Start here").
@@ -377,9 +393,10 @@ Milestone four (sound and music) is done, in the pull requests listed under "Sta
 
 ## What's next
 
-1. **The crocodiles, in a new session.** The model is Meshy candidate C, the exact file the kids picked (it is `crocodile-c.glb` on the `hero-models` release; see "Start here" for its checksum; never make it again). Rig it (a four-legged rig like `tools/rig-quadruped.py`, with its curled tail straightened), give it clips, and get the owner's OK on the enemy preview page; then its rules in `src/game/enemy.ts`, by the owner's rules in `docs/decisions.md` (2026-11-14): it reaches a swimmer at the surface and underwater, every one can be avoided on Easy without diving or precise timing, each hero's move beats or gets past it, and the regen rule applies. Place them in the two stretches, `reed-water` and `cove-water`, and get the owner's OK on the arena preview page. The bot will need to swim round or past them: `swim` in `tests/helpers/bot.ts`. **The lake must stay at 60 frames a second or more on the Mac** (it runs at 75 to 81 now; see "Start here").
-2. **The owner and the kids play the lake** on the iPad, and say what is off (see "What nobody has checked yet").
-3. **Ideas that came up and were not asked for** are not in the code: a vine to swing from, a rolling log and logs drifting in a stream (drifting logs could be a new `motion` kind in `src/game/moving.ts`), a run clip for the scout and clips of its own for the chief, recorded sounds of its own for the chief, a hint on screen the first time a guarded boss is open, remembering the last area each player picked, a ghost of someone else's run, sound that moves left and right with what makes it, sounds for strokes underwater, a boat, a loon (no CC0 recording was found; the owner left the made-in-code one out).
+1. **Fishing and the monster pike (milestone nine), in a new session.** The owner's word so far (`docs/decisions.md`, 2026-11-14): the lake level ends at a fishing dock, and the monster pike fight goes there; the pike is fought both on the fishing line and in the water. The Caputo Mountain docs (the owner's private repo) have a Cocolalla Lake fishing rescue to read first. A boss can be added to any level (`docs/adding-a-level.md`, "Ending a level with a boss"); the pike is the first boss in the water, so how it reaches a swimmer needs the owner's word, as the crocodile's did. Start with a plan for the owner.
+2. **The owner checks the lake's frame rate with the crocodiles** on the Mac (`?fps`, Hard, both crocodile swims). If it drops under 60, the first things to cut are the near pines (`nearPines` in `LAKE_LOOK`, `src/view/lake.ts`), the water's points (`22000` in `WaterView`, `src/view/water.ts`), and how far away crocodiles are drawn (`SEEN_WITHIN` in `src/view/enemies.ts`).
+3. **The owner and the kids play the lake** on the iPad, and say what is off (see "What nobody has checked yet"). Tuning is the `croc*` numbers and the rest of `src/levels/cocolalla/difficulty.ts`.
+4. **Ideas that came up and were not asked for** are not in the code: a vine to swing from, a rolling log and logs drifting in a stream (drifting logs could be a new `motion` kind in `src/game/moving.ts`), a run clip for the scout and clips of its own for the chief, recorded sounds of its own for the chief, a hint on screen the first time a guarded boss is open, remembering the last area each player picked, a ghost of someone else's run, sound that moves left and right with what makes it, sounds for strokes underwater, a boat, a loon (no CC0 recording was found; the owner left the made-in-code one out).
 
 ## Known limits
 

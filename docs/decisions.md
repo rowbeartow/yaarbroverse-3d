@@ -528,3 +528,7 @@ Supersedes: none
 ## 2026-11-15 The crocodile's sounds
 Reason: The owner's picks on the sound board: warning B (a deep growl made by voice, rubberduck), bite B (a crunchy bite, fvcalderan), splash A (a cannonball landing in the sea, Thimras) and hit A (a dull thump, rubberduck). All CC0 recordings. Claude's calls within it: the growl plays at its tell, the bite as it lunges, the splash as it comes down after a lunge and as it goes under beaten, the thump when it is struck, each fading with distance like the other enemies'. They play at the levels heard on the board. Sound and music now come to 4,095,111 of the 4,194,304 bytes allowed.
 Supersedes: none
+
+## 2026-11-15 Where the crocodiles wait
+Reason: The owner said OK to the arena preview of both swims (https://claude.ai/artifact/39XqeJ12kwpjJjdMtjTAZp ). Claude's calls within his rules: on Easy one crocodile in each long swim, 11 m to the side of the way across, so a hero swimming straight across never wakes it, with a tell of 1.8 s and the aim line; on Normal one in each, across the way, tell 0.9 s, swimming 2.4 m/s and lunging 4.5 m; on Hard two in each, tell 0.63 s, 2.9 m/s, 5.5 m, two hits to beat. Every number is `croc*` in `src/levels/cocolalla/difficulty.ts`. The test bot gets past them by looking ahead on a copy of the game and swimming or diving out of a lunge's line. With crocodile shadows off, two crocodiles in view add 2 draw calls and 16,000 triangles in the test browser.
+Supersedes: none
