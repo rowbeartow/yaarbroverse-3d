@@ -65,9 +65,17 @@ A new kind of solid needs a name in `SolidKind` (`src/game/level.ts`) and a shap
 
 `music` in the entry is the name of a looping track in `src/audio/sounds.ts`. To give a level its own:
 
-1. Put the MP3 in `assets/audio/` and credit it in `CREDITS.md` (`tests/sound-files.test.ts` fails otherwise). Sound and music together must stay under 4 MB.
-2. Add it to `SOUNDS` beside `groveMusic`, with `mix: 'music'` and `loop: true`.
+1. Put the MP3 in `assets/audio/` and credit it in `CREDITS.md` (`tests/sound-files.test.ts` fails otherwise).
+2. Add it to `SOUNDS` beside `groveMusic`, with `mix: 'music'`, `loop: true` and `home: ['<the level's id>']`.
 3. It goes on the sound board for the owner's OK before it merges (`node tools/preview/sounds.mjs`).
+
+## What loads when
+
+Music, sounds and enemy models that belong to one level are fetched when that level is picked, not at start-up, so a new level adds nothing to every visit's first download.
+
+- **Sounds.** A sound in `src/audio/sounds.ts` with a `home` (a list of level ids) belongs to those levels; one without is shared and fetched at start-up. A level's own sounds and music must stay under 2.5 MB together, and the shared ones under 1 MB (`SOUND_LIMITS`; `tests/sound-files.test.ts` holds both and `SOUND_SIZES=1 npx vitest run tests/sound-files.test.ts --silent=false` prints where each stands). When a level reuses a piece that makes a sound (water, a tipping log, an enemy), add the level's id to that sound's `home`: `tests/levels.test.ts` fails until every sound the level's pieces make is shared or its own.
+- **Enemy models.** Nothing to do: the game works out a level's models from its enemies and its boss (`modelFilesOf` in `src/view/enemies.ts`).
+- **Textures and the light** are shared by every level and fetched at start-up.
 
 ## Pieces that move
 

@@ -1,6 +1,8 @@
 // Every sound and piece of music in the game, in one list: what it is for,
 // where it comes from (a recorded file in assets/audio/, or for the mosquito a
-// recipe in synth.ts), and how loud it is against the others.
+// recipe in synth.ts), how loud it is against the others, and which levels it
+// belongs to (`home`). Shared sounds are fetched at start-up; a level's own
+// when that level is picked.
 //
 // The sound board the owner listens on (tools/preview/sounds.mjs) is built
 // from this list, and so is the game's sound. CREDITS.md lists the source and
@@ -64,7 +66,29 @@ export interface SoundDef {
   double?: number;
   /** A made sound played quietly underneath, such as the low thump under a landing. */
   under?: SynthName;
+  /**
+   * The levels this sound belongs to, by their ids in the level list. Its
+   * files are fetched when one of those levels is picked, not at start-up.
+   * Left out, the sound is shared: every level may play it, and it is fetched
+   * at start-up.
+   */
+  home?: readonly string[];
 }
+
+/** Sounds only the Bouncing Grove plays (and the Sandbox, which borrows its enemies, boss and music). */
+const GROVE = ['bouncing-grove', 'sandbox'] as const;
+/** Sounds only Cocolalla Lake plays. */
+const LAKE = ['cocolalla'] as const;
+/** Sounds of deep water, for the levels that have any. */
+const WATER = ['cocolalla', 'sandbox'] as const;
+
+/**
+ * How big the recorded files may be, in bytes: the shared ones together, and
+ * each level's own together (`tests/sound-files.test.ts` holds both). Shared
+ * sounds are part of every visit's start-up, so keep them small; a level's own
+ * are fetched when it is picked.
+ */
+export const SOUND_LIMITS = { shared: 1024 * 1024, level: 2.5 * 1024 * 1024 } as const;
 
 export const SOUNDS = {
   stepMoss: {
@@ -133,31 +157,37 @@ export const SOUNDS = {
     source: { files: ['fall.wav'] },
   },
   crocTell: {
+    home: LAKE,
     group: 'Enemies', label: "Crocodile's warning", mix: 'cue', level: 0,
     what: 'A deep growl as a crocodile fixes its aim and its eyes sink: its tell before a lunge. The owner picked choice B.',
     source: { files: ['croc-warning.wav'] },
   },
   crocBite: {
+    home: LAKE,
     group: 'Enemies', label: "Crocodile's bite", mix: 'cue', level: 0,
     what: 'A quick crunchy chomp as a crocodile lunges. The owner picked choice B.',
     source: { files: ['croc-bite.wav'] },
   },
   crocSplash: {
+    home: LAKE,
     group: 'Enemies', label: "Crocodile's splash", mix: 'action', level: 0,
     what: 'A heavy splash as a crocodile comes down after a lunge, and when it is beaten. The owner picked choice A.',
     source: { files: ['croc-splash.wav'] },
   },
   crocHit: {
+    home: LAKE,
     group: 'Enemies', label: 'A crocodile is struck', mix: 'cue', level: 0,
     what: 'A dull thump when a hero lands on a crocodile or strikes it. The owner picked choice A.',
     source: { files: ['croc-hit.wav'] },
   },
   marmotTell: {
+    home: GROVE,
     group: 'Enemies', label: "Marmot scout's warning", mix: 'cue', level: -4,
     what: 'A squeak as the scout rears up with its acorn. A squeaky toy, played a little lower.',
     source: { files: ['marmot-warning.wav'] },
   },
   marmotThrow: {
+    home: GROVE,
     group: 'Enemies', label: "Marmot scout's throw", mix: 'cue', level: -3,
     what: 'A quick, short swish as the acorn leaves its paw.',
     source: { files: ['marmot-throw.wav'] },
@@ -188,41 +218,49 @@ export const SOUNDS = {
     source: { files: ['checkpoint.wav'] },
   },
   creak: {
+    home: GROVE,
     group: 'World', label: 'Tipping log creak', mix: 'cue', level: -3, vary: 0.06,
     what: 'A slow wooden creak when a hero lands on a tipping log (its tell), and again as it starts to tip. The owner picked choice A.',
     source: { files: ['creak.wav'] },
   },
   mossRustle: {
+    home: GROVE,
     group: 'World', label: 'Moss about to crumble', mix: 'cue', level: -3, vary: 0.06,
     what: 'A dry rustle the moment a hero lands on crumbling moss: its tell. The owner picked choice B.',
     source: { files: ['moss-rustle.wav'] },
   },
   mossFall: {
+    home: GROVE,
     group: 'World', label: 'Moss falling away', mix: 'action', level: 0, vary: 0.05,
     what: 'Wood and bark tumbling as crumbling moss gives way into the mist. The owner picked choice A.',
     source: { files: ['moss-fall.wav'] },
   },
   gust: {
+    home: GROVE,
     group: 'World', label: 'Wind before a bough moves', mix: 'cue', level: -3, vary: 0.04,
     what: 'A gust that swells just before a windy bough rises or sinks: its tell. The owner picked choice B.',
     source: { files: ['gust.wav'] },
   },
   waterIn: {
+    home: WATER,
     group: 'Water', label: 'Going into the water', mix: 'action', level: 0, vary: 0.05,
     what: 'A splash when a hero goes into deep water, louder the higher the drop. The owner picked choice A.',
     source: { files: ['water-in.wav'] },
   },
   stroke: {
+    home: WATER,
     group: 'Water', label: 'A swimming stroke', mix: 'step', level: -2, vary: 0.08,
     what: 'A small splash for each stroke while swimming at the surface. The owner picked choice B.',
     source: { files: ['stroke.wav'] },
   },
   surfacing: {
+    home: WATER,
     group: 'Water', label: 'Surfacing', mix: 'action', level: -4, vary: 0.05,
     what: "A soft splash when a swimmer's head comes back up. The owner picked choice A.",
     source: { files: ['surfacing.wav'] },
   },
   lapping: {
+    home: WATER,
     group: 'Water', label: 'Water lapping', mix: 'step', level: 0, loop: true,
     what: 'Small waves lapping at a shore, round and round, softly while a hero is by or in the water. The owner said OK.',
     source: { files: ['lake-lapping.wav'] },
@@ -238,21 +276,25 @@ export const SOUNDS = {
     source: { files: ['button.wav'] },
   },
   bossBeaten: {
+    home: GROVE,
     group: 'Enemies', label: 'Boss beaten', mix: 'cue', level: 2,
     what: 'Rising chime notes that ring out over two and a half seconds, the moment a boss is beaten.',
     source: { files: ['boss-beaten.wav'] },
   },
   bossMusic: {
+    home: GROVE,
     group: 'Music', label: 'Boss music', mix: 'music', level: 0, loop: true,
     what: 'An orchestral battle theme, 40 seconds round, that takes over from a level\'s own music while a boss fight is on.',
     source: { files: ['boss-music.mp3'] },
   },
   groveMusic: {
+    home: GROVE,
     group: 'Music', label: 'Grove music', mix: 'music', level: 0, loop: true,
     what: 'A calm forest track, 1 minute 22 seconds, that goes round without a gap. It sits well under the effects.',
     source: { files: ['grove-music.mp3'] },
   },
   lakeMusic: {
+    home: LAKE,
     group: 'Music', label: 'Lake music', mix: 'music', level: 0, loop: true,
     what: "Cocolalla Lake's music: a calm, bright morning tune, 2 minutes 12 seconds, that goes round without a gap. The owner picked B, \"Morning Sky\".",
     source: { files: ['lake-music.mp3'] },
@@ -260,6 +302,24 @@ export const SOUNDS = {
 } satisfies Record<string, SoundDef>;
 
 export type SoundName = keyof typeof SOUNDS;
+
+/**
+ * The recorded files to fetch: the shared ones (no level given), or one
+ * level's own. A file a shared sound uses is shared, whoever else uses it.
+ */
+export const soundFiles = (levelId: string | null): string[] => {
+  const defs = Object.values(SOUNDS) as SoundDef[];
+  const filesOf = (def: SoundDef): string[] => ('files' in def.source ? def.source.files : []);
+  const shared = new Set(defs.filter((def) => !def.home).flatMap(filesOf));
+  if (levelId === null) return [...shared];
+  return [...new Set(defs.filter((def) => def.home?.includes(levelId)).flatMap(filesOf))].filter((file) => !shared.has(file));
+};
+
+/** True when a level may play this sound: it is shared, or the level is one of its homes. */
+export const soundAt = (name: SoundName, levelId: string): boolean => {
+  const home = (SOUNDS[name] as SoundDef).home;
+  return !home || home.includes(levelId);
+};
 
 /**
  * Who a sound is made by, when that changes how it is played. Caputo's

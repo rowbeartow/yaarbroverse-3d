@@ -2,15 +2,17 @@
 // mix.ts, which decides what may play and when). How the sounds are wired
 // together and how loud each group is lives in graph.ts and sounds.ts.
 //
-// The files are fetched as soon as the page opens, but nothing can be decoded
-// or played until the player taps or presses a key: browsers, Safari above
-// all, only let sound start from inside a tap or a key press. `wake()` is
-// called from every one of those, so sound also comes back after Safari has
-// put it to sleep (a phone call, another tab).
+// The shared files are fetched as soon as the page opens, and a level's own
+// (its music, its enemies' sounds) when that level is picked: `setLevel`.
+// Another level's are let go then, so only one level's music is ever held.
+// Nothing can be decoded or played until the player taps or presses a key:
+// browsers, Safari above all, only let sound start from inside a tap or a key
+// press. `wake()` is called from every one of those, so sound also comes back
+// after Safari has put it to sleep (a phone call, another tab).
 
 import { LIST, Turns, buildMix, loadBuffers, setUnderwater, startMusic, strike, type Buffers, type MixGraph } from './graph';
 import type { PlayOptions, Speaker } from './mix';
-import { gainOf, type SoundName } from './sounds';
+import { gainOf, soundFiles, type SoundName } from './sounds';
 
 declare const __BUILD_ID__: string;
 
@@ -20,8 +22,12 @@ const address = (file: string): string => `${import.meta.env.BASE_URL}media/audi
 export interface PlayerInfo {
   /** 'none' until the first tap or key press, then the browser's own word: 'running', 'suspended'… */
   state: string;
-  /** True once every sound is decoded and can play. */
+  /** True once the shared sounds and those of the level that is up are decoded and can play. */
   ready: boolean;
+  /** The level whose own sounds are held, by its id. */
+  level: string | null;
+  /** How many recorded files have been fetched on this visit, and their size in bytes. */
+  fetched: { files: number; bytes: number };
   /** How loud everything is let through: 1, or 0 when muted. */
   volume: number;
   /** True while everything is muffled, the hero's head being underwater. */
@@ -43,15 +49,21 @@ export class Player implements Speaker {
   private ctx: AudioContext | null = null;
   private graph: MixGraph | null = null;
   private readonly bytes = new Map<string, ArrayBuffer>();
-  private buffers: Buffers = new Map();
-  private turns = new Turns(this.buffers);
-  private fetched: Promise<void> | null = null;
+  private readonly buffers: Buffers = new Map();
+  private readonly turns = new Turns(this.buffers);
+  /** The level whose own sounds are wanted, and the one job at a time that brings sounds in. */
+  private level: string | null = null;
+  private work: Promise<void> = Promise.resolve();
+  private synthsMade = false;
   private ready = false;
+  private readonly fetched = { files: 0, bytes: 0 };
 
   private muted = false;
   private underwater = false;
   private wantedMusic: SoundName | null = null;
   private music: Running | null = null;
+  /** The music that is sounding now, which may not yet be the music wanted. */
+  private playing: SoundName | null = null;
   private tune: AudioBufferSourceNode | null = null;
   private readonly wantedLoops = new Map<SoundName, number>();
   private readonly loops = new Map<SoundName, Running>();
@@ -67,24 +79,61 @@ export class Player implements Speaker {
     });
   }
 
-  /** Fetches every sound file. Safe to call before any tap: nothing is played or decoded. */
+  /** Fetches the shared sound files. Safe to call before any tap: nothing is played or decoded. */
   preload(): Promise<void> {
-    this.fetched ??= (async () => {
-      const files = new Set<string>();
-      for (const def of Object.values(LIST)) if ('files' in def.source) for (const file of def.source.files) files.add(file);
-      await Promise.all(
-        [...files].map(async (file) => {
+    return this.bring();
+  }
+
+  /** The level that is up: fetches its own sounds and lets another level's go. Safe before any tap. */
+  setLevel(levelId: string): void {
+    if (this.level === levelId) return;
+    this.level = levelId;
+    this.ready = false;
+    void this.bring();
+  }
+
+  /** Brings in whatever is wanted now and is not here yet, one job after another so two never overlap. */
+  private bring(): Promise<void> {
+    this.work = this.work.then(() => this.sync()).catch((error: unknown) => void this.problems.push(`Sound could not be made ready: ${String(error)}`));
+    return this.work;
+  }
+
+  private async sync(): Promise<void> {
+    const level = this.level;
+    const wanted = new Set([...soundFiles(null), ...(level ? soundFiles(level) : [])]);
+    // Another level's sounds are let go. Music that is still fading out keeps its own hold on what it plays.
+    for (const file of [...this.buffers.keys()]) if (!file.startsWith('synth:') && !wanted.has(file)) this.buffers.delete(file);
+    for (const file of [...this.bytes.keys()]) if (!wanted.has(file)) this.bytes.delete(file);
+    await Promise.all(
+      [...wanted]
+        .filter((file) => !this.buffers.has(file) && !this.bytes.has(file))
+        .map(async (file) => {
           try {
             const response = await fetch(address(file));
             if (!response.ok) throw new Error(String(response.status));
-            this.bytes.set(file, await response.arrayBuffer());
+            const data = await response.arrayBuffer();
+            this.bytes.set(file, data);
+            this.fetched.files += 1;
+            this.fetched.bytes += data.byteLength;
           } catch (error) {
             this.problems.push(`${file} did not arrive: ${String(error)}`);
           }
         }),
-      );
-    })();
-    return this.fetched;
+    );
+    const ctx = this.ctx;
+    // Before the first tap there is nothing to decode with: the bytes wait.
+    if (!ctx) return;
+    const files = new Set(this.bytes.keys());
+    const made = await loadBuffers(ctx, (file) => this.bytes.get(file), this.problems, { files, synths: !this.synthsMade });
+    this.synthsMade = true;
+    for (const [key, buffer] of made) this.buffers.set(key, buffer);
+    for (const file of files) this.bytes.delete(file);
+    // The player may have picked another level meanwhile: the job queued behind this one finishes that.
+    if (this.level !== level) return;
+    this.ready = true;
+    // Whatever was asked for while the sounds were being made ready starts now.
+    if (this.playing !== this.wantedMusic) this.beginMusic();
+    for (const [name, volume] of this.wantedLoops) this.applyLoop(name, volume);
   }
 
   wake(): void {
@@ -104,20 +153,9 @@ export class Player implements Speaker {
       this.graph = buildMix(this.ctx);
       if (this.underwater) setUnderwater(this.graph, true);
       this.graph.gate.gain.value = this.muted ? 0 : 1;
-      void this.decode(this.ctx);
+      void this.bring();
     }
     if (this.ctx.state !== 'running' && !document.hidden) void this.ctx.resume().catch(() => {});
-  }
-
-  private async decode(ctx: AudioContext): Promise<void> {
-    await this.preload();
-    this.buffers = await loadBuffers(ctx, (file) => this.bytes.get(file), this.problems);
-    this.turns = new Turns(this.buffers);
-    this.bytes.clear();
-    this.ready = true;
-    // Whatever was asked for while the sounds were being made ready starts now.
-    this.beginMusic();
-    for (const [name, volume] of this.wantedLoops) this.applyLoop(name, volume);
   }
 
   play(name: SoundName, options: PlayOptions): void {
@@ -180,10 +218,13 @@ export class Player implements Speaker {
       this.music.gain.gain.setTargetAtTime(0, now, 0.3);
       this.music.source.stop(now + 2);
       this.music = null;
+      this.playing = null;
     }
     const name = this.wantedMusic;
+    // A level's music may still be on its way: it begins when it is here.
     const buffer = name ? this.turns.next(name) : undefined;
     if (!name || !buffer) return;
+    this.playing = name;
     // It comes in slowly, over a couple of seconds, so the first tap is not answered with a wall of sound.
     this.music = startMusic(graph, buffer, name, now, 1.2);
   }
@@ -235,9 +276,11 @@ export class Player implements Speaker {
     return {
       state: this.ctx?.state ?? 'none',
       ready: this.ready,
+      level: this.level,
+      fetched: { ...this.fetched },
       volume: this.muted ? 0 : 1,
       underwater: this.underwater,
-      music: this.music ? this.wantedMusic : null,
+      music: this.music ? this.playing : null,
       loops: [...this.loops.keys()],
       played: [...this.played],
       problems: [...this.problems],

@@ -39,7 +39,7 @@ import { Scatter, buildForest, type Forest } from './forest';
 import { bossFighting } from '../game/boss';
 import { BossView } from './boss';
 import { FIGHT_CAMERA, fightView } from './boss-camera';
-import { ENEMY_MODELS, ENEMY_MODEL_FILES, EnemyView } from './enemies';
+import { ENEMY_MODELS, EnemyView, modelFilesOf } from './enemies';
 import { HERO_MODEL_FILES, buildHero, type HeroView } from './heroes';
 import { buildLake } from './lake';
 import { Materials, WIND, installMist } from './materials';
@@ -166,11 +166,11 @@ export class GroveView {
   private drawn = { calls: 0, triangles: 0 };
 
   /**
-   * Sets up the 3D picture and downloads what it needs. `onProgress` gets a
-   * number from 0 to 1. Throws if the browser cannot draw 3D (an error named
+   * Sets up the 3D picture and downloads what it needs to show `first`, the
+   * level that is up when the page opens. `onProgress` gets a number from 0 to 1. Throws if the browser cannot draw 3D (an error named
    * 'No3d') or a file fails to arrive; main.ts shows a plain message for each.
    */
-  static async create(canvas: HTMLCanvasElement, onProgress: (share: number) => void): Promise<GroveView> {
+  static async create(canvas: HTMLCanvasElement, onProgress: (share: number) => void, first: Level): Promise<GroveView> {
     // Choose where to start from what the device says about itself, or from
     // the address bar (?quality=high, medium, low or minimal). This comes
     // first because smooth edges are fixed when the picture is created, and a
@@ -186,8 +186,19 @@ export class GroveView {
       error.name = 'No3d';
       throw error;
     }
-    const assets = await loadAssets(renderer, [...HERO_MODEL_FILES(), ...ENEMY_MODEL_FILES()], onProgress);
+    // The heroes, and the enemies of the level that is up first. Another level's enemies come when it is picked (`load`).
+    const assets = await loadAssets(renderer, [...HERO_MODEL_FILES(), ...modelFilesOf(first)], onProgress);
     return new GroveView(renderer, assets, start, !isTierName(asked), touch);
+  }
+
+  /** True when every model this level needs is here, so `show` can build it. */
+  has(level: Level): boolean {
+    return modelFilesOf(level).every((file) => this.assets.models.has(file));
+  }
+
+  /** Fetches the models this level needs that are not here yet. `onProgress` gets 0 to 1. */
+  load(level: Level, onProgress?: (share: number) => void): Promise<void> {
+    return this.assets.loadModels(modelFilesOf(level), onProgress);
   }
 
   private constructor(

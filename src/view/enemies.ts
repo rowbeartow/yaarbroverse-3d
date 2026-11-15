@@ -31,6 +31,7 @@ import {
 import type { GLTF } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { clone as cloneRigged } from 'three/examples/jsm/utils/SkeletonUtils.js';
 import { CROC } from '../game/crocodile';
+import type { Level } from '../game/level';
 import { ENEMY, type Enemy, type EnemyKind, type EnemyPhase, type EnemyTuning } from '../game/enemy';
 
 export interface EnemyModelSpec {
@@ -85,8 +86,12 @@ export const ENEMY_MODELS: Record<EnemyKind, EnemyModelSpec> = {
   },
 };
 
-/** The model files to download before the game can start. */
-export const ENEMY_MODEL_FILES = (): string[] => Object.values(ENEMY_MODELS).map((spec) => spec.file);
+/** The model files one level needs: its enemies', and its boss's. They are fetched when the level is picked. */
+export const modelFilesOf = (level: Level): string[] => {
+  const kinds = new Set<EnemyKind>((level.enemies ?? []).map((spot) => spot.kind));
+  if (level.boss) kinds.add(level.boss.look.model);
+  return [...kinds].map((kind) => ENEMY_MODELS[kind].file);
+};
 
 export type ClipKey = keyof EnemyModelSpec['clips'];
 

@@ -1,6 +1,6 @@
 // Downloads the files the 3D picture needs (textures, the forest light, hero
 // models) and reports how far along it is, for the progress bar on the start
-// screen. The files are made by scripts/build-assets.mjs and live in media/.
+// screen. A level's own models (its enemies) are fetched when it is picked. The files are made by scripts/build-assets.mjs and live in media/.
 
 import {
   EquirectangularReflectionMapping,
@@ -39,8 +39,10 @@ export interface Assets {
    * it is asked for, because plain shading (the lowest tier) never needs it.
    */
   environment(): Texture;
-  /** Hero and stand-in models that were asked for, by file name. */
+  /** The models fetched so far, by file name: the heroes from the start, and each level's enemies once it has been picked. */
   models: Map<string, GLTF>;
+  /** Fetches the model files not here yet (a level's enemies, when that level is picked). `onProgress` gets 0 to 1. */
+  loadModels(files: string[], onProgress?: (share: number) => void): Promise<void>;
   /** Sharper textures at a slant, as far as the device allows. */
   setAnisotropy(level: number): void;
 }
@@ -113,7 +115,8 @@ export const loadAssets = async (
 
   const byFile = new Map<string, GLTF>();
   modelFiles.forEach((file, i) => byFile.set(file, loadedModels[i]));
-  ktx2.dispose();
+  // The loaders are kept: a level picked later brings its own models.
+  const underWay = new Map<string, Promise<void>>();
 
   return {
     sets,
@@ -128,6 +131,34 @@ export const loadAssets = async (
       return environment;
     },
     models: byFile,
+    async loadModels(files, onProgress = () => {}) {
+      const missing = [...new Set(files)].filter((file) => !byFile.has(file));
+      const parts = missing.map(() => 0);
+      const tell = (): void => onProgress(parts.length ? parts.reduce((sum, part) => sum + part, 0) / parts.length : 1);
+      tell();
+      await Promise.all(
+        missing.map((file, i) => {
+          // Two askers for one file share one download.
+          let job = underWay.get(file);
+          if (!job) {
+            job = gltf
+              .loadAsync(media(`models/${file}`), (event) => {
+                if (event.lengthComputable && event.total > 0) {
+                  parts[i] = Math.min(event.loaded / event.total, 0.95);
+                  tell();
+                }
+              })
+              .then((model) => void byFile.set(file, model))
+              .finally(() => void underWay.delete(file));
+            underWay.set(file, job);
+          }
+          return job.then(() => {
+            parts[i] = 1;
+            tell();
+          });
+        }),
+      );
+    },
     setAnisotropy(level) {
       const most = renderer.capabilities.getMaxAnisotropy();
       for (const texture of all) {

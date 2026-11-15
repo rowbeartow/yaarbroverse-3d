@@ -8,6 +8,8 @@
 //
 // The start screen shows straight away. The 3D code and its files download
 // behind it, with a progress bar, and Play switches on when they are ready.
+// What belongs to one level (its music, its sounds, its enemies' models) is
+// fetched when that level is picked, with the same progress bar.
 //
 // "Who's playing?" comes first: up to four players, each with a name, a
 // colour and their own saved choices and progress (src/save/players.ts).
@@ -92,6 +94,7 @@ const boot = (): void => {
   let endCard: EndBests | null = null;
   const gameSounds = new GameSounds(sound);
   void player.preload();
+  sound.setLevel(entry.id);
   sound.setMusic(entry.music);
   // Any of these counts as the player's say-so. They are caught before anything
   // else sees them, so the very tap that starts the game can also be heard.
@@ -140,11 +143,50 @@ const boot = (): void => {
     healedNews = null;
     gameSounds.reset();
     // A fight that was on is over: the level's own music again, and no health bar.
+    sound.setLevel(entry.id);
     sound.setMusic(entry.music);
     screens.setBoss(null);
-    // The game's own copy of the level: its moving pieces are the ones the rules move.
-    view?.show(game.level, choice.hero, entry.scenery);
-    view?.snapCamera(game);
+    showLevel();
+  };
+
+  /**
+   * Counts the levels being fetched: while one is on its way (`fetching`), the
+   * picture still holds the level before it, so nothing is drawn and Play is off.
+   */
+  let asked = 0;
+  let fetching = false;
+  /** Draws the level that is up. If its models are not here yet (a level picked for the first time), fetches them first. */
+  const showLevel = (): void => {
+    if (!view) return;
+    const mine = ++asked;
+    const ready = (): void => {
+      fetching = false;
+      // The game's own copy of the level: its moving pieces are the ones the rules move.
+      view?.show(game.level, choice.hero, entry.scenery);
+      view?.snapCamera(game);
+    };
+    if (view.has(game.level)) {
+      const waited = fetching;
+      ready();
+      if (waited) screens.setLoading(null);
+      return;
+    }
+    fetching = true;
+    screens.setLoading(0, entry.name);
+    view.load(game.level, (share) => {
+      if (mine === asked) screens.setLoading(share, entry.name);
+    }).then(
+      () => {
+        // The player may have picked something else while this came down.
+        if (mine !== asked) return;
+        ready();
+        screens.setLoading(null);
+      },
+      (error: unknown) => {
+        console.error(error);
+        if (mine === asked) screens.fail('download');
+      },
+    );
   };
 
   const screens = new Screens(choice, entry, (picked) => {
@@ -226,7 +268,7 @@ const boot = (): void => {
   };
 
   const play = (): void => {
-    if (!view) return;
+    if (!view || fetching) return;
     setUp();
     // Every run is recorded. The player's best run so far is replayed beside
     // it as a ghost, when the ghost is on and there is one. The ghost is only
@@ -434,7 +476,8 @@ const boot = (): void => {
     const blend = running ? Math.min(owed / STEP, 1) : 1;
     // The ghost runs on the game's own clock, so it starts when the player starts and waits while the game is paused.
     const ghostPose = ghost && mode !== 'start' ? ghost.at(game.seconds - (1 - blend) * STEP) : null;
-    view.frame(game, before, blend, running ? dt : 0, ghostPose);
+    // While a level's models are on their way the picture still holds the level before: leave it be.
+    if (!fetching) view.frame(game, before, blend, running ? dt : 0, ghostPose);
     if (showRate) {
       sinceRate += dt;
       if (sinceRate > 0.5) {
@@ -516,7 +559,7 @@ const boot = (): void => {
     try {
       const { GroveView } = await import('./view/grove-view');
       screens.setLoading(0.1);
-      view = await GroveView.create(canvas, (share) => screens.setLoading(0.1 + share * 0.9));
+      view = await GroveView.create(canvas, (share) => screens.setLoading(0.1 + share * 0.9), level);
     } catch (error) {
       console.error(error);
       // Either this browser cannot draw 3D at all, or a file did not arrive.
@@ -527,7 +570,8 @@ const boot = (): void => {
     setUp();
     for (const hero of ['Yaarbro', 'Caputo'] as const) screens.setPortrait(hero, view.portrait(hero));
     fit();
-    screens.setLoading(null);
+    // A level picked while the page was loading may still be fetching its own files.
+    if (!fetching) screens.setLoading(null);
     last = performance.now();
     requestAnimationFrame(loop);
   })();

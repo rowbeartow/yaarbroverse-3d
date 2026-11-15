@@ -40,7 +40,7 @@ test.describe('loading', () => {
     await pickPlayer(page);
     await expect(page.locator('.area-pick[aria-checked="true"] .area-name')).toHaveText('The Bouncing Grove');
     await expect(page.locator('#loading')).toBeVisible();
-    await expect(page.locator('#loading-text')).toContainText('Loading the grove');
+    await expect(page.locator('#loading-text')).toContainText('Loading the game');
     await expect(page.locator('#play')).toBeDisabled();
     // Everything but the held file arrives, so the bar moves but cannot finish.
     await expect.poll(async () => Number(await page.locator('#loading-bar').getAttribute('value'))).toBeGreaterThan(20);

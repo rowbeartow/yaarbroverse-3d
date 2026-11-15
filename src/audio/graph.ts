@@ -163,15 +163,18 @@ export const loadBuffers = async (
   ctx: BaseAudioContext,
   bytesOf: (file: string) => ArrayBuffer | undefined | Promise<ArrayBuffer | undefined>,
   problems: string[],
+  /** Which of it to make ready: these files only, and the sounds made in code or not. Left out: everything. */
+  only?: { files: ReadonlySet<string>; synths: boolean },
 ): Promise<Buffers> => {
   const buffers: Buffers = new Map();
   const jobs: Promise<void>[] = [];
   const synths = new Set<SynthName>();
   const files = new Map<string, boolean>();
   for (const def of Object.values(LIST)) {
-    if (def.under) synths.add(def.under);
-    if ('synth' in def.source) synths.add(def.source.synth);
-    else for (const file of def.source.files) files.set(file, (files.get(file) ?? true) && def.mix !== 'music');
+    if (def.under && only?.synths !== false) synths.add(def.under);
+    if ('synth' in def.source) {
+      if (only?.synths !== false) synths.add(def.source.synth);
+    } else for (const file of def.source.files) if (!only || only.files.has(file)) files.set(file, (files.get(file) ?? true) && def.mix !== 'music');
   }
   for (const name of synths) {
     jobs.push(
