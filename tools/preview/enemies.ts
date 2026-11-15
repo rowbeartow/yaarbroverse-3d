@@ -10,6 +10,7 @@ import {
   CircleGeometry,
   DataTexture,
   DirectionalLight,
+  DoubleSide,
   EquirectangularReflectionMapping,
   Group,
   HemisphereLight,
@@ -20,6 +21,7 @@ import {
   Mesh,
   MeshStandardMaterial,
   PCFShadowMap,
+  PlaneGeometry,
   PerspectiveCamera,
   PMREMGenerator,
   RGBAFormat,
@@ -40,6 +42,10 @@ const params = new URLSearchParams(window.location.search);
 const PLAIN = params.has('plain');
 /** Nothing moves until the still-frame tool says so. */
 const STILL = params.has('still');
+/** No water drawn, to see the whole of a water enemy: `?dry`. */
+const DRY = params.has('dry');
+/** How far the camera stands off, in metres: `?reach=2.2` for a closer look. */
+const REACH = Number(params.get('reach') ?? 3.4);
 
 interface EnemyFile {
   name: string;
@@ -56,7 +62,12 @@ interface ClipNote {
 }
 
 /** What the page says about each enemy and each of its clips. */
-const ABOUT: Record<string, { title: string; hovers: boolean; clips: Record<string, ClipNote> }> = {
+/**
+ * `water`, for an enemy that lives in it: how high the water stands for each
+ * clip, in metres of the model as it came from the rig, so the page shows
+ * what a player sees above the surface. The game sets the real depth.
+ */
+const ABOUT: Record<string, { title: string; hovers: boolean; clips: Record<string, ClipNote>; water?: Record<string, number> }> = {
   marmot: {
     title: 'Marmot scout',
     hovers: false,
@@ -81,6 +92,19 @@ const ABOUT: Record<string, { title: string; hovers: boolean; clips: Record<stri
       winded: { label: 'Winded', note: 'Resting after a dive. Slow, heavy wingbeats, head and legs drooping. This is the opening to strike it or get past.' },
       defeated: { label: 'Beaten', note: 'A move has landed. The wings stop, it curls up and tumbles. The game drops it and fades it out.', once: true },
     },
+  },
+  crocodile: {
+    title: 'Crocodile',
+    hovers: false,
+    clips: {
+      lurk: { label: 'Lurking', note: 'Waiting in the water with only its eyes and the top of its snout above the surface. Almost still: a slow breath, the tail drifting.' },
+      swim: { label: 'Surface swim', note: 'Swimming at the surface, back just awash: steady sweeps of the tail, legs folded back along its sides.' },
+      dive: { label: 'Underwater swim', note: 'Swimming under the surface after a diving hero: longer, stronger sweeps, nose a little down.' },
+      lunge: { label: 'Lunge and bite', note: 'It gathers, throws itself forward with its jaws wide, and snaps them shut a third of a second in. The game moves it forward; the clip only gathers, reaches and settles.', once: true },
+      hit: { label: 'Flinch', note: 'When a hero strikes it: the head jerks up and away, the body twists and the tail thrashes.', once: true },
+      defeated: { label: 'Beaten', note: 'It rolls slowly onto its side and sinks away. The game then fades it out.', once: true },
+    },
+    water: { lurk: 0.48, swim: 0.4, dive: 0.95, lunge: 0.4, hit: 0.4, defeated: 0.4 },
   },
 };
 
@@ -223,6 +247,15 @@ const start = async (): Promise<void> => {
     model.scene.position.set(-middle.x * scale, -box.min.y * scale + lift, -middle.z * scale);
     const root = new Group();
     root.add(model.scene);
+    // The surface of the water, for an enemy that lives in it.
+    const surface = new Mesh(
+      new PlaneGeometry(4, 4),
+      new MeshStandardMaterial({ color: 0x2f6e6c, transparent: true, opacity: 0.62, roughness: 0.08, metalness: 0.05, depthWrite: false, side: DoubleSide }),
+    );
+    surface.rotation.x = -Math.PI / 2;
+    surface.renderOrder = 2;
+    surface.visible = false;
+    root.add(surface);
     const bones = new SkeletonHelper(model.scene);
     bones.visible = false;
     root.add(bones);
@@ -267,6 +300,9 @@ const start = async (): Promise<void> => {
       next.clampWhenFinished = true;
       next.play();
       slot.playing = next;
+      const level = about.water?.[clip];
+      surface.visible = level !== undefined && !DRY;
+      if (level !== undefined) surface.position.y = level * scale;
       heading.textContent = words.label;
       kind.textContent = `${slot.once ? 'Plays once' : 'Loops'}, ${next.getClip().duration.toFixed(1)} seconds`;
       note.textContent = words.note;
@@ -325,7 +361,7 @@ const start = async (): Promise<void> => {
     camera.aspect = w / h;
     camera.updateProjectionMatrix();
     // The camera goes round the enemy, so the sun and the shadow stay put.
-    const reach = 3.4;
+    const reach = REACH;
     camera.position.set(Math.sin(slot.angle) * reach, slot.lookAt + 0.7, Math.cos(slot.angle) * reach);
     camera.lookAt(0, slot.lookAt, 0);
     slot.root.visible = true;

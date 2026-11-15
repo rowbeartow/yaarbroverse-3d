@@ -1,0 +1,201 @@
+{
+  "about": "Where the crocodile's joints are, for tools/rig-quadruped.py, measured on candidate C (the owner's pick, crocodile-c.glb on the hero-models release) with tools/joint-views.py. Each point is [across, up, forward] in metres, after the model is turned 7 degrees to its right and moved 0.15 m to its left (\"turned_left_degrees\", \"shift_across\"), which puts it straight on the middle line. Its tail is curled round to its left in the model: \"straighten_tail\" lays it out straight behind, dropping 0.05 m a metre, before the clips are written. \"jaw\" is the hinge and chin of the lower jaw, and \"mouth\" the line of the closed mouth, back to front: the lower jaw is weighted to the jaw bone below that line. \"character\" picks the crocodile's own clips.",
+  "character": "crocodile",
+  "turned_left_degrees": 7,
+  "shift_across": 0.15,
+  "triangles": 8000,
+  "straighten_tail": 0.05,
+  "joints": {
+    "spine": [
+      [
+        0.0,
+        0.22,
+        -0.5
+      ],
+      [
+        0.0,
+        0.26,
+        -0.25
+      ],
+      [
+        0.0,
+        0.28,
+        0.0
+      ],
+      [
+        0.0,
+        0.3,
+        0.2
+      ],
+      [
+        0.0,
+        0.33,
+        0.4
+      ]
+    ],
+    "head": [
+      0.0,
+      0.4,
+      0.52
+    ],
+    "head_end": [
+      0.0,
+      0.44,
+      0.93
+    ],
+    "tail": [
+      [
+        0.03,
+        0.18,
+        -0.6
+      ],
+      [
+        0.15,
+        0.14,
+        -0.77
+      ],
+      [
+        0.33,
+        0.11,
+        -0.86
+      ],
+      [
+        0.55,
+        0.09,
+        -0.88
+      ],
+      [
+        0.73,
+        0.08,
+        -0.78
+      ],
+      [
+        0.85,
+        0.07,
+        -0.58
+      ],
+      [
+        0.85,
+        0.06,
+        -0.35
+      ],
+      [
+        0.81,
+        0.05,
+        -0.18
+      ]
+    ],
+    "front_left": [
+      [
+        0.21,
+        0.3,
+        0.24
+      ],
+      [
+        0.27,
+        0.15,
+        0.27
+      ],
+      [
+        0.29,
+        0.05,
+        0.33
+      ],
+      [
+        0.31,
+        0.02,
+        0.42
+      ]
+    ],
+    "front_right": [
+      [
+        -0.23,
+        0.3,
+        0.24
+      ],
+      [
+        -0.35,
+        0.15,
+        0.28
+      ],
+      [
+        -0.4,
+        0.05,
+        0.34
+      ],
+      [
+        -0.45,
+        0.02,
+        0.42
+      ]
+    ],
+    "hind_left": [
+      [
+        0.18,
+        0.25,
+        -0.3
+      ],
+      [
+        0.33,
+        0.15,
+        -0.28
+      ],
+      [
+        0.42,
+        0.05,
+        -0.25
+      ],
+      [
+        0.51,
+        0.02,
+        -0.22
+      ]
+    ],
+    "hind_right": [
+      [
+        -0.18,
+        0.25,
+        -0.45
+      ],
+      [
+        -0.3,
+        0.15,
+        -0.5
+      ],
+      [
+        -0.37,
+        0.05,
+        -0.5
+      ],
+      [
+        -0.45,
+        0.02,
+        -0.5
+      ]
+    ],
+    "jaw": [
+      [
+        0.0,
+        0.4,
+        0.5
+      ],
+      [
+        0.0,
+        0.36,
+        0.9
+      ]
+    ],
+    "mouth": [
+      [
+        0.0,
+        0.46,
+        0.55
+      ],
+      [
+        0.0,
+        0.41,
+        0.95
+      ]
+    ]
+  }
+}

@@ -5,7 +5,7 @@
 //   node tools/preview/enemies.mjs <folder> <name>=<rigged.glb> [<name>=<rigged.glb> ...]
 //
 //   folder       where to put the page. Anything already there is replaced.
-//   name         marmot or mosquito (what the page says about each enemy and
+//   name         marmot, mosquito or crocodile (what the page says about each enemy and
 //                its clips is in enemies.ts)
 //   rigged.glb   the model from tools/rig-quadruped.py or tools/rig-insect.py,
 //                before it is compressed

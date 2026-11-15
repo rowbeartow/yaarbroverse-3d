@@ -3,13 +3,16 @@
 //
 //   node tools/preview/enemy-stills.mjs <sheet.jpg> <enemy> <clip>:<shares> [<clip>:<shares> ...] [angle=<radians>] [bones]
 //
-//   enemy     marmot or mosquito
+//   enemy     marmot, mosquito or crocodile
 //   clip      a clip's name, then the shares of its length to hold it at,
 //             with commas between, such as throw:0,0.2,0.5,1
 //   angle     where the camera stands: 0 is in front of it, 1.57 at its left
 //             side, 3.14 behind. 1.1 unless given. Several angles, with
 //             commas between, give one row of frames for each.
 //   bones     the word bones draws the skeleton
+//
+// Set PAGE to add to the page's address: PAGE='dry&reach=2.2' leaves out the
+// water and stands the camera closer.
 //
 // Serve the page first: `npx vite preview --outDir <folder> --port 4176`.
 // The page is drawn in flat light, because a cloud session has no graphics card.
@@ -29,7 +32,8 @@ if (!out || !enemy || clips.length === 0) {
 const browser = await chromium.launch();
 const page = await browser.newPage({ viewport: { width: 760, height: 900 }, deviceScaleFactor: 1 });
 page.on('pageerror', (error) => console.error(`Page error: ${error.message}`));
-await page.goto('http://localhost:4176/?plain&still');
+// PAGE=dry&reach=2.2 (for one) adds to the page's address.
+await page.goto(`http://localhost:4176/?plain&still${process.env.PAGE ? `&${process.env.PAGE}` : ''}`);
 await page.waitForFunction(() => document.documentElement.dataset.ready === 'true', null, { timeout: 180000 });
 const canvas = page.locator(`#view-${enemy}`);
 await canvas.scrollIntoViewIfNeeded();
