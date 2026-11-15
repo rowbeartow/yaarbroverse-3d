@@ -66,6 +66,10 @@ Recorded files, in `assets/audio/`. All are CC0, from OpenGameArt, downloaded on
 | `surfacing.wav` | A swimmer's head coming back up: 0.52 seconds of `splash_02.ogg`, with the rumble under 80 hertz taken out. Added 2026-11-14. | "40 CC0 water / splash / slime SFX" by rubberduck: https://opengameart.org/content/40-cc0-water-splash-slime-sfx | CC0 |
 | `lake-music.mp3` | Cocolalla Lake's music: the whole track of 2 minutes 12 seconds, which its composer made to loop (`morning_2d.2.ogg`), made mono, set to the grove music's loudness and saved as MP3 (about 43 kbps, to fit the sound budget). Added 2026-11-15. | "Morning Sky" by Centurion_of_war: https://opengameart.org/content/morning-sky | CC0 |
 | `lake-lapping.wav` | Water lapping at the shore, played softly by the water: 5.6 seconds of `VistulaShort.mp3` from 91.8 seconds in, joined end to start with a 0.4-second crossfade so it loops, with the rumble under 100 hertz taken out, saved at 22,050 hertz (the recording has nothing above 11,000 hertz). Added 2026-11-15. | "Sea and river wave sounds" by RandomMind: https://opengameart.org/content/sea-and-river-wave-sounds | CC0 |
+| `croc-warning.wav` | The crocodile's warning, its tell before a lunge: the first 0.74 seconds of a deep growl made by voice (`roar_04.ogg`), saved at 22,050 hertz. Added 2026-11-15. | "80 CC0 creture SFX #2" by rubberduck: https://opengameart.org/content/80-cc0-creture-sfx-2 | CC0 |
+| `croc-bite.wav` | The crocodile's bite, as it lunges: the first 0.27 seconds of a crunchy bite made by voice (`crunchybite.ogg`). Added 2026-11-15. | "Crunchy bite" by fvcalderan: https://opengameart.org/content/crunchy-bite | CC0 |
+| `croc-splash.wav` | The crocodile's splash, as it comes down after a lunge and when it is beaten: the first second of a cannonball landing in the sea (`cannon_miss.ogg`), faded out over 0.25 seconds. Added 2026-11-15. | "Ocean splash" by Thimras: https://opengameart.org/content/ocean-splash | CC0 |
+| `croc-hit.wav` | The crocodile is struck: the first 0.42 seconds of a dull thump (`bfh1_hit_07.ogg`), saved at 22,050 hertz. Added 2026-11-15. | "75 CC0 breaking / falling / hit sfx" by rubberduck: https://opengameart.org/content/75-cc0-breaking-falling-hit-sfx | CC0 |
 
 The giant mosquito's three sounds and the low thump under a landing are made in code by this project (`src/audio/synth.ts`): there is no file, and nothing to credit. A jump and a landing have no files of their own: they play the moss and wood footsteps above.
 
@@ -95,6 +99,9 @@ SHA-256 of each download, as OpenGameArt served it:
 | `water-splash-slime-sfx.zip` ("40 CC0 water / splash / slime SFX") | `7cd39abb49d4362a37ba18dc0e454c7dc1d08029d4e5b683149046bc237b2eba` |
 | `morning_2d.2_0.ogg` ("Morning Sky") | `73fc1726c884255259a46f2e8ac0085bd1b730da99b5a228e1e1c03ae9c6cf22` |
 | `VistulaShort_0.mp3` ("Sea and river wave sounds") | `8c24607e41edd6f018ec3582a07e5a8dbc57347276339cb68440951a0fb4cfb1` |
+| `80-CC0-creature-sfx-2.zip` ("80 CC0 creture SFX #2") | `6d251aeaaaa9c2fffed8fc2f64bab3104725ceabf9259a8441994e7a20cfe22f` |
+| `crunchybite.ogg` ("Crunchy bite") | `679e360c29fd61bbaa47bd5ff130652f9ff7d9b3a30fc010810671d19f0ebc71` |
+| `cannon_miss.ogg` ("Ocean splash") | `d91a1effc2964673033fa9f8d22093029fa0b500aea0bafb86724738c0e89fe3` |
 
 ## Stand-in model
 
