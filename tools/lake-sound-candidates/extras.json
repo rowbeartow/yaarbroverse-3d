@@ -1,0 +1,42 @@
+{
+  "title": "For the lake (not in the game yet)",
+  "note": "Candidates for the lake level. Pick one of the two lake tunes (only one fits the game's 4 MB sound budget), and say whether the lapping water and the loon are right. Both tunes are set to the grove music's loudness and go round without a gap.",
+  "sounds": [
+    {
+      "label": "Lake music A: Down the river",
+      "what": "A warm, gently adventurous acoustic tune with banjo, 1 minute 17 seconds, that goes round without a gap.",
+      "file": "lake-music.mp3",
+      "credit": "Recorded: \"Down The River\" by Loyalty Freak Music (Komiku), from OpenGameArt. CC0.",
+      "loop": true,
+      "level": 0,
+      "mix": "music"
+    },
+    {
+      "label": "Lake music B: Morning Sky",
+      "what": "A calm, bright morning tune, 2 minutes 12 seconds, made by its composer to go round without a gap.",
+      "file": "lake-music-b.mp3",
+      "credit": "Recorded: \"Morning Sky\" by Centurion_of_war, from OpenGameArt. CC0.",
+      "loop": true,
+      "level": 0,
+      "mix": "music"
+    },
+    {
+      "label": "Water lapping at the shore",
+      "what": "Small waves lapping at a river pier, 5.6 seconds that go round without a gap, to play quietly by the water.",
+      "file": "lake-lapping.wav",
+      "credit": "Recorded: \"Sea and river wave sounds\" by RandomMind, from OpenGameArt. CC0.",
+      "loop": true,
+      "level": 0,
+      "mix": "step"
+    },
+    {
+      "label": "A distant loon",
+      "what": "A loon's wail far across the water, with the lake's echo, to play now and then. Made in code by this project: no CC0 recording of a loon could be found (the one on OpenGameArt is CC-BY-SA, which this game does not use).",
+      "file": "loon.wav",
+      "credit": "Made by this project, in code. No credit needed.",
+      "loop": false,
+      "level": 0,
+      "mix": "step"
+    }
+  ]
+}
