@@ -52,7 +52,7 @@ export const LAKE_LOOK = {
   /** The haze over the lake: clearer than the forest's mist, so the far shore shows. */
   haze: { near: 70, far: 230 },
   mountainsAt: 360,
-  peaks: 52,
+  peaks: 70,
 } as const;
 
 /** The water a level's pools make together, seen from above. */
@@ -76,16 +76,16 @@ const waterBounds = (level: Level): { minX: number; maxX: number; minZ: number; 
  */
 const mountains = (): Mesh => {
   const haze = new Color(MIST_COLOR);
-  const forest = new Color(0x3f6158);
-  const rock = new Color(0x8c9aa0);
+  const forest = new Color(0x274a40);
+  const rock = new Color(0x66767c);
   const snow = new Color(0xeef4f2);
   const positions: number[] = [];
   const colors: number[] = [];
   const index: number[] = [];
   const steps = 260;
   const ranges = [
-    { radius: LAKE_LOOK.mountainsAt, tall: LAKE_LOOK.peaks, seed: 3.1, pale: 0.38 },
-    { radius: LAKE_LOOK.mountainsAt - 40, tall: LAKE_LOOK.peaks * 0.5, seed: 8.7, pale: 0.15 },
+    { radius: LAKE_LOOK.mountainsAt, tall: LAKE_LOOK.peaks, seed: 3.1, pale: 0.3 },
+    { radius: LAKE_LOOK.mountainsAt - 40, tall: LAKE_LOOK.peaks * 0.5, seed: 8.7, pale: 0.1 },
   ];
   const colour = new Color();
   for (const range of ranges) {
@@ -109,7 +109,7 @@ const mountains = (): Mesh => {
         // Forest low down, rock higher, snow on the tops of the tallest, all paler with distance.
         colour.copy(forest).lerp(rock, smooth(0.5, 1, share) * smooth(0.45, 0.8, height / range.tall));
         if (share === 1 && height > range.tall * 0.7) colour.lerp(snow, smooth(range.tall * 0.7, range.tall * 0.95, height) * 0.8);
-        colour.lerp(haze, share === 0 ? 1 : range.pale + (1 - share) * 0.2);
+        colour.lerp(haze, share === 0 ? 1 : range.pale + (1 - share) * 0.12);
         colors.push(colour.r, colour.g, colour.b);
       }
     }
@@ -177,7 +177,8 @@ export const buildLake = (level: Level, materials: Materials, decor: Decor, rand
   /** The ground's height at (x, z): under water to the right of the shore line, rising to hills inland. */
   const groundAt = (x: number, z: number): number => {
     const inland = shoreLine(z) - x;
-    if (inland < 0) return water.surface + inland * 0.9 - 0.15;
+    // Under the water it slopes down to the lake bed and no further.
+    if (inland < 0) return Math.max(water.surface + inland * 0.9 - 0.15, water.floor - 0.3);
     // The hills sink away far ahead, so nothing stands up out of the haze there: the mountains close the view.
     const fade = 1 - smooth(water.minZ - 20, water.minZ - 140, z);
     const hill = LAKE_LOOK.hills * fade * smooth(8, 90, inland) * (0.55 + 0.45 * rough(x * 0.012, z * 0.012, 4.2, 3));
