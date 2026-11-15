@@ -132,6 +132,26 @@ export const SOUNDS = {
     what: 'A second of rushing wind when the hero drops off the route.',
     source: { files: ['fall.wav'] },
   },
+  crocTell: {
+    group: 'Enemies', label: "Crocodile's warning", mix: 'cue', level: 0,
+    what: 'A deep growl as a crocodile fixes its aim and its eyes sink: its tell before a lunge. The owner picked choice B.',
+    source: { files: ['croc-warning.wav'] },
+  },
+  crocBite: {
+    group: 'Enemies', label: "Crocodile's bite", mix: 'cue', level: 0,
+    what: 'A quick crunchy chomp as a crocodile lunges. The owner picked choice B.',
+    source: { files: ['croc-bite.wav'] },
+  },
+  crocSplash: {
+    group: 'Enemies', label: "Crocodile's splash", mix: 'action', level: 0,
+    what: 'A heavy splash as a crocodile comes down after a lunge, and when it is beaten. The owner picked choice A.',
+    source: { files: ['croc-splash.wav'] },
+  },
+  crocHit: {
+    group: 'Enemies', label: 'A crocodile is struck', mix: 'cue', level: 0,
+    what: 'A dull thump when a hero lands on a crocodile or strikes it. The owner picked choice A.',
+    source: { files: ['croc-hit.wav'] },
+  },
   marmotTell: {
     group: 'Enemies', label: "Marmot scout's warning", mix: 'cue', level: -4,
     what: 'A squeak as the scout rears up with its acorn. A squeaky toy, played a little lower.',

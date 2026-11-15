@@ -592,3 +592,28 @@ describe('water lapping', () => {
     expect(forestSound.speaker.loops.get('lapping') ?? 0).toBe(0);
   });
 });
+
+describe('the crocodile', () => {
+  it('growls at its tell, bites as it lunges, splashes as it comes down or is beaten, and thumps when struck', () => {
+    const level = buildLake('normal');
+    level.enemies = [{ id: 'croc', kind: 'crocodile', x: 0, y: -0.25, z: -60, arena: { minX: -8, maxX: 8, minZ: -70, maxZ: -50 }, surface: 0, floor: -4 }];
+    const game = new Game(level, 'normal', 'Yaarbro');
+    const croc = game.enemies[0];
+    // The hero right beside it, so nothing is faded out by distance.
+    Object.assign(game, { x: croc.x + 1, z: croc.z, y: croc.y });
+    const { speaker, sounds } = listening(game);
+    const heard = (event: (typeof game.events)[number]): string[] => {
+      speaker.played.length = 0;
+      game.events = [event];
+      sounds.step(game);
+      return speaker.names();
+    };
+    const id = croc.spot.id;
+    expect(heard({ type: 'enemy', id, kind: 'crocodile', phase: 'warning' })).toContain('crocTell');
+    expect(heard({ type: 'enemy', id, kind: 'crocodile', phase: 'attack' })).toContain('crocBite');
+    expect(heard({ type: 'enemy', id, kind: 'crocodile', phase: 'rest' })).toContain('crocSplash');
+    expect(heard({ type: 'enemy', id, kind: 'crocodile', phase: 'defeated' })).toContain('crocSplash');
+    expect(heard({ type: 'strike', id, kind: 'crocodile', how: 'stomp', left: 0 })).toEqual(expect.arrayContaining(['crocHit']));
+    expect(heard({ type: 'strike', id, kind: 'crocodile', how: 'stomp', left: 0 })).not.toContain('strike');
+  });
+});
