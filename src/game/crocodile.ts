@@ -20,7 +20,8 @@
 //   lurking   (`concealed`) It waits at home, low in the water, only its eyes
 //             and snout above the surface. Touching it does nothing.
 //   stalking  (`idle`) A hero is in its stretch of water: it swims after
-//             them, at their depth, slower than a hero swims at the surface.
+//             them, at their depth (at the surface, its back awash), slower
+//             than a hero swims at the surface.
 //   the tell  (`warning`) Close enough, it fixes its aim on where the hero
 //             is. Its eyes sink under, and it creeps along that line, so a
 //             wake heads for the hero. On Easy a line shows the aim.
@@ -36,8 +37,10 @@
 import type { Enemy, EnemyPhase, EnemyTuning, HeroBody } from './enemy';
 
 export const CROC = {
-  /** How deep its middle lies while lurking or resting: deep enough that only its eyes and snout show. */
+  /** How deep its middle lies while lurking: deep enough that only its eyes and snout show. */
   lurkDepth: 0.25,
+  /** How deep its middle lies while it swims at the surface or rests there: its back awash, plain to see. */
+  swimDepth: 0.1,
   /** Its body for touching, as an upright can around its middle. */
   radius: 0.8,
   halfHeight: 0.3,
@@ -68,11 +71,11 @@ const clamp = (value: number, low: number, high: number): number => Math.max(low
 const approach = (value: number, target: number, amount: number): number =>
   value < target ? Math.min(target, value + amount) : Math.max(target, value - amount);
 
-/** The depth its middle may go to, from just under the surface to just over the floor. */
-const depths = (enemy: Enemy): { top: number; bottom: number } => {
+/** The depth its middle may go to: lying low, swimming at the surface, and just over the floor. */
+const depths = (enemy: Enemy): { low: number; top: number; bottom: number } => {
   const surface = enemy.spot.surface ?? enemy.spot.y + CROC.lurkDepth;
   const floor = enemy.spot.floor ?? surface - 4;
-  return { top: surface - CROC.lurkDepth, bottom: floor + CROC.halfHeight + 0.1 };
+  return { low: surface - CROC.lurkDepth, top: surface - CROC.swimDepth, bottom: floor + CROC.halfHeight + 0.1 };
 };
 
 /**
@@ -83,7 +86,7 @@ const depths = (enemy: Enemy): { top: number; bottom: number } => {
 export const moveCrocodile = (enemy: Enemy, hero: HeroBody, tuning: EnemyTuning, nearby: boolean, dt: number, enter: (phase: EnemyPhase) => void): void => {
   const { arena } = enemy.spot;
   const reach = enemy.spot.notice ?? 0;
-  const { top, bottom } = depths(enemy);
+  const { low, top, bottom } = depths(enemy);
   const middle = hero.y + hero.bodyHeight / 2;
   const heroDepth = clamp(middle, bottom, top);
   const dx = hero.x - enemy.x;
@@ -98,7 +101,7 @@ export const moveCrocodile = (enemy: Enemy, hero: HeroBody, tuning: EnemyTuning,
   if (enemy.phase === 'concealed' && nearby) enter('idle');
 
   if (enemy.phase === 'concealed') {
-    enemy.y = approach(enemy.y, top, CROC.climbSpeed * dt);
+    enemy.y = approach(enemy.y, low, CROC.climbSpeed * dt);
   } else if (enemy.phase === 'idle') {
     if (!nearby) {
       // The hero has left its water: it goes home and lies low again.
@@ -113,7 +116,7 @@ export const moveCrocodile = (enemy: Enemy, hero: HeroBody, tuning: EnemyTuning,
         enemy.z = enemy.spot.z;
         enter('concealed');
       }
-      enemy.y = approach(enemy.y, top, CROC.climbSpeed * dt);
+      enemy.y = approach(enemy.y, low, CROC.climbSpeed * dt);
       enemy.timer = 0;
     } else {
       // After the hero, at the hero's depth.
