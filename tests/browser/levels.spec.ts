@@ -30,6 +30,23 @@ test.describe('the level list', () => {
     expect(problems).toEqual([]);
   });
 
+  test('?level=cocolalla builds the lake while it is being made: its water draws, and it plays to its end card', async ({ page }) => {
+    const problems = await open(page, 'level=cocolalla');
+    expect(await levelId(page)).toBe('cocolalla');
+    await expect(page.locator('.area-pick[aria-checked="true"] .area-name')).toHaveText('Cocolalla Lake');
+    await play(page, 'Caputo', 'normal');
+    await expect(page.locator('#place')).toHaveText('Cocolalla Lake · Normal');
+    const pools = await page.evaluate(() => (window as unknown as { __grove: { water: { pools: number } | null } }).__grove.water?.pools ?? 0);
+    expect(pools).toBeGreaterThan(0);
+    // Stand at the near end of the last bank: the leaf is straight ahead.
+    await standOn(page, 'gravel-bar', 2);
+    await page.keyboard.down('ArrowUp');
+    await expect(page.locator('#end')).toBeVisible({ timeout: 20_000 });
+    await page.keyboard.up('ArrowUp');
+    await expect(page.locator('#end-level')).toHaveText('Cocolalla Lake');
+    expect(problems).toEqual([]);
+  });
+
   test('a level name the game does not know gets the Bouncing Grove', async ({ page }) => {
     await open(page, 'level=nowhere');
     expect(await levelId(page)).toBe('bouncing-grove');

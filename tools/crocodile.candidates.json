@@ -1,0 +1,18 @@
+{
+  "about": "The three crocodile candidates, made by tools/meshy-text-to-3d.mjs: a reference picture from each description, then a textured model from each picture. They are styled to stand beside the heroes: a stylized, hand-painted storybook look, chunky proportions, nothing gory, full body on all fours on a plain background so the model comes out whole.",
+  "name": "crocodile",
+  "candidates": [
+    {
+      "label": "Lake crocodile: chunky and olive green",
+      "prompt": "A single crocodile character for a family-friendly 3D adventure game, stylized storybook look with hand-painted textures, chunky rounded body, short sturdy legs, long thick tail, olive green scales with darker bumpy ridges down its back and a pale cream belly, big amber eyes on top of its head, long snout with its mouth closed and a few blunt white teeth showing along the jaw. Mischievous rather than scary. Full body on all four legs, three-quarter side view, plain white background, no water, no ground, nothing else in the picture."
+    },
+    {
+      "label": "Reed crocodile: long, low and mossy",
+      "prompt": "A single crocodile character for a family-friendly 3D adventure game, stylized storybook look with hand-painted textures, long low body, dark green and brown scales with patches of soft green moss and a strand of lake reed draped over its back, rows of knobbly back plates, a tan belly, sleepy half-closed yellow eyes, long narrow snout with its mouth closed and teeth peeking out. Sly and sneaky, not scary. Full body on all four legs, three-quarter side view, plain white background, no water, no ground, nothing else in the picture."
+    },
+    {
+      "label": "Big crocodile: broad head and bold stripes",
+      "prompt": "A single crocodile character for a family-friendly 3D adventure game, stylized storybook look with hand-painted textures, big broad head and wide jaw, strong shoulders, grey-green scales with bold darker bands across its back and tail, a lighter yellowish belly, bright green eyes, mouth closed in a toothy grin with rounded teeth. Bold and grumpy, a lake bully, but cartoon friendly. Full body on all four legs, three-quarter side view, plain white background, no water, no ground, nothing else in the picture."
+    }
+  ]
+}

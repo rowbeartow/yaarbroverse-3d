@@ -6,11 +6,12 @@
 
 import type { LevelEntry } from './entry';
 import { BOUNCING_GROVE } from './bouncing-grove/level';
+import { COCOLALLA } from './cocolalla/level';
 import { SANDBOX } from './sandbox/level';
 
 export type { LevelEntry, SceneryName } from './entry';
 
-export const LEVELS: readonly LevelEntry[] = [BOUNCING_GROVE, SANDBOX];
+export const LEVELS: readonly LevelEntry[] = [BOUNCING_GROVE, COCOLALLA, SANDBOX];
 
 /** The levels players are shown. Development levels are left out. */
 export const listedLevels = (): LevelEntry[] => LEVELS.filter((level) => !level.devOnly);
