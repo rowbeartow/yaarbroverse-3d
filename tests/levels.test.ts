@@ -3,7 +3,9 @@
 // finishes it on every difficulty as each hero.
 
 import { describe, expect, it } from 'vitest';
-import { SOUNDS } from '../src/audio/sounds';
+import { GameSounds } from '../src/audio/game-sounds';
+import { Sound, type Speaker } from '../src/audio/mix';
+import { SOUNDS, soundAt, type SoundName } from '../src/audio/sounds';
 import { DIFFICULTIES } from '../src/game/difficulty';
 import { Game, IDLE } from '../src/game/game';
 import { HEROES, MOVE, STEP } from '../src/game/hero';
@@ -59,6 +61,26 @@ describe.each(LEVELS.map((level) => [level.id, level] as const))('the level %s',
     expect(SOUNDS[entry.music]).toMatchObject({ mix: 'music', loop: true });
   });
 
+  it('has every sound its pieces make among the shared sounds or its own, so each is fetched when the level is picked', () => {
+    // What each kind of piece plays (src/audio/game-sounds.ts).
+    const needs = new Set<SoundName>([entry.music]);
+    if (entry.bossMusic) needs.add(entry.bossMusic);
+    for (const difficulty of DIFFICULTIES) {
+      const level = entry.build(difficulty);
+      const kinds = new Set((level.enemies ?? []).map((spot) => spot.kind));
+      if (level.boss) for (const name of ['bossBeaten', 'marmotTell', 'marmotThrow'] as const) needs.add(name);
+      if (kinds.has('marmot')) for (const name of ['marmotTell', 'marmotThrow'] as const) needs.add(name);
+      if (kinds.has('crocodile')) for (const name of ['crocTell', 'crocBite', 'crocSplash', 'crocHit'] as const) needs.add(name);
+      if (level.water?.length) for (const name of ['waterIn', 'stroke', 'surfacing', 'lapping'] as const) needs.add(name);
+      for (const solid of level.solids) {
+        if (solid.motion?.kind === 'tip') needs.add('creak');
+        if (solid.motion?.kind === 'crumble') for (const name of ['mossRustle', 'mossFall'] as const) needs.add(name);
+        if (solid.motion?.kind === 'sway') needs.add('gust');
+      }
+    }
+    for (const name of needs) expect(soundAt(name, entry.id), `${name} in ${entry.id}`).toBe(true);
+  });
+
   describe.each(DIFFICULTIES)('on %s', (difficulty) => {
     it('is well formed: named, with a route over its own solids, starting on a safe bank', () => {
       const level = entry.build(difficulty);
@@ -110,14 +132,23 @@ describe.each(LEVELS.map((level) => [level.id, level] as const))('the level %s',
         if (id && !touched.includes(id)) touched.push(id);
       };
       touch(game.groundId);
+      // Every sound the run asks for, to check each is one this level has fetched.
+      const heard = new Set<SoundName>();
+      const speaker: Speaker = { wake: () => undefined, play: (name) => void heard.add(name), setLoop: (name) => void heard.add(name), setMusic: () => undefined, playTune: (name) => void (name && heard.add(name)), setMuted: () => undefined };
+      const sound = new Sound(speaker, null);
+      sound.unlock();
+      const sounds = new GameSounds(sound);
       for (let i = 0; i < 300 / STEP && !game.complete; i += 1) {
         game.step(bot.input(game));
+        sounds.step(game);
         touch(game.groundId);
         touch(game.waterId);
         for (const event of game.events) if (event.type === 'bounce') touch(event.solidId);
       }
       expect(game.complete).toBe(true);
       expect(touched).toEqual(level.route);
+      expect(heard.size).toBeGreaterThan(3);
+      for (const name of heard) expect(soundAt(name, entry.id), `${name} in ${entry.id}`).toBe(true);
     });
 
     it('is not finished by standing still', () => {

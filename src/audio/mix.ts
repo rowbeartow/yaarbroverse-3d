@@ -32,6 +32,8 @@ export interface Speaker {
   /** Null stops a tune that is playing and brings the music back. */
   playTune(name: SoundName | null): void;
   setMuted(muted: boolean): void;
+  /** The level that is up, by its id: its own sounds and music are fetched now. Left out by a speaker with nothing to fetch. */
+  setLevel?(levelId: string): void;
   /** Underwater: everything muffled. Left out by a speaker that cannot do it. */
   setUnderwater?(under: boolean): void;
 }
@@ -108,6 +110,11 @@ export class Sound {
     if (this.music === name) return;
     this.music = name;
     if (this.unlocked) this.speaker.setMusic(name);
+  }
+
+  /** The level that is up. Its own sounds are fetched straight away (fetching makes no noise, so it need not wait for a tap). */
+  setLevel(levelId: string): void {
+    this.speaker.setLevel?.(levelId);
   }
 
   playTune(name: SoundName): void {

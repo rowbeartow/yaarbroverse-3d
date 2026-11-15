@@ -160,8 +160,10 @@ export class Screens {
   /**
    * The progress bar on the start screen while the 3D picture downloads.
    * A number from 0 to 1 moves the bar; null means done, and Play switches on.
+   * It comes back for a moment when a level is picked for the first time,
+   * while that level's own files arrive; `what` is then the level's name.
    */
-  setLoading(share: number | null): void {
+  setLoading(share: number | null, what = 'the game'): void {
     const loading = el('#loading');
     if (share === null) {
       loading.hidden = true;
@@ -173,7 +175,7 @@ export class Screens {
     loading.hidden = false;
     this.play.disabled = true;
     el<HTMLProgressElement>('#loading-bar').value = percent;
-    el('#loading-text').textContent = `Loading the grove… ${percent}%`;
+    el('#loading-text').textContent = `Loading ${what}… ${percent}%`;
   }
 
   /** The game cannot start: this browser has no 3D, or a file did not arrive. */
