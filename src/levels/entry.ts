@@ -14,8 +14,9 @@ import type { Level } from '../game/level';
  * The surroundings drawn around a level's solids. Each name has a builder in
  * `SURROUNDINGS` in `src/view/grove-view.ts`.
  *   forest   the misty fir gully of the Bouncing Grove, laid out along the level's route
+ *   lake     open water to the Selkirk mountains, a wooded shore on the left and a log boom on the right, laid out from the level's pools
  */
-export type SceneryName = 'forest';
+export type SceneryName = 'forest' | 'lake';
 
 export interface LevelEntry {
   /** Short name used in the address bar and in saved progress. Lower case and dashes. Never change it once players have saved progress. */

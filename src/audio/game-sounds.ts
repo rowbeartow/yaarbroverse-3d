@@ -45,7 +45,13 @@ const STEP_SOUND: Record<SolidKind, SoundName> = {
   mushroom: 'stepMushroom',
   moss: 'stepMoss',
   arch: 'stepMoss',
+  boulder: 'stepMoss',
+  crag: 'stepMoss',
+  deck: 'stepWood',
 };
+
+/** Kinds that sound soft underfoot: a push-off or landing on them uses the moss steps. */
+const soft = (kind: SolidKind | null): boolean => kind !== null && STEP_SOUND[kind] === 'stepMoss';
 
 /** Metres between footsteps. Caputo has four paws and a shorter step. */
 const STRIDE = { Yaarbro: 1.25, Caputo: 0.8 } as const;
@@ -93,10 +99,10 @@ export class GameSounds {
     for (const event of events) {
       if (event.type === 'jump') {
         // A quiet push-off from whatever the hero was standing on. There is no jump sound of its own.
-        sound.play(this.underfoot === 'bank' || this.underfoot === 'moss' ? 'pushMoss' : 'pushWood', { voice });
+        sound.play(soft(this.underfoot) ? 'pushMoss' : 'pushWood', { voice });
       } else if (event.type === 'land') {
         // A landing sounds like the surface: two soft footsteps with a low thump under them.
-        sound.play(this.kindOf(game) === 'bank' || this.kindOf(game) === 'moss' ? 'landMoss' : 'landWood', { voice });
+        sound.play(soft(this.kindOf(game)) ? 'landMoss' : 'landWood', { voice });
         // The landing is the step: the next footstep is a full stride away.
         this.walked = 0;
       } else if (event.type === 'bounce') sound.play('bounce');

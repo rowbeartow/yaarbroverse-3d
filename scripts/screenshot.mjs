@@ -15,7 +15,8 @@
 //
 // Builds nothing: run `npm run build` first, then `npx vite preview --port 4173`
 // in another terminal. Set W and H for a window size other than 1280 by 800,
-// and PORT if the game is served somewhere other than port 4173.
+// PORT if the game is served somewhere other than port 4173, and LEVEL for a
+// level other than the grove (its id, such as cocolalla).
 // The test browser has no graphics card, so above the minimal tier a frame
 // takes several seconds here. Real devices are not affected.
 
@@ -36,7 +37,7 @@ page.on('console', (message) => {
   if (message.type() === 'error' || message.type() === 'warning') console.log(`console ${message.type()}: ${message.text()}`);
 });
 
-await page.goto(`http://localhost:${process.env.PORT || 4173}/?quality=${quality}`);
+await page.goto(`http://localhost:${process.env.PORT || 4173}/?quality=${quality}${process.env.LEVEL ? `&level=${process.env.LEVEL}` : ''}`);
 // "Who's playing?" comes first: add a made-up player.
 await page.locator('#who-name').fill('Pip');
 await page.locator('#who-done').click();

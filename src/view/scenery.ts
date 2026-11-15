@@ -31,6 +31,7 @@ import {
 } from 'three';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { MOVE } from '../game/hero';
+import { boulder, crag, deck } from './lake-solids';
 import type { Level, Solid } from '../game/level';
 import { bankOutline, bankSeed } from './bank-outline';
 import type { Materials } from './materials';
@@ -1031,6 +1032,9 @@ export const buildSolids = (level: Level, materials: Materials, decor: Decor, ra
     else if (s.kind === 'stump') shape.add(stump(s, materials));
     else if (s.kind === 'shelf') shape.add(shelf(s, materials));
     else if (s.kind === 'arch') shape.add(arch(s, materials, level));
+    else if (s.kind === 'boulder') shape.add(boulder(s, materials, level));
+    else if (s.kind === 'crag') shape.add(crag(s, materials, level));
+    else if (s.kind === 'deck') shape.add(deck(s, materials, level));
     else if (s.kind === 'bough') {
       // The last bough is the great cedar's, with the leaf. The others are limbs to walk along.
       shape.add(s.id === level.route[level.route.length - 1] ? bough(s, materials) : limb(s, materials, level));

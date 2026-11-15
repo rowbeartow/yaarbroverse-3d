@@ -49,9 +49,10 @@ export const LAKE_SHAPE = {
   surface: 0,
   floor: -4,
   halfWidth: 18,
-  /** The pebble beach at the start: how far behind and ahead of the start it reaches. */
+  /** The pebble beach at the start: how far behind and ahead of the start it reaches, and half its width. The lake is either side of it. */
   beachBehind: 6,
   beachAhead: 14,
+  beachHalfWidth: 7,
   /** Shores walked out on from the water stand this high. */
   shoreTop: 0.3,
   /** The grassy point at the end of the shore path, and the rock island: half their width, and their length. */
@@ -134,12 +135,13 @@ export function buildLake(difficulty: Difficulty, numbers: LakeNumbers = LAKE_DI
 
   // 1. THE SHORE PATH
   section('The Shore Path');
-  box('beach', 'bank', -shape.beachBehind, shape.beachAhead, 0, shape.halfWidth, shape.shoreTop, shape.depth, { safe: true });
+  box('beach', 'bank', -shape.beachBehind, shape.beachAhead, 0, shape.beachHalfWidth, shape.shoreTop, shape.depth, { safe: true });
   let at = shape.beachAhead;
-  const firstPool = at;
+  // The first pool reaches back past the beach, so stepping off either side of it is a swim.
+  const firstPool = -shape.beachBehind - 4;
   for (let i = 0; i < n.boulderCount; i += 1) {
     at += n.boulderGap + n.boulderRadius;
-    round(`boulder-${i + 1}`, 'stump', at, i % 2 === 0 ? -shape.boulderSide : shape.boulderSide, n.boulderRadius, shape.boulderTop);
+    round(`boulder-${i + 1}`, 'boulder', at, i % 2 === 0 ? -shape.boulderSide : shape.boulderSide, n.boulderRadius, shape.boulderTop);
     at += n.boulderRadius;
   }
   at += n.boulderGap;
@@ -159,7 +161,7 @@ export function buildLake(difficulty: Difficulty, numbers: LakeNumbers = LAKE_DI
     at += n.logGap;
     box(`log-${i + 1}`, 'log', at, at + shape.logLength, shape.islandSide, n.logWidth / 2, shape.logTop, shape.logTop - shape.logThickness);
     at += shape.logLength + n.logGap;
-    round(`step-${i + 1}`, 'stump', at + shape.stepBoulderRadius, shape.islandSide, shape.stepBoulderRadius, shape.stepBoulderTop);
+    round(`step-${i + 1}`, 'boulder', at + shape.stepBoulderRadius, shape.islandSide, shape.stepBoulderRadius, shape.stepBoulderTop);
     at += shape.stepBoulderRadius * 2;
   }
   at += n.logGap;
@@ -176,9 +178,9 @@ export function buildLake(difficulty: Difficulty, numbers: LakeNumbers = LAKE_DI
   const rockFrom = at;
   const rockTo = at + n.tunnelLength;
   const sideHalf = (shape.halfWidth - shape.tunnelHalfWidth) / 2;
-  box('rock-left', 'bank', rockFrom, rockTo, -shape.tunnelHalfWidth - sideHalf, sideHalf, shape.rockTop, shape.depth, {}, false);
+  box('rock-left', 'crag', rockFrom, rockTo, -shape.tunnelHalfWidth - sideHalf, sideHalf, shape.rockTop, shape.depth, {}, false);
   box('rock-tunnel', 'arch', rockFrom, rockTo, 0, shape.tunnelHalfWidth, shape.rockTop, shape.tunnelRoof, {}, false);
-  box('rock-right', 'bank', rockFrom, rockTo, shape.tunnelHalfWidth + sideHalf, sideHalf, shape.rockTop, shape.depth, {}, false);
+  box('rock-right', 'crag', rockFrom, rockTo, shape.tunnelHalfWidth + sideHalf, sideHalf, shape.rockTop, shape.depth, {}, false);
   at = rockTo + shape.afterTunnel;
   const reedBar = at;
   box('reed-bar', 'bank', at, at + shape.reedBarLength, 0, shape.halfWidth, shape.shoreTop, shape.depth, { safe: safe(4) });
@@ -203,9 +205,9 @@ export function buildLake(difficulty: Difficulty, numbers: LakeNumbers = LAKE_DI
   // 6. THE OLD PIER: the boardwalk and the fishing dock.
   at += n.postGap;
   const deck = postTop + n.postRise;
-  box('boardwalk', 'log', at, at + shape.boardwalkLength, 0, shape.boardwalkHalfWidth, deck, deck - 0.4);
+  box('boardwalk', 'deck', at, at + shape.boardwalkLength, 0, shape.boardwalkHalfWidth, deck, deck - 0.4);
   at += shape.boardwalkLength;
-  box('dock', 'bank', at, at + shape.dockLength, 0, shape.dockHalfWidth, deck, deck - 0.4);
+  box('dock', 'deck', at, at + shape.dockLength, 0, shape.dockHalfWidth, deck, deck - 0.4);
   at += shape.dockLength;
   pool('cove-water', thirdPool, at + shape.pastDock);
 
