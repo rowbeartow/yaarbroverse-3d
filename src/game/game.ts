@@ -522,7 +522,8 @@ export class Game {
 
     // The enemies move, and anything they touch is settled.
     for (const enemy of this.enemies) {
-      const canBeHurt = this.protectedFor <= 0 && this.hearts > 0 && !this.under;
+      // A crocodile is the one enemy that reaches a swimmer whose head is under.
+      const canBeHurt = this.protectedFor <= 0 && this.hearts > 0 && (!this.under || enemy.kind === 'crocodile');
       const outcome = stepEnemy(enemy, this, MOVE.bodyRadius, previousY, this.tuning, canBeHurt, dt);
       for (const phase of outcome.entered) this.events.push({ type: 'enemy', id: enemy.spot.id, kind: enemy.kind, phase });
       if (outcome.struck) {

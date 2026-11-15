@@ -4,7 +4,7 @@
 // plain blocked-out copy of the level, so what moves on the page is what
 // moves in the game. The scenery is not the game's: banks are flat turf.
 //
-//   node tools/preview/arena.mjs <folder> marmot=<rigged.glb> mosquito=<rigged.glb> yaarbro=<rigged.glb> caputo=<rigged.glb>
+//   node tools/preview/arena.mjs <folder> marmot=<rigged.glb> mosquito=<rigged.glb> crocodile=<rigged.glb> yaarbro=<rigged.glb> caputo=<rigged.glb>
 //
 //   folder       where to put the page. Anything already there is replaced.
 //   rigged.glb   each model as its Blender script wrote it, before it is
@@ -36,10 +36,10 @@ import { modelIO } from '../../scripts/lib/compress-model.mjs';
 import { fillGaps } from '../../scripts/lib/fill-gaps.mjs';
 
 const [out, ...pairs] = process.argv.slice(2);
-const wanted = ['marmot', 'mosquito', 'yaarbro', 'caputo'];
+const wanted = ['marmot', 'mosquito', 'crocodile', 'yaarbro', 'caputo'];
 const given = Object.fromEntries(pairs.filter((pair) => pair.includes('=')).map((pair) => pair.split('=')));
 if (!out || wanted.some((name) => !given[name])) {
-  console.error('Usage: node tools/preview/arena.mjs <folder> marmot=<rigged.glb> mosquito=<rigged.glb> yaarbro=<rigged.glb> caputo=<rigged.glb>');
+  console.error('Usage: node tools/preview/arena.mjs <folder> marmot=<rigged.glb> mosquito=<rigged.glb> crocodile=<rigged.glb> yaarbro=<rigged.glb> caputo=<rigged.glb>');
   process.exit(1);
 }
 const here = dirname(fileURLToPath(import.meta.url));
