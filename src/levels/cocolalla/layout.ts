@@ -15,9 +15,6 @@
 //      runs out to the fishing dock. The golden leaf is at the dock's end.
 //      (The monster pike fight goes on the dock in milestone nine.)
 //
-// Built so far: sections 1 to 3. Until the rest is built the run ends on the
-// gravel bar.
-//
 // The lake is three pools side by side, each running the full width of the
 // lake: the gravel bar and the reed bar, which also run the full width, part
 // them. The sides of a pool hold a swimmer in, so the lake's edges are where
@@ -39,9 +36,10 @@ export const LAKE_HINTS: Record<string, string> = {
   beach: 'Hop across the boulders.',
   point: 'Swim out to the rock island.',
   island: 'Jump along the logs. Fall in, and swim back to one.',
+  'gravel-bar': 'Swim to the rocks and dive through the gap.',
+  'reed-bar': 'Swim across the cove to the old pier.',
+  'post-1': 'Up the posts to the fishing dock!',
 };
-
-const byIdIn = (solids: readonly Solid[], id: string): Solid => solids.find((s) => s.id === id) as Solid;
 
 export const LAKE_GOAL_LINE = 'A golden leaf, at the end of the dock!';
 
@@ -165,18 +163,57 @@ export function buildLake(difficulty: Difficulty, numbers: LakeNumbers = LAKE_DI
     at += shape.stepBoulderRadius * 2;
   }
   at += n.logGap;
+  const gravelBar = at;
   box('gravel-bar', 'bank', at, at + shape.gravelBarLength, 0, shape.halfWidth, shape.gravelBarTop, shape.depth, { safe: safe(3) });
   pool('reed-water', firstPool, at + shape.gravelBarLength / 2);
   at += shape.gravelBarLength;
 
-  // Sections 4 to 6 come next. Until then the run ends on the gravel bar.
-  const end = byIdIn(solids, 'gravel-bar');
+  // 4. THE ROCK TUNNEL: the rocky point runs right across the lake, with deep water under its middle.
+  section('The Rock Tunnel');
+  route.push('point-water');
+  const secondPool = gravelBar + shape.gravelBarLength / 2;
+  at += shape.pointAhead;
+  const rockFrom = at;
+  const rockTo = at + n.tunnelLength;
+  const sideHalf = (shape.halfWidth - shape.tunnelHalfWidth) / 2;
+  box('rock-left', 'bank', rockFrom, rockTo, -shape.tunnelHalfWidth - sideHalf, sideHalf, shape.rockTop, shape.depth, {}, false);
+  box('rock-tunnel', 'arch', rockFrom, rockTo, 0, shape.tunnelHalfWidth, shape.rockTop, shape.tunnelRoof, {}, false);
+  box('rock-right', 'bank', rockFrom, rockTo, shape.tunnelHalfWidth + sideHalf, sideHalf, shape.rockTop, shape.depth, {}, false);
+  at = rockTo + shape.afterTunnel;
+  const reedBar = at;
+  box('reed-bar', 'bank', at, at + shape.reedBarLength, 0, shape.halfWidth, shape.shoreTop, shape.depth, { safe: safe(4) });
+  pool('point-water', secondPool, at + shape.reedBarLength / 2);
+  at += shape.reedBarLength;
+
+  // 5. CATTAIL COVE: swim to the first post of the old pier.
+  section('Cattail Cove');
+  route.push('cove-water');
+  const thirdPool = reedBar + shape.reedBarLength / 2;
+  at += n.coveSwim;
+  let postTop = shape.firstPostTop;
+  for (let i = 0; i < n.postCount; i += 1) {
+    // The first post ends the cove; the rest are the start of the pier.
+    if (i === 1) section('The Old Pier');
+    if (i > 0) at += n.postGap;
+    round(`post-${i + 1}`, 'stump', at + n.postRadius, i % 2 === 0 ? 0 : shape.postSide, n.postRadius, postTop);
+    at += n.postRadius * 2;
+    if (i < n.postCount - 1) postTop += n.postRise;
+  }
+
+  // 6. THE OLD PIER: the boardwalk and the fishing dock.
+  at += n.postGap;
+  const deck = postTop + n.postRise;
+  box('boardwalk', 'log', at, at + shape.boardwalkLength, 0, shape.boardwalkHalfWidth, deck, deck - 0.4);
+  at += shape.boardwalkLength;
+  box('dock', 'bank', at, at + shape.dockLength, 0, shape.dockHalfWidth, deck, deck - 0.4);
+  at += shape.dockLength;
+  pool('cove-water', thirdPool, at + shape.pastDock);
 
   return {
     name: LAKE_NAME,
     solids,
     spawn: { x: 0, y: shape.shoreTop, z: 0 },
-    leaf: { x: 0, y: end.top + 1.3, z: end.z - end.halfZ + 1.5, radius: 0.7 },
+    leaf: { x: 0, y: deck + 1.3, z: -(at - 1.5), radius: 0.7 },
     water,
     breath: n.breath,
     fallY: shape.fallY,
