@@ -5,10 +5,11 @@ const levelId = (page: import('@playwright/test').Page): Promise<string> =>
   page.evaluate(() => (window as unknown as { __grove: { level: string } }).__grove.level);
 
 test.describe('the level list', () => {
-  test('players get the Bouncing Grove, and nothing on the page names the sandbox', async ({ page }) => {
+  test('players get the Bouncing Grove first and Cocolalla Lake after it, and nothing on the page names the sandbox', async ({ page }) => {
     await open(page);
     expect(await levelId(page)).toBe('bouncing-grove');
-    await expect(page.locator('.area')).toHaveCount(1);
+    await expect(page.locator('.area')).toHaveCount(2);
+    await expect(page.locator('.area .area-name')).toHaveText(['The Bouncing Grove', 'Cocolalla Lake']);
     await expect(page.locator('.area-pick[aria-checked="true"] .area-name')).toHaveText('The Bouncing Grove');
     expect((await page.locator('body').innerText()).toLowerCase()).not.toContain('sandbox');
   });
@@ -30,7 +31,7 @@ test.describe('the level list', () => {
     expect(problems).toEqual([]);
   });
 
-  test('?level=cocolalla builds the lake while it is being made: its water and surroundings draw, and it plays to its end card', async ({ page }) => {
+  test('?level=cocolalla builds the lake: its water and surroundings draw, and it plays to its end card', async ({ page }) => {
     const problems = await open(page, 'level=cocolalla');
     expect(await levelId(page)).toBe('cocolalla');
     await expect(page.locator('.area-pick[aria-checked="true"] .area-name')).toHaveText('Cocolalla Lake');

@@ -19,8 +19,8 @@ describe('the level list', () => {
     for (const id of ids) expect(id).toMatch(/^[a-z][a-z0-9-]*$/);
   });
 
-  it('shows players the Bouncing Grove and never the sandbox', () => {
-    expect(listedLevels().map((level) => level.id)).toEqual(['bouncing-grove']);
+  it('shows players the Bouncing Grove, then Cocolalla Lake, and never the sandbox', () => {
+    expect(listedLevels().map((level) => level.id)).toEqual(['bouncing-grove', 'cocolalla']);
     expect(findLevel('sandbox')?.devOnly).toBe(true);
   });
 
@@ -34,11 +34,13 @@ describe('the level list', () => {
 
 describe('the level picker’s cards', () => {
   it('are the levels players are shown, plus a development level only when the address names it', () => {
-    expect(shownLevels('').map((level) => level.id)).toEqual(['bouncing-grove']);
-    expect(shownLevels('?fps').map((level) => level.id)).toEqual(['bouncing-grove']);
-    expect(shownLevels('?level=bouncing-grove').map((level) => level.id)).toEqual(['bouncing-grove']);
-    expect(shownLevels('?level=sandbox').map((level) => level.id)).toEqual(['bouncing-grove', 'sandbox']);
-    expect(shownLevels('?level=nowhere').map((level) => level.id)).toEqual(['bouncing-grove']);
+    const players = ['bouncing-grove', 'cocolalla'];
+    expect(shownLevels('').map((level) => level.id)).toEqual(players);
+    expect(shownLevels('?fps').map((level) => level.id)).toEqual(players);
+    expect(shownLevels('?level=bouncing-grove').map((level) => level.id)).toEqual(players);
+    expect(shownLevels('?level=cocolalla').map((level) => level.id)).toEqual(players);
+    expect(shownLevels('?level=sandbox').map((level) => level.id)).toEqual([...players, 'sandbox']);
+    expect(shownLevels('?level=nowhere').map((level) => level.id)).toEqual(players);
   });
 
   it.each(listedLevels().map((level) => [level.id, level] as const))('%s has a small picture for its card', (id, level) => {

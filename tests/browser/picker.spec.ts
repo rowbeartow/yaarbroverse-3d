@@ -18,10 +18,14 @@ const finishSandbox = async (page: Page, difficulty: string): Promise<void> => {
   await expect(page.locator('#start')).toBeVisible();
 };
 
-test('the start screen shows the grove as a card, picked, with nothing finished for a new player', async ({ page }) => {
+test('the start screen shows the grove as a card, picked, with nothing finished for a new player, and the lake beside it', async ({ page }) => {
   const problems = await open(page);
   await expect(page.locator('#start-title')).toHaveText('Where to?');
-  await expect(page.locator('.area')).toHaveCount(1);
+  await expect(page.locator('.area')).toHaveCount(2);
+  const lake = page.locator('.area[data-level="cocolalla"]');
+  await expect(lake.locator('.area-pick')).toHaveAttribute('aria-checked', 'false');
+  await expect(lake.locator('.area-name')).toHaveText('Cocolalla Lake');
+  await expect.poll(() => lake.locator('img').evaluate((img) => (img as HTMLImageElement).naturalWidth)).toBeGreaterThan(100);
   const card = page.locator('.area[data-level="bouncing-grove"]');
   await expect(card.locator('.area-pick')).toHaveAttribute('aria-checked', 'true');
   await expect(card.locator('.area-name')).toHaveText('The Bouncing Grove');
@@ -42,8 +46,8 @@ test('the start screen shows the grove as a card, picked, with nothing finished 
 
 test('a card marks each finished difficulty with the best time, for the player who did it', async ({ page }) => {
   const problems = await open(page, 'level=sandbox');
-  // The development level is a card only because the address names it.
-  await expect(page.locator('.area')).toHaveCount(2);
+  // The development level is a card only because the address names it, after the grove and the lake.
+  await expect(page.locator('.area')).toHaveCount(3);
   await expect(page.locator('.area[data-level="sandbox"] .area-pick')).toHaveAttribute('aria-checked', 'true');
 
   await finishSandbox(page, 'easy');
