@@ -43,8 +43,8 @@ export const LAKE_LOOK = {
   shoreRise: 0.22,
   hills: 26,
   /** The pines on the shore: how many near the water, and how many on the hills behind. */
-  nearPines: 46,
-  farPines: 120,
+  nearPines: 36,
+  farPines: 100,
   /** The log boom: how far out from the right side of the water it floats, and how long each log is. */
   boomOut: 0.7,
   boomLog: 6.2,
@@ -84,8 +84,8 @@ const mountains = (): Mesh => {
   const index: number[] = [];
   const steps = 260;
   const ranges = [
-    { radius: LAKE_LOOK.mountainsAt, tall: LAKE_LOOK.peaks, seed: 3.1, pale: 0.5 },
-    { radius: LAKE_LOOK.mountainsAt - 40, tall: LAKE_LOOK.peaks * 0.5, seed: 8.7, pale: 0.25 },
+    { radius: LAKE_LOOK.mountainsAt, tall: LAKE_LOOK.peaks, seed: 3.1, pale: 0.38 },
+    { radius: LAKE_LOOK.mountainsAt - 40, tall: LAKE_LOOK.peaks * 0.5, seed: 8.7, pale: 0.15 },
   ];
   const colour = new Color();
   for (const range of ranges) {
@@ -171,12 +171,16 @@ export const buildLake = (level: Level, materials: Materials, decor: Decor, rand
 
   // ---------- The shore on the left ----------
   /** Where the shore line is at z: the waterline, a little past the left side of the pools. */
-  const shoreLine = (z: number): number => water.minX - LAKE_LOOK.shoreOut - LAKE_LOOK.shoreWander * rough(z * 0.035, 1.7, 0, 3);
+  // Past the dock the shore bends away to the left, and the lake opens out toward the mountains.
+  const shoreLine = (z: number): number =>
+    water.minX - LAKE_LOOK.shoreOut - LAKE_LOOK.shoreWander * rough(z * 0.035, 1.7, 0, 3) - 90 * smooth(water.minZ - 10, water.minZ - 160, z) ** 1.5;
   /** The ground's height at (x, z): under water to the right of the shore line, rising to hills inland. */
   const groundAt = (x: number, z: number): number => {
     const inland = shoreLine(z) - x;
     if (inland < 0) return water.surface + inland * 0.9 - 0.15;
-    const hill = LAKE_LOOK.hills * smooth(8, 90, inland) * (0.55 + 0.45 * rough(x * 0.012, z * 0.012, 4.2, 3));
+    // The hills sink away far ahead, so nothing stands up out of the haze there: the mountains close the view.
+    const fade = 1 - smooth(water.minZ - 20, water.minZ - 140, z);
+    const hill = LAKE_LOOK.hills * fade * smooth(8, 90, inland) * (0.55 + 0.45 * rough(x * 0.012, z * 0.012, 4.2, 3));
     return water.surface - 0.15 + inland * LAKE_LOOK.shoreRise * (1 - smooth(10, 40, inland) * 0.6) + hill;
   };
   const width = 230;

@@ -201,7 +201,7 @@ export class WaterView {
       const length = water.maxZ - water.minZ;
       const middle = { x: (water.minX + water.maxX) / 2, z: (water.minZ + water.maxZ) / 2 };
       // The surface: about three points to a metre, so the waves are smooth, fewer on a wide lake.
-      const density = Math.min(3, Math.sqrt(40000 / (width * length)));
+      const density = Math.min(3, Math.sqrt(22000 / (width * length)));
       const surface = new Mesh(new PlaneGeometry(width, length, Math.ceil(width * density), Math.ceil(length * density)), surfaceLook);
       surface.rotation.x = -Math.PI / 2;
       surface.position.set(middle.x, water.surface, middle.z);
