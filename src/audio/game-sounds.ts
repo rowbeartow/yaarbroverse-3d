@@ -4,13 +4,14 @@
 // Three kinds of thing make sound:
 //   - events from a step of the game (a jump, a hit, an enemy's warning)
 //   - footsteps, counted from how far the hero has walked, and strokes, from how far it has swum
-//   - sounds that last (Yaarbro's roll, the mosquito's whine), set every step
+//   - sounds that last (Yaarbro's roll, the mosquito's whine, water lapping), set every step
 // And underwater the whole mix is muffled, for as long as the hero's head is under.
 
 import type { Enemy } from '../game/enemy';
 import type { Game, GameEvent } from '../game/game';
 import { MOVE, STEP } from '../game/hero';
 import type { SolidKind } from '../game/level';
+import type { Water } from '../game/swim';
 import type { Sound } from './mix';
 import type { SoundName } from './sounds';
 
@@ -61,6 +62,27 @@ export const STROKE = { Yaarbro: 1.4, Caputo: 0.9 } as const;
 
 /** How loud going into the water is, from how fast the hero was dropping: a step in is soft, a drop from high up is full. */
 export const splashVolume = (speed: number): number => 0.45 + 0.55 * Math.min(1, speed / 12);
+
+/**
+ * How loud the lapping of the water is, 0 to 1, for a hero this many metres
+ * from the nearest water seen from above: full by the water and in it, gone
+ * 20 m away. A level with no water never laps.
+ */
+export const lappingAt = (waters: readonly Water[] | undefined, x: number, z: number): number => {
+  let nearest = Infinity;
+  for (const w of waters ?? []) {
+    const dx = Math.max(w.minX - x, 0, x - w.maxX);
+    const dz = Math.max(w.minZ - z, 0, z - w.maxZ);
+    nearest = Math.min(nearest, Math.hypot(dx, dz));
+  }
+  if (nearest <= LAPPING.full) return 1;
+  if (nearest >= LAPPING.gone) return 0;
+  const share = (nearest - LAPPING.full) / (LAPPING.gone - LAPPING.full);
+  return (1 - share) ** 2;
+};
+
+/** Metres from the water within which the lapping is at full volume, and beyond which it is gone. */
+export const LAPPING = { full: 3, gone: 20 } as const;
 
 const distanceTo = (game: Game, enemy: Enemy): number => Math.hypot(enemy.x - game.x, enemy.y - game.y, enemy.z - game.z);
 
@@ -199,5 +221,8 @@ export class GameSounds {
     }
     // In steps of a twentieth, so the speaker is not told about every hair's breadth.
     this.sound.setLoop('mosquitoHover', Math.round(whine * 20) / 20);
+
+    // Water lapping, softly, by and in the water.
+    this.sound.setLoop('lapping', Math.round(lappingAt(game.level.water, game.x, game.z) * 20) / 20);
   }
 }

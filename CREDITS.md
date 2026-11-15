@@ -38,7 +38,7 @@ Each texture is a colour picture (`_diff_`) and a picture of fine bumps (`_nor_g
 
 ## Sound and music
 
-Recorded files, in `assets/audio/`. All are CC0, from OpenGameArt, downloaded on 2026-11-12 (the four marked 2026-11-14 on that day). Nothing came from the 2D game, which has no sound files, and no recording here is of a voice. Each short sound was made mono, cut to its sounding part and given a clean start and end; nothing else was changed unless the table says so.
+Recorded files, in `assets/audio/`. All are CC0, from OpenGameArt, downloaded on 2026-11-12 (those marked 2026-11-14 or 2026-11-15 on that day). Nothing came from the 2D game, which has no sound files, and no recording here is of a voice. Each short sound was made mono, cut to its sounding part and given a clean start and end; nothing else was changed unless the table says so.
 
 | File in this repo | What it is | Source | License |
 | --- | --- | --- | --- |
@@ -64,6 +64,8 @@ Recorded files, in `assets/audio/`. All are CC0, from OpenGameArt, downloaded on
 | `water-in.wav` | A hero going into the water: 0.74 seconds of `splash_05.ogg`, with the rumble under 80 hertz taken out. Added 2026-11-14. | "40 CC0 water / splash / slime SFX" by rubberduck: https://opengameart.org/content/40-cc0-water-splash-slime-sfx | CC0 |
 | `stroke.wav` | One swimming stroke at the surface: 0.32 seconds of `splash_03.ogg`, with the rumble under 80 hertz taken out. Added 2026-11-14. | "40 CC0 water / splash / slime SFX" by rubberduck: https://opengameart.org/content/40-cc0-water-splash-slime-sfx | CC0 |
 | `surfacing.wav` | A swimmer's head coming back up: 0.52 seconds of `splash_02.ogg`, with the rumble under 80 hertz taken out. Added 2026-11-14. | "40 CC0 water / splash / slime SFX" by rubberduck: https://opengameart.org/content/40-cc0-water-splash-slime-sfx | CC0 |
+| `lake-music.mp3` | Cocolalla Lake's music: the whole track of 2 minutes 12 seconds, which its composer made to loop (`morning_2d.2.ogg`), made mono, set to the grove music's loudness and saved as MP3 (about 43 kbps, to fit the sound budget). Added 2026-11-15. | "Morning Sky" by Centurion_of_war: https://opengameart.org/content/morning-sky | CC0 |
+| `lake-lapping.wav` | Water lapping at the shore, played softly by the water: 5.6 seconds of `VistulaShort.mp3` from 91.8 seconds in, joined end to start with a 0.4-second crossfade so it loops, with the rumble under 100 hertz taken out, saved at 22,050 hertz (the recording has nothing above 11,000 hertz). Added 2026-11-15. | "Sea and river wave sounds" by RandomMind: https://opengameart.org/content/sea-and-river-wave-sounds | CC0 |
 
 The giant mosquito's three sounds and the low thump under a landing are made in code by this project (`src/audio/synth.ts`): there is no file, and nothing to credit. A jump and a landing have no files of their own: they play the moss and wood footsteps above.
 
@@ -91,6 +93,8 @@ SHA-256 of each download, as OpenGameArt served it:
 | `sfx_breaking_and_falling.zip` ("75 CC0 breaking / falling / hit sfx") | `e6ee04d91c5f4d30cfda1260d2c9d1faf96fda36319287215fbd07bcb1a80451` |
 | `wind3.wav` ("wind1") | `8def85e8546fb4850f017ede32b938593aeca5dfd3a9361cbabd80d455ff954d` |
 | `water-splash-slime-sfx.zip` ("40 CC0 water / splash / slime SFX") | `7cd39abb49d4362a37ba18dc0e454c7dc1d08029d4e5b683149046bc237b2eba` |
+| `morning_2d.2_0.ogg` ("Morning Sky") | `73fc1726c884255259a46f2e8ac0085bd1b730da99b5a228e1e1c03ae9c6cf22` |
+| `VistulaShort_0.mp3` ("Sea and river wave sounds") | `8c24607e41edd6f018ec3582a07e5a8dbc57347276339cb68440951a0fb4cfb1` |
 
 ## Stand-in model
 

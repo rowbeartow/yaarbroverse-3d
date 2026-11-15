@@ -1,10 +1,12 @@
 # Session handoff
 
-Last updated: 2026-11-15 (milestone eight, part two: Cocolalla Lake, playable without crocodiles)
+Last updated: 2026-11-15 (milestone eight, part two: Cocolalla Lake, with its music and sounds, playable without crocodiles)
 
 ## Start here
 
-**Milestone eight, part two: Cocolalla Lake is playable from start to dock, without crocodiles.** It is on the level picker after the Bouncing Grove. The game is live at https://rowbeartow.github.io/yaarbroverse-3d/ . The lake still plays the grove's music, and has no lake sounds yet: those wait for the owner's picks on the sound board (see "What's next").
+**Milestone eight, part two: Cocolalla Lake is playable from start to dock, with its own music and the sound of lapping water, without crocodiles.** It is on the level picker after the Bouncing Grove. The game is live at https://rowbeartow.github.io/yaarbroverse-3d/ .
+
+**Next: the crocodiles, in a new session** (see "What's next"). **Frame rate budget:** the owner measured the lake at 75 to 81 frames a second in Safari on his Mac, against the grove's 120. The crocodiles must not push the lake under 60. Every crocodile is a skinned, animated model on top of an already heavier scene, so keep their triangle count low (the marmot and mosquito are about 1,024-texel, compressed models), share one model and its materials across all of them, draw only those near the hero, and measure the triangles and draw calls in the test browser against the lake's numbers below before asking the owner to check `?fps` again.
 
 Milestone eight, part two, in order:
 
@@ -14,7 +16,8 @@ Milestone eight, part two, in order:
 4. **Sections 1 to 3: pull request 56, merged 2026-11-15.** The Shore Path, The Reed Shallows, The Sunken Logs.
 5. **Sections 4 to 6: pull request 57, merged 2026-11-15.** The Rock Tunnel, Cattail Cove, The Old Pier.
 6. **The lake's scenery: pull request 58, merged 2026-11-15.** `src/view/lake.ts` and `src/view/lake-solids.ts`.
-7. **The lake on the level picker: the pull request this version of the handoff arrived in. If you are reading this on `main`, it has merged.** Its card picture is `public/cards/cocolalla.jpg`.
+7. **The lake on the level picker: pull request 59, merged 2026-11-15.** Its card picture is `public/cards/cocolalla.jpg`.
+8. **The lake's music and sounds: the pull request this version of the handoff arrived in. If you are reading this on `main`, it has merged.** The owner's picks: music B, "Morning Sky" by Centurion_of_war (`assets/audio/lake-music.mp3`, `lakeMusic`); the lapping water OK (`lake-lapping.wav`, `lapping`), which plays at full volume within 3 m of any water and fades out by 20 m (`lappingAt` in `src/audio/game-sounds.ts`); the loon left out. Sound and music: 3.75 MB of the 4 MB budget.
 
 **The lake, as built** (`src/levels/cocolalla/`, id `cocolalla`):
 
@@ -25,19 +28,18 @@ Milestone eight, part two, in order:
 - Every number is in `src/levels/cocolalla/difficulty.ts`; `tests/lake.test.ts` checks the lake's own rules. `LAKE_TIMES=1 npx vitest run tests/lake.test.ts --silent=false` prints the section times.
 - The surroundings (`scenery: 'lake'`): a wooded shore along the left with pines, rocks and reeds, which bends away past the dock; a log boom along the right, where the swimming stops; open water all round over one lake bed; a clearer haze than the forest's; the Selkirks as a dark wooded band with snow on the high tops. Boulders, the rocky point's crags and the pier's boards are new kinds of solid (`boulder`, `crag`, `deck`).
 
-**Waiting on the owner: the lake's music and sounds.** They are on the sound board (https://claude.ai/artifact/WvtY9CjWaa5yTpwyJCferH ), at the bottom under "For the lake": two tunes (A "Down the river", banjo, 1:17; B "Morning Sky", 2:12, squeezed harder to fit), lapping water, and a loon. Only one tune fits the 4 MB sound budget. No CC0 loon recording could be found (the one on OpenGameArt is CC-BY-SA; freesound.org is blocked in a cloud session), so the loon on the board is made in code by this project. **None of these is on `main` yet.** The prepared files, their CREDITS.md rows and checksums, and the loon's recipe are on the branch `claude/backup-lake-sounds`, in `tools/lake-sound-candidates/` (its README says what to do once the owner picks). Wiring them in: the tune as `lakeMusic` in `src/audio/sounds.ts` and `music` in the lake's `level.ts`; the lapping as a quiet loop while the hero is near or in the water, and the loon now and then, far off, in `src/audio/game-sounds.ts`.
-
 **What nobody has checked yet in the lake, and the owner is the one who can:**
 
-1. **Frame rate across the lake, in Safari on the Mac with `?level=cocolalla&fps`.** The target is 60 on the high tier. Not measured: the test browser draws in software. It draws about 340 to 650 thousand triangles in 140 to 165 draw calls along the lake, against about 380 thousand in 300 at the start of the grove. If it drops, the first things to cut are the near pines (`nearPines` in `LAKE_LOOK`, `src/view/lake.ts`) and the water's points (`22000` in `WaterView`, `src/view/water.ts`).
+1. **Frame rate on the iPad.** The owner measured the Mac: 75 to 81 frames a second across the lake in Safari, against 120 in the grove. In the test browser the lake draws about 340 to 650 thousand triangles in 140 to 165 draw calls, against about 380 thousand in 300 at the start of the grove. If it needs to be lighter, the first things to cut are the near pines (`nearPines` in `LAKE_LOOK`, `src/view/lake.ts`) and the water's points (`22000` in `WaterView`, `src/view/water.ts`).
 2. **How the lake looks and plays on a real screen.** Judged from still pictures only.
 3. **Whether Easy's swims and dive need no timing for the younger player,** and whether Hard's 11 s of breath and 9 m tunnel are right (`breath` and `tunnelLength` in the lake's `difficulty.ts`).
 4. **Swimming in the Sandbox, the sounds in the game, and the muffle**, still open from part one.
+5. **How the lake music and the lapping sound in the game.** Heard on the board only.
 
 **The roadmap, in the owner's order:**
 
 1. Milestones six and seven: done. Milestone eight, part one (swimming): done.
-2. **The lake, part two: the level is done.** Still to do: its music and sounds (after the owner's picks), then the crocodiles: rigging, animating and placing them, in a new session.
+2. **The lake, part two: the level, its scenery, music and sounds are done.** Next: the crocodiles, rigging, animating and placing them, in a new session.
 3. Fishing and the monster pike boss, on the fishing dock (milestone nine). The pike is fought both on the fishing line and in the water.
 4. Skiing in the Selkirks, with Caputo on a snowboard.
 5. Mountain climbing on rock, ice and trees.
@@ -372,10 +374,9 @@ Milestone four (sound and music) is done, in the pull requests listed under "Sta
 
 ## What's next
 
-1. **The owner picks the lake's music and sounds** on the sound board (https://claude.ai/artifact/WvtY9CjWaa5yTpwyJCferH ): a tune (A or B), and OK or no for the lapping water and the made-in-code loon. Then wire them in from `claude/backup-lake-sounds` (see "Start here"), with credits in `CREDITS.md`, and check the sound budget (`tests/sound-files.test.ts` allows 4,194,304 bytes; with tune A, the lapping and the loon it comes to about 4,004,000).
-2. **The crocodiles, in a new session.** The model is Meshy candidate C (see "Start here"; it is not in the repo). Rig it (a four-legged rig like `tools/rig-quadruped.py`, with its curled tail straightened), give it clips, and get the owner's OK on the enemy preview page; then its rules in `src/game/enemy.ts`, by the owner's rules in `docs/decisions.md` (2026-11-14): it reaches a swimmer at the surface and underwater, every one can be avoided on Easy without diving or precise timing, each hero's move beats or gets past it, and the regen rule applies. Place them in the two stretches, `reed-water` and `cove-water`, and get the owner's OK on the arena preview page. The bot will need to swim round or past them: `swim` in `tests/helpers/bot.ts`.
-3. **The owner plays the lake** in Safari on the Mac with `?fps` and on the iPad, and says what is off (see "What nobody has checked yet").
-4. **Ideas that came up and were not asked for** are not in the code: a vine to swing from, a rolling log and logs drifting in a stream (drifting logs could be a new `motion` kind in `src/game/moving.ts`), a run clip for the scout and clips of its own for the chief, recorded sounds of its own for the chief, a hint on screen the first time a guarded boss is open, remembering the last area each player picked, a ghost of someone else's run, sound that moves left and right with what makes it, sounds for strokes underwater, a boat.
+1. **The crocodiles, in a new session.** The model is Meshy candidate C (see "Start here"; it is not in the repo). Rig it (a four-legged rig like `tools/rig-quadruped.py`, with its curled tail straightened), give it clips, and get the owner's OK on the enemy preview page; then its rules in `src/game/enemy.ts`, by the owner's rules in `docs/decisions.md` (2026-11-14): it reaches a swimmer at the surface and underwater, every one can be avoided on Easy without diving or precise timing, each hero's move beats or gets past it, and the regen rule applies. Place them in the two stretches, `reed-water` and `cove-water`, and get the owner's OK on the arena preview page. The bot will need to swim round or past them: `swim` in `tests/helpers/bot.ts`. **The lake must stay at 60 frames a second or more on the Mac** (it runs at 75 to 81 now; see "Start here").
+2. **The owner and the kids play the lake** on the iPad, and say what is off (see "What nobody has checked yet").
+3. **Ideas that came up and were not asked for** are not in the code: a vine to swing from, a rolling log and logs drifting in a stream (drifting logs could be a new `motion` kind in `src/game/moving.ts`), a run clip for the scout and clips of its own for the chief, recorded sounds of its own for the chief, a hint on screen the first time a guarded boss is open, remembering the last area each player picked, a ghost of someone else's run, sound that moves left and right with what makes it, sounds for strokes underwater, a boat, a loon (no CC0 recording was found; the owner left the made-in-code one out).
 
 ## Known limits
 

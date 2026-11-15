@@ -13,5 +13,5 @@ export const COCOLALLA: LevelEntry = {
   blurbs: LAKE_BLURB,
   build: (difficulty) => buildLake(difficulty),
   scenery: 'lake',
-  music: 'groveMusic',
+  music: 'lakeMusic',
 };
