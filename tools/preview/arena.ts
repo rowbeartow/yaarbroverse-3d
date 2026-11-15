@@ -39,6 +39,7 @@ import { HDRLoader } from 'three/examples/jsm/loaders/HDRLoader.js';
 import { bossFighting, bossOpen, type Boss } from '../../src/game/boss';
 import { DIFFICULTIES, DIFFICULTY_LABEL, type Difficulty } from '../../src/game/difficulty';
 import { ENEMY, type Enemy } from '../../src/game/enemy';
+import { CROC } from '../../src/game/crocodile';
 import { Game, IDLE, type GameEvent, type Input } from '../../src/game/game';
 import { HEROES, MOVE, MOVE_NAME, STEP, type HeroName } from '../../src/game/hero';
 import { surfaceBelow, type Level, type Solid } from '../../src/game/level';
@@ -78,8 +79,12 @@ interface Place {
   level: string;
   /** The enemy the read-out under the picture follows. Left out for a boss fight: the read-out follows the boss. */
   watch?: string;
-  /** True when "Watch" is the test bot playing (a boss fight), not a script. */
+  /** True when "Watch" is the test bot playing (a boss fight, a swim), not a script. */
   bot?: boolean;
+  /** For the bot: the solid whose reaching ends a go, and starts it again. */
+  ends?: string;
+  /** For the bot: what the caption says while it plays. */
+  caption?: string;
   /** Where "Play it yourself" stands the hero. */
   start(level: Level): { x: number; y: number; z: number };
   script(level: Level, difficulty: Difficulty): Beat[];
@@ -158,6 +163,37 @@ const PLACES: Place[] = [
     script: () => [],
   },
   {
+    // Milestone eight, part three: the crocodiles, in the lake's two long
+    // swims. The rule tests' own player swims across, looking ahead and
+    // getting out of the line of each lunge, then starts again.
+    id: 'reed',
+    label: 'Crocodiles: the Reed Shallows',
+    level: 'cocolalla',
+    bot: true,
+    watch: 'croc-reed-1',
+    ends: 'island',
+    caption: 'The rule tests’ own player swims from the grassy point to the rock island, at full speed. When a crocodile gives its tell it swims out of the line, or dives under it, and keeps going. On Easy the crocodile waits well to the side, and a hero swimming straight across never wakes it. Then it starts again.',
+    start: (level) => {
+      const point = solid(level, 'point');
+      return on(point, 0, -point.halfZ + 1.5);
+    },
+    script: () => [],
+  },
+  {
+    id: 'cove',
+    label: 'Crocodiles: Cattail Cove',
+    level: 'cocolalla',
+    bot: true,
+    watch: 'croc-cove-1',
+    ends: 'post-1',
+    caption: 'The rule tests’ own player swims across Cattail Cove from the reed bar to the first post of the old pier, at full speed, getting out of the line of each lunge. Then it starts again.',
+    start: (level) => {
+      const bar = solid(level, 'reed-bar');
+      return on(bar, 0, -bar.halfZ + 1.5);
+    },
+    script: () => [],
+  },
+  {
     id: 'chief',
     label: 'The marmot chief',
     level: 'bouncing-grove',
@@ -202,6 +238,16 @@ const BOSS_DOING = (boss: Boss): string => {
 };
 
 /** What an enemy is doing, in the page's words. */
+/** What a crocodile is doing, in the read-out. */
+const CROC_DOING: Record<string, string> = {
+  concealed: 'Lurking: only its eyes show',
+  idle: 'Swimming after the hero',
+  warning: 'Its tell: eyes sinking, a wake heading for the hero',
+  attack: 'Lunging',
+  rest: 'Resting at the surface: the opening',
+  defeated: 'Beaten',
+};
+
 const DOING: Record<string, string> = {
   concealed: 'Hidden',
   patrol: 'On its beat',
@@ -508,13 +554,16 @@ const start = async (): Promise<void> => {
       putHero(at);
       follow = { ...at };
       bot = new Bot(level);
-      caption.textContent = place.id === 'pool'
+      caption.textContent = place.caption ?? (place.id === 'pool'
         ? 'The rule tests’ own player has the hero, at full speed. It walks off the bank into the pool, swims, holds the move button to dive under the rock, comes up, and climbs out with Jump. Then it starts again.'
-        : 'The rule tests’ own player has the hero. It keeps moving round the chief, steps out of the line of an attack, looks a moment ahead to dodge what is coming, and jumps on it when a hit will count. It uses walk and jump alone. When the fight is over it starts again.';
+        : 'The rule tests’ own player has the hero. It keeps moving round the chief, steps out of the line of an attack, looks a moment ahead to dodge what is coming, and jumps on it when a hit will count. It uses walk and jump alone. When the fight is over it starts again.');
     } else startBeat(0);
     const seconds = ENEMY.warning * (level.enemyTuning?.warning ?? 1);
     const numbers = place.bot ? level.boss?.numbers : undefined;
-    tell.textContent = place.id === 'pool'
+    const t = level.enemyTuning;
+    tell.textContent = place.level === 'cocolalla' && t
+      ? `On ${DIFFICULTY_LABEL[difficulty]}: ${(level.enemies ?? []).length / 2} in each swim. Its tell lasts ${(CROC.warning * t.warning).toFixed(2)} s, it lunges ${t.crocReach} m, swims after a hero at ${t.crocSpeed} m/s (a hero swims 3.6), and rests ${(CROC.rest * t.rest).toFixed(1)} s after a lunge. ${t.aimLine ? 'A line shows where it will lunge.' : 'No line shows where it will lunge.'}`
+      : place.id === 'pool'
       ? Number.isFinite(game.maxBreath) ? `On ${DIFFICULTY_LABEL[difficulty]} breath lasts ${game.maxBreath} s underwater.` : 'On Easy breath never runs out.'
       : numbers
       ? `On ${DIFFICULTY_LABEL[difficulty]}: ${numbers.health} hits to beat it, ${numbers.guarded ? 'and only a hit while it rests counts' : 'and any landing on top counts'}. It warns for ${numbers.warning} s before a throw and ${numbers.chargeWarning} s before a charge, and rests for ${numbers.rest} s.`
@@ -704,7 +753,7 @@ const start = async (): Promise<void> => {
     } else if (watched) {
       const moving = watched.phase === 'idle' && watched.kind === 'marmot' && (level.enemyTuning?.chaseSpeed ?? 0) > 0 && watched.timer >= ENEMY.marmotReady;
       const hovering = watched.phase === 'idle' && watched.kind === 'mosquito';
-      doing.textContent = moving ? 'Coming after the hero' : hovering ? 'Hovering over the hero' : (DOING[watched.phase] ?? watched.phase);
+      doing.textContent = watched.kind === 'crocodile' ? (CROC_DOING[watched.phase] ?? watched.phase) : moving ? 'Coming after the hero' : hovering ? 'Hovering over the hero' : (DOING[watched.phase] ?? watched.phase);
       doing.dataset.phase = watched.phase;
     }
     newsFor = Math.max(0, newsFor - dt);
@@ -726,8 +775,8 @@ const start = async (): Promise<void> => {
         // The bot's fight, over and over: a few seconds after the leaf is taken, it starts again.
         // In the pool: a few seconds after it climbs out, so the shake-off is seen.
         if (sinceOut >= 0) sinceOut += STEP;
-        if (game.complete || (place.id === 'pool' && sinceOut >= 0)) sinceOver += STEP;
-        if (sinceOver > (place.id === 'pool' ? 2.6 : 4)) {
+        if (game.complete || (place.id === 'pool' && sinceOut >= 0) || (place.ends !== undefined && game.groundId === place.ends)) sinceOver += STEP;
+        if (sinceOver > (place.id === 'pool' || place.ends ? 2.6 : 4)) {
           setUp();
           return;
         }

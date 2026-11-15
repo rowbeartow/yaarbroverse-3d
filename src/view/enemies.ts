@@ -178,7 +178,8 @@ export class EnemyView {
         : full.clone();
       if (look.tint !== undefined) own.color.multiply(new Color(look.tint));
       mesh.material = own;
-      mesh.castShadow = !full.transparent;
+      // A crocodile in the water casts no shadow worth its cost: the lake's frame budget is tight.
+      mesh.castShadow = !full.transparent && !spec.swims;
       mesh.receiveShadow = !full.transparent;
       this.materials.push({ material: own, opacity: full.opacity, seeThrough: full.transparent });
     });
