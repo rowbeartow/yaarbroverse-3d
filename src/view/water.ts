@@ -60,8 +60,8 @@ const wavesGlsl = (): string =>
       g += cos(a) * ${k} * ${w.height.toFixed(4)} * vec2(${(w.x / size).toFixed(4)}, ${(w.z / size).toFixed(4)}); }`;
   }).join('\n');
 
-/** The water's surface: see-through, glossy, with gentle waves moving across it. */
-const surfaceMaterial = (simple: boolean): Material => {
+/** The water's surface: see-through, glossy, with gentle waves moving across it. A lake's open water uses it too. */
+export const surfaceMaterial = (simple: boolean): Material => {
   const material = simple
     ? new MeshLambertMaterial({ color: WATER_COLOR, transparent: true, opacity: 0.62, side: DoubleSide, depthWrite: false })
     : new MeshStandardMaterial({ color: WATER_COLOR, roughness: 0.06, metalness: 0.05, transparent: true, opacity: 0.6, side: DoubleSide, depthWrite: false, envMapIntensity: 1.4 });
@@ -91,7 +91,7 @@ const surfaceMaterial = (simple: boolean): Material => {
  * Rock for a pool's sides and floor, with light from above rippling over it
  * below the surface: bright threads that drift, as sunlight through waves does.
  */
-const basinMaterial = (rock: Lit, surface: number): Lit => {
+export const basinMaterial = (rock: Lit, surface: number): Lit => {
   const material = rock.clone();
   const before = rock.onBeforeCompile;
   material.onBeforeCompile = (shader, renderer) => {
@@ -192,40 +192,44 @@ export class WaterView {
   private readonly materials: Material[] = [];
   private readonly scratch = { m: new Matrix4(), q: new Quaternion(), p: new Vector3(), s: new Vector3() };
 
-  constructor(waters: readonly Water[], materials: Materials, private readonly simple: boolean) {
+  /** `basins` false leaves out each pool's rock floor and sides, for surroundings that draw a lake bed of their own. */
+  constructor(waters: readonly Water[], materials: Materials, private readonly simple: boolean, basins = true) {
     const surfaceLook = surfaceMaterial(simple);
     this.materials.push(surfaceLook);
     for (const water of waters) {
       const width = water.maxX - water.minX;
       const length = water.maxZ - water.minZ;
       const middle = { x: (water.minX + water.maxX) / 2, z: (water.minZ + water.maxZ) / 2 };
-      // The surface: about four points to a metre, so the waves are smooth.
-      const surface = new Mesh(new PlaneGeometry(width, length, Math.ceil(width * 3), Math.ceil(length * 3)), surfaceLook);
+      // The surface: about three points to a metre, so the waves are smooth, fewer on a wide lake.
+      const density = Math.min(3, Math.sqrt(22000 / (width * length)));
+      const surface = new Mesh(new PlaneGeometry(width, length, Math.ceil(width * density), Math.ceil(length * density)), surfaceLook);
       surface.rotation.x = -Math.PI / 2;
       surface.position.set(middle.x, water.surface, middle.z);
       surface.renderOrder = 2;
       surface.name = `water:${water.id}`;
       this.group.add(surface);
       // The basin: a floor and four sides of rock, holding the water in.
-      const rock = basinMaterial(materials.rock, water.surface);
-      this.materials.push(rock);
-      const depth = water.surface - water.floor;
-      const wall = 0.6;
-      const floor = new Mesh(new BoxGeometry(width + wall * 2, 0.8, length + wall * 2), rock);
-      floor.position.set(middle.x, water.floor - 0.4, middle.z);
-      floor.receiveShadow = true;
-      this.group.add(floor);
-      const sides: Array<[number, number, number, number]> = [
-        [water.minX - wall / 2, middle.z, wall, length + wall * 2],
-        [water.maxX + wall / 2, middle.z, wall, length + wall * 2],
-        [middle.x, water.minZ - wall / 2, width, wall],
-        [middle.x, water.maxZ + wall / 2, width, wall],
-      ];
-      for (const [x, z, w, l] of sides) {
-        const side = new Mesh(new BoxGeometry(w, depth + 1.2, l), rock);
-        side.position.set(x, water.floor - 0.8 + (depth + 1.2) / 2 + 0.02, z);
-        side.receiveShadow = true;
-        this.group.add(side);
+      if (basins) {
+        const rock = basinMaterial(materials.rock, water.surface);
+        this.materials.push(rock);
+        const depth = water.surface - water.floor;
+        const wall = 0.6;
+        const floor = new Mesh(new BoxGeometry(width + wall * 2, 0.8, length + wall * 2), rock);
+        floor.position.set(middle.x, water.floor - 0.4, middle.z);
+        floor.receiveShadow = true;
+        this.group.add(floor);
+        const sides: Array<[number, number, number, number]> = [
+          [water.minX - wall / 2, middle.z, wall, length + wall * 2],
+          [water.maxX + wall / 2, middle.z, wall, length + wall * 2],
+          [middle.x, water.minZ - wall / 2, width, wall],
+          [middle.x, water.maxZ + wall / 2, width, wall],
+        ];
+        for (const [x, z, w, l] of sides) {
+          const side = new Mesh(new BoxGeometry(w, depth + 1.2, l), rock);
+          side.position.set(x, water.floor - 0.8 + (depth + 1.2) / 2 + 0.02, z);
+          side.receiveShadow = true;
+          this.group.add(side);
+        }
       }
       this.pools.push({ water, surface });
     }
