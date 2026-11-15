@@ -41,8 +41,8 @@ export interface LakeNumbers {
   coveSwim: number;
   /**
    * THE OLD PIER (section 6): posts that climb out of the water to the
-   * boardwalk, which runs out to the fishing dock. Only the first post is low
-   * enough to climb onto from the water.
+   * boardwalk, which runs out to the fishing dock. The low posts can be
+   * climbed onto from the water; the boardwalk and the dock cannot.
    *   postCount    how many.
    *   postRadius   how big each top is.
    *   postGap      the open water between one and the next, and before the boardwalk.
