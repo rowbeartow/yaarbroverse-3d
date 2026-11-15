@@ -1,6 +1,7 @@
 // Cocolalla Lake: its sections, how long a perfect run takes, what each
 // difficulty changes, and the lake's own rules: a missed jump lands in the
-// water, and the high banks cannot be climbed onto from it. Times come from the bot, which plays by the
+// water, the high banks cannot be climbed onto from it, and the rocky point
+// can only be passed underwater. Times come from the bot, which plays by the
 // same rules a player does. `LAKE_TIMES=1 npx vitest run tests/lake.test.ts
 // --silent=false` prints when a perfect run reaches the end of each section.
 
@@ -9,7 +10,7 @@ import { DIFFICULTIES, type Difficulty } from '../src/game/difficulty';
 import { Game, IDLE } from '../src/game/game';
 import { HEROES, STEP } from '../src/game/hero';
 import type { Level, Solid } from '../src/game/level';
-import { SWIM } from '../src/game/swim';
+import { SWIM, passageNear } from '../src/game/swim';
 import { LAKE_DIFFICULTY } from '../src/levels/cocolalla/difficulty';
 import { LAKE_SHAPE, buildLake } from '../src/levels/cocolalla/layout';
 import { Bot } from './helpers/bot';
@@ -39,15 +40,11 @@ const cleanRun = (difficulty: Difficulty, hero: (typeof HEROES)[number] = 'Yaarb
   return { level, reached, seconds: game.seconds, longestUnder };
 };
 
-/**
- * How long a perfect run should take on each difficulty, in seconds. The owner
- * asked for about a minute on Normal to the dock; sections 1 to 3, built so
- * far, are about half of that.
- */
+/** How long a perfect run of the whole lake should take on each difficulty, in seconds. The owner asked for about a minute on Normal. */
 const RUN_TIME: Record<Difficulty, [number, number]> = {
-  easy: [22, 36],
-  normal: [26, 40],
-  hard: [30, 46],
+  easy: [40, 60],
+  normal: [52, 68],
+  hard: [58, 80],
 };
 
 describe('the six sections', () => {
@@ -57,6 +54,9 @@ describe('the six sections', () => {
         'The Shore Path',
         'The Reed Shallows',
         'The Sunken Logs',
+        'The Rock Tunnel',
+        'Cattail Cove',
+        'The Old Pier',
       ]);
     }
   });
@@ -86,11 +86,29 @@ describe.each(DIFFICULTIES)('the lake on %s', (difficulty) => {
     }
   });
 
+  it('the dive through the rocky point is well under half the breath there is', () => {
+    expect(longestUnder).toBeGreaterThan(0.5);
+    if (level.breath !== undefined) expect(longestUnder).toBeLessThan(level.breath / 2);
+    else expect(difficulty).toBe('easy');
+  });
 
+  it('the rocky point runs right across the lake, too high to climb onto, with the only way past under its middle', () => {
+    const pool = (level.water ?? []).find((w) => w.id === 'point-water')!;
+    const parts = ['rock-left', 'rock-tunnel', 'rock-right'].map((id) => byId(level, id));
+    expect(Math.min(...parts.map((s) => s.x - s.halfX))).toBeCloseTo(pool.minX);
+    expect(Math.max(...parts.map((s) => s.x + s.halfX))).toBeCloseTo(pool.maxX);
+    for (const s of parts) expect(s.top - pool.surface).toBeGreaterThan(SWIM.climbHeight);
+    const tunnel = byId(level, 'rock-tunnel');
+    expect(tunnel.bottom - pool.floor).toBeGreaterThan(1);
+    expect(passageNear(level.solids, pool, tunnel.x, tunnel.z + tunnel.halfZ + 1.5)).toBe(true);
+    // Well past where a running jump in from the gravel bar lands.
+    const bar = byId(level, 'gravel-bar');
+    expect(bar.z - bar.halfZ - (tunnel.z + tunnel.halfZ)).toBeGreaterThan(8);
+  });
 
-  it('the gravel bar cannot be climbed onto from the water, the shores and the logs can', () => {
-    expect(byId(level, 'gravel-bar').top - LAKE_SHAPE.surface).toBeGreaterThan(SWIM.climbHeight);
-    for (const id of ['point', 'island', 'log-1']) expect(byId(level, id).top - LAKE_SHAPE.surface, id).toBeLessThanOrEqual(SWIM.climbHeight);
+  it('the gravel bar and the boardwalk cannot be climbed onto from the water, the shores and the first post can', () => {
+    for (const id of ['gravel-bar', 'boardwalk', 'dock']) expect(byId(level, id).top - LAKE_SHAPE.surface, id).toBeGreaterThan(SWIM.climbHeight);
+    for (const id of ['point', 'island', 'reed-bar', 'post-1', 'log-1']) expect(byId(level, id).top - LAKE_SHAPE.surface, id).toBeLessThanOrEqual(SWIM.climbHeight);
   });
 
   it('a missed jump lands in the lake, never a fall, and the hero climbs back out to go on', () => {
@@ -135,10 +153,10 @@ describe('what each difficulty changes', () => {
     }
   });
 
-  it('the first crocodile stretch is open water, wide enough to swim round a crocodile', () => {
+  it('the crocodile stretches are open water, wide enough to swim round a crocodile', () => {
     for (const difficulty of DIFFICULTIES) {
       const level = buildLake(difficulty);
-      for (const id of ['reed-water']) {
+      for (const id of ['reed-water', 'cove-water']) {
         const pool = level.water!.find((w) => w.id === id)!;
         expect(pool.maxX - pool.minX, id).toBeGreaterThan(30);
       }

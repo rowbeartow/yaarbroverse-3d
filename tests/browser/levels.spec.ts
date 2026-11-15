@@ -39,7 +39,7 @@ test.describe('the level list', () => {
     const pools = await page.evaluate(() => (window as unknown as { __grove: { water: { pools: number } | null } }).__grove.water?.pools ?? 0);
     expect(pools).toBeGreaterThan(0);
     // Stand at the near end of the last bank: the leaf is straight ahead.
-    await standOn(page, 'gravel-bar', 2);
+    await standOn(page, 'dock', 2);
     await page.keyboard.down('ArrowUp');
     await expect(page.locator('#end')).toBeVisible({ timeout: 20_000 });
     await page.keyboard.up('ArrowUp');
