@@ -9,7 +9,9 @@
 // set a little left and right of a straight line) are smoothed away, so only
 // real changes of direction count. Each straight stretch of that line is then
 // sorted by which way it runs on the screen, given which way the camera faces
-// there: away from the camera, left, right, or back toward it.
+// there: away from the camera, left, right, or back toward it. A turn is
+// counted each time the route has swung 45 degrees from the way it ran at the
+// turn before, so a long curve counts as well as a sharp corner.
 //
 // No browser or 3D code here.
 
@@ -30,7 +32,7 @@ export interface RouteShape {
   left: number;
   right: number;
   toward: number;
-  /** Turns of 45 degrees or more, and how many there are for each 100 metres of route. */
+  /** Times the route swings 45 degrees or more, and how many there are for each 100 metres of route. */
   turns: number;
   turnsPer100: number;
   /** How many times the camera turns to a new facing along the way. */
@@ -80,9 +82,8 @@ const stepOnto = (s: Solid, from: { x: number; z: number }): { x: number; z: num
   return { x: Math.max(s.x - inX, Math.min(s.x + inX, from.x)), z: Math.max(s.z - inZ, Math.min(s.z + inZ, from.z)) };
 };
 
-/** Drops the corners that stand less than SMOOTH from the straight line between the corners kept either side. */
-const smoothed = (points: Point[]): Point[] => {
-  if (points.length < 3) return points;
+/** Which corners to keep: those that stand at least SMOOTH from the straight line between the corners kept either side. */
+const corners = (points: Point[]): number[] => {
   const keep = new Array<boolean>(points.length).fill(false);
   keep[0] = true;
   keep[points.length - 1] = true;
@@ -105,8 +106,8 @@ const smoothed = (points: Point[]): Point[] => {
     split(first, worst);
     split(worst, last);
   };
-  split(0, points.length - 1);
-  return points.filter((_, i) => keep[i]);
+  if (points.length > 2) split(0, points.length - 1);
+  return points.map((_, i) => i).filter((i) => keep[i]);
 };
 
 /** Measures a level's route. Which way the camera faces comes from the level's sections (`facing`); 0 where none is given. */
@@ -120,37 +121,52 @@ export const routeShape = (level: Level): RouteShape => {
     const solid = byId.get(id);
     // A pool's id stands for the swim between the solids either side of it.
     if (!solid) continue;
-    const at = stepOnto(solid, raw[raw.length - 1]);
-    raw.push({ ...at, facing: facingOf.get(id) ?? raw[raw.length - 1].facing });
+    const from = raw[raw.length - 1];
+    const at = stepOnto(solid, from);
+    // Two solids that touch can give the same spot twice: once is enough.
+    if (Math.hypot(at.x - from.x, at.z - from.z) < 1e-6) continue;
+    raw.push({ ...at, facing: facingOf.get(id) ?? from.facing });
   }
-  raw.push({ x: level.leaf.x, z: level.leaf.z, facing: raw[raw.length - 1].facing });
+  const end = raw[raw.length - 1];
+  if (Math.hypot(level.leaf.x - end.x, level.leaf.z - end.z) > 1e-6) raw.push({ x: level.leaf.x, z: level.leaf.z, facing: end.facing });
 
-  const line = smoothed(raw).filter((p, i, all) => i === 0 || Math.hypot(p.x - all[i - 1].x, p.z - all[i - 1].z) > 1e-6);
+  const kept = corners(raw);
   const shares = { away: 0, left: 0, right: 0, toward: 0 };
   let length = 0;
   let turns = 0;
   let cameraTurns = 0;
-  let before: number | null = null;
+  // A turn is counted when the route has swung 45 degrees from the way it ran
+  // at the turn before, so a long curve counts as well as a sharp corner.
+  let since: number | null = null;
   let facingBefore: Facing | null = null;
-  for (let i = 0; i + 1 < line.length; i += 1) {
-    const a = line[i];
-    const b = line[i + 1];
-    const run = Math.hypot(b.x - a.x, b.z - a.z);
+  const line: RouteShape['line'] = [];
+  for (let k = 0; k + 1 < kept.length; k += 1) {
+    const a = raw[kept[k]];
+    const b = raw[kept[k + 1]];
     const way = heading(a, b);
-    // The camera's facing on a stretch is the facing where the stretch ends up: it turns as the hero sets out.
-    const facing = b.facing;
-    const onScreen = wrap(way - facing);
-    if (Math.abs(onScreen) <= 45) shares.away += run;
-    else if (Math.abs(onScreen) >= 135) shares.toward += run;
-    else if (onScreen > 0) shares.right += run;
-    else shares.left += run;
-    length += run;
-    if (before !== null && Math.abs(wrap(way - before)) >= TURN) turns += 1;
-    if (facingBefore !== null && Math.abs(wrap(facing - facingBefore)) >= SAME_FACING) cameraTurns += 1;
-    before = way;
-    facingBefore = facing;
-    a.facing = facing;
+    if (since === null) since = way;
+    else if (Math.abs(wrap(way - since)) >= TURN) {
+      turns += 1;
+      since = way;
+    }
+    // Each piece of the route along this stretch counts under the camera's
+    // facing on the solid it leads to: the camera turns as the hero sets out for it.
+    for (let i = kept[k]; i < kept[k + 1]; i += 1) {
+      const facing = raw[i + 1].facing;
+      const run = Math.hypot(raw[i + 1].x - raw[i].x, raw[i + 1].z - raw[i].z);
+      const onScreen = wrap(way - facing);
+      if (Math.abs(onScreen) <= 45) shares.away += run;
+      else if (Math.abs(onScreen) >= 135) shares.toward += run;
+      else if (onScreen > 0) shares.right += run;
+      else shares.left += run;
+      length += run;
+      if (facingBefore !== null && Math.abs(wrap(facing - facingBefore)) >= SAME_FACING) cameraTurns += 1;
+      facingBefore = facing;
+    }
+    line.push({ x: a.x, z: a.z, facing: raw[kept[k] + 1].facing });
   }
+  const last = raw[kept[kept.length - 1]];
+  line.push({ x: last.x, z: last.z, facing: last.facing });
   const share = (metres: number): number => (length > 0 ? metres / length : 0);
   return {
     length,
