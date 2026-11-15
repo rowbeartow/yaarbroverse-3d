@@ -59,6 +59,25 @@ describe('measuring a route', () => {
     expect(shape.cameraTurns).toBe(1);
   });
 
+  it('a long curve counts as a turn, the same as a sharp corner', () => {
+    // A quarter circle in six easy steps of 15 degrees: no one step is a turn, the whole of it is.
+    const corners: [number, number][] = [[0, 0], [0, -30]];
+    for (let i = 1; i <= 6; i += 1) {
+      const angle = (i * 15 * Math.PI) / 180;
+      corners.push([30 - 30 * Math.cos(angle), -30 - 30 * Math.sin(angle)]);
+    }
+    corners.push([60, -60]);
+    expect(routeShape(through(corners)).turns).toBeGreaterThanOrEqual(1);
+  });
+
+  it('where the camera turns part-way along a straight stretch, each part counts under its own facing', () => {
+    // 60 m straight on: the first 30 with the camera behind, the last 30 with it turned to look from the side.
+    const shape = routeShape(through([[0, 0], [0, -30], [0, -60]], [0, 0, 90]));
+    expect(shape.away).toBeCloseTo(0.5);
+    expect(shape.left).toBeCloseTo(0.5);
+    expect(shape.cameraTurns).toBe(1);
+  });
+
   it('small wiggles are not turns', () => {
     const corners: [number, number][] = [];
     for (let i = 0; i <= 20; i += 1) corners.push([i % 2 === 0 ? -0.6 : 0.6, -i * 4]);

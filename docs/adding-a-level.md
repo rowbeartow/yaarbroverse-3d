@@ -17,7 +17,7 @@ Routes turn (the owner's rule, 2026-11-15). A level winds, switches back and ope
 - No more than 60% of the route runs away from the camera.
 - At least 10% runs left on the screen, and at least 10% runs right.
 - At least 8% comes back toward the camera.
-- At least 2 turns of 45 degrees or more for each 100 m.
+- At least 2 turns for each 100 m. A turn is counted each time the route has swung 45 degrees from the way it ran at the turn before, so a long curve counts too.
 - The camera turns to a new facing at least twice.
 
 Each section of the level says which way the camera faces through it: `facing` on the section, in degrees seen from above (0 looks along -z, 90 along +x, 180 back along +z, 270 along -x). "Away", "left", "right" and "toward" are judged against that, so a camera that simply swings to keep the hero running up the screen does not pass: plan stretches that cross the screen and come back toward it.
