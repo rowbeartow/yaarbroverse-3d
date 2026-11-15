@@ -508,3 +508,7 @@ Supersedes: none
 ## 2026-11-15 The lake's frame rate, and the crocodiles' budget
 Reason: The owner measured Cocolalla Lake in Safari on his Mac: 75 to 81 frames a second across the run, against 120 in the grove. The crocodiles must not push the lake under 60.
 Supersedes: none
+
+## 2026-11-15 The crocodile is that exact model
+Reason: The owner's word: the kids picked crocodile C as Meshy made it, so it is never made again from its words. Its Meshy task IDs and checksum are in `docs/session-handoff.md`, and the file goes on the `hero-models` release beside the marmot and mosquito originals.
+Supersedes: none
