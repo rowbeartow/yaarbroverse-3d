@@ -261,16 +261,17 @@ const start = async (): Promise<void> => {
     });
     return model;
   };
-  const [turf, turfNormal, skyBytes, marmot, mosquito, yaarbro, caputo] = await Promise.all([
+  const [turf, turfNormal, skyBytes, marmot, mosquito, crocodile, yaarbro, caputo] = await Promise.all([
     pictures.loadAsync('media/turf_color.jpg').then((picture) => (loading('turf_color.jpg'), picture)),
     pictures.loadAsync('media/turf_normal.jpg').then((picture) => (loading('turf_normal.jpg'), picture)),
     PLAIN ? Promise.resolve(null) : bytesOf('media/forest.hdr.txt'),
     loadModel('marmot'),
     loadModel('mosquito'),
+    loadModel('crocodile'),
     loadModel('yaarbro'),
     loadModel('caputo'),
   ]);
-  const enemyModels = { marmot, mosquito };
+  const enemyModels = { marmot, mosquito, crocodile };
   const heroModels: Record<HeroName, GLTF> = { Yaarbro: yaarbro, Caputo: caputo };
 
   status.textContent = 'Loaded. Starting the picture…';
@@ -567,7 +568,7 @@ const start = async (): Promise<void> => {
         say(event.left > 0 ? `${name} hit! ${event.left} more to go.` : `${name} sent packing!`);
       } else if (event.type === 'hurt') say(event.left > 0 ? `Oof! ${event.left} of ${level.hearts} hearts left.` : 'Out of hearts. Back to safety!');
       else if (event.type === 'restored') say(`Safe again, with all ${level.hearts} hearts.`);
-      else if (event.type === 'healed') say(event.kind === 'marmot' ? 'The marmot scout is back to full strength.' : 'The mosquito is back to full strength.');
+      else if (event.type === 'healed') say(event.kind === 'marmot' ? 'The marmot scout is back to full strength.' : event.kind === 'crocodile' ? 'The crocodile is back to full strength.' : 'The mosquito is back to full strength.');
       else if (event.type === 'boss') {
         const name = level.boss?.name ?? 'The boss';
         if (event.what === 'begin') say(`${name}!`);
