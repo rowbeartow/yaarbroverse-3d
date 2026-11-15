@@ -512,3 +512,11 @@ Supersedes: none
 ## 2026-11-15 The crocodile is that exact model
 Reason: The owner's word: the kids picked crocodile C as Meshy made it, so it is never made again from its words. Its Meshy task IDs and checksum are in `docs/session-handoff.md`, and the file goes on the `hero-models` release beside the marmot and mosquito originals.
 Supersedes: none
+
+## 2026-11-15 Milestone eight, part three: the crocodiles
+Reason: The owner's order: rig and animate the picked crocodile (lurking with only eyes and snout above water, a surface swim, an underwater swim, a lunge with a snapping bite, a flinch, and sinking away when beaten) for his OK on a preview page; its behaviour by his rules of 2026-11-14, with a tell read in the water (the eyes sinking, a wake heading for the hero) and any aim marker on Easy only, Normal and Hard a real threat; CC0 recorded sounds (warning, lunge and bite, splash, hit) on the sound board for his OK; then placing them in `reed-water` and `cove-water` with every number in the lake's difficulty file, the bot taught to get past them, and a preview of both stretches for his OK. The lake must stay at 60 fps or more on the Mac. At most 50 Meshy credits without asking.
+Supersedes: none
+
+## 2026-11-15 How the crocodile is rigged
+Reason: Claude's calls. The crocodile uses the four-legged rig script with clips of its own (`Crocodile` in `tools/rig-quadruped.py`, guide `tools/crocodile.rig.json`). Its tail, curled round to one side in Meshy's model, is laid out straight behind before the clips are written: the skin is moved with the tail bones and that becomes its resting shape. It has a jaw bone, and the lower jaw is given to it along the line of the closed mouth, since automatic weights cannot tell the two jaws apart. It is thinned to 8,000 triangles (the marmot has 14,000) with a 1,024-pixel picture, 0.5 MB, so several can swim at once. Its clips happen on the spot apart from sinking when beaten; the rules own where it is.
+Supersedes: none

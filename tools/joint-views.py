@@ -7,7 +7,7 @@
 #
 #   model.glb    the model as it came from Meshy
 #   out.png      the picture: side view, top view, front view, one under another
-#   guide.json   optional. Its "turned_left_degrees" is undone first, as the rig
+#   guide.json   optional. Its "turned_left_degrees" and "shift_across" are undone first, as the rig
 #                scripts do, and its joints are drawn in red.
 #
 # The numbers on the grid are the guide's own: across (to the character's
@@ -40,7 +40,7 @@ def main():
     bpy.ops.wm.read_factory_settings(use_empty=True)
     bpy.ops.import_scene.gltf(filepath=source)
     meshes = [o for o in bpy.context.scene.objects if o.type == 'MESH' and len(o.data.materials) > 0]
-    fix = Matrix.Rotation(-math.radians(guide.get('turned_left_degrees', 0)), 4, 'Z')
+    fix = Matrix.Translation((guide.get('shift_across', 0.0), 0, 0)) @ Matrix.Rotation(-math.radians(guide.get('turned_left_degrees', 0)), 4, 'Z')
 
     places, colours = [], []
     rng = np.random.default_rng(1)

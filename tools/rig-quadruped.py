@@ -174,9 +174,9 @@ def open_model(path):
     return meshes[0], (armatures[0] if armatures else None)
 
 
-def straighten(mesh, armature, turned_left):
-    """Turns the model to face straight ahead and stands it on the ground."""
-    fix = Matrix.Rotation(-math.radians(turned_left), 4, 'Z')
+def straighten(mesh, armature, turned_left, shift_across=0.0):
+    """Turns the model to face straight ahead, stands it on the ground, and moves it `shift_across` metres to its left."""
+    fix = Matrix.Translation((shift_across, 0, 0)) @ Matrix.Rotation(-math.radians(turned_left), 4, 'Z')
     # Work on the mesh by itself; skin() ties it back to the skeleton.
     world = mesh.matrix_world.copy()
     mesh.parent = None
@@ -299,6 +299,10 @@ def skeleton_plan(guide):
             if f'{name}_{side}' in joints:
                 low, high = [to_blender(p) for p in joints[f'{name}_{side}']]
                 plan.append((f'{name}_{letter}', low, high, parent, True))
+    # A jaw that opens, for a character that bites: from its hinge to the tip of the chin.
+    if 'jaw' in joints:
+        hinge, chin = [to_blender(p) for p in joints['jaw']]
+        plan.append(('jaw', hinge, chin, 'head', True))
     return plan
 
 
@@ -505,6 +509,85 @@ def skin(mesh, armature, added, had_skeleton):
     say(f"skinned {len(weights)} points; {missed} loose points took the weights of the body next to them")
     if unused:
         raise SystemExit(f"These bones move no part of the model, so the automatic weights failed for them: {', '.join(unused)}. Check their places in the guide.")
+
+
+def weigh_jaw(mesh, armature, guide):
+    """
+    Gives the lower jaw to the jaw bone, and the rest of the head to the head
+    bone, along the line of the mouth in the guide ("mouth": two points,
+    [across, up, forward], at the back of the mouth and at the front). The
+    automatic weights cannot tell the two jaws apart, since the mouth is shut.
+    Just behind the hinge the two blend, so the skin there stretches.
+    """
+    joints = guide['joints']
+    back, front = [to_blender(p) for p in joints['mouth']]
+    hinge = to_blender(joints['jaw'][0])
+    groups = {g.name: g for g in mesh.vertex_groups}
+    for name in ('jaw', 'head'):
+        if name not in groups:
+            groups[name] = mesh.vertex_groups.new(name=name)
+    head_ward = {name for name in groups if name in ('head', 'neck', 'jaw')}
+    moved = 0
+    for v in mesh.data.vertices:
+        ahead = -v.co.y
+        if ahead < -hinge.y - 0.08:
+            continue
+        # Only points that belong to the head now.
+        mine = {mesh.vertex_groups[g.group].name: g.weight for g in v.groups}
+        if sum(w for n, w in mine.items() if n in head_ward) < 0.5 * max(1e-6, sum(mine.values())):
+            continue
+        share = min(1.0, max(0.0, (ahead - back.y * -1) / (front.y * -1 - back.y * -1)))
+        line = back.z + (front.z - back.z) * share
+        below = v.co.z < line
+        # Behind the hinge the jaw lets go over 8 cm.
+        reach = smoothstep((ahead - (-hinge.y - 0.08)) / 0.08)
+        jaw = reach if below else 0.0
+        for g in list(v.groups):
+            mesh.vertex_groups[g.group].remove([v.index])
+        groups['jaw'].add([v.index], jaw, 'REPLACE') if jaw > 0 else None
+        if jaw < 1.0:
+            groups['head'].add([v.index], 1.0 - jaw, 'REPLACE')
+        moved += 1
+    say(f"jaw: {moved} points of the head shared between the head and the jaw along the mouth")
+
+
+def straighten_tail(mesh, armature, droop):
+    """
+    Lays a curled tail out straight behind the body, dropping `droop` metres a
+    metre, and makes that the tail's resting shape: the skin is moved with the
+    bones, and the bent pose becomes the skeleton's new rest.
+    """
+    tail = sorted((b.name for b in armature.data.bones if b.name.startswith('tail')), key=lambda n: int(n[4:]))
+    bpy.ops.object.select_all(action='DESELECT')
+    armature.select_set(True)
+    bpy.context.view_layer.objects.active = armature
+    bpy.ops.object.mode_set(mode='POSE')
+    along = Vector((0, 1, -droop)).normalized()
+    side = Vector((1, 0, 0))
+    up = side.cross(along).normalized()
+    facing = Matrix((side, along, up)).transposed()
+    for name in tail:
+        bpy.context.view_layer.update()
+        bone = armature.pose.bones[name]
+        placed = facing.to_4x4()
+        placed.translation = bone.head.copy()
+        bone.matrix = placed
+    bpy.context.view_layer.update()
+    bpy.ops.object.mode_set(mode='OBJECT')
+    modifier = next(m for m in mesh.modifiers if m.type == 'ARMATURE')
+    bpy.ops.object.select_all(action='DESELECT')
+    mesh.select_set(True)
+    bpy.context.view_layer.objects.active = mesh
+    bpy.ops.object.modifier_apply(modifier=modifier.name)
+    bpy.ops.object.select_all(action='DESELECT')
+    armature.select_set(True)
+    bpy.context.view_layer.objects.active = armature
+    bpy.ops.object.mode_set(mode='POSE')
+    bpy.ops.pose.armature_apply(selected=False)
+    bpy.ops.object.mode_set(mode='OBJECT')
+    mesh.modifiers.new('Skeleton', 'ARMATURE').object = armature
+    ends = armature.data.bones[tail[-1]].tail_local
+    say(f"tail laid out straight: its tip now {ends.y:.2f} m behind the middle, {ends.z:.2f} m up")
 
 
 # ---------- 5: clips ----------
@@ -1409,6 +1492,113 @@ class MarmotScout(Quadruped):
         say('throw: the acorn leaves the paw a fifth of the way through the clip')
 
 
+class Crocodile(Quadruped):
+    """
+    The crocodile's clips (milestone eight, part three): it lives in the
+    water. It lurks low and still, swims at the surface and underwater by
+    sweeping its tail with its legs folded back along its sides, lunges with
+    a snapping bite, flinches when struck, and when beaten rolls over and
+    sinks away. The game sets how deep it floats; these clips only move the
+    body. A guide picks these with "character": "crocodile", and gives it a
+    jaw (see `weigh_jaw`).
+    """
+
+    # In the water no paw is on the ground.
+    stretched = ('lurk', 'swim', 'dive', 'lunge', 'hit', 'defeated')
+
+    def tuck(self, kick=0.0, splay=0.0):
+        """Folds the legs back along the sides, as a crocodile does when it swims. `kick` paddles the hind feet a little."""
+        for leg in ('front_l', 'front_r'):
+            self.paw(leg, forward=-0.2, lift=0.1 + splay * 0.04, toes=-55, out=0.02 + splay * 0.05)
+        for side, leg in ((1, 'hind_l'), (-1, 'hind_r')):
+            self.paw(leg, forward=-0.22 + 0.04 * kick * side, lift=0.09, toes=-65, out=0.04 + splay * 0.05)
+
+    def jaw(self, open_degrees):
+        if 'jaw' in {b.name for b in self.armature.data.bones}:
+            self.poser.place('jaw', turn=pitch(-open_degrees))
+
+    def body_wave(self, phase, body, tail, lag, tail_lift=0.0, head_follow=0.35, head_pitch=0.0, rise=0.0, lean=0.0):
+        """A swimming wave: the hips swing one way as the chest swings the other, and the tail sweeps after them."""
+        a = TAU * phase
+        self.trunk(rise=rise, lean=lean, hips_yaw=body * math.sin(a), chest_yaw=-body * 0.6 * math.sin(a), hips_roll=1.5 * math.sin(a))
+        self.head(follow=head_follow, turn=yaw(body * 0.35 * math.sin(a - 0.6)) @ pitch(head_pitch))
+        self.tail_curve(phase, sway=lambda at: tail * math.sin(TAU * at), lift=lambda at: tail_lift, lag=lag)
+
+    def lurk(self, phase):
+        # Waiting low in the water: almost still, a slow breath, the tail drifting.
+        t = phase * 6.0
+        drift = math.sin(TAU * phase)
+        self.trunk(rise=0.006 * math.sin(TAU * phase * 3), hips_yaw=2.0 * drift, chest_yaw=-1.0 * drift)
+        self.head(follow=0.2, turn=yaw(3.0 * math.sin(TAU * (phase - 0.2))) @ pitch(2.0))
+        self.tuck(splay=0.6)
+        self.jaw(0.0)
+        self.tail_curve(t, sway=lambda at: 9 * math.sin(TAU * at / 6.0), lift=lambda at: 0.0, lag=0.25)
+
+    def swim(self, phase):
+        # At the surface: steady sweeps of the tail, the body following, legs folded back.
+        self.body_wave(phase, body=6.0, tail=28.0, lag=0.07)
+        self.tuck(kick=math.sin(TAU * phase))
+        self.jaw(0.0)
+
+    def dive(self, phase):
+        # Underwater: longer, stronger sweeps, nose a little down.
+        self.body_wave(phase, body=8.0, tail=36.0, lag=0.08, head_pitch=-4.0, lean=-3.0)
+        self.tuck(kick=math.sin(TAU * phase))
+        self.jaw(0.0)
+
+    LUNGE_SECONDS = 0.75
+
+    def lunge(self, phase):
+        """
+        Coils, throws itself forward with its jaws wide, and snaps them shut:
+        the bite is at 0.45 of the clip. The game moves it forward; here the
+        body only gathers, reaches and settles.
+        """
+        coil = keyed([(0.0, 0.0), (0.2, 1.0), (0.35, -0.6), (0.6, -0.2), (1.0, 0.0)], phase)
+        reach = keyed([(0.0, 0.0), (0.2, -0.06), (0.4, 0.22), (0.6, 0.18), (1.0, 0.0)], phase)
+        rearing = keyed([(0.0, 0.0), (0.25, 6.0), (0.42, 14.0), (0.6, 4.0), (1.0, 0.0)], phase)
+        self.trunk(forward=reach, rise=0.04 * rearing / 14.0, lean=rearing * 0.5, hips_yaw=10 * coil, chest_yaw=-8 * coil)
+        self.head(follow=1.0, turn=pitch(rearing))
+        opened = keyed([(0.0, 0.0), (0.15, 6.0), (0.33, 42.0), (0.43, 44.0), (0.47, 0.0), (0.55, 4.0), (0.6, 0.0), (1.0, 0.0)], phase)
+        self.jaw(opened)
+        self.tuck(splay=1.0 - abs(coil))
+        self.tail_curve(phase, sway=lambda at: -40 * keyed([(0.0, 0.0), (0.2, 1.0), (0.4, -0.8), (0.7, 0.2), (1.0, 0.0)], min(1.0, max(0.0, at))), lift=lambda at: 0.0, lag=0.05)
+
+    def hit(self, phase):
+        # Struck: the head jerks up and away, the body twists, the tail thrashes, then it steadies.
+        jolt = keyed([(0.0, 0.0), (0.25, 1.0), (0.6, 0.35), (1.0, 0.0)], phase)
+        self.trunk(rise=0.03 * jolt, lean=8 * jolt, hips_roll=-12 * jolt, chest_roll=14 * jolt, chest_yaw=-10 * jolt)
+        self.head(follow=1.0, turn=pitch(20 * jolt) @ yaw(-14 * jolt))
+        self.jaw(16 * jolt)
+        self.tuck(splay=jolt)
+        self.tail_curve(phase, sway=lambda at: 45 * jolt * math.sin(TAU * at * 2.5), lift=lambda at: 0.0, lag=0.04)
+
+    DEFEATED_SECONDS = 1.8
+
+    def defeated(self, phase):
+        # Beaten: it rolls slowly over onto its side and sinks away, limp, mouth a little open.
+        over = 110 * smootherstep(phase / 0.7)
+        sink = self.setting('defeated', 'sink', 0.9) * smoothstep((phase - 0.1) / 0.9)
+        self.trunk(rise=-sink, lean=-6 * smoothstep(phase), hips_roll=over, chest_roll=over)
+        self.head(follow=1.0, turn=pitch(-8 * smoothstep(phase)))
+        self.jaw(10 * smoothstep(phase / 0.5))
+        self.tuck(splay=1.0)
+        self.tail_curve(phase, sway=lambda at: 14 * (1 - smoothstep(at)) * math.sin(TAU * at * 2), lift=lambda at: 0.0, lag=0.06)
+
+    def clips(self):
+        return [
+            ('lurk', self.lurk, 6.0),
+            ('swim', self.swim, self.setting('swim', 'seconds', 1.2)),
+            ('dive', self.dive, self.setting('dive', 'seconds', 1.0)),
+            ('lunge', self.lunge, self.LUNGE_SECONDS),
+            ('hit', self.hit, 0.45),
+            ('defeated', self.defeated, self.DEFEATED_SECONDS),
+        ]
+
+    def report(self, lasts):
+        say(f"lunge: the jaws snap shut {0.45 * lasts['lunge']:.2f} s into the clip")
+
+
 # ---------- 6: save ----------
 
 def save(path):
@@ -1430,7 +1620,7 @@ def save(path):
     )
 
 
-CHARACTERS = {'cat': Quadruped, 'marmot': MarmotScout}
+CHARACTERS = {'cat': Quadruped, 'marmot': MarmotScout, 'crocodile': Crocodile}
 
 
 def main():
@@ -1444,12 +1634,16 @@ def main():
     mesh, armature = open_model(source)
     had_skeleton = armature is not None
     say(f"opened {source}: {len(mesh.data.vertices)} points, {'with' if had_skeleton else 'no'} skeleton")
-    straighten(mesh, armature, guide.get('turned_left_degrees', 0))
+    straighten(mesh, armature, guide.get('turned_left_degrees', 0), guide.get('shift_across', 0.0))
     merge_seams(mesh)
     thin(mesh, guide.get('triangles'))
     armature, added = build_skeleton(guide, armature)
     say(f"skeleton: {len(armature.data.bones)} bones" + (f", {len(added)} of them added" if had_skeleton else ''))
     skin(mesh, armature, added, had_skeleton)
+    if 'jaw' in guide['joints']:
+        weigh_jaw(mesh, armature, guide)
+    if guide.get('straighten_tail'):
+        straighten_tail(mesh, armature, guide['straighten_tail'])
     CHARACTERS[guide.get('character', 'cat')](armature, guide).write()
     save(out)
     say(f"saved {out}")
