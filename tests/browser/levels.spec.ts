@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { open, play, skipBoss, snapshot, standOn } from './helpers';
+import { open, play, ready, skipBoss, snapshot, standOn } from './helpers';
 
 const levelId = (page: import('@playwright/test').Page): Promise<string> =>
   page.evaluate(() => (window as unknown as { __grove: { level: string } }).__grove.level);
@@ -61,5 +61,59 @@ test.describe('the level list', () => {
   test('a level name the game does not know gets the Bouncing Grove', async ({ page }) => {
     await open(page, 'level=nowhere');
     expect(await levelId(page)).toBe('bouncing-grove');
+  });
+});
+
+test.describe("a level's own files", () => {
+  /** The media files the page has asked for so far, by file name. */
+  const watchMedia = (page: import('@playwright/test').Page): Set<string> => {
+    const asked = new Set<string>();
+    page.on('request', (request) => {
+      const path = new URL(request.url()).pathname;
+      if (path.includes('/media/')) asked.add(path.slice(path.lastIndexOf('/') + 1));
+    });
+    return asked;
+  };
+  const soundLevel = (page: import('@playwright/test').Page): Promise<{ level: string | null; ready: boolean; music: string | null; problems: string[] }> =>
+    page.evaluate(() => (window as unknown as { __grove: { sound: { level: string | null; ready: boolean; music: string | null; problems: string[] } } }).__grove.sound);
+
+  test("arrive when the level is picked: the lake's crocodile, music and sounds are not fetched at start-up", async ({ page }) => {
+    const asked = watchMedia(page);
+    const problems = await open(page);
+    // Start-up: the heroes, the shared sounds, and the grove's own, since the grove is up first.
+    for (const file of ['yaarbro.glb', 'caputo.glb', 'marmot.glb', 'mosquito.glb', 'button.wav', 'grove-music.mp3']) expect([...asked], file).toContain(file);
+    for (const file of ['crocodile.glb', 'lake-music.mp3', 'croc-bite.wav', 'lake-lapping.wav']) expect([...asked], file).not.toContain(file);
+
+    // Picking the lake fetches its own files, and Play works again once they are here.
+    await page.locator('.area[data-level="cocolalla"] .area-pick').click();
+    await ready(page);
+    expect(await levelId(page)).toBe('cocolalla');
+    for (const file of ['crocodile.glb', 'lake-music.mp3', 'croc-bite.wav', 'lake-lapping.wav']) expect([...asked], file).toContain(file);
+    await expect.poll(async () => (await soundLevel(page)).ready, { timeout: 30_000 }).toBe(true);
+    expect((await soundLevel(page)).level).toBe('cocolalla');
+    await expect.poll(async () => (await soundLevel(page)).music).toBe('lakeMusic');
+    await play(page, 'Yaarbro', 'hard');
+    // The lake's crocodiles are drawn from the model that just arrived.
+    const crocodiles = await page.evaluate(() => (window as unknown as { __grove: { enemies: unknown[] } }).__grove.enemies.length);
+    expect(crocodiles).toBeGreaterThan(0);
+
+    // And back: the grove's music again, with nothing fetched twice going wrong.
+    await page.keyboard.press('Escape');
+    await page.locator('#quit').click();
+    await page.locator('.area[data-level="bouncing-grove"] .area-pick').click();
+    await ready(page);
+    await expect.poll(async () => (await soundLevel(page)).music, { timeout: 30_000 }).toBe('groveMusic');
+    expect((await soundLevel(page)).problems).toEqual([]);
+    expect(problems).toEqual([]);
+  });
+
+  test("opening straight onto the lake never fetches the grove's own files", async ({ page }) => {
+    const asked = watchMedia(page);
+    const problems = await open(page, 'level=cocolalla');
+    await expect.poll(async () => (await soundLevel(page)).level).toBe('cocolalla');
+    await expect.poll(() => [...asked]).toContain('lake-music.mp3');
+    for (const file of ['crocodile.glb', 'yaarbro.glb', 'caputo.glb']) expect([...asked], file).toContain(file);
+    for (const file of ['marmot.glb', 'mosquito.glb', 'grove-music.mp3', 'boss-music.mp3', 'creak.wav']) expect([...asked], file).not.toContain(file);
+    expect(problems).toEqual([]);
   });
 });
