@@ -5,12 +5,13 @@
 //   1. The Shore Path: from the pebble beach, boulder hops across the
 //      shallows to a grassy point.
 //   2. The Reed Shallows: a swim past the reed beds to a rock island. A
-//      crocodile stretch (empty until the crocodiles are made).
+//      crocodile stretch.
 //   3. The Sunken Logs: logs and boulders in turn to a gravel bar too high to
 //      climb onto from the water. A missed jump lands in the lake.
 //   4. The Rock Tunnel: a rocky point runs right across the lake. The way on
 //      is a dive through the passage under it, to a reed bar.
 //   5. Cattail Cove: a long swim to the old pier. The second crocodile stretch.
+//   The crocodiles' numbers (how many, where, how fast) are `croc*` in difficulty.ts.
 //   6. The Old Pier: posts climb out of the water to the boardwalk, which
 //      runs out to the fishing dock. The golden leaf is at the dock's end.
 //      (The monster pike fight goes on the dock in milestone nine.)
@@ -24,7 +25,9 @@
 // out on from the water; anything up to 1.35 is climbed onto; higher than
 // that can only be jumped onto.
 
+import { CROC } from '../../game/crocodile';
 import type { Difficulty } from '../../game/difficulty';
+import type { EnemySpot } from '../../game/enemy';
 import type { Level, Section, Solid } from '../../game/level';
 import type { Water } from '../../game/swim';
 import { LAKE_DIFFICULTY, type LakeNumbers } from './difficulty';
@@ -151,6 +154,7 @@ export function buildLake(difficulty: Difficulty, numbers: LakeNumbers = LAKE_DI
   // 2. THE REED SHALLOWS: swim to the rock island.
   section('The Reed Shallows');
   route.push('reed-water');
+  const reedSwim = { from: at, to: at + n.reedSwim, x0: 0, x1: shape.islandSide };
   at += n.reedSwim;
   box('island', 'bank', at, at + shape.islandLength, shape.islandSide, shape.islandHalfWidth, shape.shoreTop, shape.depth, { safe: safe(2) });
   at += shape.islandLength;
@@ -191,6 +195,7 @@ export function buildLake(difficulty: Difficulty, numbers: LakeNumbers = LAKE_DI
   section('Cattail Cove');
   route.push('cove-water');
   const thirdPool = reedBar + shape.reedBarLength / 2;
+  const coveSwim = { from: at, to: at + n.coveSwim, x0: 0, x1: 0 };
   at += n.coveSwim;
   let postTop = shape.firstPostTop;
   for (let i = 0; i < n.postCount; i += 1) {
@@ -211,8 +216,47 @@ export function buildLake(difficulty: Difficulty, numbers: LakeNumbers = LAKE_DI
   at += shape.dockLength;
   pool('cove-water', thirdPool, at + shape.pastDock);
 
+  // The crocodiles: spread along each long swim, taking turns right and left of the way across.
+  const enemies: EnemySpot[] = [];
+  for (const [name, swim] of [['reed', reedSwim], ['cove', coveSwim]] as const) {
+    const length = swim.to - swim.from;
+    for (let i = 0; i < n.crocCount; i += 1) {
+      const along = swim.from + (length * (i + 1)) / (n.crocCount + 1);
+      const share = (along - swim.from) / length;
+      const side = i % 2 === 0 ? 1 : -1;
+      const x = swim.x0 + (swim.x1 - swim.x0) * share + side * n.crocAside;
+      // Its water: across, inside the lake; along, inside the swim, clear of the shores at either end.
+      const half = length / (2 * n.crocCount);
+      enemies.push({
+        id: `croc-${name}-${i + 1}`,
+        kind: 'crocodile',
+        x,
+        y: shape.surface - CROC.lurkDepth,
+        z: -along,
+        arena: {
+          minX: Math.max(-shape.halfWidth + 1, x - n.crocPatch),
+          maxX: Math.min(shape.halfWidth - 1, x + n.crocPatch),
+          minZ: -Math.min(swim.to - 2, along + half),
+          maxZ: -Math.max(swim.from + 2, along - half),
+        },
+        surface: shape.surface,
+        floor: shape.floor,
+      });
+    }
+  }
+
   return {
     name: LAKE_NAME,
+    enemies,
+    enemyTuning: {
+      warning: n.crocWarning,
+      speed: 1,
+      rest: n.crocRest,
+      aimLine: n.crocLine,
+      crocSpeed: n.crocSpeed,
+      crocReach: n.crocReach,
+      crocHits: n.crocHits,
+    },
     solids,
     spawn: { x: 0, y: shape.shoreTop, z: 0 },
     leaf: { x: 0, y: deck + 1.3, z: -(at - 1.5), radius: 0.7 },
