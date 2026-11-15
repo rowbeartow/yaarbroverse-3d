@@ -500,3 +500,11 @@ Supersedes: none
 ## 2026-11-15 Cocolalla Lake is on the level picker, with the grove's music for now
 Reason: The owner's order: once the level is built, add the lake to the level picker, and stop for his OK on the lake's music and sounds before wiring them in. So the lake is on the picker after the Bouncing Grove, playable from start to dock without crocodiles, and plays the grove's music until he picks a lake tune on the sound board. Its card picture is a still of the sunken logs with the gravel bar, the rocky point and the pier beyond.
 Supersedes: none
+
+## 2026-11-15 The lake's music and sounds
+Reason: The owner's picks on the sound board: lake music B ("Morning Sky" by Centurion_of_war, CC0), the lapping water OK, and the loon left out. Claude's calls within it: the lapping loops in the footsteps group at the level the owner heard on the board, full while the hero is within 3 m of any water (in a pool, or by it) and fading to nothing 20 m away, so the Sandbox's pool laps too and the grove never does (`lappingAt` in `src/audio/game-sounds.ts`). Underwater it is muffled with everything else. Sound and music now come to 3.75 MB of the 4 MB budget.
+Supersedes: none
+
+## 2026-11-15 The lake's frame rate, and the crocodiles' budget
+Reason: The owner measured Cocolalla Lake in Safari on his Mac: 75 to 81 frames a second across the run, against 120 in the grove. The crocodiles must not push the lake under 60.
+Supersedes: none

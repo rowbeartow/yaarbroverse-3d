@@ -3,7 +3,8 @@
 // right sounds. A stand-in speaker writes down what it is asked to do.
 
 import { describe, expect, it } from 'vitest';
-import { GameSounds, FAR, NEAR, STROKE, byDistance, splashVolume } from '../src/audio/game-sounds';
+import { GameSounds, FAR, LAPPING, NEAR, STROKE, byDistance, lappingAt, splashVolume } from '../src/audio/game-sounds';
+import { buildLake } from '../src/levels/cocolalla/layout';
 import { buildSandbox } from '../src/levels/sandbox/layout';
 import { MUTE_KEY, Sound, type Memory, type PlayOptions, type Speaker } from '../src/audio/mix';
 import { VOICE, type SoundName } from '../src/audio/sounds';
@@ -565,5 +566,29 @@ describe('in the water', () => {
     const { speaker, run } = dropped(0.5);
     run({ ...idle, move: true }, 16);
     expect(speaker.names()).toContain('heartsOut');
+  });
+});
+
+describe('water lapping', () => {
+  it('is full by and in the water, fades out 20 m away, and is never heard where there is no water', () => {
+    const pool = [{ id: 'p', minX: -2, maxX: 2, minZ: -10, maxZ: 0, surface: 0, floor: -4 }];
+    expect(lappingAt(pool, 0, -5)).toBe(1);
+    expect(lappingAt(pool, 0, LAPPING.full)).toBe(1);
+    const halfway = lappingAt(pool, 0, (LAPPING.full + LAPPING.gone) / 2);
+    expect(halfway).toBeGreaterThan(0);
+    expect(halfway).toBeLessThan(1);
+    expect(lappingAt(pool, 0, LAPPING.gone + 1)).toBe(0);
+    expect(lappingAt(undefined, 0, 0)).toBe(0);
+  });
+
+  it('laps all the way across Cocolalla Lake, and not in the grove', () => {
+    const lake = new Game(buildLake('normal'), 'normal', 'Yaarbro');
+    const lakeSound = listening(lake);
+    lakeSound.sounds.step(lake);
+    expect(lakeSound.speaker.loops.get('lapping')).toBe(1);
+    const forest = new Game(buildGrove('normal'), 'normal', 'Yaarbro');
+    const forestSound = listening(forest);
+    forestSound.sounds.step(forest);
+    expect(forestSound.speaker.loops.get('lapping') ?? 0).toBe(0);
   });
 });

@@ -202,6 +202,11 @@ export const SOUNDS = {
     what: "A soft splash when a swimmer's head comes back up. The owner picked choice A.",
     source: { files: ['surfacing.wav'] },
   },
+  lapping: {
+    group: 'Water', label: 'Water lapping', mix: 'step', level: 0, loop: true,
+    what: 'Small waves lapping at a shore, round and round, softly while a hero is by or in the water. The owner said OK.',
+    source: { files: ['lake-lapping.wav'] },
+  },
   leafTune: {
     group: 'Music', label: 'Golden leaf tune', mix: 'music', level: 6,
     what: 'A ten-second victory fanfare in a bright key when the golden leaf is found. The grove music stops for it.',
@@ -226,6 +231,11 @@ export const SOUNDS = {
     group: 'Music', label: 'Grove music', mix: 'music', level: 0, loop: true,
     what: 'A calm forest track, 1 minute 22 seconds, that goes round without a gap. It sits well under the effects.',
     source: { files: ['grove-music.mp3'] },
+  },
+  lakeMusic: {
+    group: 'Music', label: 'Lake music', mix: 'music', level: 0, loop: true,
+    what: "Cocolalla Lake's music: a calm, bright morning tune, 2 minutes 12 seconds, that goes round without a gap. The owner picked B, \"Morning Sky\".",
+    source: { files: ['lake-music.mp3'] },
   },
 } satisfies Record<string, SoundDef>;
 
