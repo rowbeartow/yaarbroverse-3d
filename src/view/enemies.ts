@@ -1,14 +1,17 @@
-// Draws the enemies: the marmot scout and the giant mosquito, each from its
+// Draws the enemies: the marmot scout, the giant mosquito and the crocodile, each from its
 // model, playing the clip for whatever the rules say it is doing. Also the
 // acorn, and the line an attack is aimed along while its warning lasts. Looks
 // only: where an enemy is and what it is doing come from src/game/enemy.ts.
 //
-// The models are made by tools/rig-quadruped.py (marmot) and
-// tools/rig-insect.py (mosquito), which also name the clips used here.
+// The models are made by tools/rig-quadruped.py (marmot, crocodile) and
+// tools/rig-insect.py (mosquito), which also name the clips used here. A
+// crocodile also pushes a wake across the surface as it swims near it, plainest
+// in its tell, when it creeps at a hero with its eyes sunk.
 
 import {
   AnimationMixer,
   Box3,
+  CanvasTexture,
   Color,
   CylinderGeometry,
   Group,
@@ -18,6 +21,7 @@ import {
   MeshBasicMaterial,
   MeshLambertMaterial,
   MeshStandardMaterial,
+  PlaneGeometry,
   Quaternion,
   SphereGeometry,
   Vector3,
@@ -26,6 +30,7 @@ import {
 } from 'three';
 import type { GLTF } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { clone as cloneRigged } from 'three/examples/jsm/utils/SkeletonUtils.js';
+import { CROC } from '../game/crocodile';
 import { ENEMY, type Enemy, type EnemyKind, type EnemyPhase, type EnemyTuning } from '../game/enemy';
 
 export interface EnemyModelSpec {
@@ -35,6 +40,8 @@ export interface EnemyModelSpec {
   length: number;
   /** Where the rules' place for it is on its body: the ground under its feet, or its middle. */
   stands: boolean;
+  /** It lives in the water (the crocodile): seen while it lurks, its warning is a swim and not a held wind-up, and its lunge plays once. */
+  swims?: boolean;
   /** The clip for each thing it does. */
   clips: {
     idle: string;
@@ -47,6 +54,9 @@ export interface EnemyModelSpec {
     hit?: string;
     dodge?: string;
     defeated: string;
+    /** Crocodile only: lying low, and swimming deep. */
+    lurk?: string;
+    deep?: string;
   };
 }
 
@@ -64,6 +74,15 @@ export const ENEMY_MODELS: Record<EnemyKind, EnemyModelSpec> = {
     stands: false,
     clips: { idle: 'hover', warning: 'warning', attack: 'dive', rest: 'winded', defeated: 'defeated' },
   },
+  crocodile: {
+    file: 'crocodile.glb',
+    // Nose to tail, long enough to be the biggest thing in the water, its head
+    // about as wide as a hero.
+    length: 2.6,
+    stands: false,
+    swims: true,
+    clips: { idle: 'swim', warning: 'swim', attack: 'lunge', rest: 'lurk', hit: 'hit', defeated: 'defeated', lurk: 'lurk', deep: 'dive' },
+  },
 };
 
 /** The model files to download before the game can start. */
@@ -80,6 +99,36 @@ const ACORN_COLOR = 0x8a5a2b;
 
 const acornShape = new SphereGeometry(ENEMY.acornRadius, 12, 8);
 const laneShape = new CylinderGeometry(0.05, 0.05, 1, 6, 1, true);
+const wakeShape = new PlaneGeometry(1, 1);
+
+/** A wake: two pale lines spreading back from a point, fading out behind. Drawn once, in code. */
+let wakeTexture: CanvasTexture | null = null;
+const wakePicture = (): CanvasTexture => {
+  if (wakeTexture) return wakeTexture;
+  const size = 128;
+  const canvas = document.createElement('canvas');
+  canvas.width = size;
+  canvas.height = size;
+  const pen = canvas.getContext('2d', { willReadFrequently: true }) as CanvasRenderingContext2D;
+  for (let i = 0; i < 3; i += 1) {
+    const back = 0.25 + i * 0.28;
+    pen.strokeStyle = `rgba(255,255,255,${0.9 - i * 0.28})`;
+    pen.lineWidth = 7 - i * 1.5;
+    pen.beginPath();
+    pen.moveTo(size * (0.5 - back * 0.45), size * (0.06 + back));
+    pen.lineTo(size * 0.5, size * 0.06 + i * 6);
+    pen.lineTo(size * (0.5 + back * 0.45), size * (0.06 + back));
+    pen.stroke();
+  }
+  const fade = pen.createLinearGradient(0, 0, 0, size);
+  fade.addColorStop(0, 'rgba(0,0,0,0)');
+  fade.addColorStop(1, 'rgba(0,0,0,1)');
+  pen.globalCompositeOperation = 'destination-out';
+  pen.fillStyle = fade;
+  pen.fillRect(0, 0, size, size);
+  wakeTexture = new CanvasTexture(canvas);
+  return wakeTexture;
+};
 
 export class EnemyView {
   readonly root = new Group();
@@ -129,7 +178,8 @@ export class EnemyView {
         : full.clone();
       if (look.tint !== undefined) own.color.multiply(new Color(look.tint));
       mesh.material = own;
-      mesh.castShadow = !full.transparent;
+      // A crocodile in the water casts no shadow worth its cost: the lake's frame budget is tight.
+      mesh.castShadow = !full.transparent && !spec.swims;
       mesh.receiveShadow = !full.transparent;
       this.materials.push({ material: own, opacity: full.opacity, seeThrough: full.transparent });
     });
@@ -149,7 +199,7 @@ export class EnemyView {
       const clip = source.animations.find((each) => each.name === name);
       if (!clip) continue;
       const action = this.mixer.clipAction(clip);
-      const loops = key === 'idle' || key === 'walk' || key === 'rest' || (key === 'attack' && !spec.stands);
+      const loops = key === 'idle' || key === 'walk' || key === 'rest' || key === 'lurk' || key === 'deep' || (key === 'attack' && !spec.stands && !spec.swims);
       action.setLoop(loops ? LoopRepeat : LoopOnce, loops ? Infinity : 1);
       action.clampWhenFinished = true;
       action.enabled = true;
@@ -168,12 +218,19 @@ export class EnemyView {
     this.laneMaterial = new MeshBasicMaterial({ color: spec.stands ? 0xffd27a : 0xff8a5c, transparent: true, opacity: 0, depthWrite: false });
     this.lane = new Mesh(laneShape, this.laneMaterial);
     this.lane.visible = false;
+    if (spec.swims) {
+      this.wake = new Mesh(wakeShape, new MeshBasicMaterial({ map: wakePicture(), color: 0xeafcf7, transparent: true, opacity: 0, depthWrite: false }));
+      this.wake.renderOrder = 3;
+      this.wake.visible = false;
+    }
     this.root.visible = false;
   }
 
-  /** The acorn and the aiming line: added to the scene beside the enemy itself. */
+  private readonly wake: Mesh | null = null;
+
+  /** The acorn, the aiming line and a crocodile's wake: added to the scene beside the enemy itself. */
   get extras(): Mesh[] {
-    return [this.acorn, this.lane];
+    return this.wake ? [this.acorn, this.lane, this.wake] : [this.acorn, this.lane];
   }
 
   /** The hero's move just struck it: it flashes bright, on and off, for as long as it cannot be struck again. */
@@ -196,7 +253,11 @@ export class EnemyView {
         return clips.dodge ? 'dodge' : 'idle';
       case 'defeated':
         return 'defeated';
+      case 'concealed':
+        return clips.lurk ? 'lurk' : 'idle';
       default:
+        if (clips.deep && enemy.spot.surface !== undefined && enemy.y < enemy.spot.surface - 0.9) return 'deep';
+        if (this.spec.swims && this.moving < 0.1) return 'lurk';
         return clips.walk && this.moving > 0.15 ? 'walk' : 'idle';
     }
   }
@@ -205,10 +266,12 @@ export class EnemyView {
   update(enemy: Enemy, tuning: EnemyTuning, heroZ: number, dt: number): void {
     const near = Math.abs(enemy.z - heroZ) < SEEN_WITHIN;
     // Hidden: a scout that has not come out, a sidekick its boss has not called, and a beaten enemy once it has faded.
-    const hidden = enemy.phase === 'concealed' || enemy.dormant || (enemy.phase === 'defeated' && enemy.timer > ENEMY.fade);
+    // A crocodile lying low is still seen: its eyes and snout show above the water.
+    const hidden = (enemy.phase === 'concealed' && !this.spec.swims) || enemy.dormant || (enemy.phase === 'defeated' && enemy.timer > ENEMY.fade);
     this.root.visible = near && !hidden;
     this.acorn.visible = false;
     this.lane.visible = false;
+    if (this.wake) this.wake.visible = false;
     if (!this.root.visible) {
       this.phase = enemy.phase;
       this.risen = 0;
@@ -289,7 +352,7 @@ export class EnemyView {
       const action = this.actions[this.pose.clip];
       if (this.pose.hold !== undefined) held(this.pose.clip, this.pose.hold);
       else if (action) action.paused = false;
-    } else if (enemy.phase === 'warning') held('warning', enemy.timer / (ENEMY.warning * tuning.warning));
+    } else if (enemy.phase === 'warning' && !this.spec.swims) held('warning', enemy.timer / (ENEMY.warning * tuning.warning));
     else if (enemy.phase === 'dodge') held('dodge', 0.15 + 0.7 * (enemy.timer / ENEMY.dodgeTime));
     else if (enemy.phase === 'dodge-warning') held('dodge', 0.15 * (enemy.timer / ENEMY.dodgeWarning));
     else if (enemy.phase === 'attack' && this.spec.stands) {
@@ -299,6 +362,7 @@ export class EnemyView {
     const walk = this.actions.walk;
     if (walk) walk.setEffectiveTimeScale(0.6 + Math.max(this.moving, this.pace / 1.5));
     this.mixer.update(dt);
+    this.wakeAt(enemy);
 
     // The acorn: in the raised paw through the warning, then in flight.
     if (this.spec.stands && enemy.phase === 'warning' && enemy.timer > 0.3 * ENEMY.warning * tuning.warning) {
@@ -320,20 +384,43 @@ export class EnemyView {
       this.lane.position.set((enemy.from.x + enemy.target.x) / 2, (enemy.from.y + enemy.target.y) / 2, (enemy.from.z + enemy.target.z) / 2);
       this.lane.scale.set(1, length, 1);
       this.lane.quaternion.copy(new Quaternion().setFromUnitVectors(new Vector3(0, 1, 0), along.normalize()));
-      const share = enemy.phase === 'warning' ? enemy.timer / (ENEMY.warning * tuning.warning) : 1;
+      const share = enemy.phase === 'warning' ? enemy.timer / ((this.spec.swims ? CROC.warning : ENEMY.warning) * tuning.warning) : 1;
       this.laneMaterial.opacity = enemy.phase === 'attack' ? 0.55 : 0.25 + 0.3 * share * (0.6 + 0.4 * Math.sin(this.clock * (10 + 20 * share)));
     }
   }
 
+  /**
+   * The wake: a pale V on the water ahead of a crocodile swimming near the
+   * surface, longer the faster it goes, and plainest in its tell, when it
+   * creeps at a hero with its eyes sunk.
+   */
+  private wakeAt(enemy: Enemy): void {
+    const wake = this.wake;
+    const surface = enemy.spot.surface;
+    if (!wake || surface === undefined || enemy.phase === 'defeated') return;
+    const depth = surface - enemy.y;
+    const telling = enemy.phase === 'warning';
+    const strength = (telling ? 1 : Math.min(1, this.moving * 1.4) * 0.6) * (depth < 1 ? 1 : 0);
+    if (strength < 0.05) return;
+    wake.visible = true;
+    const facing = this.root.rotation.y;
+    // Its point at the snout, spreading back along its body.
+    wake.position.set(enemy.x + Math.sin(facing) * 0.2, surface + 0.03, enemy.z + Math.cos(facing) * 0.2);
+    wake.rotation.set(-Math.PI / 2, 0, facing + Math.PI);
+    wake.scale.set(1.6, 2.6 + strength, 1);
+    (wake.material as MeshBasicMaterial).opacity = 0.55 * strength * (0.85 + 0.15 * Math.sin(this.clock * 9));
+  }
+
   /** The clip showing now, for the browser checks. */
-  info(): { clip: string; visible: boolean; aimLine: boolean; flashing: boolean } {
-    return { clip: this.spec.clips[this.showing] ?? 'idle', visible: this.root.visible, aimLine: this.lane.visible, flashing: this.flashing > 0 };
+  info(): { clip: string; visible: boolean; aimLine: boolean; flashing: boolean; wake: boolean } {
+    return { clip: this.spec.clips[this.showing] ?? 'idle', visible: this.root.visible, aimLine: this.lane.visible, flashing: this.flashing > 0, wake: Boolean(this.wake?.visible) };
   }
 
   dispose(): void {
     this.mixer.stopAllAction();
     for (const each of this.materials) each.material.dispose();
     (this.acorn.material as Material).dispose();
+    if (this.wake) (this.wake.material as Material).dispose();
     this.laneMaterial.dispose();
   }
 }

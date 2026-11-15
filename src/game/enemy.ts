@@ -1,4 +1,5 @@
-// The enemies: the marmot scout and the giant mosquito. Their behaviour is
+// The enemies: the marmot scout, the giant mosquito, and in the water the
+// crocodile (its own file, crocodile.ts, says how it goes). Their behaviour is
 // Caputo Mountain's, moved from its flat forest into three dimensions. Game
 // rules only: nothing here draws anything.
 //
@@ -33,6 +34,8 @@
 //
 // The older player's rule: when the hero is sent back to a safe bank, every
 // enemy that is not beaten is at full health again (`sendHome`).
+
+import { CROC, moveCrocodile } from './crocodile';
 
 /** Distances are metres, times are seconds, speeds are metres per second. */
 export const ENEMY = {
@@ -115,7 +118,7 @@ export const ENEMY = {
   fade: 0.8,
 } as const;
 
-export type EnemyKind = 'marmot' | 'mosquito';
+export type EnemyKind = 'marmot' | 'mosquito' | 'crocodile';
 
 export type EnemyPhase = 'concealed' | 'patrol' | 'idle' | 'dodge-warning' | 'dodge' | 'warning' | 'attack' | 'rest' | 'defeated';
 
@@ -138,9 +141,11 @@ export interface EnemySpot {
    * harmless, until its boss calls it, and is gone when its boss is beaten.
    */
   sidekickOf?: string;
-  /** For a mosquito: the lowest and highest it flies. */
+  /** For a mosquito: the lowest and highest it flies. For a crocodile: the floor of its water. */
   floor?: number;
   ceiling?: number;
+  /** For a crocodile: the surface of its water. Its home's y is where its middle lies while it lurks. */
+  surface?: number;
 }
 
 /** How a level's difficulty stretches the enemies' timing. Normal is 1 for each. */
@@ -178,6 +183,10 @@ export interface EnemyTuning {
   /** Strikes it takes to beat a marmot scout, and a giant mosquito. Left out: 2 and 1. */
   scoutHits?: number;
   mosquitoHits?: number;
+  /** The crocodile: how fast it swims after a hero, how far it lunges, and strikes that beat it. Left out: crocodile.ts's own. */
+  crocSpeed?: number;
+  crocReach?: number;
+  crocHits?: number;
 }
 
 export interface Enemy {
@@ -239,7 +248,11 @@ export interface EnemyOutcome {
 
 /** How many strikes it takes to beat an enemy of this kind in a level with this tuning. */
 export const fullHits = (kind: EnemyKind, tuning?: EnemyTuning): number =>
-  kind === 'marmot' ? (tuning?.scoutHits ?? ENEMY.marmotHits) : (tuning?.mosquitoHits ?? ENEMY.mosquitoHits);
+  kind === 'marmot'
+    ? (tuning?.scoutHits ?? ENEMY.marmotHits)
+    : kind === 'crocodile'
+      ? (tuning?.crocHits ?? CROC.hits)
+      : (tuning?.mosquitoHits ?? ENEMY.mosquitoHits);
 
 export const newEnemy = (spot: EnemySpot, tuning?: EnemyTuning): Enemy => ({
   spot,
@@ -247,7 +260,7 @@ export const newEnemy = (spot: EnemySpot, tuning?: EnemyTuning): Enemy => ({
   x: spot.x,
   y: spot.y,
   z: spot.z,
-  phase: spot.kind === 'marmot' ? 'concealed' : 'idle',
+  phase: spot.kind === 'mosquito' ? 'idle' : 'concealed',
   timer: 0,
   facing: 0,
   from: { x: spot.x, y: spot.y, z: spot.z },
@@ -307,10 +320,13 @@ const approach = (value: number, target: number, amount: number): number =>
 export const enemyBody = (enemy: Enemy): { bottom: number; top: number; radius: number } =>
   enemy.kind === 'marmot'
     ? { bottom: enemy.y, top: enemy.y + ENEMY.marmotHeight, radius: ENEMY.marmotRadius }
-    : { bottom: enemy.y - ENEMY.mosquitoHalfHeight, top: enemy.y + ENEMY.mosquitoHalfHeight, radius: ENEMY.mosquitoRadius };
+    : enemy.kind === 'crocodile'
+      ? { bottom: enemy.y - CROC.halfHeight, top: enemy.y + CROC.halfHeight, radius: CROC.radius }
+      : { bottom: enemy.y - ENEMY.mosquitoHalfHeight, top: enemy.y + ENEMY.mosquitoHalfHeight, radius: ENEMY.mosquitoRadius };
 
-/** True while touching this enemy would hurt. */
-export const isDangerous = (enemy: Enemy): boolean => enemy.phase === 'idle' || enemy.phase === 'patrol' || enemy.phase === 'attack';
+/** True while touching this enemy would hurt. A crocodile hurts only with its lunge. */
+export const isDangerous = (enemy: Enemy): boolean =>
+  enemy.kind === 'crocodile' ? enemy.phase === 'attack' : enemy.phase === 'idle' || enemy.phase === 'patrol' || enemy.phase === 'attack';
 
 /**
  * Advances one enemy by `dt` seconds and works out what it does to the hero.
@@ -359,7 +375,9 @@ export const stepEnemy = (
   const inArena =
     hero.x >= arena.minX - reach && hero.x <= arena.maxX + reach && hero.z >= arena.minZ - reach && hero.z <= arena.maxZ + reach;
   const hoverAbove = tuning.hoverAbove ?? ENEMY.hoverAbove;
-  const level = Math.abs(middle - (marmot ? enemy.y + ENEMY.marmotHeight / 2 : enemy.spot.y)) < ENEMY.noticeHeight + (marmot ? 0 : hoverAbove);
+  const croc = enemy.kind === 'crocodile';
+  // A crocodile notices a hero at any depth in its water, and on the logs and banks just over it.
+  const level = croc || Math.abs(middle - (marmot ? enemy.y + ENEMY.marmotHeight / 2 : enemy.spot.y)) < ENEMY.noticeHeight + (marmot ? 0 : hoverAbove);
   const nearby = level && inArena && enemy.grace === 0;
   const patrolSpeed = marmot ? (tuning.patrolSpeed ?? 0) : 0;
   const chaseSpeed = marmot ? (tuning.chaseSpeed ?? 0) : 0;
@@ -369,6 +387,8 @@ export const stepEnemy = (
     enemy.z = clamp(enemy.z, arena.minZ, arena.maxZ);
   };
 
+  if (croc) moveCrocodile(enemy, hero, tuning, nearby, dt, enter);
+  else {
   // A scout with a beat to walk is never hidden.
   if (enemy.phase === 'concealed' && patrolSpeed > 0) enemy.phase = 'patrol';
   if ((enemy.phase === 'concealed' || enemy.phase === 'patrol') && nearby) enter('idle');
@@ -515,6 +535,7 @@ export const stepEnemy = (
     }
   }
   if (marmot && enemy.phase !== 'dodge') enemy.y = enemy.spot.y;
+  }
 
   // Touching it.
   const body = enemyBody(enemy);
