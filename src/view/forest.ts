@@ -120,7 +120,7 @@ const strip = (
 };
 
 /** Crowns are drawn this many times taller than their lowest boughs reach. */
-const CROWN_SHAPE = 4;
+export const CROWN_SHAPE = 4;
 
 /**
  * The green of one conifer, one unit tall and one unit in reach at the bottom:
@@ -132,7 +132,7 @@ const CROWN_SHAPE = 4;
  * It is made for a tree CROWN_SHAPE times taller than its reach, which is how
  * trees are sized below, so a bough's slope comes out right in metres.
  */
-const crownGeometry = (seed: number, tiers: number, fullest: number, steps = 4): BufferGeometry => {
+export const crownGeometry = (seed: number, tiers: number, fullest: number, steps = 4): BufferGeometry => {
   const lists = emptyLists();
   let random = seed;
   const next = (): number => {
@@ -230,7 +230,7 @@ const crownGeometry = (seed: number, tiers: number, fullest: number, steps = 4):
  * One trunk, one unit tall and one unit in radius at the foot: straight,
  * tapering to almost nothing at the tip, flaring into roots at the ground.
  */
-const trunkGeometry = (): BufferGeometry =>
+export const trunkGeometry = (): BufferGeometry =>
   surface(
     6,
     10,
@@ -431,6 +431,10 @@ export interface Forest {
    */
   update(time: number, heroZ: number): void;
   setDetail(share: number): void;
+  /** True when the surroundings draw the lake bed under the level's pools, so the pools leave out their own rock basins. */
+  lakeBed?: boolean;
+  /** Where the haze begins and where it hides everything, in metres from the camera, when not the forest's mist. */
+  fog?: { near: number; far: number };
 }
 
 interface Tree {

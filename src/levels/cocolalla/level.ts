@@ -12,7 +12,7 @@ export const COCOLALLA: LevelEntry = {
   lead: 'Swim, dive and hop across the lake to the fishing dock.',
   blurbs: LAKE_BLURB,
   build: (difficulty) => buildLake(difficulty),
-  scenery: 'forest',
+  scenery: 'lake',
   music: 'groveMusic',
   devOnly: true,
 };

@@ -16,7 +16,7 @@ Make `src/levels/<id>/` with three files:
 
 1. **`difficulty.ts`**: every Easy, Normal and Hard number for the level, in one table, with a comment on each number saying what it does. Also the three one-line blurbs for the start screen. Every level needs `hearts`, `protection`, `knockback`, `coyoteTime` and `ledgeHelp`; if it has enemies, `enemyWarning`, `enemySpeed` and `enemyRest` too, and if its scouts walk a beat and give chase or its mosquito keeps up, the grove's `scoutPatrol`, `scoutChase`, `mosquitoFollow`, `mosquitoHover` and `mosquitoPause`. Start from the grove's values for those.
 2. **`layout.ts`**: one function, `build<Name>(difficulty)`, that returns a `Level` (`src/game/level.ts`) built from those numbers. No drawing code.
-   - `solids`: everything to stand on. Kinds that already draw: `bank`, `log`, `stump`, `shelf`, `mushroom` (give it `bounce`), `bough`, `moss` (crumbling moss only). Mark checkpoints `safe: true`. A solid can also move: see "Pieces that move" below.
+   - `solids`: everything to stand on. Kinds that already draw: `bank`, `log`, `stump`, `shelf`, `mushroom` (give it `bounce`), `bough`, `moss` (crumbling moss only), `arch` (rock across water, with its opening drawn when water runs under it), and for a lake `boulder` (a round rock standing out of the water), `crag` (a block of rock) and `deck` (wooden boards on posts). Mark checkpoints `safe: true`. A solid can also move: see "Pieces that move" below.
    - `spawn` must be on a safe solid. `leaf` is the goal.
    - `route`: the ids of the solids in the order a run crosses them, and of any pool where a run swims across it. The test bot follows it, so it must be complete and in order.
    - `water` and `breath`: see "Water" below.
@@ -32,7 +32,7 @@ Then add the entry to `LEVELS` in `src/levels/index.ts`. Order there is the orde
 
 ## Scenery
 
-`scenery` in the entry names what is drawn around the solids. `'forest'` is the misty fir gully, and it lays itself out along any route (`src/view/route.ts`).
+`scenery` in the entry names what is drawn around the solids. `'forest'` is the misty fir gully, and it lays itself out along any route (`src/view/route.ts`). `'lake'` (`src/view/lake.ts`) is open water out to the Selkirk mountains, a wooded shore with rocks and reeds along the left and a log boom along the right: it lays itself out from the level's pools, which together should make one rectangle of water (Cocolalla Lake's three pools do). It draws one lake bed under everything, so the pools leave out their rock basins, and sets a clearer haze than the forest's mist (`lakeBed` and `fog` on what a builder returns).
 
 For different surroundings:
 
@@ -78,8 +78,9 @@ Any level can have deep water: give the `Level` a `water` list of pools, each a 
 - **Breath:** `breath` on the `Level`, in seconds, from the level's `difficulty.ts`. Leave it out on Easy: breath never runs out there (the owner's rule). It fills again at the surface. Running out underwater is the same as losing the last heart: back to the last checkpoint with every heart. Make the longest swim under anything well under half the breath there is.
 - **Telling players how:** the game says how to dive the first time in a run a hero goes into the water ("Press X to dive", or on touch the round button turns into a pulsing Dive button), and again when a swimmer waits a few seconds at the surface by an underwater-only passage (`passageNear` in `src/game/swim.ts`, `src/ui/dive-hint.ts`). Nothing for the level to do.
 - **Checkpoints:** water is never one. Make the solid a hero climbs out onto `safe` if losing breath on the next swim should not cost what came before.
-- **Enemies:** nothing reaches a hero whose head is underwater (acorns and dives stop at the surface). A mosquito whose patch is over a pool can dive at a swimmer at the surface: give it a `floor` just above the water. Scouts and bosses stay on their banks.
+- **Enemies:** no land enemy reaches a hero whose head is underwater (acorns and dives stop at the surface). Crocodiles, still to be made, will: the owner's rule in `docs/decisions.md`. A mosquito whose patch is over a pool can dive at a swimmer at the surface: give it a `floor` just above the water. Scouts and bosses stay on their banks.
 - Pieces that move and water have not been tried together.
+- **A lake of several pools:** each pool's id may appear only once in `route`, so a run that swims, climbs out and swims again needs a pool for each swim. Pools can sit side by side, parted by a solid that runs their full width (Cocolalla Lake's gravel bar and reed bar), since a swimmer cannot cross from one pool into the next.
 
 ## New enemies
 

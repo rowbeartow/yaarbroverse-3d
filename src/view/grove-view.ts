@@ -41,6 +41,7 @@ import { BossView } from './boss';
 import { FIGHT_CAMERA, fightView } from './boss-camera';
 import { ENEMY_MODELS, ENEMY_MODEL_FILES, EnemyView } from './enemies';
 import { HERO_MODEL_FILES, buildHero, type HeroView } from './heroes';
+import { buildLake } from './lake';
 import { Materials, WIND, installMist } from './materials';
 import { seeded } from './noise';
 import { MIST_COLOR } from './pictures';
@@ -95,6 +96,7 @@ export interface ViewStats {
  */
 const SURROUNDINGS: Record<SceneryName, typeof buildForest> = {
   forest: buildForest,
+  lake: buildLake,
 };
 
 interface LevelView extends LevelSolids {
@@ -156,6 +158,8 @@ export class GroveView {
   private nextWake = 0;
   private nextBubbles = 0;
   private readonly fogAbove = new Color(MIST_COLOR);
+  /** How near the haze begins and how far it closes in, above water: the surroundings' own, or the forest's mist. */
+  private mist = { near: MIST_NEAR, far: MIST_FAR };
   private readonly fogBelow = new Color(UNDERWATER_FOG);
   private lastFrame = 0;
   private smoothedRate = 0;
@@ -265,9 +269,13 @@ export class GroveView {
     const scatter = new Scatter();
     const solids = buildSolids(level, this.materials, scatter, random);
     const forest = SURROUNDINGS[scenery](level, this.materials, scatter, random);
+    this.mist = forest.fog ?? { near: MIST_NEAR, far: MIST_FAR };
+    const haze = this.scene.fog as Fog;
+    haze.near = this.mist.near;
+    haze.far = this.mist.far;
     const root = new Group();
     root.add(solids.group, forest.group, scatter.build(this.materials));
-    const water = level.water?.length ? new WaterView(level.water, this.materials, this.tier.simple) : null;
+    const water = level.water?.length ? new WaterView(level.water, this.materials, this.tier.simple, !forest.lakeBed) : null;
     if (water) root.add(water.group);
     this.levelView?.water?.dispose();
     this.levelView = { ...solids, root, forest, scatter, water };
@@ -314,7 +322,7 @@ export class GroveView {
     const water = this.levelView?.water;
     if (!water) return null;
     const fog = this.scene.fog as Fog;
-    return { ...water.info(), underwater: Math.max(0, Math.min(1, (MIST_FAR - fog.far) / (MIST_FAR - UNDERWATER.fogFar))) };
+    return { ...water.info(), underwater: Math.max(0, Math.min(1, (this.mist.far - fog.far) / (this.mist.far - UNDERWATER.fogFar))) };
   }
 
   /** Reacts to what just happened in the rules: squash a mushroom, stretch the hero, and so on. */
@@ -570,8 +578,8 @@ export class GroveView {
     const below = Math.min(1, depth / 0.15);
     const fog = this.scene.fog as Fog;
     fog.color.copy(this.fogAbove).lerp(this.fogBelow, below);
-    fog.near = MIST_NEAR + (UNDERWATER.fogNear - MIST_NEAR) * below;
-    fog.far = MIST_FAR + (UNDERWATER.fogFar - MIST_FAR) * below;
+    fog.near = this.mist.near + (UNDERWATER.fogNear - this.mist.near) * below;
+    fog.far = this.mist.far + (UNDERWATER.fogFar - this.mist.far) * below;
     water.setUnder(below, WIND.time.value);
   }
 
