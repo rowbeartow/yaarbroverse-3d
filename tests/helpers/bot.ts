@@ -51,7 +51,7 @@ export class Bot {
     if (game.grounded && game.groundId) this.index = level.route.indexOf(game.groundId);
     if (game.swimming && game.waterId) {
       this.index = level.route.indexOf(game.waterId);
-      return this.swim(game);
+      return this.swimSafely(game);
     }
     if (game.climbing > 0) return { moveX: 0, moveZ: 0, jump: false };
 
@@ -210,6 +210,63 @@ export class Bot {
     }
     this.holdingJump = jump;
     return { moveX: way.x, moveZ: way.z, jump, move: dive };
+  }
+
+  /** A way out of a crocodile's lunge the bot has picked in the water, and for how much longer it keeps to it. */
+  private dodge_: { input: Input; left: number } | null = null;
+  /** Seconds until the bot next looks ahead in the water. */
+  private swimLookIn = 0;
+
+  /**
+   * Swimming with crocodiles about, looking ahead first, as it does in a boss
+   * fight: every tenth of a second it plays its own swimming plan forward on
+   * a copy of the game. If that gets it bitten, it tries each way it could
+   * swim instead for a moment, at the surface or diving, each followed by the
+   * plan again, and keeps to the safest. A crocodile's lunge only goes where
+   * it aimed, so swimming out of the line, or diving under it, gets past.
+   */
+  private swimSafely(game: Game): Input {
+    const awake = game.enemies.some(
+      (enemy) => enemy.kind === 'crocodile' && enemy.phase !== 'concealed' && enemy.phase !== 'defeated' && Math.hypot(enemy.x - game.x, enemy.z - game.z) < 14,
+    );
+    if (!awake) {
+      this.dodge_ = null;
+      return this.swim(game);
+    }
+    if (this.dodge_ && this.dodge_.left > 0) {
+      this.dodge_.left -= STEP;
+      return this.dodge_.input;
+    }
+    this.dodge_ = null;
+    this.swimLookIn -= STEP;
+    if (this.swimLookIn > 0) return this.swim(game);
+    this.swimLookIn = RETHINK;
+    const plan = copyBot(this);
+    const planned = trouble(copyGame(game), (copy) => plan.swimOnly(copy), LOOK_AHEAD);
+    if (planned === null) return this.swim(game);
+    let best: { input: Input; score: number } | null = null;
+    for (const input of SWIM_ESCAPES) {
+      const copy = copyGame(game);
+      const after = copyBot(this);
+      let steps = 0;
+      const when = trouble(copy, (c) => (steps++ < SWIM_ESCAPE_FOR / STEP ? input : after.swimOnly(c)), LOOK_AHEAD + 0.6);
+      // Safe beats unsafe, then later trouble beats sooner; then staying at the surface, then going the way the plan goes.
+      const score = (when === null ? 100 : when * 10) - (input.move ? 0.5 : 0);
+      if (!best || score > best.score) best = { input, score };
+    }
+    if (!best || best.score <= planned * 10) return this.swim(game);
+    this.dodge_ = { input: best.input, left: SWIM_ESCAPE_FOR - STEP };
+    this.holdingJump = false;
+    return best.input;
+  }
+
+  /** The swimming plan alone, for playing forward: swim when swimming, and the whole bot otherwise. */
+  private swimOnly(game: Game): Input {
+    if (game.swimming && game.waterId) {
+      this.index = game.level.route.indexOf(game.waterId);
+      return this.swim(game);
+    }
+    return this.input(game);
   }
 
   private way: Way = 1;
@@ -410,6 +467,12 @@ const ESCAPES: Input[] = [
   ),
 ];
 
+/** The ways out of a lunge the bot tries in the water: each of eight directions, at the surface or diving. */
+const SWIM_ESCAPE_FOR = 0.4;
+const SWIM_ESCAPES: Input[] = [false, true].flatMap((move) =>
+  Array.from({ length: 8 }, (_, i) => ({ moveX: Math.sin((i * Math.PI) / 4), moveZ: Math.cos((i * Math.PI) / 4), jump: false, move })),
+);
+
 /** The part of an arena the bot keeps to: in from its edge by a hit's throw and a step more. */
 const roomIn = (arena: BossSpot['arena'], knockback: number): BossSpot['arena'] => {
   const inset = Math.max(0.8, knockback + 0.6);
@@ -420,7 +483,7 @@ const roomIn = (arena: BossSpot['arena'], knockback: number): BossSpot['arena'] 
 const copyGame = (game: Game): Game => Object.assign(Object.create(Game.prototype) as Game, structuredClone({ ...game }));
 
 /** A copy of the bot, for playing its plan forward. */
-const copyBot = (bot: Bot): Bot => Object.assign(Object.create(Bot.prototype) as Bot, { ...bot, stomping: null, escape: null });
+const copyBot = (bot: Bot): Bot => Object.assign(Object.create(Bot.prototype) as Bot, { ...bot, stomping: null, escape: null, dodge_: null });
 
 /**
  * Plays a copy of a game (see `copyGame`) forward for up to `seconds` with `choose` deciding
