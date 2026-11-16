@@ -29,23 +29,27 @@ export interface LakeNumbers {
    */
   crossing: number;
   /**
-   * The crocodiles a hero crosses on (section 2). They lie low until a hero
-   * comes near, then surface in a row. From the first step on one it holds,
-   * then goes under.
-   *   stoneGap    about how much open water lies between one back and the next.
-   *   stoneHold   seconds a back holds from the first step on it. Left out:
-   *               it never goes under while anyone is about, so timing does
-   *               not matter (the owner's rule for Easy).
-   *   stoneTell   how long before going under it shudders and growls: its warning.
-   *   stoneSnap   true: one a hero is still on when its hold runs out snaps,
-   *               which costs a heart (the owner's rule for Hard).
-   *   stoneDown   seconds one stays under before it comes up again.
+   * The crocodiles a hero crosses on (section 2), in two rows with a rock
+   * between. A row lies under the water until a hero comes near its first
+   * crocodile; then they surface one after another along it, each with a
+   * splash, so a wave runs up the row.
+   *   stoneGap      about how much open water lies between one back and the
+   *                 next. With `crossing`, it sets how many crocodiles there are.
+   *   stoneStagger  seconds between one crocodile surfacing and the next.
+   *   stoneUp       seconds each stays up, from the start of its rise.
+   *   stonePeriod   seconds from one surfacing to its next: the row's rhythm.
+   *                 Left out, the wave runs once and they stay up, so timing
+   *                 does not matter (the owner's rule for Easy).
+   *   stoneTell     how long before going under it shudders and growls: its warning.
+   *   stoneSnap     seconds a hero can stand on one before it turns and snaps,
+   *                 which costs a heart (the owner's rule for Hard). Left out: never.
    */
   stoneGap: number;
-  stoneHold?: number;
+  stoneStagger: number;
+  stoneUp: number;
+  stonePeriod?: number;
   stoneTell: number;
-  stoneSnap: boolean;
-  stoneDown: number;
+  stoneSnap?: number;
   /**
    * THE SWINGING PINES (section 3): two rope swings across the cove, the
    * first to a rock stack, the second up to the headland's ledge.
@@ -141,8 +145,8 @@ export interface LakeNumbers {
 export const LAKE_DIFFICULTY: Record<Difficulty, LakeNumbers> = {
   easy: {
     boulderCount: 5, boulderRadius: 1.6, boulderGap: 0.9,
-    crossing: 28,
-    stoneGap: 1.3, stoneTell: 1, stoneSnap: false, stoneDown: 1.5,
+    crossing: 34,
+    stoneGap: 1.3, stoneStagger: 0.3, stoneUp: 4, stoneTell: 0,
     ropeHelp: true, stackRadius: 3.4, ledgeAhead: 3.2,
     logCount: 3, logWidth: 2.4, logGap: 1,
     tunnelLength: 4,
@@ -153,8 +157,8 @@ export const LAKE_DIFFICULTY: Record<Difficulty, LakeNumbers> = {
   },
   normal: {
     boulderCount: 6, boulderRadius: 1.2, boulderGap: 1.8,
-    crossing: 36,
-    stoneGap: 2, stoneHold: 2.2, stoneTell: 0.9, stoneSnap: false, stoneDown: 2.5,
+    crossing: 48,
+    stoneGap: 1.9, stoneStagger: 1.1, stoneUp: 2.9, stonePeriod: 6.5, stoneTell: 0.8,
     ropeHelp: false, stackRadius: 3, ledgeAhead: 3.6,
     logCount: 3, logWidth: 1.6, logGap: 2,
     tunnelLength: 6,
@@ -166,8 +170,8 @@ export const LAKE_DIFFICULTY: Record<Difficulty, LakeNumbers> = {
   },
   hard: {
     boulderCount: 7, boulderRadius: 0.85, boulderGap: 2.6,
-    crossing: 42,
-    stoneGap: 2.6, stoneHold: 1.1, stoneTell: 0.6, stoneSnap: true, stoneDown: 3.5,
+    crossing: 54,
+    stoneGap: 2.2, stoneStagger: 0.95, stoneUp: 2.1, stonePeriod: 5, stoneTell: 0.5, stoneSnap: 0.8,
     ropeHelp: false, stackRadius: 2.2, ledgeAhead: 4.2,
     logCount: 4, logWidth: 1, logGap: 2.8,
     tunnelLength: 9,

@@ -22,7 +22,7 @@
 // A rope's id goes in the level's `route` between the solid before it and the
 // solid it ends on, the way a pool's id stands for a swim.
 
-import { MOVE } from './hero';
+import { MOVE, type HeroName } from './hero';
 import type { Solid } from './level';
 
 /** A rope, as a level places it. */
@@ -55,7 +55,7 @@ export interface RopeState {
 
 /** Distances are metres, times are seconds, speeds are metres a second, angles are radians. */
 export const ROPE = {
-  /** How far a hero's hands are above its feet when it holds on. */
+  /** How far a hero's grip is above its feet when it holds on, unless the hero has its own (HANG). */
   hang: 1.5,
   /** A hero whose hands come this close to the lower part of a rope grabs it; with help, this much closer still counts. */
   reach: 1.1,
@@ -78,6 +78,31 @@ export const ROPE = {
   settle: 1.2,
 } as const;
 
+/**
+ * How far a hero's grip is above its feet while it hangs from a rope, in
+ * metres: Yaarbro's hands over his head, Caputo's jaw at the top of his body
+ * hanging nose up. Measured on the drawn models (src/view/ropes.ts hangs them
+ * by the grip), so where the rules have a hero is where it is drawn when it
+ * lets go. A hero reaches a rope with its grip, so these also say how high it
+ * reaches.
+ */
+export const HANG: Record<HeroName, number> = { Yaarbro: 2.5, Caputo: 1.4 };
+
+/**
+ * How far a hero in the air is from the end of the nearest rope it could
+ * take hold of, measured from its grip. For the drawing: a hero reaches out
+ * as a rope comes near. Infinity with none.
+ */
+export const nearestRopeEnd = (hero: { ropes: readonly RopeState[]; x: number; y: number; z: number; hero: HeroName; lastRope: string | null }): number => {
+  let nearest = Infinity;
+  for (const state of hero.ropes) {
+    if (state.rope.id === hero.lastRope) continue;
+    const end = handOf(state);
+    nearest = Math.min(nearest, Math.hypot(hero.x - end.x, hero.y + HANG[hero.hero] - end.y, hero.z - end.z));
+  }
+  return nearest;
+};
+
 export const newRope = (rope: Rope): RopeState => ({ rope, angle: 0, speed: 0, swing: ROPE.swing });
 
 /** Where a hero holds a rope as it is now: the end of it. */
@@ -98,9 +123,9 @@ export const handSpeed = (state: RopeState): { x: number; y: number; z: number }
  * The rope a hero in the air with feet at (x, y, z) can grab now, if any: its
  * hands are within reach of the lower part of one.
  */
-export const ropeInReach = (ropes: readonly RopeState[], x: number, y: number, z: number, help: boolean, not: string | null): RopeState | null => {
+export const ropeInReach = (ropes: readonly RopeState[], x: number, y: number, z: number, help: boolean, not: string | null, hang: number = ROPE.hang): RopeState | null => {
   const reach = ROPE.reach + (help ? ROPE.helpReach : 0);
-  const handsY = y + ROPE.hang;
+  const handsY = y + hang;
   for (const state of ropes) {
     if (state.rope.id === not) continue;
     const end = handOf(state);

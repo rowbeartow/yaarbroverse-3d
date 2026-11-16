@@ -24,14 +24,16 @@ import { GameSounds } from './audio/game-sounds';
 import { Sound } from './audio/mix';
 import { Player } from './audio/player';
 import { bossFighting, bossOpen } from './game/boss';
-import { Game, IDLE, type GameEvent } from './game/game';
+import { Game, IDLE, type GameEvent, type Input } from './game/game';
+import type { Difficulty } from './game/difficulty';
+import type { HeroName } from './game/hero';
 import { GhostPlayer, GhostRecorder } from './game/ghost';
 import { MOVE_NAME, STEP } from './game/hero';
 import { passageNear } from './game/swim';
 import type { Level } from './game/level';
 import { Controls } from './input/controls';
 import { stickToLevel } from './view/route-camera';
-import { levelFromAddress, listedLevels, shownLevels } from './levels';
+import { findLevel, levelFromAddress, listedLevels, shownLevels } from './levels';
 import { GhostStore } from './save/ghost-store';
 import { loadGhost, saveGhost, type GhostSlot } from './save/ghosts';
 import { Players, endBests, ghostOn, type EndBests, type Player as SavedPlayer } from './save/players';
@@ -43,12 +45,34 @@ import type { GroveView } from './view/grove-view';
 
 type Mode = 'start' | 'playing' | 'paused' | 'ended';
 
+/**
+ * What a preview page can ask of the game, set as `window.__grovePreview`
+ * before this file runs (tools/preview/lake.mjs builds one): a level, a place
+ * in it to start on, a difficulty and a hero, straight into play with nobody
+ * picked and nothing saved; `pilot` plays instead of the controls (the test
+ * bot, for "Watch"), `again` says when to start that place over, and `hold`
+ * stops the clock for a still picture. Players
+ * never have one: the game itself never sets it.
+ */
+interface PreviewHook {
+  level?: string;
+  at?: string;
+  difficulty?: Difficulty;
+  hero?: HeroName;
+  pilot?: (game: Game) => Input;
+  again?: (game: Game) => boolean;
+  /** True while the page holds the game still, for a still picture of one moment. */
+  hold?: () => boolean;
+}
+const preview = (window as unknown as { __grovePreview?: PreviewHook }).__grovePreview ?? null;
+
 const canvas = document.querySelector<HTMLCanvasElement>('#view')!;
 
 const boot = (): void => {
   let view: GroveView | null = null;
-  let entry = levelFromAddress(window.location.search) ?? listedLevels()[0];
+  let entry = findLevel(preview?.level) ?? levelFromAddress(window.location.search) ?? listedLevels()[0];
   let choice: Choice = loadChoice();
+  if (preview) choice = { hero: preview.hero ?? choice.hero, difficulty: preview.difficulty ?? choice.difficulty };
   let level: Level = entry.build(choice.difficulty);
   let game = new Game(level, choice.difficulty, choice.hero);
   let mode: Mode = 'start';
@@ -132,6 +156,7 @@ const boot = (): void => {
   const setUp = (): void => {
     level = entry.build(choice.difficulty);
     game = new Game(level, choice.difficulty, choice.hero);
+    if (preview?.at) game.startOn(preview.at);
     before = { x: game.x, y: game.y, z: game.z };
     owed = 0;
     sinceGoal = 0;
@@ -429,14 +454,14 @@ const boot = (): void => {
     if (!view) return;
     const dt = Math.min((now - last) / 1000, 0.1);
     last = now;
-    const running = (mode === 'playing' || mode === 'ended') && !turned;
+    const running = (mode === 'playing' || mode === 'ended') && !turned && !preview?.hold?.();
     if (running) {
       owed += dt;
       let steps = 0;
       while (owed >= STEP && steps < 6) {
         before = { x: game.x, y: game.y, z: game.z };
         // The stick follows the camera: up is away from it, whichever way it faces (src/view/route-camera.ts).
-        game.step(mode === 'playing' ? stickToLevel(controls.read(), view.facing) : IDLE);
+        game.step(mode !== 'playing' ? IDLE : preview?.pilot ? preview.pilot(game) : stickToLevel(controls.read(), view.facing));
         // After a fall, or after running out of hearts, the hero is somewhere else entirely: do not slide there.
         if (game.events.some((event) => event.type === 'fall' || event.type === 'restored')) before = { x: game.x, y: game.y, z: game.z };
         view.handle(game.events);
@@ -448,6 +473,8 @@ const boot = (): void => {
         steps += 1;
       }
       if (steps === 6) owed = 0;
+      // A preview page starts its place over when it says so.
+      if (preview?.again?.(game)) play();
       screens.setHearts(game.hearts, level.hearts);
       screens.setSwimming(game.swimming);
       screens.setBreath(Number.isFinite(game.maxBreath) && (game.under || game.breath < game.maxBreath) ? game.breath / game.maxBreath : null);
@@ -587,6 +614,15 @@ const boot = (): void => {
     fit();
     // A level picked while the page was loading may still be fetching its own files.
     if (!fetching) screens.setLoading(null);
+    // A preview page goes straight into play, with nobody picked.
+    if (preview) {
+      whoScreen.close();
+      const go = (): void => {
+        if (fetching) setTimeout(go, 100);
+        else play();
+      };
+      go();
+    }
     last = performance.now();
     requestAnimationFrame(loop);
   })();

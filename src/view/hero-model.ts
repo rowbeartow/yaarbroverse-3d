@@ -37,7 +37,10 @@ import type { HeroInfo, HeroView, Pose } from './heroes';
 /** How fast a roll clip turns at full rolling speed, against how it was made. */
 const ROLL_RATE = 1.6;
 
-export type ClipRole = 'idle' | 'walk' | 'trot' | 'run' | 'jump' | 'fall' | 'land' | 'roll' | 'tread' | 'swim' | 'under' | 'climb' | 'shake';
+export type ClipRole = 'idle' | 'walk' | 'trot' | 'run' | 'jump' | 'fall' | 'land' | 'roll' | 'tread' | 'swim' | 'under' | 'climb' | 'shake' | 'reach' | 'catch' | 'hang' | 'release';
+
+/** The rope clips, in the order they play: reaching out, catching hold, hanging on, letting go. */
+const ROPE_ROLES = ['reach', 'catch', 'hang', 'release'] as const;
 
 export interface HeroModelSpec {
   /** File name in assets/models/. */
@@ -103,6 +106,14 @@ export interface HeroModelSpec {
    * over climbing out.
    */
   swim?: { tread: number; swim: number; under: number; strokes: number; climb: [number, number] };
+  /**
+   * Rope swings. `grip` names the bones a rope is held by: the hero is hung
+   * so the middle of them is on the rope (his hands, or Caputo's jaw, whose
+   * `gripAhead` puts the hold that many metres along the bone, at the front
+   * of the mouth). `tilt` turns the whole body nose up while hanging, in
+   * radians, for a four-legged hero who hangs from his teeth.
+   */
+  rope?: { grip: string[]; gripAhead?: number; tilt: number };
 }
 
 /** Each hero's model. */
@@ -129,7 +140,14 @@ export const HERO_MODELS: Record<HeroName, HeroModelSpec> = {
       swim: ['swim'],
       under: ['underwater'],
       climb: ['climb'],
+      // From Meshy's animation library, on the same new rig (tools/yaarbro.rope.json).
+      reach: ['rope_reach'],
+      catch: ['rope_catch'],
+      hang: ['rope_hang'],
+      release: ['rope_release'],
     },
+    // He holds a rope in both hands.
+    rope: { grip: ['LeftHand', 'RightHand'], tilt: 0 },
     // Measured in Blender: treading, the water is at his shoulders; crawling, at his back.
     swim: { tread: -0.33, swim: 0.47, under: -0.25, strokes: 2.2, climb: [0.55, 1] },
     // The jump clip is already cut to the part where he is in the air.
@@ -164,7 +182,13 @@ export const HERO_MODELS: Record<HeroName, HeroModelSpec> = {
       under: ['underwater'],
       climb: ['jump'],
       shake: ['shake'],
+      reach: ['rope_reach'],
+      catch: ['rope_catch'],
+      hang: ['rope_hang'],
+      release: ['rope_release'],
     },
+    // He catches a rope in his teeth and hangs nose up (ROPE_TILT in tools/rig-quadruped.py: 70 degrees).
+    rope: { grip: ['jaw'], gripAhead: 0.12, tilt: (70 * Math.PI) / 180 },
     // Measured in Blender: paddling, his back is at the water and his head out of it.
     swim: { tread: 0.2, swim: 0.2, under: -0.25, strokes: 1.6, climb: [0, 0.3] },
     // His jump opens with a crouch and a push from the hind legs.
@@ -282,6 +306,11 @@ export class ModelHero implements HeroView {
   private shaking = 0;
   /** The body's tip along a dive or a swim up, in radians. */
   private tip = 0;
+  /** How much of each rope clip shows, 0 to 1, and the bones a rope is held by. */
+  private reaching = 0;
+  private hanging = 0;
+  private releasing = 0;
+  private readonly gripBones: Object3D[] = [];
 
   /** Materials made for this hero alone (see `simple` and `ghost`), freed with it. */
   private readonly ownMaterials: Material[] = [];
@@ -336,7 +365,7 @@ export class ModelHero implements HeroView {
     this.root.add(this.body);
 
     this.mixer = new AnimationMixer(model);
-    for (const role of ['idle', 'walk', 'trot', 'run', 'jump', 'fall', 'land', 'roll', 'tread', 'swim', 'under', 'climb', 'shake'] as const) {
+    for (const role of ['idle', 'walk', 'trot', 'run', 'jump', 'fall', 'land', 'roll', 'tread', 'swim', 'under', 'climb', 'shake', ...ROPE_ROLES] as const) {
       const clip = findClip(source.animations, spec.clips[role]);
       if (!clip) continue;
       const action = this.mixer.clipAction(clip);
@@ -370,6 +399,18 @@ export class ModelHero implements HeroView {
     // The hero's own move: a roll loops for as long as it is held, and a
     // pounce is held as a pose that follows how far through the burst he is.
     this.actions.roll?.setLoop(LoopRepeat, Infinity).play();
+    // On a rope: reaching, catching and letting go play once and hold their last pose; hanging loops.
+    for (const role of ['reach', 'catch', 'release'] as const) {
+      const action = this.actions[role];
+      if (!action) continue;
+      action.setLoop(LoopOnce, 1);
+      action.clampWhenFinished = true;
+    }
+    this.actions.hang?.setLoop(LoopRepeat, Infinity).play();
+    for (const name of spec.rope?.grip ?? []) {
+      const bone = model.getObjectByName(name);
+      if (bone) this.gripBones.push(bone);
+    }
     this.animate({ pace: 0, grounded: true, rise: 0 }, 0);
 
     // Stand the model on the spot the rules use, as it stands at rest: scaled
@@ -383,7 +424,18 @@ export class ModelHero implements HeroView {
     this.body.rotation.y = spec.turn;
   }
 
-  react(event: 'jump' | 'land' | 'bounce' | 'out'): void {
+  react(event: 'jump' | 'land' | 'bounce' | 'out' | 'catch' | 'letgo'): void {
+    if (event === 'catch') {
+      // Taking hold: the catch plays once into the hang.
+      this.actions.catch?.reset().play();
+      this.hanging = Math.max(this.hanging, 0.6);
+      return;
+    }
+    if (event === 'letgo') {
+      this.actions.release?.reset().play();
+      this.releasing = 1;
+      return;
+    }
     if (event === 'out') {
       // Out of the water: shake it off, if this hero does.
       const shake = this.actions.shake;
@@ -571,10 +623,12 @@ export class ModelHero implements HeroView {
       }
       shake.setEffectiveWeight(this.shaking);
     }
+    // On a rope: reaching for it, catching it, hanging on, and letting go take over from everything else.
+    const ropeTilt = this.ropeClips(pose, dt);
     // Underwater the body tips along its way up or down.
     const wantTip = pose.water === 'under' ? Math.max(-0.3, Math.min(0.3, 0.5 * Math.atan2(pose.rise, Math.max(1.5, pose.pace * MOVE.walkSpeed)))) : 0;
     this.tip = approach(this.tip, wantTip, 6, dt);
-    this.body.rotation.x = -this.tip;
+    this.body.rotation.x = -this.tip - ropeTilt;
     // Each clip sits at its own depth in the water.
     const lift = this.wet * ((1 - this.deep) * (swimSpec.tread + (swimSpec.swim - swimSpec.tread) * movingShare(pose.pace)) + this.deep * swimSpec.under);
     this.body.position.y = climbing ? 0 : lift;
@@ -582,6 +636,76 @@ export class ModelHero implements HeroView {
 
     this.squashed *= Math.exp(-dt * 10);
     this.body.scale.set(1 + this.squashed * 0.5, 1 - this.squashed, 1 + this.squashed * 0.5);
+  }
+
+  /**
+   * Weighs the rope clips against everything else for this frame, and returns
+   * how far the body is turned nose up for hanging (a hero who hangs from his
+   * teeth). Reaching shows while `pose.rope` is 'reach'; the catch, then the
+   * hang, while it is 'hang'; letting go plays once after, fading as the hero
+   * flies on and gone by the time they land.
+   */
+  private ropeClips(pose: Pose, dt: number): number {
+    const { actions } = this;
+    const reach = actions.reach;
+    const catching = actions.catch;
+    const hang = actions.hang;
+    const release = actions.release;
+    if (!hang) return 0;
+    const reachWanted = pose.rope === 'reach' ? 1 : 0;
+    // A reach starts from its first frame each time a rope comes near.
+    if (reach && reachWanted && this.reaching < 0.02) reach.reset().play();
+    this.reaching = approach(this.reaching, reachWanted, reachWanted ? 16 : 10, dt);
+    this.hanging = approach(this.hanging, pose.rope === 'hang' ? 1 : 0, pose.rope === 'hang' ? 20 : 14, dt);
+    if (release && this.releasing > 0) {
+      const left = 1 - release.time / Math.max(release.getClip().duration, 0.001);
+      // Fades out over its last part, and at once on landing or in the water.
+      this.releasing = pose.grounded || pose.water ? Math.min(this.releasing, 0) : Math.min(this.releasing, Math.max(0, left * 2.5));
+    }
+    const total = Math.min(1, this.reaching * (1 - this.hanging) + this.hanging + this.releasing * (1 - this.hanging));
+    if (total < 0.001) {
+      for (const role of ROPE_ROLES) actions[role]?.setEffectiveWeight(0);
+      return 0;
+    }
+    for (const role of Object.keys(actions) as ClipRole[]) {
+      if ((ROPE_ROLES as readonly string[]).includes(role)) continue;
+      const other = actions[role];
+      if (other) other.setEffectiveWeight(other.getEffectiveWeight() * (1 - total));
+    }
+    // While hanging, the catch shows over its own length, then the hang.
+    const caught = catching && catching.isRunning() ? 1 - catching.time / Math.max(catching.getClip().duration, 0.001) : 0;
+    const catchShare = catching ? Math.min(1, caught * 1.4) : 0;
+    reach?.setEffectiveWeight(this.reaching * (1 - this.hanging) * (1 - this.releasing));
+    catching?.setEffectiveWeight(this.hanging * catchShare);
+    hang.setEffectiveWeight(this.hanging * (1 - catchShare));
+    release?.setEffectiveWeight(this.releasing * (1 - this.hanging));
+    const tilt = this.spec.rope?.tilt ?? 0;
+    // Nose up for as long as he hangs, and easing level again as he lets go.
+    const letGo = release ? Math.min(1, release.time / Math.max(release.getClip().duration * 0.7, 0.001)) : 1;
+    return tilt * Math.max(this.hanging, this.releasing * (1 - letGo));
+  }
+
+  /**
+   * Where the hero holds a rope, in the world, as drawn now: the middle of its
+   * grip bones (and for a jaw, out at the front of the mouth). Call after
+   * `animate` and after the root has been placed. False for a hero with none.
+   */
+  grip(into: Vector3): boolean {
+    if (this.gripBones.length === 0) return false;
+    this.root.updateMatrixWorld(true);
+    into.set(0, 0, 0);
+    const point = new Vector3();
+    for (const bone of this.gripBones) {
+      point.set(0, this.spec.rope?.gripAhead ? this.spec.rope.gripAhead / Math.max(bone.getWorldScale(new Vector3()).y, 1e-6) : 0, 0);
+      into.add(bone.localToWorld(point));
+    }
+    into.multiplyScalar(1 / this.gripBones.length);
+    return true;
+  }
+
+  /** How much the hero is held by a rope right now, 0 to 1: the share of its drawing the grip decides. */
+  get held(): number {
+    return this.hanging;
   }
 
   /** Makes a ghost fainter or fuller: 0 is gone, 1 is as see-through as a ghost gets. */

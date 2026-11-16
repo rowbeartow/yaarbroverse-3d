@@ -22,7 +22,6 @@ import {
   LinearSRGBColorSpace,
   Mesh,
   MeshBasicMaterial,
-  MeshLambertMaterial,
   MeshStandardMaterial,
   PCFShadowMap,
   PerspectiveCamera,
@@ -51,9 +50,6 @@ import { FIGHT_CAMERA, fightView } from '../../src/view/boss-camera';
 import { ENEMY_MODELS, EnemyView } from '../../src/view/enemies';
 import { HERO_MODELS, ModelHero } from '../../src/view/hero-model';
 import { WIND, type Materials } from '../../src/view/materials';
-import { CrocStones } from '../../src/view/croc-stones';
-import { RopesView, hangOnRope } from '../../src/view/ropes';
-import { cameraFor, followsRoute, forwardOf, stickToLevel, turnToward } from '../../src/view/route-camera';
 import { UNDERWATER_FOG, WaterView, sightBlocked, underwaterCeiling, underwaterDepth } from '../../src/view/water';
 import { SWIM } from '../../src/game/swim';
 // The rule tests' own player. In "Watch", it is what fights a boss.
@@ -167,50 +163,33 @@ const PLACES: Place[] = [
     script: () => [],
   },
   {
-    // Milestone nine: the crocodile stepping stones up the lake's east channel.
-    // The rule tests' own player hops across on their backs, then starts again.
-    id: 'stones',
-    label: 'Crocodile stepping stones',
+    // Milestone eight, part three: the crocodiles, in the lake's two long
+    // swims. The rule tests' own player swims across, looking ahead and
+    // getting out of the line of each lunge, then starts again.
+    id: 'reed',
+    label: 'Crocodiles: the Reed Shallows',
     level: 'cocolalla',
     bot: true,
+    watch: 'croc-reed-1',
     ends: 'island',
-    caption: 'The rule tests’ own player has the hero, at full speed. The crocodiles lie low until it comes near, then surface in a row. It hops from back to back, rests on the rock half way, and jumps up onto the rock island. Then it starts again. Press "Play it yourself" and stand still on one to see what it does on each difficulty.',
+    caption: 'The rule tests’ own player swims from the grassy point to the rock island, at full speed. When a crocodile gives its tell it swims out of the line, or dives under it, and keeps going. On Easy the crocodile waits well to the side, and a hero swimming straight across never wakes it. Then it starts again.',
     start: (level) => {
       const point = solid(level, 'point');
-      return on(point, 0, 1);
+      return on(point, 0, -point.halfZ + 1.5);
     },
     script: () => [],
   },
   {
-    // Milestone nine: the rope swings across the lake's cove. The rule tests'
-    // own player jumps for each rope and lets go when that lands it on the
-    // rock stack, then on the headland's ledge. Then it starts again.
-    id: 'swings',
-    label: 'Rope swings',
+    id: 'cove',
+    label: 'Crocodiles: Cattail Cove',
     level: 'cocolalla',
     bot: true,
-    ends: 'headland',
-    caption: 'The rule tests’ own player has the hero, at full speed. It runs off the rock island, jumps for the rope and takes hold with no button, swings, and lets go with Jump to land on the rock stack. Then the second rope, up to the ledge on the headland. Then it starts again. Press "Play it yourself" to try: on Easy, letting go anywhere lands safely.',
+    watch: 'croc-cove-1',
+    ends: 'post-1',
+    caption: 'The rule tests’ own player swims across Cattail Cove from the reed bar to the first post of the old pier, at full speed, getting out of the line of each lunge. Then it starts again.',
     start: (level) => {
-      const island = solid(level, 'island');
-      return on(island, 1, 0);
-    },
-    script: () => [],
-  },
-  {
-    // The crocodiles, in the lake's long swim. The rule tests' own player
-    // swims down the lake, looking ahead and getting out of the line of each
-    // lunge, then starts again.
-    id: 'open',
-    label: 'Crocodiles: the Open Water',
-    level: 'cocolalla',
-    bot: true,
-    watch: 'croc-open-1',
-    ends: 'reed-bar',
-    caption: 'The rule tests’ own player swims down the lake from the gravel bar to the reed bar, at full speed. When a crocodile gives its tell it swims out of the line, or dives under it, and keeps going. On Easy the crocodile waits well to the side, and a hero swimming straight down never wakes it. Then it starts again.',
-    start: (level) => {
-      const bar = solid(level, 'gravel-bar');
-      return on(bar, -bar.halfX + 1.5, 0);
+      const bar = solid(level, 'reed-bar');
+      return on(bar, 0, -bar.halfZ + 1.5);
     },
     script: () => [],
   },
@@ -400,9 +379,6 @@ const start = async (): Promise<void> => {
       made.push(mesh);
     };
     for (const s of level.solids) {
-      // A wooded island is scenery the game draws as a rise: here it would only wall off the view.
-      // A crocodile stepping stone is drawn from the crocodile's model.
-      if (s.kind === 'island' || s.id === 'headland-back' || s.motion?.kind === 'float') continue;
       const depth = Math.min(s.top - s.bottom, 14);
       if (s.kind === 'mushroom') {
         const top = new Mesh(new CylinderGeometry(s.halfX, s.halfX * 0.8, 0.5, 28), cap);
@@ -472,11 +448,6 @@ const start = async (): Promise<void> => {
   let bot: Bot | null = null;
   /** The level's water, drawn by the game's own code, and how far into the underwater look the picture is. */
   let water: WaterView | null = null;
-  /** The level's ropes, drawn by the game's own code, and the camera that follows the route, as in the game. */
-  let ropes: RopesView | null = null;
-  let stones: CrocStones | null = null;
-  let yaw = 0;
-  let lastStood: string | null = null;
   let under = 0;
   let climbingOut = false;
   let sinceOut = -1;
@@ -544,42 +515,9 @@ const start = async (): Promise<void> => {
     }
     if (level.water?.length) {
       // The water needs only a rock surface from the game's materials.
-      // A lake of several pools has one bed under all of it, as in the game: no rock walls between its pools.
-      const lake = level.water.length > 1;
-      water = new WaterView(level.water, { rock } as unknown as Materials, PLAIN, !lake);
+      water = new WaterView(level.water, { rock } as unknown as Materials, PLAIN);
       scene.add(water.group);
-      if (lake) {
-        const minX = Math.min(...level.water.map((w) => w.minX));
-        const maxX = Math.max(...level.water.map((w) => w.maxX));
-        const minZ = Math.min(...level.water.map((w) => w.minZ));
-        const maxZ = Math.max(...level.water.map((w) => w.maxZ));
-        const bed = new Mesh(new BoxGeometry(maxX - minX + 400, 0.2, maxZ - minZ + 400), new MeshBasicMaterial({ color: 0x3f7f6c }));
-        bed.position.set((minX + maxX) / 2, level.water[0].floor - 0.4, (minZ + maxZ) / 2);
-        scene.add(bed);
-        blocks.push(bed);
-      }
     }
-    if (ropes) {
-      scene.remove(ropes.group);
-      ropes.dispose();
-      ropes = null;
-    }
-    if (level.ropes?.length) {
-      // The ropes need only bark and green from the game's materials.
-      ropes = new RopesView(level, { simple: true, bark: new MeshLambertMaterial({ color: 0x6b5138 }), foliage: new MeshLambertMaterial({ color: 0x4f8a55 }) } as unknown as Materials);
-      scene.add(ropes.group);
-    }
-    if (stones) {
-      scene.remove(stones.group);
-      stones.dispose();
-      stones = null;
-    }
-    if (level.solids.some((s) => s.motion?.kind === 'float')) {
-      stones = new CrocStones(level, enemyModels.crocodile, PLAIN);
-      scene.add(stones.group);
-    }
-    lastStood = null;
-    yaw = followsRoute(level) ? cameraFor(level, level.route[Math.max(0, level.route.indexOf(place.ends ?? '') - 1)] ?? null).facing : 0;
     under = 0;
     climbingOut = false;
     sinceOut = -1;
@@ -662,10 +600,6 @@ const start = async (): Promise<void> => {
         }
         if (event.type === 'land') climbingOut = false;
       }
-      if (event.type === 'piece' && event.what === 'snap') {
-        stones?.snap(event.id);
-        say('Snap! Do not stand on a crocodile too long.');
-      }
       if (event.type === 'splash') water?.splash(game.x, game.z, Math.min(1, event.speed / 14));
       else if (event.type === 'dive') water?.ring(game.x, game.z, 1.6);
       else if (event.type === 'surface') water?.ring(game.x, game.z, 1.8);
@@ -725,9 +659,6 @@ const start = async (): Promise<void> => {
     let turn = game.facing - hero.root.rotation.y;
     turn = Math.atan2(Math.sin(turn), Math.cos(turn));
     hero.root.rotation.y += turn * (1 - Math.exp(-14 * dt));
-    ropes?.update(game.ropes);
-    stones?.update(game.level.solids, dt);
-    hangOnRope(hero.root, game.swinging, dt);
     hero.animate(
       {
         pace: Math.min(Math.hypot(game.vx, game.vz) / MOVE.walkSpeed, 1),
@@ -777,19 +708,8 @@ const start = async (): Promise<void> => {
     under = Math.max(0, Math.min(1, under + (game.swimming && game.under ? dt * 3.5 : -dt * 3.5)));
     follow.y = ease(follow.y, under > 0 ? y : Math.max(y, -4), game.grounded || game.swimming ? 5 : 2.6, dt);
     const out = fightView(fight, follow, level.boss);
-    // A level whose route turns has the camera turn with it (src/view/route-camera.ts); the others keep the old lean toward the middle.
-    const turns = followsRoute(level);
-    if (turns) {
-      if (game.groundId) lastStood = game.groundId;
-      const wanted = cameraFor(level, lastStood ?? level.route[Math.max(0, level.route.indexOf(place.ends ?? '') - 1)] ?? null);
-      yaw = turnToward(yaw, wanted.facing, dt);
-      const ahead = forwardOf(yaw);
-      camera.position.set(follow.x - ahead.x * 12 * out.back * wanted.pull, follow.y + 8 * out.up * wanted.pull, follow.z - ahead.z * 12 * out.back * wanted.pull);
-      camera.lookAt(follow.x + ahead.x * 4.5, follow.y + 1, follow.z + ahead.z * 4.5);
-    } else {
-      camera.position.set(follow.x * 0.85, follow.y + 8 * out.up, follow.z + 12 * out.back);
-      camera.lookAt(follow.x * 0.92, follow.y + 1, follow.z - 4.5);
-    }
+    camera.position.set(follow.x * 0.85, follow.y + 8 * out.up, follow.z + 12 * out.back);
+    camera.lookAt(follow.x * 0.92, follow.y + 1, follow.z - 4.5);
     // Underwater, as in the game (grove-view.ts): the camera dips in close behind the swimmer, and the fog closes in, blue-green.
     const pool = game.water ?? level.water?.[0];
     const share = under * under * (3 - 2 * under);
@@ -847,7 +767,7 @@ const start = async (): Promise<void> => {
     let steps = 0;
     while (owed >= STEP && steps < 6) {
       was = { x: game.x, y: game.y, z: game.z };
-      game.step(playing ? stickToLevel(controls.read(), yaw) : bot ? bot.input(game) : scripted());
+      game.step(playing ? controls.read() : bot ? bot.input(game) : scripted());
       react(game.events);
       owed -= STEP;
       steps += 1;

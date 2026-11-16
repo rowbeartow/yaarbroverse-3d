@@ -9,7 +9,7 @@
 import { describe, expect, it } from 'vitest';
 import { DIFFICULTIES, type Difficulty } from '../src/game/difficulty';
 import { Game, IDLE } from '../src/game/game';
-import { HEROES, STEP } from '../src/game/hero';
+import { HEROES, STEP, type HeroName } from '../src/game/hero';
 import type { Level, Solid } from '../src/game/level';
 import { SWIM, passageNear } from '../src/game/swim';
 import { LAKE_DIFFICULTY } from '../src/levels/cocolalla/difficulty';
@@ -203,10 +203,10 @@ describe.each(DIFFICULTIES)('the lake on %s', (difficulty) => {
 
 describe('the rope swings', () => {
   /** Jumps for the rope from the bank before it, holds on for `wait` seconds, lets go, and says what the hero came down on. */
-  const swing = (difficulty: Difficulty, ropeId: string, wait: number, steer: boolean): string => {
+  const swing = (difficulty: Difficulty, ropeId: string, wait: number, steer: boolean, hero: HeroName = 'Yaarbro'): string => {
     const level = buildLake(difficulty);
     const from = byId(level, level.route[level.route.indexOf(ropeId) - 1]);
-    const game = new Game(level, difficulty, 'Yaarbro');
+    const game = new Game(level, difficulty, hero);
     Object.assign(game, { x: from.x - from.halfX + 2.5, z: from.z, y: from.top, groundId: from.id, grounded: true });
     for (let i = 0; i < 4 / STEP && !game.swinging; i += 1) game.step({ ...IDLE, moveX: -1, jump: game.x < from.x - from.halfX + 0.6 });
     expect(game.ropeId, `${difficulty} ${ropeId}`).toBe(ropeId);
@@ -222,9 +222,9 @@ describe('the rope swings', () => {
   };
   /** One swing out and back takes about three seconds. */
   const WAITS = Array.from({ length: 31 }, (_, i) => i * 0.1);
-  const lands = (difficulty: Difficulty, ropeId: string, steer: boolean): boolean[] => {
+  const lands = (difficulty: Difficulty, ropeId: string, steer: boolean, hero: HeroName = 'Yaarbro'): boolean[] => {
     const to = buildLake(difficulty).ropes!.find((r) => r.id === ropeId)!.to;
-    return WAITS.map((wait) => swing(difficulty, ropeId, wait, steer) === to);
+    return WAITS.map((wait) => swing(difficulty, ropeId, wait, steer, hero) === to);
   };
 
   it('two ropes cross the cove, to the rock stack and then up to the headland, and a jump from the bank before each reaches it', () => {
@@ -240,17 +240,30 @@ describe('the rope swings', () => {
 
   it('on Easy, letting go at any point in the swing lands safely (the owner\'s rule)', () => {
     expect(buildLake('easy').ropeHelp).toBe(true);
-    for (const ropeId of ['rope-1', 'rope-2']) for (const steer of [false, true]) expect(lands('easy', ropeId, steer).every(Boolean), `${ropeId} steer ${steer}`).toBe(true);
+    for (const hero of HEROES) {
+      for (const ropeId of ['rope-1', 'rope-2']) for (const steer of [false, true]) expect(lands('easy', ropeId, steer, hero).every(Boolean), `${hero} ${ropeId} steer ${steer}`).toBe(true);
+    }
   });
 
   it('on Normal, letting go anywhere on the way forward gets there, and at the back of the swing does not', () => {
     expect(buildLake('normal').ropeHelp).toBe(false);
-    for (const ropeId of ['rope-1', 'rope-2']) {
-      const steering = lands('normal', ropeId, true);
-      // The first seven tenths of a second are the way forward.
-      expect(steering.slice(1, 8).every(Boolean), ropeId).toBe(true);
-      // Around half a swing later the rope is at the back.
-      expect(steering.slice(13, 18).some(Boolean), ropeId).toBe(false);
+    for (const hero of HEROES) {
+      for (const ropeId of ['rope-1', 'rope-2']) {
+        const steering = lands('normal', ropeId, true, hero);
+        // The first seven tenths of a second are the way forward.
+        expect(steering.slice(1, 8).every(Boolean), `${hero} ${ropeId}`).toBe(true);
+        // Around half a swing later the rope is at the back.
+        expect(steering.slice(13, 18).some(Boolean), `${hero} ${ropeId}`).toBe(false);
+      }
+    }
+  });
+
+  it('the two heroes have about as many good moments to let go: hanging by the hands or by the teeth makes no rope harder', () => {
+    for (const difficulty of ['normal', 'hard'] as const) {
+      for (const ropeId of ['rope-1', 'rope-2']) {
+        const [yaarbro, caputo] = HEROES.map((hero) => lands(difficulty, ropeId, true, hero).filter(Boolean).length);
+        expect(Math.abs(yaarbro - caputo), `${difficulty} ${ropeId}: ${yaarbro} and ${caputo}`).toBeLessThanOrEqual(2);
+      }
     }
   });
 

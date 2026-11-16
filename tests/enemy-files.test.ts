@@ -13,7 +13,7 @@ import { beforeAll, describe, expect, it } from 'vitest';
 const ENEMIES: Record<string, { clips: readonly string[]; body: string; sinks?: readonly string[] }> = {
   marmot: { clips: ['defeated', 'hit', 'hop', 'idle', 'throw', 'walk', 'warning', 'winded'], body: 'hips' },
   mosquito: { clips: ['defeated', 'dive', 'hover', 'warning', 'winded'], body: 'body' },
-  crocodile: { clips: ['defeated', 'dive', 'hit', 'lunge', 'lurk', 'swim'], body: 'hips', sinks: ['defeated'] },
+  crocodile: { clips: ['defeated', 'dive', 'float', 'hit', 'lunge', 'lurk', 'swim', 'turn_snap'], body: 'hips', sinks: ['defeated'] },
 };
 
 const path = (name: string): string => `assets/enemies/${name}.glb`;

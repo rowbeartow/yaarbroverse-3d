@@ -98,9 +98,9 @@
 
 <main class="page">
   <header>
-    <p class="eyebrow">Yaarbroverse 3D · milestone nine</p>
-    <h1>Rope swings and crocodile stepping stones</h1>
-    <p class="lede">The two things the kids picked for the lake, on the game’s own rules, at full speed, on each difficulty: the rope swings across the cove, and the crocodiles to cross the east channel on. The rule tests’ own player does each, and you can take the hero yourself. The ropes, the crocodiles, the water and the hero are the game’s own; the banks and the rocks are plain blocks, and the wooded island is left out. Nothing here is on the live site until you say OK.</p>
+    <p class="eyebrow">Yaarbroverse 3D · milestone eight, part three</p>
+    <h1>The crocodiles, in the lake</h1>
+    <p class="lede">The crocodile in the lake’s two long swims, the Reed Shallows and Cattail Cove, on the game’s own rules, at full speed, on each difficulty. The rule tests’ own player swims across and gets past them. The water and the crocodiles are the game’s own; the banks and the rocks are plain blocks. Nothing here is on the live site until you say OK.</p>
   </header>
 
   <p id="status" role="status">Loading the models…</p>
@@ -111,7 +111,7 @@
   </div>
 
   <div class="window">
-    <canvas id="view" aria-label="The hero on the rope swings or the crocodile stepping stones, in a blocked-out copy of the lake, moving at the game's speed"></canvas>
+    <canvas id="view" aria-label="The hero swimming in a blocked-out copy of the lake, with a crocodile, moving at the game's speed"></canvas>
     <div id="hearts"></div>
     <div id="news" aria-live="polite"></div>
     <div id="boss" hidden><p id="boss-name"></p><div id="boss-health" role="img" aria-label="The boss's health"></div></div>
@@ -128,66 +128,43 @@
     <div><span class="label">Who has the hero</span><div class="row" id="modes" role="group" aria-label="Watch or play"></div></div>
     <div><span class="label">Hero</span><div class="row" id="heroes" role="group" aria-label="Hero"></div></div>
   </div>
-  <p class="note">Pick “Rope swings” or “Crocodile stepping stones” under “Where”, and a difficulty. “Watch” is the rule tests’ own player doing it, over and over. “Play it yourself” gives you the hero at the start with the game’s own controls; click the picture first if the keys do nothing. On the ropes: run left off the rock island and jump, and the hero takes hold by itself; Space (or the right thumb) lets go. On the crocodiles: up is away from the camera; hop from back to back. Miss either, and you land in the water: swim to a rock and climb out with Jump. The third place is the crocodiles in the open water, as they are in the game now. This page has no sound.</p>
+  <p class="note">Pick a swim under “Where” and a difficulty. “Watch” is the rule tests’ own player crossing that swim, over and over. “Play it yourself” gives you the hero at the edge of the water with the game’s own controls; click the picture first if the keys do nothing. In the water: move to swim, hold X or Shift (or the round button) to dive, hold Space to swim up. The other places on the page are earlier previews, left as they were. This page has no sound.</p>
 
   <hr class="rule">
 
   <!-- Hand-written for each change: bring it up to date before publishing. -->
   <section class="words">
-    <h2>How a rope swing goes</h2>
+    <h2>How a crocodile goes</h2>
     <ul>
-      <li><b>Taking hold.</b> A rope hangs still from a bough on a bare snag, out past the edge, its end a jump’s height up. Jump at it and the hero grabs it, with no button.</li>
-      <li><b>Swinging.</b> The hero swings out and back, always the same width of swing, for as long as they hold on. The stick does nothing. One swing out and back takes about three seconds.</li>
-      <li><b>Letting go.</b> Jump lets go. The hero flies on the way the rope was going, with a small kick upward, and can steer in the air. Let go on the way forward to fly on. Let go at the back of the swing and the hero drops short.</li>
-      <li><b>A miss</b> lands in the cove, never a fall. Swim back and climb onto the rock island or the rock stack.</li>
-      <li><b>The same rope goes in any level:</b> a level hangs one by saying where it is tied, how long it is, which way it carries and what it leads to.</li>
+      <li><b>Lurking.</b> It waits low in the water with only its eyes and snout showing. Touching it then does nothing.</li>
+      <li><b>Swimming after you.</b> Once you are in its stretch of water it comes after you, back awash, at your depth: it follows you down if you dive. It is always slower than you swim.</li>
+      <li><b>Its tell.</b> Close enough, it fixes its aim on where you are. Its eyes sink under and it creeps at you, pushing a wake ahead of it. On Easy a line also shows where it will lunge; on Normal and Hard there is no line, as with every enemy.</li>
+      <li><b>The lunge.</b> It shoots along that line, jaws snapping. Only the lunge hurts, at the surface or underwater. Swim out of the line, or dive under it, and it misses: that is the move that gets you past.</li>
+      <li><b>Resting.</b> After a lunge it lies at the surface getting its breath back: the time to swim on past. Landing on it beats it, and so does Yaarbro’s roll or Caputo’s pounce from a log or the bank.</li>
+      <li><b>The regen rule.</b> Sent back to a safe bank, you find every crocodile you had not beaten back at home at full strength.</li>
     </ul>
   </section>
   <section class="words">
     <h2>On each difficulty</h2>
     <ul>
-      <li><b>Easy:</b> letting go at any point in the swing, forward or back, throws the hero onto the rock stack or the ledge. The stick cannot spoil it. The rope is also a little easier to reach.</li>
-      <li><b>Normal:</b> let go anywhere on the way forward and you get there. The stack is 6 m across.</li>
-      <li><b>Hard:</b> the stack is 4.4 m across and the ledge is further off, so fewer moments work: let go in the upper half of the way forward.</li>
-      <li><b>The bot crosses on every difficulty</b> as each hero. It holds on until letting go would land it.</li>
+      <li><b>Easy:</b> one in each swim, well to the side. Swim straight across and it never wakes. Its tell lasts 1.8 s, with the line, and it is slow.</li>
+      <li><b>Normal:</b> one in each swim, right across the way. Its tell lasts 0.9 s, it swims 2.4 m a second (you swim 3.6), and lunges 4.5 m.</li>
+      <li><b>Hard:</b> two in each swim, faster (2.9), lunging further (5.5 m), a tell of 0.63 s, a shorter rest, and two hits to beat.</li>
+      <li><b>The bot gets past every one</b>, on every difficulty, as each hero, without losing a heart.</li>
     </ul>
-  </section>
-  <section class="words">
-    <h2>How the crocodile stepping stones go</h2>
-    <ul>
-      <li><b>Lying low.</b> A row of big crocodiles lies across the channel with only eyes and snouts showing. They are not there to stand on.</li>
-      <li><b>Surfacing.</b> As the hero comes near they come up, the nearest first, backs awash. A back is 3 m long and 1.2 m across.</li>
-      <li><b>Holding.</b> From the first step on one it holds for a while, then goes under. For the last moment it shudders and growls: its warning. Hopping off does not reset it.</li>
-      <li><b>Going under</b> drops the hero in the water, never a fall. Nobody can climb onto a crocodile from the water: swim to the rock at the start, the rock half way, and go on from there. It comes up again a few seconds later.</li>
-      <li><b>The rock island at the end is too high to climb onto from the water</b>, so the crocodiles are the way across.</li>
-    </ul>
-  </section>
-  <section class="words">
-    <h2>The stepping stones on each difficulty</h2>
-    <ul>
-      <li><b>Easy:</b> they never go under while anyone is about, so timing does not matter. The gaps are about 1.3 m.</li>
-      <li><b>Normal:</b> each holds 2.2 s from the first step, with 0.9 s of warning, then sinks. No harm done. Gaps about 2 m.</li>
-      <li><b>Hard:</b> each holds 1.1 s, with 0.6 s of warning. Stay on one until its hold runs out and it snaps: a heart, and you are thrown off. Gaps about 2.6 m.</li>
-      <li><b>The bot crosses on every difficulty</b> as each hero, with no heart lost.</li>
-    </ul>
-  </section>
-  <section class="words">
-    <h2>Sounds, for your pick</h2>
-    <p>Two new sounds for the rope are on the sound board, each with a second choice: taking hold (a short creak) and letting go (a whoosh). All four are recordings, CC0. Tell me A or B for each. The stepping stones use the crocodile sounds you already picked: its growl as its hold runs out, its bite if it snaps, and its splash, quieter, as one comes up or goes under.</p>
   </section>
   <section class="words">
     <h2>What is not checked</h2>
     <ul>
       <li><b>I cannot watch this move.</b> I checked it in still frames and with the rule tests. You are the first to see it at speed.</li>
-      <li><b>The heroes have no clip of their own for hanging on.</b> They hang in the pose they have in the air, tipped to the line of the rope. Caputo hangs by his paws. If either looks wrong, say so.</li>
-      <li><b>Touch.</b> The right thumb lets go, as it jumps. I have not held a finger on a real iPad.</li>
-      <li><b>The stepping-stone crocodiles are the lake’s crocodile, bigger.</b> They float in its lurking pose and snap with its lunge. If they should look different from the ones that hunt, say so.</li>
+      <li><b>Its sounds are not in yet.</b> They wait for your picks on the sound board.</li>
+      <li><b>Frame rate.</b> In the test browser the crocodiles add about 2 draw calls and 16 thousand triangles for each one in view, on a lake that draws 380 to 590 thousand. They cast no shadow, and only those near you are drawn or moved.</li>
     </ul>
   </section>
   <section class="words">
     <h2>Your call</h2>
-    <p>Reply OK to each, or tell me what is off. The ropes: the swing too fast or too slow, too wide, too hard to reach, letting go too fussy. The crocodiles: they hold too long or not long enough, the gaps, the warning, the snap. Say on which difficulty. Every number is in the lake’s difficulty file.</p>
+    <p>Reply OK, or tell me what is off: too easy, too hard, too hidden, too fast, on which difficulty. Every number is in the lake’s difficulty file.</p>
   </section>
 </main>
-<script>document.documentElement.dataset.first = 'swings';</script>
+<script>document.documentElement.dataset.first = 'reed';</script>
 <script type="module" src="arena.js"></script>

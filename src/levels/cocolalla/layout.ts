@@ -49,7 +49,7 @@ export const LAKE_NAME = 'Cocolalla Lake';
 /** Short prompts, each shown the first time the hero stands on that part of the lake. */
 export const LAKE_HINTS: Record<string, string> = {
   beach: 'Hop along the boulders to the grassy point.',
-  point: 'Cross on the crocodiles\' backs. Keep moving: they sink!',
+  point: 'Watch the crocodiles come up one after another, and step as each one rises!',
   'mid-rock': 'Half way. On you go!',
   island: 'Jump at the rope and swing across. Press Jump to let go!',
   stack: 'Swing again, and let go near the top to reach the ledge.',
@@ -93,7 +93,8 @@ export const LAKE_SHAPE = {
    * The crocodile stepping stones: how far in from the channel's west side
    * their line runs, how far left and right of it they lie in turn, half the
    * size of a back (along the crocodile, and across it), how high a back
-   * floats, how near a hero must be for one to come up, and how long that takes.
+   * floats, how near a hero must come to a row's first crocodile to wake the
+   * row, and how long one takes to come up.
    */
   crossIn: 2.5,
   stoneSide: 0.5,
@@ -102,8 +103,10 @@ export const LAKE_SHAPE = {
   stoneTop: 0.4,
   /** How deep a crocodile's body reaches under its back: shallow enough to swim under. */
   stoneThickness: 0.55,
-  stoneWake: 11,
-  stoneRise: 0.5,
+  stoneWake: 7,
+  stoneRise: 0.45,
+  /** How far a back dips under a hero's weight. */
+  stoneDip: 0.12,
   /** The rock half way across, where a hero who fell in can climb out and go on. */
   midRockRadius: 1.6,
   /** The wooded island: its south face (z), how far its north face lies south of the line the logs follow, and how high it stands (too high to jump onto from anywhere). */
@@ -249,6 +252,9 @@ export function buildLake(difficulty: Difficulty, numbers: LakeNumbers = LAKE_DI
     const gap = (span - count * shape.stoneHalfZ * 2) / (count + 2);
     const first = Math.ceil(count / 2);
     let z = from;
+    /** The first crocodile of the row being laid, and how far along its row this one is. */
+    let row = { x: 0, z: 0 };
+    let along = 0;
     for (let i = 0; i < count; i += 1) {
       if (i === first) {
         z -= gap + shape.midRockRadius;
@@ -256,11 +262,20 @@ export function buildLake(difficulty: Difficulty, numbers: LakeNumbers = LAKE_DI
         z -= shape.midRockRadius;
       }
       z -= gap + shape.stoneHalfZ;
+      const x = crossX + (i % 2 === 0 ? -shape.stoneSide : shape.stoneSide);
+      if (i === 0 || i === first) {
+        row = { x, z };
+        along = 0;
+      }
       add({
-        id: `stone-${i + 1}`, kind: 'log', shape: 'box', x: crossX + (i % 2 === 0 ? -shape.stoneSide : shape.stoneSide), z, halfX: shape.stoneHalfX, halfZ: shape.stoneHalfZ,
+        id: `stone-${i + 1}`, kind: 'log', shape: 'box', x, z, halfX: shape.stoneHalfX, halfZ: shape.stoneHalfZ,
         top: shape.stoneTop, bottom: shape.stoneTop - shape.stoneThickness,
-        motion: { kind: 'float', wake: shape.stoneWake, rise: shape.stoneRise, hold: n.stoneHold ?? Infinity, tell: n.stoneTell, snap: n.stoneSnap, down: n.stoneDown },
+        motion: {
+          kind: 'float', wake: shape.stoneWake, from: row, delay: along * n.stoneStagger, rise: shape.stoneRise,
+          up: n.stoneUp, period: n.stonePeriod ?? Infinity, tell: n.stoneTell, dip: shape.stoneDip, snap: n.stoneSnap ?? Infinity,
+        },
       });
+      along += 1;
       z -= shape.stoneHalfZ;
     }
   }

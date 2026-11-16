@@ -35,6 +35,8 @@ export class Bot {
   /** Position in the level's route of the solid the bot last stood or bounced on. */
   private index = 0;
   private holdingJump = false;
+  /** Seconds on the rope the bot is swinging on. */
+  private swingingFor = 0;
   /** The enemy the bot is in the air over, on its way to landing on it. */
   private stomping: Enemy | null = null;
 
@@ -66,12 +68,17 @@ export class Bot {
       return this.swimSafely(game);
     }
     if (game.climbing > 0) return { moveX: 0, moveZ: 0, jump: false };
-    // On a rope: hold on until letting go now would land on what the rope leads to.
+    // On a rope: ride the swing out toward its far end, as a player does, and let go there,
+    // once letting go would land on what the rope leads to. Never hang on for ever.
     if (game.swinging) {
-      this.index = level.route.indexOf(game.swinging.rope.id);
-      this.holdingJump = this.wouldLand(game);
+      const swing = game.swinging;
+      this.index = level.route.indexOf(swing.rope.id);
+      this.swingingFor = this.holdingJump ? 0 : this.swingingFor + STEP;
+      const outward = swing.speed > 0 && swing.angle > swing.swing * 0.35;
+      this.holdingJump = (outward || this.swingingFor > 5) && this.wouldLand(game);
       return { moveX: 0, moveZ: 0, jump: this.holdingJump };
     }
+    this.swingingFor = 0;
 
     // A scout coming at the bot: jump, and come down on top of it. Landing on
     // an enemy strikes it on every difficulty, so this is walk and jump alone.

@@ -6,7 +6,7 @@ import { describe, expect, it } from 'vitest';
 import { Game, IDLE, type Input } from '../src/game/game';
 import { STEP } from '../src/game/hero';
 import type { Level, Solid } from '../src/game/level';
-import { ROPE, handOf, newRope, stepLoose, type Rope } from '../src/game/rope';
+import { HANG, ROPE, handOf, newRope, stepLoose, type Rope } from '../src/game/rope';
 
 const bank = (id: string, x: number, halfX: number, top = 0): Solid => ({ id, kind: 'bank', shape: 'box', x, z: 0, halfX, halfZ: 3, top, bottom: -40, safe: id === 'start' });
 
@@ -76,7 +76,7 @@ describe('taking hold', () => {
       game.step({ ...IDLE, moveX: i % 2 ? 1 : -1, moveZ: 1 });
       const hand = handOf(game.swinging!);
       expect(game.x).toBeCloseTo(hand.x, 1);
-      expect(game.y).toBeCloseTo(hand.y - ROPE.hang, 1);
+      expect(game.y).toBeCloseTo(hand.y - HANG.Yaarbro, 1);
       expect(game.z).toBeCloseTo(0);
     }
   });

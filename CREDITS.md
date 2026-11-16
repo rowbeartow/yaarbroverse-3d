@@ -8,8 +8,8 @@ The Yaarbroverse, its characters and their art are not CC0. They are all rights 
 
 | File in this repo | What it is | Source | License |
 | --- | --- | --- | --- |
-| `assets/heroes/yaarbro.glb` | Yaarbro: a textured model on a skeleton, with clips for standing, walking, running, jumping, landing and rolling. Put together and cleaned up from the owner's originals by `tools/prepare-rigged.py` and compressed by `tools/compress-hero.mjs`. | Made, rigged and animated by the owner in Meshy from the Caputo Mountain art | All rights reserved |
-| `assets/heroes/caputo.glb` | Caputo: a textured model on a skeleton, with clips for standing, walking, running, jumping, falling and landing. The model is the owner's; the skeleton and clips are made by `tools/rig-quadruped.py`, and the file is compressed by `tools/compress-hero.mjs`. | Model made by the owner in Meshy from the Caputo Mountain art. Skeleton and clips made here. | All rights reserved |
+| `assets/heroes/yaarbro.glb` | Yaarbro: a textured model on a skeleton, with clips for standing, walking, running, jumping, landing and rolling, swimming, and reaching for, catching, hanging from and letting go of a rope (the swimming and rope clips from Meshy's animation library, on Meshy's rig of his model: `tools/yaarbro.swim.json`, `tools/yaarbro.rope.json`). Put together and cleaned up from the owner's originals by `tools/prepare-rigged.py` and compressed by `tools/compress-hero.mjs`. | Made, rigged and animated by the owner in Meshy from the Caputo Mountain art | All rights reserved |
+| `assets/heroes/caputo.glb` | Caputo: a textured model on a skeleton, with clips for standing, walking, running, jumping, falling and landing, swimming, and catching and hanging from a rope in his jaws. The model is the owner's; the skeleton and clips are made by `tools/rig-quadruped.py`, and the file is compressed by `tools/compress-hero.mjs`. | Model made by the owner in Meshy from the Caputo Mountain art. Skeleton and clips made here. | All rights reserved |
 
 ## Enemy models (all rights reserved, not CC0)
 

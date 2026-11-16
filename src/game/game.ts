@@ -8,7 +8,7 @@ import { ENEMY, callSidekick, dismissSidekick, newEnemy, sendHome, stepEnemy, ty
 import { MOVE, STEP, knockSpeed, type HeroName } from './hero';
 import { pushOutside, surfaceBelow, topAt, touchesFromAbove, type Level, type Solid } from './level';
 import { ownPieces, resetPieces, stepPieces, type PieceEvent } from './moving';
-import { ROPE, grab, handOf, handSpeed, letGo, newRope, ropeInReach, stepHeld, stepLoose, type RopeState } from './rope';
+import { HANG, ROPE, grab, handOf, handSpeed, letGo, newRope, ropeInReach, stepHeld, stepLoose, type RopeState } from './rope';
 import { SWIM, climbOut, inWater, waterAt, type Water } from './swim';
 
 /** What the player is asking for during one step. */
@@ -152,7 +152,7 @@ export class Game {
   readonly ropes: RopeState[];
   swinging: RopeState | null = null;
   /** The rope last let go of: it cannot be grabbed again until the hero has landed or gone into the water. */
-  private lastRope: string | null = null;
+  lastRope: string | null = null;
   /** Thrown from a rope with help, and still in the air: the stick cannot spoil the throw. */
   private thrown = false;
   /** How far the hero was from the rope's end when it took hold: it slides to the end over a moment, never jumps there. */
@@ -202,12 +202,26 @@ export class Game {
     return this.level.breath ?? Infinity;
   }
 
-  /** The pool the hero is swimming in, if any. */
   /** The id of the rope the hero is swinging on, or null. */
   get ropeId(): string | null {
     return this.swinging ? this.swinging.rope.id : null;
   }
 
+  /**
+   * Stands the hero on the solid `id`, in its middle, before the run starts,
+   * as if the level began there: for a preview page that shows one part of a
+   * level (see `__grovePreview` in src/main.ts). Unknown ids are ignored.
+   */
+  startOn(id: string): void {
+    const s = this.level.solids.find((each) => each.id === id);
+    if (!s) return;
+    const x = s.safeAt?.x ?? s.x;
+    const z = s.safeAt?.z ?? s.z;
+    Object.assign(this, { x, y: s.top, z, vx: 0, vy: 0, vz: 0, grounded: true, groundId: s.id });
+    this.safeSpot = { x, y: s.top, z, id: s.id };
+  }
+
+  /** The pool the hero is swimming in, if any. */
   get water(): Water | null {
     return this.swimming ? this.level.water?.find((w) => w.id === this.waterId) ?? null : null;
   }
@@ -390,11 +404,11 @@ export class Game {
       this.thrown = false;
     }
     if (!this.swinging && !this.grounded && !this.swimming && this.climbing <= 0 && !frozen && this.ropes.length > 0) {
-      const within = ropeInReach(this.ropes, this.x, this.y, this.z, Boolean(level.ropeHelp), this.lastRope);
+      const within = ropeInReach(this.ropes, this.x, this.y, this.z, Boolean(level.ropeHelp), this.lastRope, HANG[this.hero]);
       if (within) {
         grab(within, this.vx, this.vz);
         const end = handOf(within);
-        this.ropeSlip = { x: this.x - end.x, y: this.y - (end.y - ROPE.hang), z: this.z - end.z };
+        this.ropeSlip = { x: this.x - end.x, y: this.y - (end.y - HANG[this.hero]), z: this.z - end.z };
         this.swinging = within;
         this.rolling = false;
         this.pouncing = 0;
@@ -713,7 +727,7 @@ export class Game {
     const slip = Math.exp(-ROPE.slide * dt);
     this.ropeSlip = { x: this.ropeSlip.x * slip, y: this.ropeSlip.y * slip, z: this.ropeSlip.z * slip };
     this.x = hand.x + this.ropeSlip.x;
-    this.y = hand.y - ROPE.hang + this.ropeSlip.y;
+    this.y = hand.y - HANG[this.hero] + this.ropeSlip.y;
     this.z = hand.z + this.ropeSlip.z;
     this.vx = speed.x;
     this.vy = speed.y;

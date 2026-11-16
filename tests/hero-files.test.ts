@@ -42,8 +42,8 @@ describe('the hero model files', () => {
     });
   }
 
-  it('Yaarbro: holds one clip from each of his Meshy files, and his four swimming clips', () => {
-    expect(clipNames('yaarbro.glb').sort()).toEqual(['climb', 'idle', 'jump', 'landing', 'roll', 'run', 'swim', 'tread', 'underwater', 'walk']);
+  it('Yaarbro: holds one clip from each of his Meshy files, his four swimming clips and his four rope clips', () => {
+    expect(clipNames('yaarbro.glb').sort()).toEqual(['climb', 'idle', 'jump', 'landing', 'roll', 'rope_catch', 'rope_hang', 'rope_reach', 'rope_release', 'run', 'swim', 'tread', 'underwater', 'walk']);
   });
 
   it('Yaarbro: every clip happens on the spot, because the rules own where he is', () => {
@@ -64,8 +64,9 @@ describe('the hero model files', () => {
         // Side to side and forward: a sway of a few centimetres, never a journey.
         expect(high[0] - low[0], `${clip.getName()} sideways`).toBeLessThan(15);
         expect(high[2] - low[2], `${clip.getName()} forward`).toBeLessThan(15);
-        // Up and down: he may crouch or tuck, but never leaves for the sky.
-        expect(high[1], `${clip.getName()} height`).toBeLessThan(200);
+        // Up and down: he may crouch or tuck, but never leaves for the sky. Hanging from a rope the
+        // game holds him by his hands (src/view/ropes.ts), so how high the hips are does not matter there.
+        if (!['rope_catch', 'rope_hang'].includes(clip.getName())) expect(high[1], `${clip.getName()} height`).toBeLessThan(200);
       }
     }
   });
@@ -87,13 +88,13 @@ describe('the hero model files', () => {
   });
 
   it('Caputo: holds every clip the rig script writes', () => {
-    expect(clipNames('caputo.glb').sort()).toEqual(['falling', 'idle', 'jump', 'landing', 'paddle', 'pounce', 'run', 'shake', 'trot', 'underwater', 'walk']);
+    expect(clipNames('caputo.glb').sort()).toEqual(['falling', 'idle', 'jump', 'landing', 'paddle', 'pounce', 'rope_catch', 'rope_hang', 'rope_reach', 'rope_release', 'run', 'shake', 'trot', 'underwater', 'walk']);
   });
 
-  it('Caputo: has a spine, neck and head, shoulder blades, ears, four legs of three bones, and a tail of at least five', () => {
+  it('Caputo: has a spine, neck and head, a jaw that opens, shoulder blades, ears, four legs of three bones, and a tail of at least five', () => {
     const bones = boneNames('caputo.glb');
     expect(bones).toEqual(expect.arrayContaining(['hips', 'spine1', 'spine2', 'chest', 'neck', 'head']));
-    expect(bones).toEqual(expect.arrayContaining(['blade_l', 'blade_r', 'ear_l', 'ear_r']));
+    expect(bones).toEqual(expect.arrayContaining(['blade_l', 'blade_r', 'ear_l', 'ear_r', 'jaw']));
     for (const leg of ['front', 'hind']) {
       for (const side of ['l', 'r']) {
         expect(bones).toEqual(expect.arrayContaining([`${leg}_upper_${side}`, `${leg}_lower_${side}`, `${leg}_paw_${side}`]));
