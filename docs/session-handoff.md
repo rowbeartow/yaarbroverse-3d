@@ -1,6 +1,6 @@
 # Session handoff
 
-Last updated: 2026-11-16 (milestone nine: Cocolalla Lake reshaped. The rope swings and the crocodile stepping stones, reworked after the owner's first look, wait for his OK.)
+Last updated: 2026-11-16 (milestone nine: Cocolalla Lake reshaped. The rope swings and the crocodile stepping stones are merged; the rope's dismount is next.)
 
 ## Start here
 
@@ -14,7 +14,7 @@ Last updated: 2026-11-16 (milestone nine: Cocolalla Lake reshaped. The rope swin
 4. **The lake's new layout** (70). Eight sections round a wooded island; `src/levels/cocolalla/layout.ts` has the map in words at its top. On the route rule, Normal: 26% away, 24% left, 30% right, 20% toward, 8 turns, 4 camera turns (it was 100% away with none).
 5. **The hunting crocodiles** (71). On Normal and Hard the crocodiles have all of the Open Water and come after a swimmer, heading for where they are going; on Hard one more waits under the sunken logs for a hero who falls in (`crocHunt`, `crocLead`, `crocUnderLogs` in the lake's `difficulty.ts`).
 
-**Built, and waiting for the owner's OK before it merges: the rope swings and the crocodile stepping stones, reworked after his first look.** His first look (2026-11-16): not OK on either; the hero never grabbed the rope, and he did not notice any crocodiles and the crossing was not a challenge. What he asked for and what was built is `docs/decisions.md` "Rope swings and crocodile stepping stones, reworked after the owner's first look". They are in the pull request this version of the handoff arrived in. **If you are reading this on `main`, he said OK and it has merged.**
+**The rope swings and the crocodile stepping stones, reworked after the owner's first look: merged at his word.** His second look (2026-11-16, `docs/decisions.md` "The owner's second look"): the stepping stones are OK; on the ropes taking hold is OK, but **letting go is not quite right: the dismount needs work, and it is the next job on the lake.** Start there: ask him what looks wrong in it if his words are not enough to go on (where the hero is drawn as he leaves the rope, the push-off clip, the way the body swings upright, or the flight), using the preview page below. The pieces involved: `rope_release` in each hero's clips (Yaarbro's cut from Meshy's "Swing on Rope to Ground" in `tools/yaarbro.guide.json`, Caputo's `rope_release` in `tools/rig-quadruped.py`), `ropeClips` in `src/view/hero-model.ts`, `Hanger` in `src/view/ropes.ts` (after letting go, the 0.4 m or so between where the grip held Yaarbro and where the rules have him fades out over a moment), and `letGo` and `HANG` in `src/game/rope.ts`. What he asked for and what was built is `docs/decisions.md` "Rope swings and crocodile stepping stones, reworked after the owner's first look".
 
 - The preview page is the game itself (its scenery, light and camera), opening on the crocodiles on Normal, with a panel to pick the place, difficulty, hero, and whether the test bot plays: https://claude.ai/artifact/Gq1nsmNEZTm7NnfsdaTPq5 . The first preview (the blocked-out arena, https://claude.ai/artifact/HKCAXXuzCGGT6oJNyxEHRZ ) is out of date.
 - The rope's two sounds still wait for his pick on the sound board, A or B for each (choice A is wired in): https://claude.ai/artifact/WvtY9CjWaa5yTpwyJCferH
@@ -422,7 +422,7 @@ Milestone four (sound and music) is done, in the pull requests listed under "Sta
 
 ## What's next
 
-1. **The owner's OK on the rope swings and the crocodile stepping stones** (the preview page and the sound board, at the top of this file), then merge that pull request and check the live site.
+1. **The rope swing's dismount** (see the top of this file), with a new look on the lake preview page before it merges. The rope's two sounds still wait for his pick on the sound board.
 2. **Fishing and the monster pike, in a new session.** The owner's word so far (`docs/decisions.md`, 2026-11-14): the lake level ends at a fishing dock, and the monster pike fight goes there; the pike is fought both on the fishing line and in the water. Read the Caputo Mountain docs on fishing in the private repo first, and ask the owner for anything they do not give.
 3. **The Bouncing Grove reshaped by the route rule**, after that. Plan it the way the lake was planned: a map from above with the camera's facing in each part and its numbers on the rule, for the owner's OK before anything is built.
 4. **The owner checks the reshaped lake on the Mac and with the kids** (see "What nobody has checked yet on the reshaped lake"). If the frame rate drops under 60, the first things to cut are the near pines (`nearPines` in `LAKE_LOOK`, `src/view/lake.ts`), the pines on the island (`islandPineArea`), and the water's points (the 2.5 m cells in `sheet`, `src/view/lake.ts`).
