@@ -7,6 +7,7 @@
 import type { BossSpot } from './boss';
 import type { EnemySpot, EnemyTuning } from './enemy';
 import type { Motion, Piece } from './moving';
+import type { Rope } from './rope';
 import type { Water } from './swim';
 
 export type SolidKind = 'bank' | 'log' | 'stump' | 'shelf' | 'mushroom' | 'bough' | 'moss' | 'arch' | 'boulder' | 'crag' | 'deck' | 'island';
@@ -105,9 +106,13 @@ export interface Level {
   water?: Water[];
   /** Seconds a hero can stay underwater before running out of breath. Left out, breath never runs out (Easy). */
   breath?: number;
+  /** Ropes to swing on, if the level has any (see rope.ts). */
+  ropes?: Rope[];
+  /** True when letting go of a rope at any point lands the hero safely on what the rope leads to (Easy). */
+  ropeHelp?: boolean;
   /** The boss the level ends with, if it has one. The goal cannot be taken until it is beaten. */
   boss?: BossSpot;
-  /** Ids of the solids in the order a run crosses them, start to goal. A pool's id stands for swimming across it. */
+  /** Ids of the solids in the order a run crosses them, start to goal. A pool's id stands for swimming across it, and a rope's for swinging on it. */
   route: string[];
   /** The level's sections in order, each with the ids of its solids in route order. */
   sections?: Section[];

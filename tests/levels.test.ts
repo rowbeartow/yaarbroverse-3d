@@ -89,7 +89,10 @@ describe.each(LEVELS.map((level) => [level.id, level] as const))('the level %s',
       const pools = (level.water ?? []).map((w) => w.id);
       expect(new Set([...ids, ...pools]).size).toBe(ids.length + pools.length);
       expect(level.route.length).toBeGreaterThan(0);
-      for (const id of level.route) expect([...ids, ...pools]).toContain(id);
+      const ropes = (level.ropes ?? []).map((r) => r.id);
+      // A rope leads to a solid of the level, and is on the route just before it.
+      for (const rope of level.ropes ?? []) expect(level.route[level.route.indexOf(rope.id) + 1]).toBe(rope.to);
+      for (const id of level.route) expect([...ids, ...pools, ...ropes]).toContain(id);
       // Every pool is deep and above the height a fall counts from. It is crossed on the way,
       // or it is where a missed jump lands: then a solid of the route stands in it or at its edge.
       for (const water of level.water ?? []) {
@@ -145,6 +148,7 @@ describe.each(LEVELS.map((level) => [level.id, level] as const))('the level %s',
         sounds.step(game);
         touch(game.groundId);
         touch(game.waterId);
+        touch(game.ropeId);
         for (const event of game.events) if (event.type === 'bounce') touch(event.solidId);
       }
       expect(game.complete).toBe(true);

@@ -65,6 +65,12 @@ export class Bot {
       return this.swimSafely(game);
     }
     if (game.climbing > 0) return { moveX: 0, moveZ: 0, jump: false };
+    // On a rope: hold on until letting go now would land on what the rope leads to.
+    if (game.swinging) {
+      this.index = level.route.indexOf(game.swinging.rope.id);
+      this.holdingJump = this.wouldLand(game);
+      return { moveX: 0, moveZ: 0, jump: this.holdingJump };
+    }
 
     // A scout coming at the bot: jump, and come down on top of it. Landing on
     // an enemy strikes it on every difficulty, so this is walk and jump alone.
@@ -103,7 +109,9 @@ export class Bot {
     const isWater = (id: string | undefined): boolean => (level.water ?? []).some((w) => w.id === id);
     const nextId = isWater(level.route[this.index + 1]) ? level.route[this.index + 2] : level.route[this.index + 1];
     const next = level.solids.find((s) => s.id === nextId);
-    let aim = next ? aimPoint(next, game.x, game.z) : { x: level.leaf.x, z: level.leaf.z };
+    // A rope next on the route: run and jump for where it hangs, and the hero takes hold in the air.
+    const rope = (level.ropes ?? []).find((each) => each.id === nextId);
+    let aim = next ? aimPoint(next, game.x, game.z) : rope ? { x: rope.x, z: rope.z } : { x: level.leaf.x, z: level.leaf.z };
     let easing = true;
     // Where the route turns a corner, the straight line to the next piece
     // would leave this one too soon. Run along this piece first, to the spot
@@ -178,6 +186,30 @@ export class Bot {
     else if (game.vy <= 0) this.holdingJump = false;
 
     return { moveX, moveZ, jump: this.holdingJump };
+  }
+
+  /**
+   * True when letting go of the rope on this very step, then steering for the
+   * solid it leads to, lands there. Played out on a copy of the game.
+   */
+  private wouldLand(game: Game): boolean {
+    const rope = game.swinging?.rope;
+    const to = game.level.solids.find((s) => s.id === rope?.to);
+    if (!rope || !to) return false;
+    const copy = copyGame(game);
+    copy.step({ moveX: 0, moveZ: 0, jump: true });
+    if (copy.swinging) return false;
+    for (let i = 0; i < 3 / STEP; i += 1) {
+      if (copy.grounded) return copy.groundId === to.id;
+      if (copy.swimming || copy.falls > game.falls) return false;
+      const aim = aimPoint(to, copy.x, copy.z);
+      const dx = aim.x - copy.x;
+      const dz = aim.z - copy.z;
+      const far = Math.hypot(dx, dz);
+      const push = Math.min(far / 1.2, 1);
+      copy.step({ moveX: far > 1e-6 ? (dx / far) * push : 0, moveZ: far > 1e-6 ? (dz / far) * push : 0, jump: false });
+    }
+    return false;
   }
 
   /**

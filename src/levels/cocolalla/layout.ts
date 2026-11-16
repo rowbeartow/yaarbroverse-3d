@@ -9,8 +9,8 @@
 //      the south shore to a grassy point. On screen: right.
 //   2. The Crocodile Crossing: north up the east channel to a rock island.
 //      (A plain swim until the crocodile stepping stones are built.) Away.
-//   3. The Swinging Pines: west across a cove to a ledge on the island's
-//      headland. (Boulder hops until the rope swings are built.) Left.
+//   3. The Swinging Pines: two rope swings west across a cove, to a rock
+//      stack and then up to a ledge on the island's headland. Left.
 //   4. The Sunken Logs: logs and boulders west along the island's north
 //      shore, with a zigzag out into the channel, to a gravel bar too high
 //      to climb onto from the water. Left.
@@ -38,6 +38,7 @@ import { CROC } from '../../game/crocodile';
 import type { Difficulty } from '../../game/difficulty';
 import type { EnemySpot } from '../../game/enemy';
 import type { Level, Section, Solid } from '../../game/level';
+import type { Rope } from '../../game/rope';
 import type { Water } from '../../game/swim';
 import { LAKE_DIFFICULTY, type LakeNumbers } from './difficulty';
 
@@ -47,7 +48,8 @@ export const LAKE_NAME = 'Cocolalla Lake';
 export const LAKE_HINTS: Record<string, string> = {
   beach: 'Hop along the boulders to the grassy point.',
   point: 'Swim up the channel to the rock island.',
-  island: 'Hop across the cove, up to the ledge.',
+  island: 'Jump at the rope and swing across. Press Jump to let go!',
+  stack: 'Swing again, and let go near the top to reach the ledge.',
   headland: 'Jump along the logs. Fall in, and swim back to one.',
   'gravel-bar': 'Swim down the lake to the reed bar. Mind the crocodiles: when eyes sink, swim out of the way or dive!',
   'reed-bar': 'Swim to the rocks and dive through the gap.',
@@ -88,8 +90,18 @@ export const LAKE_SHAPE = {
   woodedTop: 5.2,
   /** The north channel: how far north of the logs' line the swimming stops. */
   northReach: 14,
-  /** The cove's hops up to the headland: how much higher each boulder is than the last. (Until the rope swings are built.) */
-  hopRise: 0.5,
+  /**
+   * The rope swings across the cove: how long each rope is, how far past the
+   * edge before it it hangs, how high its end hangs over that edge's top (a
+   * jump reaches it), and how far north of the line the snag that holds it stands.
+   */
+  ropeLength: 7,
+  ropeOut: 3,
+  ropeAbove: 2.3,
+  snagBack: 3,
+  /** The rock stack between the two ropes: how far past the first rope its middle is, and its top (it can be climbed onto from the water). */
+  stackAhead: 6.5,
+  stackTop: 1.2,
   /** The headland's ledge: half its length east to west, how far north of the logs' line it reaches, and how high it stands (too high to climb onto). */
   headlandHalfX: 4.5,
   headlandNorth: 5,
@@ -210,16 +222,21 @@ export function buildLake(difficulty: Difficulty, numbers: LakeNumbers = LAKE_DI
   // The rock island stands across the corner where the east channel meets the north one.
   box('island', 'bank', channelWest - shape.islandHalfX, channelWest + shape.islandHalfX, lineZ - shape.islandHalfZ, lineZ + shape.islandHalfZ, shape.shoreTop, shape.depth, { safe: safe(2) });
 
-  // 3. THE SWINGING PINES: west across the cove, up to the headland's ledge. Boulder hops until the rope swings are built.
+  // 3. THE SWINGING PINES: west across the cove on two ropes, to a rock stack and then up to the headland's ledge.
   section('The Swinging Pines', LAKE_CAMERA.pines);
   x = channelWest - shape.islandHalfX;
-  const hops = Math.ceil((shape.headlandTop - shape.shoreTop) / shape.hopRise) - 1;
-  for (let i = 0; i < hops; i += 1) {
-    x -= n.boulderGap + n.boulderRadius;
-    round(`hop-${i + 1}`, 'boulder', x, lineZ + (i % 2 === 0 ? shape.boulderSide : -shape.boulderSide), n.boulderRadius, shape.shoreTop + shape.hopRise * (i + 1));
-    x -= n.boulderRadius;
-  }
-  x -= n.boulderGap;
+  const ropes: Rope[] = [];
+  /** Hangs a rope `ropeOut` past the edge at `x`, its end a jump's height over a bank whose top is `top`. */
+  const rope = (id: string, top: number, to: string): number => {
+    const at = x - shape.ropeOut;
+    ropes.push({ id, x: at, y: top + shape.ropeAbove + shape.ropeLength, z: lineZ, length: shape.ropeLength, ahead: { x: -1, z: 0 }, to, foot: { x: at + 0.6, z: lineZ - shape.snagBack } });
+    route.push(id);
+    return at;
+  };
+  x = rope('rope-1', shape.shoreTop, 'stack') - shape.stackAhead;
+  round('stack', 'boulder', x, lineZ, n.stackRadius, shape.stackTop);
+  x -= n.stackRadius;
+  x = rope('rope-2', shape.stackTop, 'headland') - n.ledgeAhead;
   const woodedNorth = lineZ + shape.woodedBack;
   // The headland reaches from the wooded island out past the logs' line; its middle parts the cove's water from the logs'.
   const headlandX = x - shape.headlandHalfX;
@@ -369,6 +386,8 @@ export function buildLake(difficulty: Difficulty, numbers: LakeNumbers = LAKE_DI
     spawn: { x: shape.beachLength / 2, y: shape.shoreTop, z: shape.shoreZ - 1 },
     leaf: { x: x - 1.5, y: deck + 1.3, z: pierZ, radius: 0.7 },
     water,
+    ropes,
+    ropeHelp: n.ropeHelp,
     breath: n.breath,
     fallY: shape.fallY,
     coyoteTime: n.coyoteTime,
