@@ -2,9 +2,9 @@
 // it, moved every frame to where the rules have it, and the bare snag with a
 // bough that holds it up. Looks only: the rules are in src/game/rope.ts.
 
-import { ConeGeometry, CylinderGeometry, Group, Mesh, MeshLambertMaterial, MeshStandardMaterial, SphereGeometry, Vector3, type Material } from 'three';
+import { ConeGeometry, CylinderGeometry, Group, Mesh, type Object3D, MeshLambertMaterial, MeshStandardMaterial, SphereGeometry, Vector3, type Material } from 'three';
 import type { Level } from '../game/level';
-import { handOf, type RopeState } from '../game/rope';
+import { ROPE, handOf, type RopeState } from '../game/rope';
 import type { Materials } from './materials';
 
 const ROPE_COLOR = 0xc9a66b;
@@ -80,3 +80,24 @@ export class RopesView {
     for (const look of this.looks) look.dispose();
   }
 }
+
+/**
+ * Hangs a hero from the rope it is swinging on: in line with the rope, hands
+ * at its end. Off a rope (`swinging` null) it eases the hero upright again.
+ * Call after the hero has been put where the rules have it and turned.
+ */
+export const hangOnRope = (root: Object3D, swinging: RopeState | null, dt: number): void => {
+  root.rotation.order = 'YXZ';
+  const lean = swinging ? -swinging.angle : 0;
+  root.rotation.x += (lean - root.rotation.x) * (1 - Math.exp(-18 * dt));
+  // The rules slide a hero to the rope's end over a moment after it takes hold; once there, hang it exactly.
+  if (!swinging || Math.hypot(root.position.x - handOf(swinging).x, root.position.z - handOf(swinging).z) > 0.25) return;
+  const hand = handOf(swinging);
+  const { rope } = swinging;
+  // Feet a body's length down the line of the rope from the hands.
+  root.position.set(
+    hand.x - ((rope.x - hand.x) / rope.length) * ROPE.hang,
+    hand.y - ((rope.y - hand.y) / rope.length) * ROPE.hang,
+    hand.z - ((rope.z - hand.z) / rope.length) * ROPE.hang,
+  );
+};

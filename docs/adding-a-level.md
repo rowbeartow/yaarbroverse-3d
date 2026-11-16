@@ -38,7 +38,7 @@ Make `src/levels/<id>/` with three files:
 2. **`layout.ts`**: one function, `build<Name>(difficulty)`, that returns a `Level` (`src/game/level.ts`) built from those numbers. No drawing code.
    - `solids`: everything to stand on. Kinds that already draw: `bank`, `log`, `stump`, `shelf`, `mushroom` (give it `bounce`), `bough`, `moss` (crumbling moss only), `arch` (rock across water, with its opening drawn when water runs under it), and for a lake `boulder` (a round rock standing out of the water), `crag` (a block of rock), `deck` (wooden boards on posts) and `island` (a wooded rise the lake scenery draws; a wall to a hero, never on the route). Mark checkpoints `safe: true`. A solid can also move: see "Pieces that move" below.
    - `spawn` must be on a safe solid. `leaf` is the goal.
-   - `route`: the ids of the solids in the order a run crosses them, and of any pool where a run swims across it. The test bot follows it, so it must be complete and in order.
+   - `route`: the ids of the solids in the order a run crosses them, of any pool where a run swims across it, and of any rope a run swings on. The test bot follows it, so it must be complete and in order.
    - `water` and `breath`: see "Water" below.
    - `sections`, `hints` (shown the first time a hero stands on that solid) and `goalLine` are optional.
    - `enemies`: see how the grove places its scouts and mosquito at the end of its `layout.ts`.
@@ -93,6 +93,19 @@ Every moving piece has a tell before it moves (it shakes, and a sound plays), ca
 The grove's section 6, The Windy Climb, has both: `moss*` and `wind*` in its `difficulty.ts`.
 
 The test bot copes with moving pieces on its own: it reads each piece where it is now, never lingers, does not take walking down a tilted log for an edge, and waits at the edge (or on the bough) until a windy bough is resting level with where it is going, for long enough to get across.
+
+## Rope swings
+
+Any level can hang a rope: give the `Level` a `ropes` list. The rules are in `src/game/rope.ts` (its top says how a swing goes), the drawing in `src/view/ropes.ts`, and `tests/rope.test.ts` holds the tests. Cocolalla Lake's Swinging Pines is the example.
+
+- A rope is where it is tied (`x`, `y`, `z`), its `length`, which way it carries a hero (`ahead`, a step of length 1 seen from above), the solid it leads to (`to`), and where the foot of the snag that holds it stands (`foot`, for drawing only).
+- Hang it about 3 m past the edge of the solid before it, with its end about 2.3 m above that solid's top (`y` is that plus the length): a running jump off the edge reaches it. A 7 m rope swings out and back in about three seconds and carries a hero 5.5 m out and 2.7 m up at the top of its swing.
+- Put the rope's id in `route` between the solid before it and the solid it leads to. The test bot jumps for it and lets go when that lands it.
+- Without help, a hero who lets go on the way forward flies 3 to 8 m past where the rope is tied: put the landing there, and make it long. To go up to a ledge, put its edge 3 to 4 m past the rope: only letting go in the upper part of the way forward reaches it.
+- **Easy:** set `ropeHelp: true` on the `Level` from the level's `difficulty.ts`. Letting go at any point then lands the hero on the rope's `to` (the owner's rule).
+- Over water, a miss is a swim: make something beside the rope low enough to climb back onto. Over open air a miss is a fall, so keep a checkpoint just before the rope.
+- Make ropes cross the screen where you can (the camera's facing at right angles to `ahead`): a swing reads best from the side.
+- Its sounds (`ropeGrab`, `ropeRelease`) belong to the levels that hang ropes: add the level's id to their `home` in `src/audio/sounds.ts`.
 
 ## Water
 

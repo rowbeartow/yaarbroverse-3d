@@ -68,3 +68,31 @@ test('the Bouncing Grove keeps its camera looking straight up the route', async 
   await frames(page, 6);
   expect(await facing(page)).toBe(0);
 });
+
+test('the rope swings are drawn over the cove, and a hero who jumps at one takes hold and swings', async ({ page }) => {
+  const problems = await open(page, 'level=cocolalla');
+  await play(page, 'Yaarbro', 'easy');
+  const ropes = (): Promise<{ id: string; angle: number }[]> => page.evaluate(() => (window as unknown as { __grove: { ropes: { id: string; angle: number }[] } }).__grove.ropes);
+  expect((await ropes()).map((rope) => rope.id)).toEqual(['rope-1', 'rope-2']);
+  // Stand at the rock island's west edge. The camera looks north there, so the rope is to the left.
+  await standOn(page, 'island');
+  await settled(page, 0);
+  await page.evaluate(() => {
+    const { game } = (window as unknown as { __grove: { game: { x: number; level: { solids: { id: string; x: number; halfX: number }[] } } } }).__grove;
+    const island = game.level.solids.find((s) => s.id === 'island')!;
+    game.x = island.x - island.halfX + 1.2;
+  });
+  await frames(page, 2);
+  await page.keyboard.down('ArrowLeft');
+  await page.keyboard.down('Space');
+  const swinging = (): Promise<string | null> => page.evaluate(() => (window as unknown as { __grove: { game: { ropeId: string | null } } }).__grove.game.ropeId);
+  await expect.poll(swinging, { timeout: 30_000 }).toBe('rope-1');
+  await page.keyboard.up('Space');
+  await page.keyboard.up('ArrowLeft');
+  // It swings: the rope leaves the straight-down it hung at.
+  await expect.poll(async () => Math.abs((await ropes())[0].angle), { timeout: 20_000 }).toBeGreaterThan(0.3);
+  // Letting go on Easy lands on the rock stack, wherever in the swing it is.
+  await page.keyboard.press('Space');
+  await expect.poll(async () => (await snapshot(page)).groundId, { timeout: 30_000 }).toBe('stack');
+  expect(problems).toEqual([]);
+});

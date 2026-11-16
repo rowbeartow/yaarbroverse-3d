@@ -62,6 +62,8 @@ export const ROPE = {
   helpReach: 0.5,
   /** The part of a rope that can be grabbed: this far up from its end. */
   grip: 2.2,
+  /** A hero who takes hold a little way from the rope's end slides to it: this share of what is left, each second, roughly. */
+  slide: 9,
   /** How wide a swing is, whatever speed the hero grabbed it at. */
   swing: (52 * Math.PI) / 180,
   /** The pull that swings it. The same as the pull on a jumping hero. */

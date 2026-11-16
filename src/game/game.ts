@@ -155,6 +155,8 @@ export class Game {
   private lastRope: string | null = null;
   /** Thrown from a rope with help, and still in the air: the stick cannot spoil the throw. */
   private thrown = false;
+  /** How far the hero was from the rope's end when it took hold: it slides to the end over a moment, never jumps there. */
+  private ropeSlip = { x: 0, y: 0, z: 0 };
 
   private safeSpot: { x: number; y: number; z: number; id: string | null };
   private pending: GameEvent[] = [];
@@ -384,6 +386,8 @@ export class Game {
       const within = ropeInReach(this.ropes, this.x, this.y, this.z, Boolean(level.ropeHelp), this.lastRope);
       if (within) {
         grab(within, this.vx, this.vz);
+        const end = handOf(within);
+        this.ropeSlip = { x: this.x - end.x, y: this.y - (end.y - ROPE.hang), z: this.z - end.z };
         this.swinging = within;
         this.rolling = false;
         this.pouncing = 0;
@@ -699,9 +703,11 @@ export class Game {
     stepHeld(state, dt);
     const hand = handOf(state);
     const speed = handSpeed(state);
-    this.x = hand.x;
-    this.y = hand.y - ROPE.hang;
-    this.z = hand.z;
+    const slip = Math.exp(-ROPE.slide * dt);
+    this.ropeSlip = { x: this.ropeSlip.x * slip, y: this.ropeSlip.y * slip, z: this.ropeSlip.z * slip };
+    this.x = hand.x + this.ropeSlip.x;
+    this.y = hand.y - ROPE.hang + this.ropeSlip.y;
+    this.z = hand.z + this.ropeSlip.z;
     this.vx = speed.x;
     this.vy = speed.y;
     this.vz = speed.z;

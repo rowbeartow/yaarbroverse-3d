@@ -39,8 +39,7 @@ import { Scatter, buildForest, type Forest } from './forest';
 import { bossFighting } from '../game/boss';
 import { BossView } from './boss';
 import { FIGHT_CAMERA, fightView } from './boss-camera';
-import { ROPE, handOf } from '../game/rope';
-import { RopesView } from './ropes';
+import { RopesView, hangOnRope } from './ropes';
 import { ROUTE_CAMERA, cameraFor, followsRoute, forwardOf, turnToward } from './route-camera';
 import { ENEMY_MODELS, EnemyView, modelFilesOf } from './enemies';
 import { HERO_MODEL_FILES, buildHero, type HeroView } from './heroes';
@@ -415,18 +414,7 @@ export class GroveView {
     hero.root.rotation.y += turn * (1 - Math.exp(-14 * dt));
     // On a rope the hero hangs in line with it, hands at its end; off it, upright again.
     levelView.ropes?.update(game.ropes);
-    hero.root.rotation.order = 'YXZ';
-    const lean = game.swinging ? -game.swinging.angle : 0;
-    hero.root.rotation.x += (lean - hero.root.rotation.x) * (1 - Math.exp(-18 * dt));
-    if (game.swinging) {
-      const hand = handOf(game.swinging);
-      const { rope } = game.swinging;
-      hero.root.position.set(
-        hand.x - ((rope.x - hand.x) / rope.length) * ROPE.hang,
-        hand.y - ((rope.y - hand.y) / rope.length) * ROPE.hang,
-        hand.z - ((rope.z - hand.z) / rope.length) * ROPE.hang,
-      );
-    }
+    hangOnRope(hero.root, game.swinging, dt);
     hero.animate(
       {
         pace: Math.min(Math.hypot(game.vx, game.vz) / MOVE.walkSpeed, 1),

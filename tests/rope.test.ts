@@ -65,11 +65,18 @@ describe('taking hold', () => {
 
   it('holding on, the hero hangs from the end of the rope and the stick does nothing', () => {
     const game = takeHold();
+    // It slides to the rope's end over the first moment: never a jump from where it took hold.
+    let last = { x: game.x, y: game.y };
+    for (let i = 0; i < 0.8 / STEP; i += 1) {
+      game.step(IDLE);
+      expect(Math.hypot(game.x - last.x, game.y - last.y)).toBeLessThan(0.45);
+      last = { x: game.x, y: game.y };
+    }
     for (let i = 0; i < 2 / STEP; i += 1) {
       game.step({ ...IDLE, moveX: i % 2 ? 1 : -1, moveZ: 1 });
       const hand = handOf(game.swinging!);
-      expect(game.x).toBeCloseTo(hand.x);
-      expect(game.y).toBeCloseTo(hand.y - ROPE.hang);
+      expect(game.x).toBeCloseTo(hand.x, 1);
+      expect(game.y).toBeCloseTo(hand.y - ROPE.hang, 1);
       expect(game.z).toBeCloseTo(0);
     }
   });
