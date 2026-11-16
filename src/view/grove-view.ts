@@ -39,6 +39,8 @@ import { Scatter, buildForest, type Forest } from './forest';
 import { bossFighting } from '../game/boss';
 import { BossView } from './boss';
 import { FIGHT_CAMERA, fightView } from './boss-camera';
+import { ROPE, handOf } from '../game/rope';
+import { RopesView } from './ropes';
 import { ROUTE_CAMERA, cameraFor, followsRoute, forwardOf, turnToward } from './route-camera';
 import { ENEMY_MODELS, EnemyView, modelFilesOf } from './enemies';
 import { HERO_MODEL_FILES, buildHero, type HeroView } from './heroes';
@@ -106,6 +108,8 @@ interface LevelView extends LevelSolids {
   scatter: Scatter;
   /** The level's pools, if it has any. */
   water: WaterView | null;
+  /** The level's ropes, if it has any. */
+  ropes: RopesView | null;
 }
 
 /**
@@ -294,8 +298,11 @@ export class GroveView {
     root.add(solids.group, forest.group, scatter.build(this.materials));
     const water = level.water?.length ? new WaterView(level.water, this.materials, this.tier.simple, !forest.lakeBed) : null;
     if (water) root.add(water.group);
+    const ropes = level.ropes?.length ? new RopesView(level, this.materials) : null;
+    if (ropes) root.add(ropes.group);
     this.levelView?.water?.dispose();
-    this.levelView = { ...solids, root, forest, scatter, water };
+    this.levelView?.ropes?.dispose();
+    this.levelView = { ...solids, root, forest, scatter, water, ropes };
     this.swimEvents = [];
     this.under = 0;
     this.hero = buildHero(heroName, this.assets, this.tier.simple);
@@ -406,6 +413,20 @@ export class GroveView {
     let turn = game.facing - hero.root.rotation.y;
     turn = Math.atan2(Math.sin(turn), Math.cos(turn));
     hero.root.rotation.y += turn * (1 - Math.exp(-14 * dt));
+    // On a rope the hero hangs in line with it, hands at its end; off it, upright again.
+    levelView.ropes?.update(game.ropes);
+    hero.root.rotation.order = 'YXZ';
+    const lean = game.swinging ? -game.swinging.angle : 0;
+    hero.root.rotation.x += (lean - hero.root.rotation.x) * (1 - Math.exp(-18 * dt));
+    if (game.swinging) {
+      const hand = handOf(game.swinging);
+      const { rope } = game.swinging;
+      hero.root.position.set(
+        hand.x - ((rope.x - hand.x) / rope.length) * ROPE.hang,
+        hand.y - ((rope.y - hand.y) / rope.length) * ROPE.hang,
+        hand.z - ((rope.z - hand.z) / rope.length) * ROPE.hang,
+      );
+    }
     hero.animate(
       {
         pace: Math.min(Math.hypot(game.vx, game.vz) / MOVE.walkSpeed, 1),
@@ -673,6 +694,11 @@ export class GroveView {
       drawCalls: this.drawn.calls,
       triangles: this.drawn.triangles,
     };
+  }
+
+  /** The ropes drawn and how far each has swung, for the browser checks. */
+  ropeInfo(game: Game): { id: string; angle: number }[] {
+    return this.levelView?.ropes?.info(game.ropes) ?? [];
   }
 
   /** What the boss on screen is showing, for the browser checks, or null when the level has none. */

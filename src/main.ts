@@ -533,6 +533,10 @@ const boot = (): void => {
       get water() {
         return view ? view.waterInfo() : null;
       },
+      /** The level's ropes as drawn: each one's id and how far it has swung, in radians. */
+      get ropes() {
+        return view ? view.ropeInfo(game) : [];
+      },
       /** Which way the camera faces now, in degrees seen from above (0 looks along -z). */
       get facing() {
         return view ? view.facing : 0;

@@ -72,6 +72,7 @@ describe.each(LEVELS.map((level) => [level.id, level] as const))('the level %s',
       if (kinds.has('marmot')) for (const name of ['marmotTell', 'marmotThrow'] as const) needs.add(name);
       if (kinds.has('crocodile')) for (const name of ['crocTell', 'crocBite', 'crocSplash', 'crocHit'] as const) needs.add(name);
       if (level.water?.length) for (const name of ['waterIn', 'stroke', 'surfacing', 'lapping'] as const) needs.add(name);
+      if (level.ropes?.length) for (const name of ['ropeGrab', 'ropeRelease'] as const) needs.add(name);
       for (const solid of level.solids) {
         if (solid.motion?.kind === 'tip') needs.add('creak');
         if (solid.motion?.kind === 'crumble') for (const name of ['mossRustle', 'mossFall'] as const) needs.add(name);

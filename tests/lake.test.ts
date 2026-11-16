@@ -142,7 +142,7 @@ describe.each(DIFFICULTIES)('the lake on %s', (difficulty) => {
 
   it('the high banks cannot be climbed onto from the water, the shores and the low pieces can, and nobody can get onto the wooded island', () => {
     for (const id of ['headland', 'gravel-bar', 'landing', 'boardwalk', 'dock']) expect(byId(level, id).top - LAKE_SHAPE.surface, id).toBeGreaterThan(SWIM.climbHeight);
-    for (const id of ['point', 'island', 'reed-bar', 'cove-beach', 'post-1', 'log-1']) expect(byId(level, id).top - LAKE_SHAPE.surface, id).toBeLessThanOrEqual(SWIM.climbHeight);
+    for (const id of ['point', 'island', 'stack', 'reed-bar', 'cove-beach', 'post-1', 'log-1']) expect(byId(level, id).top - LAKE_SHAPE.surface, id).toBeLessThanOrEqual(SWIM.climbHeight);
     // The wooded island stands more than a full jump (2 m) over the highest place beside it.
     const wooded = byId(level, 'wooded-island');
     expect(level.route).not.toContain('wooded-island');
@@ -198,6 +198,79 @@ describe.each(DIFFICULTIES)('the lake on %s', (difficulty) => {
     expect(climbedOnto).toMatch(/^(log-|step-)/);
     expect(game.complete).toBe(true);
     expect(game.falls).toBe(0);
+  });
+});
+
+describe('the rope swings', () => {
+  /** Jumps for the rope from the bank before it, holds on for `wait` seconds, lets go, and says what the hero came down on. */
+  const swing = (difficulty: Difficulty, ropeId: string, wait: number, steer: boolean): string => {
+    const level = buildLake(difficulty);
+    const from = byId(level, level.route[level.route.indexOf(ropeId) - 1]);
+    const game = new Game(level, difficulty, 'Yaarbro');
+    Object.assign(game, { x: from.x - from.halfX + 2.5, z: from.z, y: from.top, groundId: from.id, grounded: true });
+    for (let i = 0; i < 4 / STEP && !game.swinging; i += 1) game.step({ ...IDLE, moveX: -1, jump: game.x < from.x - from.halfX + 0.6 });
+    expect(game.ropeId, `${difficulty} ${ropeId}`).toBe(ropeId);
+    game.step(IDLE);
+    for (let i = 0; i < wait / STEP; i += 1) game.step(IDLE);
+    game.step({ ...IDLE, jump: true });
+    for (let i = 0; i < 6 / STEP; i += 1) {
+      game.step(steer ? { ...IDLE, moveX: -1 } : IDLE);
+      if (game.grounded) return game.groundId ?? 'ground';
+      if (game.swimming) return 'water';
+    }
+    return 'air';
+  };
+  /** One swing out and back takes about three seconds. */
+  const WAITS = Array.from({ length: 31 }, (_, i) => i * 0.1);
+  const lands = (difficulty: Difficulty, ropeId: string, steer: boolean): boolean[] => {
+    const to = buildLake(difficulty).ropes!.find((r) => r.id === ropeId)!.to;
+    return WAITS.map((wait) => swing(difficulty, ropeId, wait, steer) === to);
+  };
+
+  it('two ropes cross the cove, to the rock stack and then up to the headland, and a jump from the bank before each reaches it', () => {
+    for (const difficulty of DIFFICULTIES) {
+      const level = buildLake(difficulty);
+      expect((level.ropes ?? []).map((r) => [r.id, r.to])).toEqual([['rope-1', 'stack'], ['rope-2', 'headland']]);
+      const at = level.route.indexOf('island');
+      expect(level.route.slice(at, at + 5)).toEqual(['island', 'rope-1', 'stack', 'rope-2', 'headland']);
+      // Both carry the hero west: left on the screen, with the camera looking north.
+      for (const rope of level.ropes ?? []) expect(rope.ahead).toEqual({ x: -1, z: 0 });
+    }
+  });
+
+  it('on Easy, letting go at any point in the swing lands safely (the owner\'s rule)', () => {
+    expect(buildLake('easy').ropeHelp).toBe(true);
+    for (const ropeId of ['rope-1', 'rope-2']) for (const steer of [false, true]) expect(lands('easy', ropeId, steer).every(Boolean), `${ropeId} steer ${steer}`).toBe(true);
+  });
+
+  it('on Normal, letting go anywhere on the way forward gets there, and at the back of the swing does not', () => {
+    expect(buildLake('normal').ropeHelp).toBe(false);
+    for (const ropeId of ['rope-1', 'rope-2']) {
+      const steering = lands('normal', ropeId, true);
+      // The first seven tenths of a second are the way forward.
+      expect(steering.slice(1, 8).every(Boolean), ropeId).toBe(true);
+      // Around half a swing later the rope is at the back.
+      expect(steering.slice(13, 18).some(Boolean), ropeId).toBe(false);
+    }
+  });
+
+  it('on Hard there is less to land on: fewer moments work than on Normal, but a good one still does with no steering', () => {
+    for (const ropeId of ['rope-1', 'rope-2']) {
+      const count = (difficulty: Difficulty): number => [...lands(difficulty, ropeId, false), ...lands(difficulty, ropeId, true)].filter(Boolean).length;
+      expect(count('hard'), ropeId).toBeLessThan(count('normal'));
+      expect(lands('hard', ropeId, false).some(Boolean), ropeId).toBe(true);
+    }
+  });
+
+  it('a miss lands in the cove, never a fall, and the hero can climb back onto the rock island or the stack', () => {
+    for (const difficulty of ['normal', 'hard'] as const) {
+      const level = buildLake(difficulty);
+      const pool = level.water!.find((w) => w.id === 'cove-water')!;
+      for (const rope of level.ropes ?? []) expect(rope.x > pool.minX && rope.x < pool.maxX && rope.z > pool.minZ && rope.z < pool.maxZ, rope.id).toBe(true);
+      for (const id of ['island', 'stack']) expect(byId(level, id).top - LAKE_SHAPE.surface, id).toBeLessThanOrEqual(SWIM.climbHeight);
+      // Holding on for half a swing and letting go at the back drops the hero short.
+      expect(['water', 'island']).toContain(swing(difficulty, 'rope-1', 1.5, false));
+    }
   });
 });
 

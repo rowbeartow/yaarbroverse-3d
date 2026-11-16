@@ -134,6 +134,7 @@ export class GameSounds {
         sound.play('waterIn', { volume: splashVolume(event.speed) });
         this.walked = 0;
       } else if (event.type === 'surface') sound.play('surfacing');
+      else if (event.type === 'rope') sound.play(event.what === 'grab' ? 'ropeGrab' : 'ropeRelease');
       // Out of breath sounds like running out of hearts: it is the same setback.
       else if (event.type === 'breathless') sound.play('heartsOut');
       else if (event.type === 'hurt') sound.play(event.left > 0 ? 'hit' : 'heartsOut');

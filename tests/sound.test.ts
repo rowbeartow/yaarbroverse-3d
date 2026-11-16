@@ -593,6 +593,20 @@ describe('water lapping', () => {
   });
 });
 
+describe('a rope swing', () => {
+  it('creaks as a hero takes hold and whooshes as they let go', () => {
+    const game = new Game(buildLake('normal'), 'normal', 'Yaarbro');
+    const { speaker, sounds } = listening(game);
+    game.events = [{ type: 'rope', id: 'rope-1', what: 'grab' }];
+    sounds.step(game);
+    expect(speaker.names()).toContain('ropeGrab');
+    speaker.played.length = 0;
+    game.events = [{ type: 'rope', id: 'rope-1', what: 'release' }];
+    sounds.step(game);
+    expect(speaker.names()).toContain('ropeRelease');
+  });
+});
+
 describe('the crocodile', () => {
   it('growls at its tell, bites as it lunges, splashes as it comes down or is beaten, and thumps when struck', () => {
     const level = buildLake('normal');
