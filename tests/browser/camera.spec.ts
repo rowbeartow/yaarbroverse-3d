@@ -94,19 +94,21 @@ test('the rope swings are drawn over the cove, and a hero who jumps at one takes
   expect(problems).toEqual([]);
 });
 
-test('the crocodile stepping stones lie low until a hero is near, then come up to be stood on', async ({ page }) => {
+test('the crocodile stepping stones lie under the water until a hero is near, then come up to be stood on', async ({ page }) => {
   const problems = await open(page, 'level=cocolalla');
   await play(page, 'Yaarbro', 'easy');
-  const stones = (): Promise<{ id: string; phase: string; y: number }[]> => page.evaluate(() => (window as unknown as { __grove: { stones: { id: string; phase: string; y: number }[] } }).__grove.stones);
-  // From the beach they are far off: every one lies low.
+  const stones = (): Promise<{ id: string; phase: string; y: number; shown: boolean }[]> =>
+    page.evaluate(() => (window as unknown as { __grove: { stones: { id: string; phase: string; y: number; shown: boolean }[] } }).__grove.stones);
+  // From the beach they are far off: every one lies under the water, out of sight.
   const far = await stones();
-  expect(far.length).toBeGreaterThanOrEqual(6);
-  expect(far.every((stone) => stone.phase === 'gone')).toBe(true);
-  const low = far[0].y;
-  // On the grassy point the first of the row is near: it comes up, and its back is higher than it lay.
+  expect(far.length).toBeGreaterThanOrEqual(10);
+  expect(far.every((stone) => stone.phase === 'gone' && !stone.shown)).toBe(true);
+  // On the grassy point the row is near: the first comes up and is drawn, its back about level with the water.
   await standOn(page, 'point');
   await expect.poll(async () => (await stones())[0].phase, { timeout: 30_000 }).toBe('rest');
-  expect((await stones())[0].y).toBeGreaterThan(low + 0.5);
+  const up = (await stones())[0];
+  expect(up.shown).toBe(true);
+  expect(Math.abs(up.y)).toBeLessThan(0.5);
   // Standing on it: on Easy it holds, and the hero stays on its back.
   await standOn(page, 'stone-1');
   await frames(page, 12);

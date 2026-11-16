@@ -103,7 +103,7 @@ export const LAKE_SHAPE = {
   stoneTop: 0.4,
   /** How deep a crocodile's body reaches under its back: shallow enough to swim under. */
   stoneThickness: 0.55,
-  stoneWake: 7,
+  stoneWake: 9,
   stoneRise: 0.45,
   /** How far a back dips under a hero's weight. */
   stoneDip: 0.12,
