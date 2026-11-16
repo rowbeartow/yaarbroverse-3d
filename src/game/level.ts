@@ -70,6 +70,12 @@ export interface Section {
    * (see route-shape.ts). Left out, 0.
    */
   facing?: number;
+  /**
+   * How far back and up the camera sits through this section, as a multiple
+   * of its usual place. More than 1 shows more of what is around the hero:
+   * for a stretch that comes back toward the camera, say. Left out, 1.
+   */
+  pull?: number;
 }
 
 export interface Level {
