@@ -72,10 +72,12 @@ describe.each(LEVELS.map((level) => [level.id, level] as const))('the level %s',
       if (kinds.has('marmot')) for (const name of ['marmotTell', 'marmotThrow'] as const) needs.add(name);
       if (kinds.has('crocodile')) for (const name of ['crocTell', 'crocBite', 'crocSplash', 'crocHit'] as const) needs.add(name);
       if (level.water?.length) for (const name of ['waterIn', 'stroke', 'surfacing', 'lapping'] as const) needs.add(name);
+      if (level.ropes?.length) for (const name of ['ropeGrab', 'ropeRelease'] as const) needs.add(name);
       for (const solid of level.solids) {
         if (solid.motion?.kind === 'tip') needs.add('creak');
         if (solid.motion?.kind === 'crumble') for (const name of ['mossRustle', 'mossFall'] as const) needs.add(name);
         if (solid.motion?.kind === 'sway') needs.add('gust');
+        if (solid.motion?.kind === 'float') for (const name of ['crocTell', 'crocBite', 'crocSplash'] as const) needs.add(name);
       }
     }
     for (const name of needs) expect(soundAt(name, entry.id), `${name} in ${entry.id}`).toBe(true);
@@ -89,7 +91,10 @@ describe.each(LEVELS.map((level) => [level.id, level] as const))('the level %s',
       const pools = (level.water ?? []).map((w) => w.id);
       expect(new Set([...ids, ...pools]).size).toBe(ids.length + pools.length);
       expect(level.route.length).toBeGreaterThan(0);
-      for (const id of level.route) expect([...ids, ...pools]).toContain(id);
+      const ropes = (level.ropes ?? []).map((r) => r.id);
+      // A rope leads to a solid of the level, and is on the route just before it.
+      for (const rope of level.ropes ?? []) expect(level.route[level.route.indexOf(rope.id) + 1]).toBe(rope.to);
+      for (const id of level.route) expect([...ids, ...pools, ...ropes]).toContain(id);
       // Every pool is deep and above the height a fall counts from. It is crossed on the way,
       // or it is where a missed jump lands: then a solid of the route stands in it or at its edge.
       for (const water of level.water ?? []) {
@@ -145,6 +150,7 @@ describe.each(LEVELS.map((level) => [level.id, level] as const))('the level %s',
         sounds.step(game);
         touch(game.groundId);
         touch(game.waterId);
+        touch(game.ropeId);
         for (const event of game.events) if (event.type === 'bounce') touch(event.solidId);
       }
       expect(game.complete).toBe(true);

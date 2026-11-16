@@ -353,6 +353,7 @@ const boot = (): void => {
     };
     for (const event of events) {
       if (event.type === 'fall') screens.say('Back to safety…', 2);
+      else if (event.type === 'piece' && event.what === 'snap') news('Snap! Do not stand on a crocodile too long.', 2.5);
       else if (event.type === 'hurt' && event.left > 0) news(`Oof! ${event.left} of ${level.hearts} hearts left.`, 2.5);
       else if (event.type === 'hurt') news('Out of hearts. Back to safety!', 2.5);
       else if (event.type === 'breathless') news('Out of breath! Back to safety.', 2.5);
@@ -532,6 +533,14 @@ const boot = (): void => {
       /** The level's water, if it has any: pools drawn, splashes showing, and how far under the picture is. */
       get water() {
         return view ? view.waterInfo() : null;
+      },
+      /** The level's crocodile stepping stones as drawn: each one's id, what it is doing and how high it is. */
+      get stones() {
+        return view ? view.stoneInfo() : [];
+      },
+      /** The level's ropes as drawn: each one's id and how far it has swung, in radians. */
+      get ropes() {
+        return view ? view.ropeInfo(game) : [];
       },
       /** Which way the camera faces now, in degrees seen from above (0 looks along -z). */
       get facing() {

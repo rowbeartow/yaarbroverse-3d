@@ -1,18 +1,49 @@
 # Session handoff
 
-Last updated: 2026-11-15 (milestone eight, part three: the crocodiles. Milestone eight is done.)
+Last updated: 2026-11-16 (milestone nine: Cocolalla Lake reshaped. The rope swings and the crocodile stepping stones wait for the owner's OK.)
 
 ## Start here
 
-**Milestone nine is under way: Cocolalla Lake reshaped.** The owner's playtest, his order, his OK on the route plan and his two changes are in `docs/decisions.md` (2026-11-15 and 2026-11-16). Done and merged: the route rule (`src/game/route-shape.ts`, pull requests 66 and 68), loading by level (67), the camera that follows the route (69, `src/view/route-camera.ts`). **The new layout is in the pull request this note arrived in; if you are reading this on `main`, it has merged.** The lake is now eight sections round a wooded island (`src/levels/cocolalla/layout.ts` has the map in words at its top; `docs/decisions.md` "Cocolalla Lake's new layout" has the numbers). Two sections are stand-ins: the Crocodile Crossing is a plain swim until the stepping stones are built, and the Swinging Pines is boulder hops until the rope swings are built. **The hunting crocodiles are in the pull request this version of the note arrived in (on `main`, it has merged):** on Normal and Hard the crocodiles have all of the Open Water and come after a swimmer, heading for where they are going; on Hard one more waits under the sunken logs for a hero who falls in (`crocHunt`, `crocLead` and `crocUnderLogs` in the lake's `difficulty.ts`; `docs/decisions.md` "The crocodiles hunt in the open water"). **Still to merge: the rope swings and the crocodile stepping stones, built and waiting on the branch `claude/backup-croc-stones` for the owner's OK on the preview page (https://claude.ai/artifact/HKCAXXuzCGGT6oJNyxEHRZ ) and his pick of the rope's two sounds on the sound board (https://claude.ai/artifact/WvtY9CjWaa5yTpwyJCferH ).** After milestone nine: fishing and the monster pike, then the grove reshaped by the route rule.
+**Milestone nine: Cocolalla Lake reshaped.** The game is live at https://rowbeartow.github.io/yaarbroverse-3d/ . What the owner asked for and why is in `docs/decisions.md` (2026-11-15 and 2026-11-16): his playtest found the lake "just more jumping", the crocodiles easy to avoid, and every route a straight line up the screen.
 
-**What nobody has checked yet on the reshaped lake, and the owner is the one who can:** the frame rate on the Mac in Safari with `?fps` (it must stay at 60 or more; in the test browser it draws about what the old lake drew); how the camera's turns feel, above all on the reed bar (a quarter turn after swimming toward the camera) and on the pier's landing; whether the stick following the camera is clear to the kids on touch; and how the wooded island and the booms look in full light. A cloud session has only seen still frames at the low tier.
+**Merged and live:**
 
-Everything below this paragraph describes the game as milestone eight left it.
+1. **The route rule** (pull requests 66 and 68). Routes turn: `src/game/route-shape.ts` measures a level's route and `tests/route-shape.test.ts` holds every level on the picker to the minimum. `docs/adding-a-level.md` "The route rule" has it in words. The Bouncing Grove is the one level still on the test's waiting list.
+2. **Loading by level** (67). A level's music, sounds and enemy models are fetched when it is picked. The 4 MB limit on sound is now 1 MB for shared sounds and 2.5 MB for each level's own (`home` and `SOUND_LIMITS` in `src/audio/sounds.ts`).
+3. **The camera that follows the route** (69). `src/view/route-camera.ts`: a section says which way the camera faces (`facing`) and may ask it to sit further back (`pull`); the stick follows the camera.
+4. **The lake's new layout** (70). Eight sections round a wooded island; `src/levels/cocolalla/layout.ts` has the map in words at its top. On the route rule, Normal: 26% away, 24% left, 30% right, 20% toward, 8 turns, 4 camera turns (it was 100% away with none).
+5. **The hunting crocodiles** (71). On Normal and Hard the crocodiles have all of the Open Water and come after a swimmer, heading for where they are going; on Hard one more waits under the sunken logs for a hero who falls in (`crocHunt`, `crocLead`, `crocUnderLogs` in the lake's `difficulty.ts`).
 
-**Milestone eight is done: Cocolalla Lake is playable from start to dock, with its crocodiles.** The game is live at https://rowbeartow.github.io/yaarbroverse-3d/ , the lake on the level picker after the Bouncing Grove.
+**Built, and waiting for the owner's OK before it merges: the rope swings and the crocodile stepping stones.** They are in the pull request this version of the handoff arrived in. **If you are reading this on `main`, he said OK and it has merged.**
 
-**Next: fishing and the monster pike, milestone nine, in a new session** (see "What's next"). The pike fight goes on the lake's fishing dock.
+- The preview page shows both at full speed, to watch or play, on each difficulty: https://claude.ai/artifact/HKCAXXuzCGGT6oJNyxEHRZ
+- The rope's two sounds wait for his pick on the sound board, A or B for each (choice A is wired in): https://claude.ai/artifact/WvtY9CjWaa5yTpwyJCferH
+- **The rope swings:** `src/game/rope.ts` has the rules, `src/view/ropes.ts` the drawing, `docs/adding-a-level.md` "Rope swings" the recipe, `docs/decisions.md` "How a rope swing works" the choices. Two ropes cross the lake's cove in section 3, to a rock stack and up to the headland's ledge. On Easy, letting go anywhere lands safely (`ropeHelp`).
+- **The crocodile stepping stones:** a new kind of moving piece, `float`, in `src/game/moving.ts`, drawn from the crocodile's model by `src/view/croc-stones.ts`; `docs/decisions.md` "How the crocodile stepping stones work" has the choices. Two rows cross the east channel in section 2 with a rock half way. On Easy they never go under; on Hard one stood on too long snaps (`stone*` in the lake's `difficulty.ts`). The rock island is now too high to climb onto from the water.
+- If he asks for changes: the numbers are in `src/levels/cocolalla/difficulty.ts` and `ROPE` in `src/game/rope.ts`. Rebuild the preview page with `tools/preview/arena.mjs` (its "Rope swings" and "Crocodile stepping stones" places come first; the five plain model files it needs are rebuilt from the originals on the `hero-models` release with the commands in `CLAUDE.md`) and publish it over the same address.
+- If he picks choice B for a rope sound: the two B files were cut as `CREDITS.md` describes for A, with these differences: taking hold B is 0.6 s of `tree_creak.flac` from 4.0 s in, played 1.9 times as fast, bass under 180 hertz out; letting go B is `swish-8` played at three quarters of its speed.
+
+**What nobody has checked yet on the reshaped lake, and the owner is the one who can:**
+
+1. **The frame rate on the Mac** in Safari with `?fps`, on Hard. It must stay at 60 or more. In the test browser the reshaped lake draws about what the old one drew (347 to 575 thousand triangles at six places, against 344 to 598 thousand).
+2. **How the camera's turns feel**, above all on the reed bar (a quarter turn after swimming toward the camera) and on the pier's landing, and whether the stick following the camera is clear to the kids on touch.
+3. **Anything in motion.** A cloud session has seen only still frames: the swings, the crocodiles surfacing and snapping, the hunt.
+4. **Whether the hunting crocodiles are now a real threat on Normal and fair on Hard**, and whether Easy is still easy enough for the younger player.
+5. **How the wooded island, the booms and the snags look in full light.**
+6. **How the lake's music comes in** after the short fetch when the lake is picked, on a real connection.
+
+**The roadmap, in the owner's order:**
+
+1. Milestones six to nine (the grove's boss and variety, swimming, the lake, the lake reshaped): done, apart from the owner's OK above.
+2. **Fishing and the monster pike boss, on the lake's fishing dock: next.** The pike is fought both on the fishing line and in the water. The dock stands in open water at the end of the Old Pier, with the camera looking north.
+3. **The Bouncing Grove reshaped by the route rule.** Today 92% of it runs away from the camera with no camera turns; it is on the route test's waiting list until then.
+4. Skiing in the Selkirks, with Caputo on a snowboard.
+5. Mountain climbing on rock, ice and trees.
+
+---
+
+**Milestone eight, part three (done 2026-11-15): the crocodiles, as it was written then.** The lake's layout, where the crocodiles wait and how they behave on Normal and Hard have changed since (see above); the crocodile's model, clips, tell, lunge and sounds have not.
+
 
 **Frame rate budget, still in force:** the owner measured the lake at 75 to 81 frames a second in Safari on his Mac before the crocodiles (the grove runs at 120). It must stay at 60 or more. The owner checks the lake with the crocodiles next (see "What nobody has checked yet").
 
@@ -56,14 +87,6 @@ Two crocodiles in view cost 2 draw calls and 16,000 triangles, about 3% more tri
 3. **How they sound in the game.** Heard on the board only.
 4. **Whether Easy is easy enough and Hard a real threat**, played by the kids on the iPad.
 5. Still open from parts one and two: swimming in the Sandbox, the lake's music and lapping in the game, the iPad's frame rate on the lake.
-
-**The roadmap, in the owner's order:**
-
-1. Milestones six, seven and eight (the lake: swimming, the level, the crocodiles): done.
-2. **Fishing and the monster pike boss, on the fishing dock (milestone nine): next.** The pike is fought both on the fishing line and in the water.
-3. Skiing in the Selkirks, with Caputo on a snowboard.
-4. Mountain climbing on rock, ice and trees.
-
 ---
 
 **Milestone eight, part two (done 2026-11-15): Cocolalla Lake.** Pull requests 55 to 60, all merged: the browser checks in parallel shards, about 10 minutes a pull request (55); the route plan (owner's OK: https://claude.ai/artifact/WzVaTX3yBGtw8qswMdqTY5 ); sections 1 to 3 (56) and 4 to 6 (57); the lake's scenery (58); the lake on the level picker (59); its music, "Morning Sky", and lapping water (60). The level is `src/levels/cocolalla/` (id `cocolalla`): a pebble beach, boulder hops, a swim to a rock island, sunken logs to a gravel bar, a dive under a rocky point, a swim across Cattail Cove, and posts up to the boardwalk and the fishing dock. The water is three pools the full width of the lake, parted by the gravel bar and the reed bar, so a missed jump lands in the water and is never a fall. `tests/lake.test.ts` checks the lake's own rules; `LAKE_TIMES=1 npx vitest run tests/lake.test.ts --silent=false` prints the section times. The surroundings are `scenery: 'lake'` (`src/view/lake.ts`, `src/view/lake-solids.ts`).
@@ -399,10 +422,11 @@ Milestone four (sound and music) is done, in the pull requests listed under "Sta
 
 ## What's next
 
-1. **Fishing and the monster pike (milestone nine), in a new session.** The owner's word so far (`docs/decisions.md`, 2026-11-14): the lake level ends at a fishing dock, and the monster pike fight goes there; the pike is fought both on the fishing line and in the water. The Caputo Mountain docs (the owner's private repo) have a Cocolalla Lake fishing rescue to read first. A boss can be added to any level (`docs/adding-a-level.md`, "Ending a level with a boss"); the pike is the first boss in the water, so how it reaches a swimmer needs the owner's word, as the crocodile's did. Start with a plan for the owner.
-2. **The owner checks the lake's frame rate with the crocodiles** on the Mac (`?fps`, Hard, both crocodile swims). If it drops under 60, the first things to cut are the near pines (`nearPines` in `LAKE_LOOK`, `src/view/lake.ts`), the water's points (`22000` in `WaterView`, `src/view/water.ts`), and how far away crocodiles are drawn (`SEEN_WITHIN` in `src/view/enemies.ts`).
-3. **The owner and the kids play the lake** on the iPad, and say what is off (see "What nobody has checked yet"). Tuning is the `croc*` numbers and the rest of `src/levels/cocolalla/difficulty.ts`.
-4. **Ideas that came up and were not asked for** are not in the code: a vine to swing from, a rolling log and logs drifting in a stream (drifting logs could be a new `motion` kind in `src/game/moving.ts`), a run clip for the scout and clips of its own for the chief, recorded sounds of its own for the chief, a hint on screen the first time a guarded boss is open, remembering the last area each player picked, a ghost of someone else's run, sound that moves left and right with what makes it, sounds for strokes underwater, a boat, a loon (no CC0 recording was found; the owner left the made-in-code one out).
+1. **The owner's OK on the rope swings and the crocodile stepping stones** (the preview page and the sound board, at the top of this file), then merge that pull request and check the live site.
+2. **Fishing and the monster pike, in a new session.** The owner's word so far (`docs/decisions.md`, 2026-11-14): the lake level ends at a fishing dock, and the monster pike fight goes there; the pike is fought both on the fishing line and in the water. Read the Caputo Mountain docs on fishing in the private repo first, and ask the owner for anything they do not give.
+3. **The Bouncing Grove reshaped by the route rule**, after that. Plan it the way the lake was planned: a map from above with the camera's facing in each part and its numbers on the rule, for the owner's OK before anything is built.
+4. **The owner checks the reshaped lake on the Mac and with the kids** (see "What nobody has checked yet on the reshaped lake"). If the frame rate drops under 60, the first things to cut are the near pines (`nearPines` in `LAKE_LOOK`, `src/view/lake.ts`), the pines on the island (`islandPineArea`), and the water's points (the 2.5 m cells in `sheet`, `src/view/lake.ts`).
+5. **Ideas that came up and were not asked for** are not in the code: a rolling log and logs drifting in a stream (drifting logs could be a new `motion` kind in `src/game/moving.ts`), a run clip for the scout and clips of its own for the chief, a clip of its own for each hero hanging from a rope, harder optional routes on the lake for the older player.
 
 ## Known limits
 

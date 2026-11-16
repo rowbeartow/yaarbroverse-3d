@@ -593,6 +593,39 @@ describe('water lapping', () => {
   });
 });
 
+describe('a rope swing', () => {
+  it('creaks as a hero takes hold and whooshes as they let go', () => {
+    const game = new Game(buildLake('normal'), 'normal', 'Yaarbro');
+    const { speaker, sounds } = listening(game);
+    game.events = [{ type: 'rope', id: 'rope-1', what: 'grab' }];
+    sounds.step(game);
+    expect(speaker.names()).toContain('ropeGrab');
+    speaker.played.length = 0;
+    game.events = [{ type: 'rope', id: 'rope-1', what: 'release' }];
+    sounds.step(game);
+    expect(speaker.names()).toContain('ropeRelease');
+  });
+});
+
+describe('a crocodile stepping stone', () => {
+  it('growls as its hold runs out, bites if it snaps, and splashes quietly as it comes up or goes under', () => {
+    const game = new Game(buildLake('hard'), 'hard', 'Yaarbro');
+    const stone = game.level.solids.find((s) => s.id === 'stone-1')!;
+    Object.assign(game, { x: stone.x, z: stone.z, y: stone.top });
+    const { speaker, sounds } = listening(game);
+    const heard = (what: 'tell' | 'snap' | 'fall' | 'back'): string[] => {
+      speaker.played.length = 0;
+      game.events = [{ type: 'piece', id: 'stone-1', kind: 'float', what }];
+      sounds.step(game);
+      return speaker.names();
+    };
+    expect(heard('tell')).toContain('crocTell');
+    expect(heard('snap')).toContain('crocBite');
+    expect(heard('fall')).toContain('crocSplash');
+    expect(heard('back')).toContain('crocSplash');
+  });
+});
+
 describe('the crocodile', () => {
   it('growls at its tell, bites as it lunges, splashes as it comes down or is beaten, and thumps when struck', () => {
     const level = buildLake('normal');

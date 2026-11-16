@@ -134,6 +134,7 @@ export class GameSounds {
         sound.play('waterIn', { volume: splashVolume(event.speed) });
         this.walked = 0;
       } else if (event.type === 'surface') sound.play('surfacing');
+      else if (event.type === 'rope') sound.play(event.what === 'grab' ? 'ropeGrab' : 'ropeRelease');
       // Out of breath sounds like running out of hearts: it is the same setback.
       else if (event.type === 'breathless') sound.play('heartsOut');
       else if (event.type === 'hurt') sound.play(event.left > 0 ? 'hit' : 'heartsOut');
@@ -161,6 +162,10 @@ export class GameSounds {
         else if (event.kind === 'tip' && event.what === 'move') sound.play('creak', { volume: volume * 0.7 });
         else if (event.kind === 'crumble' && event.what === 'tell') sound.play('mossRustle', { volume });
         else if (event.kind === 'crumble' && event.what === 'fall') sound.play('mossFall', { volume });
+        // A crocodile stepping stone: a quiet splash as it comes up or goes under, its growl as its hold runs out, its bite if it snaps.
+        else if (event.kind === 'float' && event.what === 'tell') sound.play('crocTell', { volume: volume * 0.8 });
+        else if (event.kind === 'float' && event.what === 'snap') sound.play('crocBite', { volume });
+        else if (event.kind === 'float' && (event.what === 'fall' || event.what === 'back')) sound.play('crocSplash', { volume: volume * 0.45 });
         // Windy boughs gust over and over: only the ones close by are heard.
         else if (event.kind === 'sway' && event.what === 'tell' && piece && Math.hypot(piece.x - game.x, piece.z - game.z) < GUST_NEAR) sound.play('gust', { volume });
       }

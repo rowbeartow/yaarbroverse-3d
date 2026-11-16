@@ -58,13 +58,20 @@ export class Bot {
         const pool = game.water as Water;
         const reachable = (id: string | undefined): boolean => {
           const solid = level.solids.find((s) => s.id === id);
-          return solid !== undefined && solid.top - pool.surface <= SWIM.climbHeight;
+          // A crocodile's back cannot be climbed onto from the water.
+          return solid !== undefined && solid.motion?.kind !== 'float' && solid.top - pool.surface <= SWIM.climbHeight;
         };
         while (this.index >= 0 && !reachable(level.route[this.index + 1])) this.index -= 1;
       }
       return this.swimSafely(game);
     }
     if (game.climbing > 0) return { moveX: 0, moveZ: 0, jump: false };
+    // On a rope: hold on until letting go now would land on what the rope leads to.
+    if (game.swinging) {
+      this.index = level.route.indexOf(game.swinging.rope.id);
+      this.holdingJump = this.wouldLand(game);
+      return { moveX: 0, moveZ: 0, jump: this.holdingJump };
+    }
 
     // A scout coming at the bot: jump, and come down on top of it. Landing on
     // an enemy strikes it on every difficulty, so this is walk and jump alone.
@@ -103,7 +110,9 @@ export class Bot {
     const isWater = (id: string | undefined): boolean => (level.water ?? []).some((w) => w.id === id);
     const nextId = isWater(level.route[this.index + 1]) ? level.route[this.index + 2] : level.route[this.index + 1];
     const next = level.solids.find((s) => s.id === nextId);
-    let aim = next ? aimPoint(next, game.x, game.z) : { x: level.leaf.x, z: level.leaf.z };
+    // A rope next on the route: run and jump for where it hangs, and the hero takes hold in the air.
+    const rope = (level.ropes ?? []).find((each) => each.id === nextId);
+    let aim = next ? aimPoint(next, game.x, game.z) : rope ? { x: rope.x, z: rope.z } : { x: level.leaf.x, z: level.leaf.z };
     let easing = true;
     // Where the route turns a corner, the straight line to the next piece
     // would leave this one too soon. Run along this piece first, to the spot
@@ -129,11 +138,13 @@ export class Bot {
     }
     // A windy bough (here or next) has to be resting, level with where the bot is going, for
     // long enough to get across. Until then, wait: on the bough, or at the edge before it.
-    if (game.grounded && here && next && (next.motion?.kind === 'sway' || here.motion?.kind === 'sway')) {
+    // A crocodile's back next: wait where the bot is until it is up and will hold long enough to get across it.
+    const backNext = next?.motion?.kind === 'float';
+    if (game.grounded && here && next && (backNext || next.motion?.kind === 'sway' || here.motion?.kind === 'sway')) {
       const toNext = distanceToEdge(next, game.x, game.z);
       const needed = toNext / MOVE.walkSpeed + 0.2;
-      const even = Math.abs(topAt(next, next.x, next.z) - game.y) <= game.level.ledgeHelp + 0.05;
-      const ready = even && steadyFor(next) > needed && steadyFor(here) > needed;
+      const even = backNext || Math.abs(topAt(next, next.x, next.z) - game.y) <= game.level.ledgeHelp + 0.05;
+      const ready = backNext ? !next.gone && steadyFor(next) > needed + 0.4 : even && steadyFor(next) > needed && steadyFor(here) > needed;
       if (!ready) {
         // Just inside the edge nearest the next piece.
         const inset = here.shape === 'box' ? { x: Math.min(0.35, here.halfX * 0.8), z: Math.min(0.35, here.halfZ * 0.8) } : { x: 0, z: 0 };
@@ -181,6 +192,30 @@ export class Bot {
   }
 
   /**
+   * True when letting go of the rope on this very step, then steering for the
+   * solid it leads to, lands there. Played out on a copy of the game.
+   */
+  private wouldLand(game: Game): boolean {
+    const rope = game.swinging?.rope;
+    const to = game.level.solids.find((s) => s.id === rope?.to);
+    if (!rope || !to) return false;
+    const copy = copyGame(game);
+    copy.step({ moveX: 0, moveZ: 0, jump: true });
+    if (copy.swinging) return false;
+    for (let i = 0; i < 3 / STEP; i += 1) {
+      if (copy.grounded) return copy.groundId === to.id;
+      if (copy.swimming || copy.falls > game.falls) return false;
+      const aim = aimPoint(to, copy.x, copy.z);
+      const dx = aim.x - copy.x;
+      const dz = aim.z - copy.z;
+      const far = Math.hypot(dx, dz);
+      const push = Math.min(far / 1.2, 1);
+      copy.step({ moveX: far > 1e-6 ? (dx / far) * push : 0, moveZ: far > 1e-6 ? (dz / far) * push : 0, jump: false });
+    }
+    return false;
+  }
+
+  /**
    * In the water: swim for the next solid on the route. Something in the way
    * at this depth means dive (the move button) until under it; with nothing
    * in the way and nothing overhead, swim back up. At the surface beside the
@@ -210,7 +245,10 @@ export class Bot {
     const blockedAtSurface = inWay(floatY, MOVE.bodyHeight);
     let dive = false;
     let up = false;
-    if (blockedHere) dive = true;
+    // Under something shallow (a crocodile's body), stay a little deeper than just clear of it: a swimmer who
+    // drifts up to the depth where it straightens out is stopped by it again.
+    const wellUnder = game.y < floatY - 0.7;
+    if (blockedHere || ((blockedAtSurface || overhead) && !wellUnder)) dive = true;
     else if (game.under && !overhead && !blockedAtSurface) up = true;
     // Beside the next solid at the surface: climb out (a fresh press of Jump).
     let jump = up;

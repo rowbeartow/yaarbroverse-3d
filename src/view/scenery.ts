@@ -1020,7 +1020,9 @@ export const buildSolids = (level: Level, materials: Materials, decor: Decor, ra
   const pieces: LevelSolids['pieces'] = [];
   for (const s of level.solids) {
     const shape = new Group();
-    if (s.motion) {
+    // A crocodile stepping stone is drawn from the crocodile's model: `croc-stones.ts`.
+    if (s.motion?.kind === 'float') shape.visible = false;
+    else if (s.motion) {
       const made = s.motion.kind === 'tip' ? tippingLog(s, materials) : s.motion.kind === 'crumble' ? mossPad(s, materials) : windyBough(s, materials);
       shape.add(made.shape);
       moving.push(made.view);
