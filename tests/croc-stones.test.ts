@@ -7,12 +7,14 @@
 import { describe, expect, it } from 'vitest';
 import { DIFFICULTIES } from '../src/game/difficulty';
 import { Game, IDLE } from '../src/game/game';
-import { HEROES, STEP } from '../src/game/hero';
-import type { Level, Solid } from '../src/game/level';
+import { HEROES, MOVE, STEP } from '../src/game/hero';
+import { touchesFromAbove, type Level, type Solid } from '../src/game/level';
 import { FLOAT_LOW, floatPhase, type Motion } from '../src/game/moving';
 import { SWIM } from '../src/game/swim';
 import { LAKE_DIFFICULTY } from '../src/levels/cocolalla/difficulty';
 import { buildLake } from '../src/levels/cocolalla/layout';
+import { cameraFor } from '../src/view/route-camera';
+import { stoneLength } from '../src/view/croc-stones';
 import { Bot } from './helpers/bot';
 
 type Float = Extract<Motion, { kind: 'float' }>;
@@ -61,6 +63,121 @@ const upAndOn = (motion: Partial<Float> = {}): Game => {
   standOnBack(game);
   return game;
 };
+
+describe('a row that waits for the first step (Normal)', () => {
+  const waiting = (): Game => new Game(yard({ waitFor: 'back' }), 'normal', 'Yaarbro');
+
+  it('only its first crocodile comes up when a hero is near, and stays up however long the hero waits', () => {
+    const game = waiting();
+    hover(game, 1);
+    expect(solidOf(game).gone).toBe(false);
+    expect(solidOf(game, 'next').gone).toBe(true);
+    hover(game, 20);
+    expect(solidOf(game).gone).toBe(false);
+    expect(solidOf(game).top).toBeCloseTo(0.4);
+    expect(solidOf(game, 'next').gone).toBe(true);
+  });
+
+  it('the first step onto it starts the row: the next comes up the stagger later, and the first keeps the rhythm from then', () => {
+    const game = waiting();
+    hover(game, 1);
+    standOnBack(game);
+    const seen = wait(game, 0.8, 'next');
+    expect(seen).toEqual([]);
+    // The second's stagger is 0.9 s, and it takes 0.5 s to come up.
+    expect(wait(game, 0.3, 'next')).toEqual(['back']);
+    wait(game, 0.6);
+    expect(solidOf(game, 'next').gone).toBe(false);
+    // The first stays up for `up` (2.5 s) from the step, then goes under with the hero on it.
+    const game2 = waiting();
+    hover(game2, 1);
+    standOnBack(game2);
+    wait(game2, 2.2);
+    expect(solidOf(game2).gone).toBe(false);
+    wait(game2, 1.5);
+    expect(game2.swimming).toBe(true);
+  });
+
+  it('a hero back on the bank before the row finds it waiting again, and the others go under smoothly, not all at once', () => {
+    const level = yard({ waitFor: 'back' });
+    // A bank near the row's first crocodile, inside its wake.
+    level.solids.push({ id: 'shore', kind: 'bank', shape: 'box', x: 5, z: -10, halfX: 1, halfZ: 1, top: 0.3, bottom: -40 });
+    const game = new Game(level, 'normal', 'Yaarbro');
+    hover(game, 1);
+    standOnBack(game);
+    wait(game, 1.6);
+    expect(solidOf(game, 'next').gone).toBe(false);
+    Object.assign(game, { x: 5, z: -10, y: 0.3, vx: 0, vy: 0, vz: 0, grounded: true, groundId: 'shore' });
+    game.step(IDLE);
+    // A moment later the second is still on its way down...
+    expect(solidOf(game, 'next').top).toBeGreaterThan(0.4 - FLOAT_LOW + 0.5);
+    for (let i = 0; i < 1.5 / STEP; i += 1) {
+      Object.assign(game, { x: 5, z: -10, grounded: true, groundId: 'shore' });
+      game.step(IDLE);
+    }
+    // ...and then under, while the first waits again.
+    expect(solidOf(game, 'next').gone).toBe(true);
+    expect(solidOf(game).gone).toBe(false);
+    for (let i = 0; i < 10 / STEP; i += 1) {
+      Object.assign(game, { x: 5, z: -10, grounded: true, groundId: 'shore' });
+      game.step(IDLE);
+    }
+    expect(solidOf(game).gone).toBe(false);
+  });
+
+  it('floatPhase: a waiting first crocodile rises from when a hero came near, and the step does not make it rise again', () => {
+    const m: Float = { ...FLOAT, waitFor: 'back' };
+    expect(floatPhase(m, -1, -1).phase).toBe('gone');
+    expect(floatPhase(m, -1, 0.2).phase).toBe('rise');
+    expect(floatPhase(m, -1, 30)).toMatchObject({ phase: 'rest', under: 0, left: Infinity });
+    expect(floatPhase(m, 0, 30)).toMatchObject({ phase: 'rest', under: 0 });
+    expect(floatPhase(m, 0.1, 30).left).toBeCloseTo(m.up - 0.1);
+    // Next time round it comes up as the others do.
+    expect(floatPhase(m, m.period + 0.1, 30).phase).toBe('rise');
+  });
+});
+
+describe('the lake\'s crossing, as the owner asked on 2026-11-16', () => {
+  const stones = (level: Level): Solid[] => level.solids.filter((s) => s.motion?.kind === 'float');
+  it('Normal waits for the first step of each row; Easy and Hard do not', () => {
+    const first = (difficulty: (typeof DIFFICULTIES)[number]): (string | undefined)[] => [...new Set(stones(buildLake(difficulty)).map((s) => (s.motion as Float).waitFor))];
+    expect(first('easy')).toEqual([undefined]);
+    expect(first('hard')).toEqual([undefined]);
+    const level = buildLake('normal');
+    const firsts = first('normal');
+    // Two rows, each waiting for its own first crocodile, which is the first on the way across.
+    expect(firsts).toHaveLength(2);
+    for (const id of firsts) expect((level.solids.find((s) => s.id === id)!.motion as Float).delay).toBe(0);
+  });
+
+  it('on Normal the wave is slower and they stay up longer than before (1.1 s apart and 2.9 s up)', () => {
+    const n = LAKE_DIFFICULTY.normal;
+    expect(n.stoneStagger).toBeGreaterThan(1.1);
+    expect(n.stoneUp).toBeGreaterThan(2.9);
+    expect(n.stonePeriod!).toBeGreaterThan(n.stoneUp + 1);
+  });
+
+  it('the footing is the whole crocodile as drawn, head to tail: the drawing is made to the solid\'s size', () => {
+    for (const difficulty of DIFFICULTIES) {
+      for (const s of stones(buildLake(difficulty))) {
+        expect(stoneLength(s)).toBeCloseTo(4.6);
+        // Its tail tip, 2.2 m from its middle along it, is footing.
+        expect(touchesFromAbove(s, s.x + 2.2, s.z, MOVE.footRadius)).toBe(true);
+        expect(touchesFromAbove(s, s.x - 2.2, s.z, MOVE.footRadius)).toBe(true);
+        // About as wide as the drawn body, legs and all (1.5 m).
+        expect(s.halfZ * 2).toBeGreaterThanOrEqual(1.5);
+      }
+    }
+  });
+
+  it('the camera looks straight up the rows, so up on the keys runs along them', () => {
+    const level = buildLake('normal');
+    expect(cameraFor(level, 'point').facing).toBe(0);
+    const row = stones(level);
+    // Every crocodile is straight up the channel from the one before, give or take its sideways step.
+    for (let i = 1; i < row.length; i += 1) expect(Math.abs(row[i].x - row[i - 1].x)).toBeLessThanOrEqual(1.01);
+  });
+});
 
 describe('a crocodile stepping stone', () => {
   it('lies under the water, out of sight and not there to stand on, while no hero is near', () => {

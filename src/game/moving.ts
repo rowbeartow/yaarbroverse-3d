@@ -31,6 +31,13 @@
 //             wave runs once and they stay up. A back dips `dip` metres while
 //             a hero stands on it. With `snap` (Hard), a hero who stays on one
 //             that long is snapped at: a heart. A swimmer cannot climb onto one.
+//             With `waitFor` (Normal), the row waits for the hero: when a hero
+//             comes near, only its first crocodile (the one `waitFor` names)
+//             comes up, and it stays up until a hero steps onto it. That step
+//             starts the row's clock, so the rest of the wave runs from the
+//             first jump, which is always a fair one. A hero back on the bank
+//             before the row (after a swim, say) finds it waiting again: the
+//             others go under and the first comes up and waits.
 //
 // Where a hero can stand is always where the piece is now: its top moves, or
 // tilts, and `topAt` in level.ts gives the height at any point. The drawing
@@ -56,6 +63,8 @@ export type Motion =
       tell: number;
       dip: number;
       snap: number;
+      /** The row's first crocodile, which waits for a hero's first step before the row's clock starts. Left out, the clock starts when a hero comes near. */
+      waitFor?: string;
     };
 
 export type PiecePhase =
@@ -91,7 +100,11 @@ export interface Piece {
   speed: number;
   /** sway and float: in the tell before its next move. */
   telling: boolean;
-  /** float: seconds since its row woke (below 0 until it has), and seconds a hero has stood on it without a break. */
+  /**
+   * float: seconds since its row's clock started (below 0 until it has), and
+   * seconds a hero has stood on it without a break. In a row that waits
+   * (`waitFor`), `clock` is the seconds since a hero came near (below 0 until one has).
+   */
   since?: number;
   onFor?: number;
 }
@@ -120,7 +133,7 @@ const SAG_RATE = 0.3;
 
 export const newPiece = (s: Solid): Piece => ({
   phase: s.motion?.kind === 'sway' ? swayPhase(s.motion, 0).phase : s.motion?.kind === 'float' ? 'gone' : 'rest',
-  clock: 0,
+  clock: s.motion?.kind === 'float' ? -1 : 0,
   baseTop: s.top,
   thickness: s.top - s.bottom,
   dip: s.motion?.kind === 'float' ? FLOAT_LOW : 0,
@@ -131,15 +144,26 @@ export const newPiece = (s: Solid): Piece => ({
 
 /**
  * Where a crocodile stepping stone is in its row's rhythm, `since` seconds
- * after the row woke: its phase, how far under it is (0 floating, 1 out of
- * sight), whether it is giving its warning, and how many seconds are left
- * before it goes under (Infinity when it never will).
+ * after the row's clock started: its phase, how far under it is (0 floating,
+ * 1 out of sight), whether it is giving its warning, and how many seconds are
+ * left before it goes under (Infinity when it never will). In a row that waits
+ * for a hero's first step (`waitFor`), `near` is the seconds since a hero came
+ * near: until the first step, the row's first crocodile comes up and stays.
  */
-export const floatPhase = (m: Extract<Motion, { kind: 'float' }>, since: number): { phase: PiecePhase; under: number; telling: boolean; left: number } => {
+export const floatPhase = (m: Extract<Motion, { kind: 'float' }>, since: number, near = -1): { phase: PiecePhase; under: number; telling: boolean; left: number } => {
+  const first = m.waitFor !== undefined && m.delay === 0;
+  if (first && since < 0) {
+    // Waiting for the first step: up once a hero is near, and staying up.
+    if (near < 0) return { phase: 'gone', under: 1, telling: false, left: 0 };
+    if (near < m.rise) return { phase: 'rise', under: 1 - smooth(near / m.rise), telling: false, left: 0 };
+    return { phase: 'rest', under: 0, telling: false, left: Infinity };
+  }
   const c = since - m.delay;
   if (since < 0 || c < 0) return { phase: 'gone', under: 1, telling: false, left: 0 };
   const rhythm = Number.isFinite(m.period);
   const k = rhythm ? c % m.period : c;
+  // The first crocodile of a row that waited is already up when its clock starts: the step on it started it.
+  if (k < m.rise && first && c < m.period) return rhythm ? { phase: 'rest', under: 0, telling: false, left: m.up - k } : { phase: 'rest', under: 0, telling: false, left: Infinity };
   if (k < m.rise) return { phase: 'rise', under: 1 - smooth(k / m.rise), telling: false, left: 0 };
   // Without a rhythm (Easy) it stays up from here on.
   if (!rhythm) return { phase: 'rest', under: 0, telling: false, left: Infinity };
@@ -272,14 +296,31 @@ export const stepPieces = (solids: Solid[], standing: string | null, forward: nu
         say('back');
       }
     } else if (m.kind === 'float') {
-      // The row's clock starts when a hero first comes near its first crocodile; every crocodile in the row has the same.
       const since = p.since ?? -1;
-      if (since < 0 && hero !== undefined && Math.hypot(hero.x - m.from.x, hero.z - m.from.z) <= m.wake) p.since = 0;
-      else if (since >= 0) p.since = since + dt;
-      const now = floatPhase(m, p.since ?? -1);
+      const near = hero !== undefined && Math.hypot(hero.x - m.from.x, hero.z - m.from.z) <= m.wake;
+      if (m.waitFor === undefined) {
+        // The row's clock starts when a hero first comes near its first crocodile; every crocodile in the row has the same.
+        if (since < 0 && near) p.since = 0;
+        else if (since >= 0) p.since = since + dt;
+      } else {
+        // A row that waits: its clock starts with a hero's first step onto its first crocodile.
+        if (p.clock < 0 && near) p.clock = 0;
+        else if (p.clock >= 0) p.clock += dt;
+        if (since < 0 && standing === m.waitFor) p.since = 0;
+        else if (since >= 0) p.since = since + dt;
+        // Back on the bank before the row, the row waits again.
+        const bank = standing === null ? undefined : solids.find((each) => each.id === standing);
+        const ofRow = bank?.motion?.kind === 'float' && bank.motion.waitFor === m.waitFor;
+        if ((p.since ?? -1) >= 0 && bank && !ofRow && near) {
+          p.since = -1;
+          // The first stays up if it is up, or comes up now.
+          if (m.delay === 0) p.clock = p.phase === 'rest' || p.phase === 'tell' ? m.rise : 0;
+        }
+      }
+      const now = floatPhase(m, p.since ?? -1, p.clock);
       if (now.phase !== p.phase) {
         if (now.phase === 'rise') say('back');
-        if (now.phase === 'sink') say('fall');
+        if (now.phase === 'sink' || (now.phase === 'gone' && (p.phase === 'rest' || p.phase === 'tell'))) say('fall');
       }
       if (now.telling && !p.telling) say('tell');
       p.phase = now.phase;
@@ -287,7 +328,10 @@ export const stepPieces = (solids: Solid[], standing: string | null, forward: nu
       // Under a hero's weight the back dips a little; it bobs back up when they leave.
       const weight = on ? m.dip : 0;
       p.speed += Math.max(-FLOAT_DIP_RATE * dt, Math.min(FLOAT_DIP_RATE * dt, weight - p.speed));
-      p.dip = p.speed + FLOAT_LOW * now.under;
+      // Never faster than its quickest rise or sink, so a row that starts waiting again goes under smoothly.
+      const want = p.speed + FLOAT_LOW * now.under;
+      const most = (1.6 * FLOAT_LOW * dt) / Math.min(m.rise, FLOAT_SINK) + FLOAT_DIP_RATE * dt;
+      p.dip += Math.max(-most, Math.min(most, want - p.dip));
       // Stood on too long, it turns and snaps (Hard). The clock starts again from the next step on it.
       p.onFor = on && p.dip <= FLOAT_UNDER ? (p.onFor ?? 0) + dt : 0;
       if (p.onFor >= m.snap) {
@@ -313,7 +357,7 @@ export const resetPieces = (solids: Solid[]): void => {
     if (!s.piece || !s.motion || s.motion.kind === 'sway') continue;
     const float = s.motion.kind === 'float';
     s.piece.phase = float ? 'gone' : 'rest';
-    s.piece.clock = 0;
+    s.piece.clock = float ? -1 : 0;
     s.piece.dip = float ? FLOAT_LOW : 0;
     s.piece.speed = 0;
     s.piece.telling = false;
@@ -336,7 +380,7 @@ export const steadyFor = (s: Solid): number => {
   if (!m || !s.piece) return Infinity;
   if (m.kind === 'float') {
     // A crocodile's back: steady for what is left of its time up, and not at all while it rises or sinks.
-    const now = floatPhase(m, s.piece.since ?? -1);
+    const now = floatPhase(m, s.piece.since ?? -1, s.piece.clock);
     return now.phase === 'rest' || now.phase === 'tell' ? now.left : 0;
   }
   if (m.kind !== 'sway') return Infinity;

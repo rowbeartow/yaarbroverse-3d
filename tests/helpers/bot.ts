@@ -246,7 +246,9 @@ export class Bot {
         }
         return false;
       });
-    const overhead = level.solids.some((s) => !s.gone && s !== next && s.bottom > game.y && s.bottom < water.surface + 0.5 && touchesFromAbove(s, game.x, game.z, SWIM.radius + 0.6));
+    // Beside the next solid, only something right overhead keeps the bot under: it is time to come up and climb out.
+    const besideNext = next !== undefined && distanceToEdge(next, game.x, game.z) < SWIM.radius + SWIM.climbReach;
+    const overhead = level.solids.some((s) => !s.gone && s !== next && s.bottom > game.y && s.bottom < water.surface + 0.5 && touchesFromAbove(s, game.x, game.z, SWIM.radius + (besideNext ? 0 : 0.6)));
     const floatY = water.surface - SWIM.float;
     const blockedHere = inWay(game.y, game.bodyHeight);
     const blockedAtSurface = inWay(floatY, MOVE.bodyHeight);

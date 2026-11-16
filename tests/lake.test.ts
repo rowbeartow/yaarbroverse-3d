@@ -70,7 +70,8 @@ describe('the eight sections', () => {
     for (const difficulty of DIFFICULTIES) {
       const shape = routeShape(buildLake(difficulty));
       expect(routeFaults(shape), difficulty).toEqual([]);
-      // The owner asked for about 20% leftward movement and a third camera turn.
+      // The owner asked for about 20% leftward movement and a third camera turn. Since 2026-11-16 the third turn is
+      // the Shore Path's, looking east along the boulders, kept off every precise section.
       expect(shape.left, difficulty).toBeGreaterThan(0.18);
       expect(shape.cameraTurns, difficulty).toBeGreaterThanOrEqual(3);
       expect(shape.away, difficulty).toBeLessThan(0.45);

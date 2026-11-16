@@ -18,13 +18,15 @@ const settled = async (page: Page, wanted: number): Promise<void> => {
   await expect.poll(async () => Math.abs((await facing(page)) - wanted), { timeout: 40_000 }).toBeLessThan(4);
 };
 
-test('the camera turns to follow the lake: north along the shore, up the channel, west through the tunnel, north again on the pier', async ({ page }) => {
+test('the camera turns to follow the lake: east along the shore, up the channel, west through the tunnel, north again on the pier', async ({ page }) => {
   const problems = await open(page, 'level=cocolalla');
   await play(page, 'Yaarbro', 'easy');
-  expect(Math.abs(await facing(page))).toBeLessThan(1);
+  // Along the Shore Path it looks east, along the boulders.
+  expect(Math.abs((await facing(page)) - 90)).toBeLessThan(1);
   // It turns on the bank a section ends on, before the hero sets out.
+  // Straight up the crocodile stepping stones from the grassy point, so up on the keys runs along the row.
   await standOn(page, 'point');
-  await settled(page, -30);
+  await settled(page, 0);
   await standOn(page, 'island');
   await settled(page, 0);
   await standOn(page, 'reed-bar');
@@ -37,8 +39,18 @@ test('the camera turns to follow the lake: north along the shore, up the channel
 test('up on the keys is away from the camera, whichever way it faces', async ({ page }) => {
   await open(page, 'level=cocolalla');
   await play(page, 'Yaarbro', 'easy');
-  // On the beach the camera looks north: up walks north, toward the water.
+  // On the beach the camera looks east along the boulders: up walks east.
   let before = await snapshot(page);
+  await page.keyboard.down('ArrowUp');
+  await expect.poll(async () => (await snapshot(page)).x, { timeout: 20_000 }).toBeGreaterThan(before.x + 1);
+  await page.keyboard.up('ArrowUp');
+  expect(Math.abs((await snapshot(page)).z - before.z)).toBeLessThan(0.5);
+
+  // On the grassy point it looks straight up the crocodiles' row: up walks north along it, not at an angle.
+  await standOn(page, 'point');
+  await settled(page, 0);
+  await frames(page, 2);
+  before = await snapshot(page);
   await page.keyboard.down('ArrowUp');
   await expect.poll(async () => (await snapshot(page)).z, { timeout: 20_000 }).toBeLessThan(before.z - 1);
   await page.keyboard.up('ArrowUp');

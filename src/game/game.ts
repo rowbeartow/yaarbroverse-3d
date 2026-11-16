@@ -2,6 +2,7 @@
 // last safe bank, lose a heart to whatever hurts, reach the golden leaf. No browser or drawing code, so the
 // tests (and later a server, for two-device play) can run it as is.
 
+import { steerJump } from './assist';
 import { BOSS, bossFighting, newBoss, resetBoss, stepBoss, type Boss, type BossAttack, type BossPhase } from './boss';
 import type { Difficulty } from './difficulty';
 import { ENEMY, callSidekick, dismissSidekick, newEnemy, sendHome, stepEnemy, type Enemy, type EnemyPhase, type EnemyTuning } from './enemy';
@@ -157,6 +158,9 @@ export class Game {
   private thrown = false;
   /** How far the hero was from the rope's end when it took hold: it slides to the end over a moment, never jumps there. */
   private ropeSlip = { x: 0, y: 0, z: 0 };
+  /** In the air after a jump or a rope, where the jump assist can help (see assist.ts); and what it is steering onto, a solid's or a rope's id. */
+  private assisting = false;
+  assistTarget: string | null = null;
 
   private safeSpot: { x: number; y: number; z: number; id: string | null };
   private pending: GameEvent[] = [];
@@ -288,6 +292,8 @@ export class Game {
     this.canCutJump = false;
     this.stunned = MOVE.hurtLock;
     this.knocked = true;
+    this.assisting = false;
+    this.assistTarget = null;
     this.rolling = false;
     this.pouncing = 0;
     // A hit knocks a hero off a rope.
@@ -403,6 +409,10 @@ export class Game {
       this.lastRope = null;
       this.thrown = false;
     }
+    if (this.grounded || this.swimming || this.swinging || frozen) {
+      this.assisting = false;
+      this.assistTarget = null;
+    }
     if (!this.swinging && !this.grounded && !this.swimming && this.climbing <= 0 && !frozen && this.ropes.length > 0) {
       const within = ropeInReach(this.ropes, this.x, this.y, this.z, Boolean(level.ropeHelp), this.lastRope, HANG[this.hero]);
       if (within) {
@@ -494,6 +504,13 @@ export class Game {
         // Up to walking speed he gets going as fast as ever; the extra comes slower.
         if (speed >= MOVE.walkSpeed) accel = this.grounded ? MOVE.rollAccel : MOVE.rollAirAccel;
       }
+      // The jump assist (Easy and Normal): a jump aimed roughly at a small piece or a rope steers onto it.
+      if (this.assisting && level.jumpAssist && !this.grounded) {
+        const steer = steerJump({ x: this.x, y: this.y, z: this.z, vy: this.vy, hang: HANG[this.hero] }, { x: wantX, z: wantZ }, level, this.ropes, this.lastRope, this.assistTarget, level.jumpAssist);
+        this.assistTarget = steer.target;
+        wantX = steer.want.x;
+        wantZ = steer.want.z;
+      }
       const change = accel * dt;
       const gapX = wantX - this.vx;
       const gapZ = wantZ - this.vz;
@@ -517,6 +534,7 @@ export class Game {
       this.coyote = 0;
       this.buffer = 0;
       this.canCutJump = true;
+      this.assisting = true;
       this.events.push({ type: 'jump' });
     }
     this.coyote = Math.max(0, this.coyote - dt);
@@ -562,6 +580,9 @@ export class Game {
           this.vy = ground.bounce;
           this.coyote = 0;
           this.canCutJump = false;
+          // A bounce is not a jump: the assist does not steer it back onto the mushroom.
+          this.assisting = false;
+          this.assistTarget = null;
           this.events.push({ type: 'bounce', solidId: ground.id });
         } else {
           this.vy = 0;
@@ -749,6 +770,7 @@ export class Game {
     this.buffer = 0;
     this.swinging = null;
     this.lastRope = state.rope.id;
+    this.assisting = !away.thrown;
     this.events.push({ type: 'rope', id: state.rope.id, what: 'release' });
   }
 

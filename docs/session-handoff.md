@@ -1,10 +1,12 @@
 # Session handoff
 
-Last updated: 2026-11-16 (milestone nine: Cocolalla Lake reshaped. The rope swings and the crocodile stepping stones are merged; the rope's dismount is next.)
+Last updated: 2026-11-16 (milestone nine: Cocolalla Lake reshaped. The rope swings and the crocodile stepping stones are merged. The keyboard fixes for the crossing are merged; the rope's dismount is next.)
 
 ## Start here
 
 **Milestone nine: Cocolalla Lake reshaped.** The game is live at https://rowbeartow.github.io/yaarbroverse-3d/ . What the owner asked for and why is in `docs/decisions.md` (2026-11-15 and 2026-11-16): his playtest found the lake "just more jumping", the crocodiles easy to avoid, and every route a straight line up the screen.
+
+**The keyboard fixes: merged at the owner's word** (pull request 74). His keyboard playtest on Normal could not get past the first crocodile (`docs/decisions.md`, "A keyboard must get through"); after the fixes he played the stepping stones on Normal with the keyboard: OK. Built: the crossing's camera faces straight up the rows; the Shore Path's looks east along the boulders (the lake's third camera turn, at his word); the jump assist on Easy and Normal on every level (`src/game/assist.ts`); the stepping stones' footing is the whole drawn crocodile, 4.6 by 1.5 m, and the drawing takes its size from the footing; on Normal each row's first crocodile waits for the first step (`stoneWait`), and the wave is 1.4 s apart, 4 s up, every 8 s; the keyboard rule test over every level (`tests/keyboard.test.ts`). Before the fixes the keyboard bot failed only the lake on Normal; now every level passes. If he asks for changes: Normal's stone numbers are in the lake's `difficulty.ts`, the assist's in each level's `difficulty.ts` (`jumpAssist`) and `ASSIST` in `src/game/assist.ts`. Next on the lake: the rope's dismount (below).
 
 **Merged and live:**
 

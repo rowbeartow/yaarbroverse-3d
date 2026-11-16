@@ -6,6 +6,7 @@
 //
 // Sizes and distances are in metres, times in seconds.
 
+import type { JumpAssist } from '../../game/assist';
 import type { BossNumbers } from '../../game/boss';
 import type { Difficulty } from '../../game/difficulty';
 
@@ -29,6 +30,14 @@ export interface SandboxNumbers {
   /** Seconds a hero can stay underwater in the pool. Left out, breath never runs out (Easy, by the owner's rule). */
   breath?: number;
   /**
+   * The jump assist (src/game/assist.ts): a jump aimed roughly at a small
+   * piece or a rope steers onto it, for a keyboard's eight directions.
+   *   reach   how far from where the jump would come down it can be, in metres.
+   *   angle   how far off the way the stick points, in degrees.
+   * Left out, none (Hard, by the owner's rule).
+   */
+  jumpAssist?: JumpAssist;
+  /**
    * The practice boss at the end: a big marmot that proves the boss system.
    * Every number of a boss is here (`BossNumbers` in src/game/boss.ts says
    * what each does). Easy can be beaten by jumping on it at any time; on
@@ -45,11 +54,11 @@ const STAGES: BossNumbers['stages'] = [
 
 export const SANDBOX_DIFFICULTY: Record<Difficulty, SandboxNumbers> = {
   easy: {
-    logWidth: 2.6, logGap: 1, mushroomRadius: 1.5, hearts: 5, protection: 1.5, knockback: 0.5, coyoteTime: 0.2, ledgeHelp: 0.5,
+    logWidth: 2.6, logGap: 1, mushroomRadius: 1.5, hearts: 5, protection: 1.5, knockback: 0.5, coyoteTime: 0.2, ledgeHelp: 0.5, jumpAssist: { reach: 1.6, angle: 35 },
     boss: { health: 3, guarded: false, pause: 1.6, walkSpeed: 1.2, warning: 1.2, chargeWarning: 1.4, rest: 2.6, acorns: 1, spread: 0, acornSpeed: 6, chargeSpeed: 7, stages: STAGES, aimLine: true },
   },
   normal: {
-    logWidth: 1.6, logGap: 2.2, mushroomRadius: 1.15, hearts: 3, protection: 1, knockback: 1.2, coyoteTime: 0.12, ledgeHelp: 0.3, breath: 14,
+    logWidth: 1.6, logGap: 2.2, mushroomRadius: 1.15, hearts: 3, protection: 1, knockback: 1.2, coyoteTime: 0.12, ledgeHelp: 0.3, breath: 14, jumpAssist: { reach: 1, angle: 25 },
     boss: { health: 4, guarded: true, pause: 1.1, walkSpeed: 1.8, warning: 0.8, chargeWarning: 1, rest: 2, acorns: 3, spread: 16, acornSpeed: 8, chargeSpeed: 10, stages: STAGES, aimLine: false },
   },
   hard: {
