@@ -15,8 +15,6 @@ export interface LakeNumbers {
   /**
    * THE SHORE PATH (section 1): boulders in a line along the south shore,
    * from the pebble beach to a grassy point. A missed hop lands in the lake.
-   * The same boulders, climbing, cross the cove in section 3 until the rope
-   * swings are built.
    *   boulderCount    how many on the shore path.
    *   boulderRadius   how big each top is, from its middle to its edge.
    *   boulderGap      the open water between one and the next, and either end.
@@ -30,6 +28,36 @@ export interface LakeNumbers {
    * comes back the same distance, so this also sets how long that is.
    */
   crossing: number;
+  /**
+   * The crocodiles a hero crosses on (section 2). They lie low until a hero
+   * comes near, then surface in a row. From the first step on one it holds,
+   * then goes under.
+   *   stoneGap    about how much open water lies between one back and the next.
+   *   stoneHold   seconds a back holds from the first step on it. Left out:
+   *               it never goes under while anyone is about, so timing does
+   *               not matter (the owner's rule for Easy).
+   *   stoneTell   how long before going under it shudders and growls: its warning.
+   *   stoneSnap   true: one a hero is still on when its hold runs out snaps,
+   *               which costs a heart (the owner's rule for Hard).
+   *   stoneDown   seconds one stays under before it comes up again.
+   */
+  stoneGap: number;
+  stoneHold?: number;
+  stoneTell: number;
+  stoneSnap: boolean;
+  stoneDown: number;
+  /**
+   * THE SWINGING PINES (section 3): two rope swings across the cove, the
+   * first to a rock stack, the second up to the headland's ledge.
+   *   ropeHelp      true: letting go at any point in a swing lands the hero
+   *                 on the stack or the ledge (the owner's rule for Easy).
+   *   stackRadius   how big the rock stack's top is. Smaller needs a better-timed let-go.
+   *   ledgeAhead    how far past the second rope the ledge's edge is. Further
+   *                 means letting go nearer the top of the swing.
+   */
+  ropeHelp: boolean;
+  stackRadius: number;
+  ledgeAhead: number;
   /**
    * THE SUNKEN LOGS (section 4): logs and boulders in turn, from the headland
    * to the gravel bar, with a zigzag of three boulders after the second log.
@@ -114,6 +142,8 @@ export const LAKE_DIFFICULTY: Record<Difficulty, LakeNumbers> = {
   easy: {
     boulderCount: 5, boulderRadius: 1.6, boulderGap: 0.9,
     crossing: 28,
+    stoneGap: 1.3, stoneTell: 1, stoneSnap: false, stoneDown: 1.5,
+    ropeHelp: true, stackRadius: 3.4, ledgeAhead: 3.2,
     logCount: 3, logWidth: 2.4, logGap: 1,
     tunnelLength: 4,
     postCount: 4, postRadius: 1, postGap: 0.9, postRise: 0.5,
@@ -124,6 +154,8 @@ export const LAKE_DIFFICULTY: Record<Difficulty, LakeNumbers> = {
   normal: {
     boulderCount: 6, boulderRadius: 1.2, boulderGap: 1.8,
     crossing: 36,
+    stoneGap: 2, stoneHold: 2.2, stoneTell: 0.9, stoneSnap: false, stoneDown: 2.5,
+    ropeHelp: false, stackRadius: 3, ledgeAhead: 3.6,
     logCount: 3, logWidth: 1.6, logGap: 2,
     tunnelLength: 6,
     postCount: 5, postRadius: 0.75, postGap: 1.6, postRise: 0.6,
@@ -135,6 +167,8 @@ export const LAKE_DIFFICULTY: Record<Difficulty, LakeNumbers> = {
   hard: {
     boulderCount: 7, boulderRadius: 0.85, boulderGap: 2.6,
     crossing: 42,
+    stoneGap: 2.6, stoneHold: 1.1, stoneTell: 0.6, stoneSnap: true, stoneDown: 3.5,
+    ropeHelp: false, stackRadius: 2.2, ledgeAhead: 4.2,
     logCount: 4, logWidth: 1, logGap: 2.8,
     tunnelLength: 9,
     postCount: 6, postRadius: 0.55, postGap: 2.3, postRise: 0.6,
