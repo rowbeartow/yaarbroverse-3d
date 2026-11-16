@@ -4,8 +4,9 @@
 // hands the controls to the rule tests' own bot (tests/helpers/bot.ts), which
 // plays the place over and over; "Play it yourself" hands them to you.
 //
-// What is picked lives in the page's address after # (so the choice survives
-// the reload that a new choice needs). The panel at the top left picks.
+// What is picked is kept in this browser's storage, so it survives the reload
+// a new choice needs (an address after # is read first, for the stills
+// script). The panel at the top left picks.
 //
 // Built by tools/preview/lake.mjs. Everything else on the page is the game
 // itself: its scenery, its light, its camera, its sounds.
@@ -35,7 +36,16 @@ const DIFFICULTIES: [Difficulty, string][] = [
 ];
 const HEROES: HeroName[] = ['Yaarbro', 'Caputo'];
 
-const asked = new URLSearchParams(window.location.hash.slice(1));
+/** The choice: from the address after # when it has one (tools/preview/lake-stills.mjs), else the one this browser last made here. */
+const KEPT = 'lake-preview-choice';
+const kept = ((): string => {
+  try {
+    return window.localStorage.getItem(KEPT) ?? '';
+  } catch {
+    return '';
+  }
+})();
+const asked = new URLSearchParams(window.location.hash.includes('=') ? window.location.hash.slice(1) : kept);
 const place = PLACES.find((each) => each.id === asked.get('place')) ?? PLACES[0];
 const difficulty = (DIFFICULTIES.find(([id]) => id === asked.get('difficulty'))?.[0] ?? 'normal') as Difficulty;
 const hero = HEROES.find((each) => each === asked.get('hero')) ?? 'Yaarbro';
@@ -93,9 +103,14 @@ const row = (options: [string, string][], key: string, current: string): void =>
     button.textContent = label;
     button.setAttribute('aria-pressed', String(id === current));
     button.addEventListener('click', () => {
-      const next = new URLSearchParams(window.location.hash.slice(1));
+      const next = new URLSearchParams(asked);
       next.set(key, id);
-      window.location.hash = next.toString();
+      try {
+        window.localStorage.setItem(KEPT, next.toString());
+      } catch {
+        // No storage here: the page opens on its first choice again.
+      }
+      if (window.location.hash.includes('=')) window.location.hash = next.toString();
       window.location.reload();
     });
     holder.append(button);
