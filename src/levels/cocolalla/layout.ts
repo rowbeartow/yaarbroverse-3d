@@ -15,7 +15,8 @@
 //      shore, with a zigzag out into the channel, to a gravel bar too high
 //      to climb onto from the water. Left.
 //   5. The Open Water: a long swim south down the middle of the lake, back
-//      toward the camera, to a reed bar. The crocodiles' water.
+//      toward the camera, to a reed bar. The crocodiles' water: on Normal and
+//      Hard they hunt a swimmer anywhere in it.
 //   6. The Rock Tunnel: west, with a dive through the passage under the
 //      rocky point, to a small beach in the west cove. The camera turns west. Away.
 //   7. Cattail Cove: old pier posts north up the west shore to the pier's
@@ -333,8 +334,9 @@ export function buildLake(difficulty: Difficulty, numbers: LakeNumbers = LAKE_DI
     // West and a little north of the way down is open lake; east of it is the wooded island.
     const cx = Math.max(reedX + 2, Math.min(woodedWest - 2, openSwim.x0 + (openSwim.x1 - openSwim.x0) * share - along.z * side * n.crocAside));
     const cz = Math.max(northEdge + 2, openSwim.z0 + (openSwim.z1 - openSwim.z0) * share + along.x * side * n.crocAside);
-    // Its water reaches this far up and down the lake from where it waits: never the whole swim, so on Easy it can be passed wide.
-    const half = Math.min(swimLength / (2 * n.crocCount), n.crocPatch * 1.5);
+    // Its water reaches this far up and down the lake from where it waits. One that hunts has all the open water;
+    // one that does not never has the whole swim, so on Easy it can be passed wide.
+    const half = n.crocHunt ? swimLength : Math.min(swimLength / (2 * n.crocCount), n.crocPatch * 1.5);
     enemies.push({
       id: `croc-open-${i + 1}`,
       kind: 'crocodile',
@@ -343,11 +345,28 @@ export function buildLake(difficulty: Difficulty, numbers: LakeNumbers = LAKE_DI
       z: cz,
       // Its water: inside the open water, clear of the bars at either end.
       arena: {
-        minX: Math.max(reedX + 1, cx - n.crocPatch),
-        maxX: Math.min(woodedWest - 1, cx + n.crocPatch),
+        minX: Math.max(reedX + 1, cx - (n.crocHunt ? swimLength : n.crocPatch)),
+        maxX: Math.min(woodedWest - 1, cx + (n.crocHunt ? swimLength : n.crocPatch)),
         minZ: Math.max(northEdge + 1, cz - half),
         maxZ: Math.min(openSwim.z1 - 2, cz + half),
       },
+      surface: shape.surface,
+      floor: shape.floor,
+    });
+  }
+
+  // On Hard one more waits under the sunken logs, for anyone who falls in: it hunts all of the logs' water.
+  if (n.crocUnderLogs) {
+    const cx = (barX + headlandX) / 2;
+    enemies.push({
+      id: 'croc-logs',
+      kind: 'crocodile',
+      x: cx,
+      y: shape.surface - CROC.lurkDepth,
+      z: lineZ + 4,
+      arena: { minX: barX + 1, maxX: headlandX - 1, minZ: northEdge + 1, maxZ: woodedNorth - 1 },
+      // It leaves a hero on the logs alone.
+      swimmersOnly: true,
       surface: shape.surface,
       floor: shape.floor,
     });
@@ -364,6 +383,7 @@ export function buildLake(difficulty: Difficulty, numbers: LakeNumbers = LAKE_DI
       crocSpeed: n.crocSpeed,
       crocReach: n.crocReach,
       crocHits: n.crocHits,
+      crocLead: n.crocLead,
     },
     solids,
     spawn: { x: shape.beachLength / 2, y: shape.shoreTop, z: shape.shoreZ - 1 },

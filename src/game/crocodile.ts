@@ -21,7 +21,11 @@
 //             and snout above the surface. Touching it does nothing.
 //   stalking  (`idle`) A hero is in its stretch of water: it swims after
 //             them, at their depth (at the surface, its back awash), slower
-//             than a hero swims at the surface.
+//             than a hero swims at the surface. A crocodile that hunts
+//             (milestone nine: its water is the whole of the open water, and
+//             the level gives it `crocLead`) heads for where the swimmer is
+//             going, to cut them off, and takes up the hunt again after
+//             every lunge.
 //   the tell  (`warning`) Close enough, it fixes its aim on where the hero
 //             is. Its eyes sink under, and it creeps along that line, so a
 //             wake heads for the hero. On Easy a line shows the aim.
@@ -32,7 +36,8 @@
 //
 // Distances are metres, times are seconds, speeds are metres per second. Each
 // level's difficulty sets how fast it swims (`crocSpeed`), how far it lunges
-// (`crocReach`), and stretches its warning, lunge and rest like any enemy's.
+// (`crocReach`), how far ahead of a swimmer it aims its chase (`crocLead`),
+// and stretches its warning, lunge and rest like any enemy's.
 
 import type { Enemy, EnemyPhase, EnemyTuning, HeroBody } from './enemy';
 
@@ -119,12 +124,17 @@ export const moveCrocodile = (enemy: Enemy, hero: HeroBody, tuning: EnemyTuning,
       enemy.y = approach(enemy.y, low, CROC.climbSpeed * dt);
       enemy.timer = 0;
     } else {
-      // After the hero, at the hero's depth.
-      if (distance > 1e-6) enemy.facing = Math.atan2(dx, dz);
+      // After the hero, at the hero's depth. A crocodile that hunts (`crocLead`) heads for where the
+      // swimmer will be a moment from now, so it cuts them off; close in, it turns to face them.
+      const lead = distance > CROC.lungeFrom ? (tuning.crocLead ?? 0) : 0;
+      const tx = clamp(hero.x + hero.vx * lead, arena.minX, arena.maxX) - enemy.x;
+      const tz = clamp(hero.z + hero.vz * lead, arena.minZ, arena.maxZ) - enemy.z;
+      const toward = Math.hypot(tx, tz);
+      if (toward > 1e-6) enemy.facing = Math.atan2(tx, tz);
       const step = (tuning.crocSpeed ?? CROC.speed * tuning.speed) * dt;
-      if (distance > CROC.lungeFrom * 0.6 && distance > step) {
-        enemy.x += (dx / distance) * step;
-        enemy.z += (dz / distance) * step;
+      if (distance > CROC.lungeFrom * 0.6 && toward > step) {
+        enemy.x += (tx / toward) * step;
+        enemy.z += (tz / toward) * step;
       }
       enemy.y = approach(enemy.y, heroDepth, CROC.climbSpeed * dt);
       stayIn();

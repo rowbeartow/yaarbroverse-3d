@@ -62,12 +62,18 @@ export interface LakeNumbers {
    * THE CROCODILES, in the long swim (The Open Water, section 5). The
    * owner's rules: on Easy every one can be avoided without diving or precise
    * timing, and Normal and Hard make them a real threat.
-   *   crocCount    how many.
+   *   crocCount    how many, in the open water.
    *   crocAside    how far to the side of the way down the lake each waits
    *                (they take turns, west then east). On Easy far enough that
    *                a hero swimming straight down never comes into its water.
-   *   crocPatch    how far either side of where it waits its water reaches:
-   *                a hero in that water is stalked.
+   *   crocHunt     true: it hunts. Its water is the whole of the open water,
+   *                so it comes after a swimmer from the moment they are in,
+   *                wherever they swim, and takes up the hunt again after
+   *                every lunge (the owner's rule for Normal and Hard).
+   *   crocLead     hunting: how many seconds ahead of the swimmer it aims its
+   *                chase, to cut them off. 0 swims straight at them.
+   *   crocPatch    not hunting: how far either side of where it waits its
+   *                water reaches. Only a hero in that water is stalked.
    *   crocSpeed    how fast it swims after a hero. A hero swims 3.6 at the surface.
    *   crocReach    how far its lunge carries.
    *   crocWarning  times how long its tell lasts (0.9 s): its eyes sinking and the wake.
@@ -76,6 +82,10 @@ export interface LakeNumbers {
    *   crocLine     whether a line shows where it will lunge, through its tell. Easy only, as with every enemy.
    */
   crocCount: number;
+  /** True: one more crocodile waits under the sunken logs (section 4), for anyone who falls in. Hard only. */
+  crocUnderLogs: boolean;
+  crocHunt: boolean;
+  crocLead: number;
   crocAside: number;
   crocPatch: number;
   crocSpeed: number;
@@ -107,7 +117,7 @@ export const LAKE_DIFFICULTY: Record<Difficulty, LakeNumbers> = {
     logCount: 3, logWidth: 2.4, logGap: 1,
     tunnelLength: 4,
     postCount: 4, postRadius: 1, postGap: 0.9, postRise: 0.5,
-    crocCount: 1, crocAside: 9, crocPatch: 4, crocSpeed: 1.5, crocReach: 3.5, crocWarning: 2, crocRest: 1.6, crocHits: 1, crocLine: true,
+    crocCount: 1, crocUnderLogs: false, crocHunt: false, crocLead: 0, crocAside: 9, crocPatch: 4, crocSpeed: 1.5, crocReach: 3.5, crocWarning: 2, crocRest: 1.6, crocHits: 1, crocLine: true,
     checkpoints: [1, 2, 3, 4, 5, 6],
     hearts: 5, protection: 1.5, knockback: 0.5, coyoteTime: 0.2, ledgeHelp: 0.5,
   },
@@ -117,7 +127,7 @@ export const LAKE_DIFFICULTY: Record<Difficulty, LakeNumbers> = {
     logCount: 3, logWidth: 1.6, logGap: 2,
     tunnelLength: 6,
     postCount: 5, postRadius: 0.75, postGap: 1.6, postRise: 0.6,
-    crocCount: 1, crocAside: 0, crocPatch: 9, crocSpeed: 2.4, crocReach: 4.5, crocWarning: 1, crocRest: 1, crocHits: 1, crocLine: false,
+    crocCount: 1, crocUnderLogs: false, crocHunt: true, crocLead: 0.6, crocAside: 4, crocPatch: 9, crocSpeed: 2.9, crocReach: 4.5, crocWarning: 1, crocRest: 1, crocHits: 1, crocLine: false,
     checkpoints: [1, 2, 3, 4, 5, 6],
     breath: 16,
     hearts: 3, protection: 1, knockback: 1.2, coyoteTime: 0.12, ledgeHelp: 0.3,
@@ -128,7 +138,7 @@ export const LAKE_DIFFICULTY: Record<Difficulty, LakeNumbers> = {
     logCount: 4, logWidth: 1, logGap: 2.8,
     tunnelLength: 9,
     postCount: 6, postRadius: 0.55, postGap: 2.3, postRise: 0.6,
-    crocCount: 2, crocAside: 3, crocPatch: 10, crocSpeed: 2.9, crocReach: 5.5, crocWarning: 0.7, crocRest: 0.75, crocHits: 2, crocLine: false,
+    crocCount: 2, crocUnderLogs: true, crocHunt: true, crocLead: 1.2, crocAside: 5, crocPatch: 10, crocSpeed: 3.3, crocReach: 5.5, crocWarning: 0.7, crocRest: 0.75, crocHits: 2, crocLine: false,
     checkpoints: [2, 4, 6],
     breath: 11,
     hearts: 2, protection: 0.6, knockback: 2, coyoteTime: 0.06, ledgeHelp: 0.15,

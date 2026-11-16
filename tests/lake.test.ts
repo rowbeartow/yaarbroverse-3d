@@ -202,15 +202,16 @@ describe.each(DIFFICULTIES)('the lake on %s', (difficulty) => {
 });
 
 describe('the crocodiles', () => {
-  it('wait in the long swim, the Open Water, on every difficulty', () => {
+  it('wait in the long swim, the Open Water, on every difficulty, and on Hard one more under the sunken logs', () => {
     for (const difficulty of DIFFICULTIES) {
       const level = buildLake(difficulty);
       const crocs = level.enemies ?? [];
-      expect(crocs.length).toBe(LAKE_DIFFICULTY[difficulty].crocCount);
+      const numbers = LAKE_DIFFICULTY[difficulty];
+      expect(crocs.length).toBe(numbers.crocCount + (numbers.crocUnderLogs ? 1 : 0));
       for (const croc of crocs) {
         expect(croc.kind).toBe('crocodile');
         const pool = level.water!.find((w) => croc.z >= w.minZ && croc.z <= w.maxZ && croc.x >= w.minX && croc.x <= w.maxX)!;
-        expect(pool.id).toBe('open-water');
+        expect(pool.id).toBe(croc.id === 'croc-logs' ? 'logs-water' : 'open-water');
         // Its whole water is inside the open water.
         expect(croc.arena.minX).toBeGreaterThanOrEqual(pool.minX);
         expect(croc.arena.maxX).toBeLessThanOrEqual(pool.maxX);
@@ -232,7 +233,98 @@ describe('the crocodiles', () => {
     expect(game.heartsLost).toBe(0);
   });
 
-  it('on Normal and Hard lie across the way: every one wakes, and the bot still gets past each with no heart lost', () => {
+  it('on Normal and Hard they hunt: the whole of the open water is theirs, and they come after a swimmer from the moment they are in', () => {
+    expect(DIFFICULTIES.map((d) => LAKE_DIFFICULTY[d].crocHunt)).toEqual([false, true, true]);
+    for (const difficulty of ['normal', 'hard'] as const) {
+      const level = buildLake(difficulty);
+      const pool = level.water!.find((w) => w.id === 'open-water')!;
+      const hunters = level.enemies!.filter((croc) => croc.id.startsWith('croc-open'));
+      for (const croc of hunters) {
+        // Its water is the open water, shore to shore, less a metre or two at the edges.
+        expect(croc.arena.maxX - croc.arena.minX, croc.id).toBeGreaterThan(18);
+        expect(croc.arena.minZ, croc.id).toBeLessThan(pool.minZ + 2);
+        expect(croc.arena.maxZ, croc.id).toBeGreaterThan(-10);
+      }
+      // A swimmer who only treads water where they went in is come for: each crocodile leaves home and closes in.
+      const game = new Game(level, difficulty, 'Yaarbro');
+      const bar = byId(level, 'gravel-bar');
+      Object.assign(game, { x: bar.x - bar.halfX - 1.5, z: bar.z, y: -SWIM.float, grounded: false, groundId: null, swimming: true, waterId: 'open-water' });
+      const far = (croc: (typeof game.enemies)[number]): number => Math.hypot(croc.x - game.x, croc.z - game.z);
+      const crocs = game.enemies.filter((croc) => croc.spot.id.startsWith('croc-open'));
+      const before = crocs.map(far);
+      game.step(IDLE);
+      for (const croc of crocs) expect(croc.phase, `${difficulty} ${croc.spot.id}`).toBe('idle');
+      for (let i = 0; i < 4 / STEP; i += 1) {
+        game.protectedFor = 10;
+        game.step(IDLE);
+      }
+      crocs.forEach((croc, i) => expect(before[i] - far(croc), `${difficulty} ${croc.spot.id}`).toBeGreaterThan(8));
+    }
+  });
+
+  it('on Hard the one under the sunken logs leaves a hero on the logs alone, and comes for one who falls in', () => {
+    const level = buildLake('hard');
+    const game = new Game(level, 'hard', 'Yaarbro');
+    const croc = game.enemies.find((each) => each.spot.id === 'croc-logs')!;
+    const log = byId(level, 'log-2');
+    Object.assign(game, { x: log.x, z: log.z, y: log.top, grounded: true, groundId: 'log-2', vx: 0, vy: 0, vz: 0 });
+    for (let i = 0; i < 5 / STEP; i += 1) game.step(IDLE);
+    expect(croc.phase).toBe('concealed');
+    // Off the side of the log, into the water.
+    Object.assign(game, { x: log.x, z: log.z - 2.5, y: -SWIM.float, grounded: false, groundId: null, swimming: true, waterId: 'logs-water' });
+    game.step(IDLE);
+    expect(croc.phase).toBe('idle');
+    const before = Math.hypot(croc.x - game.x, croc.z - game.z);
+    for (let i = 0; i < 2 / STEP; i += 1) {
+      game.protectedFor = 10;
+      game.step(IDLE);
+    }
+    expect(Math.hypot(croc.x - game.x, croc.z - game.z)).toBeLessThan(before - 3);
+    expect(buildLake('normal').enemies!.some((each) => each.id === 'croc-logs')).toBe(false);
+  });
+
+  it('on Easy they do not hunt: a swimmer treading water where they went in is left alone', () => {
+    const level = buildLake('easy');
+    const game = new Game(level, 'easy', 'Yaarbro');
+    const bar = byId(level, 'gravel-bar');
+    Object.assign(game, { x: bar.x - bar.halfX - 1.5, z: bar.z, y: -SWIM.float, grounded: false, groundId: null, swimming: true, waterId: 'open-water' });
+    for (let i = 0; i < 6 / STEP; i += 1) game.step(IDLE);
+    for (const croc of game.enemies) expect(croc.phase).toBe('concealed');
+    expect(game.heartsLost).toBe(0);
+  });
+
+  it('a hunting crocodile takes up the hunt again after a lunge, and goes home when the swimmer is out of the water', () => {
+    const level = buildLake('normal');
+    const game = new Game(level, 'normal', 'Yaarbro');
+    const bar = byId(level, 'gravel-bar');
+    Object.assign(game, { x: bar.x - bar.halfX - 6, z: bar.z + 6, y: -SWIM.float, grounded: false, groundId: null, swimming: true, waterId: 'open-water' });
+    const croc = game.enemies[0];
+    const phases: string[] = [];
+    for (let i = 0; i < 30 / STEP && phases.filter((p) => p === 'attack').length < 2; i += 1) {
+      game.protectedFor = 10;
+      game.step(IDLE);
+      for (const event of game.events) if (event.type === 'enemy') phases.push(event.phase);
+    }
+    // Lunge, rest, hunt, and lunge again.
+    expect(phases.filter((p) => p === 'attack').length).toBe(2);
+    expect(phases.join(' ')).toContain('attack rest idle warning attack');
+    // Out on the reed bar, it gives up and goes home to lie low.
+    const reeds = byId(level, 'reed-bar');
+    Object.assign(game, { x: reeds.x, z: reeds.z, y: reeds.top, grounded: true, groundId: 'reed-bar', swimming: false, waterId: null, vx: 0, vy: 0, vz: 0 });
+    for (let i = 0; i < 60 / STEP && croc.phase !== 'concealed'; i += 1) game.step(IDLE);
+    expect(croc.phase).toBe('concealed');
+    expect(Math.hypot(croc.x - croc.spot.x, croc.z - croc.spot.z)).toBeLessThan(0.1);
+  });
+
+  it('on Hard they head for where the swimmer is going, to cut them off; on Normal they lead a little; on Easy not at all', () => {
+    const [e, n, h] = DIFFICULTIES.map((d) => LAKE_DIFFICULTY[d]);
+    expect(e.crocLead).toBe(0);
+    expect(n.crocLead).toBeGreaterThan(0);
+    expect(h.crocLead).toBeGreaterThan(n.crocLead);
+    expect(buildLake('hard').enemyTuning?.crocLead).toBe(h.crocLead);
+  });
+
+  it('on Normal and Hard every one in the open water wakes, and the bot still gets past each with no heart lost', () => {
     for (const difficulty of ['normal', 'hard'] as const) {
       for (const hero of HEROES) {
         const level = buildLake(difficulty);
@@ -246,7 +338,8 @@ describe('the crocodiles', () => {
           lunges += game.events.filter((e) => e.type === 'enemy' && e.phase === 'attack').length;
         }
         expect(game.complete, `${difficulty} ${hero}`).toBe(true);
-        expect(woke.size, `${difficulty} ${hero}`).toBe(level.enemies!.length);
+        // The one under the logs on Hard only wakes for a hero who falls in there.
+        expect([...woke].sort(), `${difficulty} ${hero}`).toEqual(level.enemies!.map((croc) => croc.id).filter((id) => id !== 'croc-logs').sort());
         expect(lunges, `${difficulty} ${hero}`).toBeGreaterThan(0);
         expect(game.heartsLost, `${difficulty} ${hero}`).toBe(0);
       }
