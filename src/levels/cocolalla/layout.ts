@@ -6,7 +6,7 @@
 // turns to follow it. Seen from above, north (-z) at the top:
 //
 //   1. The Shore Path: down the pebble beach, then boulder hops east along
-//      the south shore to a grassy point. On screen: right.
+//      the south shore to a grassy point. The camera looks east along them. Away.
 //   2. The Crocodile Crossing: north up the east channel on the backs of
 //      crocodiles that surface as the hero comes, with a rock half way, to a
 //      rock island. Away.
@@ -179,7 +179,8 @@ export const LAKE_SHAPE = {
 
 /** Which way the camera faces through each section, in degrees seen from above (0 looks north, 270 west), and where it sits further back. */
 export const LAKE_CAMERA = {
-  shore: 0,
+  /** East along the boulders, so up on the keys runs along them. It turns north on the grassy point, a roomy bank, never on a boulder or a crocodile (the owner's word, 2026-11-16). */
+  shore: 90,
   /**
    * Straight up the rows of crocodiles, so up on the keys runs along them. A
    * precise stretch lines the camera up with the way across: a keyboard has
