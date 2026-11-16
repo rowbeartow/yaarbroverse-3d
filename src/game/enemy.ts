@@ -134,6 +134,8 @@ export interface EnemySpot {
   arena: { minX: number; maxX: number; minZ: number; maxZ: number };
   /** How far past the edge of its patch it notices a hero, and aims. 0 when left out. */
   notice?: number;
+  /** A crocodile that only notices a hero who is in the water: one on a log or a bank over it is left alone. */
+  swimmersOnly?: boolean;
   /** For a marmot that walks a beat: the far end of it. Home is the near end. Left out, it is home mirrored across the middle of the patch. */
   beat?: { x: number; z: number };
   /**
@@ -187,6 +189,8 @@ export interface EnemyTuning {
   crocSpeed?: number;
   crocReach?: number;
   crocHits?: number;
+  /** The crocodile, hunting: how many seconds ahead of a swimmer it aims its chase, to cut them off. Left out: it swims straight at them. */
+  crocLead?: number;
 }
 
 export interface Enemy {
@@ -377,7 +381,8 @@ export const stepEnemy = (
   const hoverAbove = tuning.hoverAbove ?? ENEMY.hoverAbove;
   const croc = enemy.kind === 'crocodile';
   // A crocodile notices a hero at any depth in its water, and on the logs and banks just over it.
-  const level = croc || Math.abs(middle - (marmot ? enemy.y + ENEMY.marmotHeight / 2 : enemy.spot.y)) < ENEMY.noticeHeight + (marmot ? 0 : hoverAbove);
+  const inItsWater = !enemy.spot.swimmersOnly || hero.y < (enemy.spot.surface ?? enemy.spot.y) - 0.3;
+  const level = croc ? inItsWater : Math.abs(middle - (marmot ? enemy.y + ENEMY.marmotHeight / 2 : enemy.spot.y)) < ENEMY.noticeHeight + (marmot ? 0 : hoverAbove);
   const nearby = level && inArena && enemy.grace === 0;
   const patrolSpeed = marmot ? (tuning.patrolSpeed ?? 0) : 0;
   const chaseSpeed = marmot ? (tuning.chaseSpeed ?? 0) : 0;
