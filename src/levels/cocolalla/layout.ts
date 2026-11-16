@@ -1,25 +1,34 @@
 // COCOLALLA LAKE: where everything is. Builds the level from the numbers in
 // difficulty.ts. No drawing here; src/view/ turns this into shapes.
 //
-// The run, start to the fishing dock, as the owner approved it (2026-11-15):
-//   1. The Shore Path: from the pebble beach, boulder hops across the
-//      shallows to a grassy point.
-//   2. The Reed Shallows: a swim past the reed beds to a rock island. A
-//      crocodile stretch.
-//   3. The Sunken Logs: logs and boulders in turn to a gravel bar too high to
-//      climb onto from the water. A missed jump lands in the lake.
-//   4. The Rock Tunnel: a rocky point runs right across the lake. The way on
-//      is a dive through the passage under it, to a reed bar.
-//   5. Cattail Cove: a long swim to the old pier. The second crocodile stretch.
-//   The crocodiles' numbers (how many, where, how fast) are `croc*` in difficulty.ts.
-//   6. The Old Pier: posts climb out of the water to the boardwalk, which
-//      runs out to the fishing dock. The golden leaf is at the dock's end.
-//      (The monster pike fight goes on the dock in milestone nine.)
+// The lake as reshaped in milestone nine (the owner's OK, 2026-11-16): the
+// route winds round a wooded island and across the water, and the camera
+// turns to follow it. Seen from above, north (-z) at the top:
 //
-// The lake is three pools side by side, each running the full width of the
-// lake: the gravel bar and the reed bar, which also run the full width, part
-// them. The sides of a pool hold a swimmer in, so the lake's edges are where
-// the scenery draws the shore and the log boom.
+//   1. The Shore Path: down the pebble beach, then boulder hops east along
+//      the south shore to a grassy point. On screen: right.
+//   2. The Crocodile Crossing: north up the east channel to a rock island.
+//      (A plain swim until the crocodile stepping stones are built.) Away.
+//   3. The Swinging Pines: west across a cove to a ledge on the island's
+//      headland. (Boulder hops until the rope swings are built.) Left.
+//   4. The Sunken Logs: logs and boulders west along the island's north
+//      shore, with a zigzag out into the channel, to a gravel bar too high
+//      to climb onto from the water. Left.
+//   5. The Open Water: a long swim south down the middle of the lake, back
+//      toward the camera, to a reed bar. The crocodiles' water.
+//   6. The Rock Tunnel: west, with a dive through the passage under the
+//      rocky point, to a small beach in the west cove. The camera turns west. Away.
+//   7. Cattail Cove: old pier posts north up the west shore to the pier's
+//      landing. Right.
+//   8. The Old Pier: the boardwalk east out over the lake to the fishing
+//      dock and the golden leaf. The camera turns north again. Right.
+//      (The monster pike fight goes on the dock in a later milestone.)
+//
+// The water is seven pools, each a box. The sides of a pool hold a swimmer
+// in, and a solid stands across every place where the route passes from one
+// pool to the next, so nobody swims past a section: the scenery floats a log
+// boom along every open pool edge. Three pools are swum across on the route;
+// the others are only where a missed jump lands.
 //
 // Heights: the lake's surface is at 0. A shore no higher than 0.35 is walked
 // out on from the water; anything up to 1.35 is climbed onto; higher than
@@ -36,70 +45,112 @@ export const LAKE_NAME = 'Cocolalla Lake';
 
 /** Short prompts, each shown the first time the hero stands on that part of the lake. */
 export const LAKE_HINTS: Record<string, string> = {
-  beach: 'Hop across the boulders.',
-  point: 'Swim out to the rock island. Mind the crocodile: when its eyes sink, swim out of its way or dive!',
-  island: 'Jump along the logs. Fall in, and swim back to one.',
-  'gravel-bar': 'Swim to the rocks and dive through the gap.',
-  'reed-bar': 'Swim across the cove to the old pier. Watch for crocodiles!',
-  'post-1': 'Up the posts to the fishing dock!',
+  beach: 'Hop along the boulders to the grassy point.',
+  point: 'Swim up the channel to the rock island.',
+  island: 'Hop across the cove, up to the ledge.',
+  headland: 'Jump along the logs. Fall in, and swim back to one.',
+  'gravel-bar': 'Swim down the lake to the reed bar. Mind the crocodiles: when eyes sink, swim out of the way or dive!',
+  'reed-bar': 'Swim to the rocks and dive through the gap.',
+  'cove-beach': 'Up the posts to the old pier!',
+  landing: 'Along the boardwalk to the fishing dock!',
 };
 
 export const LAKE_GOAL_LINE = 'A golden leaf, at the end of the dock!';
 
 /** Fixed sizes that do not change with difficulty. */
 export const LAKE_SHAPE = {
-  /** The lake's water: its surface, its floor, and how far it reaches each side of the middle. */
+  /** The lake's water: its surface and its floor. */
   surface: 0,
   floor: -4,
-  halfWidth: 18,
-  /** The pebble beach at the start: how far behind and ahead of the start it reaches, and half its width. The lake is either side of it. */
-  beachBehind: 6,
-  beachAhead: 14,
-  beachHalfWidth: 7,
+  /** Where the south shore's waterline is (z), and how far west of the beach the first pool reaches. */
+  shoreZ: 5,
+  westOfBeach: 3,
+  /** The pebble beach at the start: from x 0 to this, and from the shore out to this z. */
+  beachLength: 14,
+  beachOut: -1,
   /** Shores walked out on from the water stand this high. */
   shoreTop: 0.3,
-  /** The grassy point at the end of the shore path, and the rock island: half their width, and their length. */
-  pointHalfWidth: 5,
-  pointLength: 8,
-  islandHalfWidth: 5,
-  islandLength: 8,
-  islandSide: 2,
-  /** Boulder tops, and how far left and right of the middle they sit in turn. */
-  boulderTop: 0.6,
+  /** The line the shore path's boulders follow (z), how far north and south of it they sit in turn, and their tops. */
+  pathZ: -3,
   boulderSide: 0.6,
+  boulderTop: 0.6,
+  /** The grassy point: how long it is east to west, and half its width. */
+  pointLength: 8,
+  pointHalfWidth: 4,
+  /** The east channel: how wide it is, from the wooded island's east face to the east shore. */
+  channelWidth: 20,
+  /** The rock island at the top of the east channel: half its size each way. */
+  islandHalfX: 4.5,
+  islandHalfZ: 4,
+  /** The wooded island: its south face (z), how far its north face lies south of the line the logs follow, and how high it stands (too high to jump onto from anywhere). */
+  woodedSouth: -10,
+  woodedBack: 10,
+  woodedTop: 5.2,
+  /** The north channel: how far north of the logs' line the swimming stops. */
+  northReach: 14,
+  /** The cove's hops up to the headland: how much higher each boulder is than the last. (Until the rope swings are built.) */
+  hopRise: 0.5,
+  /** The headland's ledge: half its length east to west, how far north of the logs' line it reaches, and how high it stands (too high to climb onto). */
+  headlandHalfX: 4.5,
+  headlandNorth: 5,
+  headlandTop: 2.6,
   /** The sunken logs: how long each is, its top, and how thick. The boulders between them are higher. */
   logLength: 5,
   logTop: 0.5,
   logThickness: 1,
   stepBoulderTop: 0.9,
   stepBoulderRadius: 1.1,
-  /** The gravel bar: too high to climb onto from the water. How long it is. */
+  /** The zigzag in the logs: which way its boulders run from the line, as a step of length 1 (west and north, then west and south). */
+  zigWest: 0.57,
+  zigNorth: 0.82,
+  /** The gravel bar: too high to climb onto from the water. Half its width east to west. */
   gravelBarTop: 1.6,
-  gravelBarLength: 6,
+  gravelBarHalfX: 4,
+  /** The reed bar at the end of the long swim: how far west of the gravel bar its middle is, its middle (z), and half its size. */
+  reedBarWest: 22,
+  reedBarZ: -4,
+  reedBarHalfX: 5,
+  reedBarHalfZ: 3,
   /**
-   * The rocky point: how far past the gravel bar it begins (well past where a
-   * running jump into the water lands, so a dive is needed), how high its
-   * top stands (too high to climb onto), how low the passage's roof comes,
-   * and how wide the passage is.
+   * The rocky point: how far past the reed bar it begins (well past where a
+   * running jump into the water lands, so a dive is needed), how far north it
+   * runs from the shore, how high its top stands (too high to climb onto),
+   * how low the passage's roof comes, and half the passage's width.
    */
   pointAhead: 9.5,
+  rockNorth: -15,
   rockTop: 1.7,
   tunnelRoof: -1.9,
   tunnelHalfWidth: 3,
-  /** The swim from the far side of the rocky point to the reed bar, and the reed bar's length. */
+  /** The swim from the far side of the rocky point to the cove's beach, and half the beach's size. */
   afterTunnel: 6,
-  reedBarLength: 5,
-  /** The old pier: the first post's top, the boardwalk's half width and length, and the dock's. */
+  coveBeachHalfX: 4,
+  coveBeachHalfZ: 5,
+  /** The old pier: the first post's top, how far east and west the posts sit in turn, the landing's half size, and the boardwalk's half width and length, and the dock's. */
   firstPostTop: 0.6,
   postSide: 0.5,
+  landingHalf: 2.6,
   boardwalkHalfWidth: 1.2,
   boardwalkLength: 16,
   dockHalfWidth: 4,
   dockLength: 6,
-  /** Water beyond the dock, before the far edge of the last pool. */
-  pastDock: 6,
   fallY: -6,
   depth: -40,
+} as const;
+
+/** Which way the camera faces through each section, in degrees seen from above (0 looks north, 270 west), and where it sits further back. */
+export const LAKE_CAMERA = {
+  shore: 0,
+  /** Turned a little to look up the channel from over the water, not from over the island. */
+  crossing: 330,
+  pines: 0,
+  logs: 0,
+  /** The swim comes back toward the camera: it sits further back and higher, so the water ahead shows. */
+  open: 0,
+  openPull: 1.4,
+  tunnel: 270,
+  cove: 270,
+  pier: 0,
 } as const;
 
 /**
@@ -113,8 +164,8 @@ export function buildLake(difficulty: Difficulty, numbers: LakeNumbers = LAKE_DI
   const route: string[] = [];
   const sections: Section[] = [];
   const water: Water[] = [];
-  const section = (name: string): void => {
-    sections.push({ name, solids: [] });
+  const section = (name: string, facing: number, pull?: number): void => {
+    sections.push(pull === undefined ? { name, solids: [], facing } : { name, solids: [], facing, pull });
   };
   const add = (solid: Solid, onRoute = true): Solid => {
     solids.push(solid);
@@ -124,125 +175,180 @@ export function buildLake(difficulty: Difficulty, numbers: LakeNumbers = LAKE_DI
     }
     return solid;
   };
-  // `from` and `to` count metres travelled away from the camera, which is -z in the world.
-  const box = (id: string, kind: Solid['kind'], from: number, to: number, x: number, halfX: number, top: number, bottom: number = shape.depth, extra: Partial<Solid> = {}, onRoute = true): Solid =>
-    add({ id, kind, shape: 'box', x, z: -(from + to) / 2, halfX, halfZ: (to - from) / 2, top, bottom, ...extra }, onRoute);
-  const round = (id: string, kind: Solid['kind'], at: number, x: number, radius: number, top: number): Solid =>
-    add({ id, kind, shape: 'round', x, z: -at, halfX: radius, halfZ: radius, top, bottom: shape.depth });
-  /** A pool the full width of the lake, from `from` to `to` along the route. */
-  const pool = (id: string, from: number, to: number): void => {
-    water.push({ id, minX: -shape.halfWidth, maxX: shape.halfWidth, minZ: -to, maxZ: -from, surface: shape.surface, floor: shape.floor });
+  /** A box from x `west` to `east` and z `north` to `south` (north is the smaller z). */
+  const box = (id: string, kind: Solid['kind'], west: number, east: number, north: number, south: number, top: number, bottom: number = shape.depth, extra: Partial<Solid> = {}, onRoute = true): Solid =>
+    add({ id, kind, shape: 'box', x: (west + east) / 2, z: (north + south) / 2, halfX: (east - west) / 2, halfZ: (south - north) / 2, top, bottom, ...extra }, onRoute);
+  const round = (id: string, kind: Solid['kind'], x: number, z: number, radius: number, top: number): Solid =>
+    add({ id, kind, shape: 'round', x, z, halfX: radius, halfZ: radius, top, bottom: shape.depth });
+  const pool = (id: string, west: number, east: number, north: number, south: number): void => {
+    water.push({ id, minX: west, maxX: east, minZ: north, maxZ: south, surface: shape.surface, floor: shape.floor });
   };
   /** Bank number `number` (the beach is 0) is a checkpoint on this difficulty. */
   const safe = (number: number): boolean => number === 0 || n.checkpoints.includes(number);
 
-  // 1. THE SHORE PATH
-  section('The Shore Path');
-  box('beach', 'bank', -shape.beachBehind, shape.beachAhead, 0, shape.beachHalfWidth, shape.shoreTop, shape.depth, { safe: true });
-  let at = shape.beachAhead;
-  // The first pool reaches back past the beach, so stepping off either side of it is a swim.
-  const firstPool = -shape.beachBehind - 4;
+  // 1. THE SHORE PATH: east along the south shore.
+  section('The Shore Path', LAKE_CAMERA.shore);
+  box('beach', 'bank', 0, shape.beachLength, shape.beachOut, shape.shoreZ + 2, shape.shoreTop, shape.depth, { safe: true });
+  let x = shape.beachLength;
   for (let i = 0; i < n.boulderCount; i += 1) {
-    at += n.boulderGap + n.boulderRadius;
-    round(`boulder-${i + 1}`, 'boulder', at, i % 2 === 0 ? -shape.boulderSide : shape.boulderSide, n.boulderRadius, shape.boulderTop);
-    at += n.boulderRadius;
+    x += n.boulderGap + n.boulderRadius;
+    round(`boulder-${i + 1}`, 'boulder', x, shape.pathZ + (i % 2 === 0 ? -shape.boulderSide : shape.boulderSide), n.boulderRadius, shape.boulderTop);
+    x += n.boulderRadius;
   }
-  at += n.boulderGap;
-  box('point', 'bank', at, at + shape.pointLength, 0, shape.pointHalfWidth, shape.shoreTop, shape.depth, { safe: safe(1) });
-  at += shape.pointLength;
+  x += n.boulderGap;
+  // The point's west edge is where the shore's water ends and the east channel's begins.
+  const channelWest = x;
+  box('point', 'bank', channelWest, channelWest + shape.pointLength, shape.pathZ - shape.pointHalfWidth, shape.pathZ + shape.pointHalfWidth, shape.shoreTop, shape.depth, { safe: safe(1) });
+  const channelEast = channelWest + shape.channelWidth;
 
-  // 2. THE REED SHALLOWS: swim to the rock island.
-  section('The Reed Shallows');
-  route.push('reed-water');
-  const reedSwim = { from: at, to: at + n.reedSwim, x0: 0, x1: shape.islandSide };
-  at += n.reedSwim;
-  box('island', 'bank', at, at + shape.islandLength, shape.islandSide, shape.islandHalfWidth, shape.shoreTop, shape.depth, { safe: safe(2) });
-  at += shape.islandLength;
+  // 2. THE CROCODILE CROSSING: north up the east channel. A plain swim until the stepping stones are built.
+  section('The Crocodile Crossing', LAKE_CAMERA.crossing);
+  route.push('channel-water');
+  /** The line the rock island, the cove's hops and the sunken logs lie along (z). */
+  const lineZ = shape.pathZ - shape.pointHalfWidth - n.crossing - shape.islandHalfZ;
+  const northEdge = lineZ - shape.northReach;
+  // The rock island stands across the corner where the east channel meets the north one.
+  box('island', 'bank', channelWest - shape.islandHalfX, channelWest + shape.islandHalfX, lineZ - shape.islandHalfZ, lineZ + shape.islandHalfZ, shape.shoreTop, shape.depth, { safe: safe(2) });
 
-  // 3. THE SUNKEN LOGS: a log, a boulder, and again, up to the gravel bar.
-  section('The Sunken Logs');
+  // 3. THE SWINGING PINES: west across the cove, up to the headland's ledge. Boulder hops until the rope swings are built.
+  section('The Swinging Pines', LAKE_CAMERA.pines);
+  x = channelWest - shape.islandHalfX;
+  const hops = Math.ceil((shape.headlandTop - shape.shoreTop) / shape.hopRise) - 1;
+  for (let i = 0; i < hops; i += 1) {
+    x -= n.boulderGap + n.boulderRadius;
+    round(`hop-${i + 1}`, 'boulder', x, lineZ + (i % 2 === 0 ? shape.boulderSide : -shape.boulderSide), n.boulderRadius, shape.shoreTop + shape.hopRise * (i + 1));
+    x -= n.boulderRadius;
+  }
+  x -= n.boulderGap;
+  const woodedNorth = lineZ + shape.woodedBack;
+  // The headland reaches from the wooded island out past the logs' line; its middle parts the cove's water from the logs'.
+  const headlandX = x - shape.headlandHalfX;
+  box('headland', 'crag', x - shape.headlandHalfX * 2, x, lineZ - shape.headlandNorth, woodedNorth, shape.headlandTop, shape.depth, { safe: safe(3) });
+  x -= shape.headlandHalfX * 2;
+
+  // 4. THE SUNKEN LOGS: west along the island's north shore, with a zigzag out into the channel.
+  section('The Sunken Logs', LAKE_CAMERA.logs);
+  const step = (id: string, at: number, z: number): Solid => round(id, 'boulder', at, z, shape.stepBoulderRadius, shape.stepBoulderTop);
+  let steps = 0;
   for (let i = 0; i < n.logCount; i += 1) {
-    at += n.logGap;
-    box(`log-${i + 1}`, 'log', at, at + shape.logLength, shape.islandSide, n.logWidth / 2, shape.logTop, shape.logTop - shape.logThickness);
-    at += shape.logLength + n.logGap;
-    round(`step-${i + 1}`, 'boulder', at + shape.stepBoulderRadius, shape.islandSide, shape.stepBoulderRadius, shape.stepBoulderTop);
-    at += shape.stepBoulderRadius * 2;
+    x -= n.logGap;
+    box(`log-${i + 1}`, 'log', x - shape.logLength, x, lineZ - n.logWidth / 2, lineZ + n.logWidth / 2, shape.logTop, shape.logTop - shape.logThickness);
+    x -= shape.logLength;
+    if (i === n.logCount - 1) break;
+    if (i === 1) {
+      // The zigzag: boulders out to the north-west and back, each a jump from the last.
+      const reach = n.logGap + shape.stepBoulderRadius;
+      const stride = n.logGap + shape.stepBoulderRadius * 2;
+      let zx = x - reach * shape.zigWest;
+      let zz = lineZ - reach * shape.zigNorth;
+      step(`step-${(steps += 1)}`, zx, zz);
+      zx -= stride * shape.zigWest;
+      zz -= stride * shape.zigNorth;
+      step(`step-${(steps += 1)}`, zx, zz);
+      zx -= stride * shape.zigWest;
+      zz += stride * shape.zigNorth;
+      step(`step-${(steps += 1)}`, zx, zz);
+      // The next log's near end is one more such jump on, back on the line.
+      x = zx - reach * shape.zigWest + n.logGap;
+    } else {
+      x -= n.logGap + shape.stepBoulderRadius;
+      step(`step-${(steps += 1)}`, x, lineZ);
+      x -= shape.stepBoulderRadius;
+    }
   }
-  at += n.logGap;
-  const gravelBar = at;
-  box('gravel-bar', 'bank', at, at + shape.gravelBarLength, 0, shape.halfWidth, shape.gravelBarTop, shape.depth, { safe: safe(3) });
-  pool('reed-water', firstPool, at + shape.gravelBarLength / 2);
-  at += shape.gravelBarLength;
+  x -= n.logGap;
+  // The gravel bar closes the north channel's west end; its middle parts the logs' water from the open water.
+  const barX = x - shape.gravelBarHalfX;
+  box('gravel-bar', 'bank', x - shape.gravelBarHalfX * 2, x, northEdge, woodedNorth, shape.gravelBarTop, shape.depth, { safe: safe(4) });
+  const woodedWest = x - shape.gravelBarHalfX * 2;
+  // The wooded island the route goes round. Scenery to the eye, a wall to a hero: nobody stands on it.
+  box('wooded-island', 'island', woodedWest, channelWest, woodedNorth, shape.woodedSouth, shape.woodedTop, shape.depth, {}, false);
 
-  // 4. THE ROCK TUNNEL: the rocky point runs right across the lake, with deep water under its middle.
-  section('The Rock Tunnel');
-  route.push('point-water');
-  const secondPool = gravelBar + shape.gravelBarLength / 2;
-  at += shape.pointAhead;
-  const rockFrom = at;
-  const rockTo = at + n.tunnelLength;
-  const sideHalf = (shape.halfWidth - shape.tunnelHalfWidth) / 2;
-  box('rock-left', 'crag', rockFrom, rockTo, -shape.tunnelHalfWidth - sideHalf, sideHalf, shape.rockTop, shape.depth, {}, false);
-  box('rock-tunnel', 'arch', rockFrom, rockTo, 0, shape.tunnelHalfWidth, shape.rockTop, shape.tunnelRoof, {}, false);
-  box('rock-right', 'crag', rockFrom, rockTo, shape.tunnelHalfWidth + sideHalf, sideHalf, shape.rockTop, shape.depth, {}, false);
-  at = rockTo + shape.afterTunnel;
-  const reedBar = at;
-  box('reed-bar', 'bank', at, at + shape.reedBarLength, 0, shape.halfWidth, shape.shoreTop, shape.depth, { safe: safe(4) });
-  pool('point-water', secondPool, at + shape.reedBarLength / 2);
-  at += shape.reedBarLength;
+  // 5. THE OPEN WATER: south down the middle of the lake, back toward the camera.
+  section('The Open Water', LAKE_CAMERA.open, LAKE_CAMERA.openPull);
+  route.push('open-water');
+  const reedX = woodedWest - shape.reedBarWest;
+  box('reed-bar', 'bank', reedX - shape.reedBarHalfX, reedX + shape.reedBarHalfX, shape.reedBarZ - shape.reedBarHalfZ, shape.reedBarZ + shape.reedBarHalfZ, shape.shoreTop, shape.depth, { safe: safe(5) });
+  // The way a swimmer takes: off the bar's west side where the logs come in, to the reed bar's north-east corner.
+  const openSwim = { x0: woodedWest - 1, z0: lineZ, x1: reedX + shape.reedBarHalfX - 1, z1: shape.reedBarZ - shape.reedBarHalfZ };
 
-  // 5. CATTAIL COVE: swim to the first post of the old pier.
-  section('Cattail Cove');
-  route.push('cove-water');
-  const thirdPool = reedBar + shape.reedBarLength / 2;
-  const coveSwim = { from: at, to: at + n.coveSwim, x0: 0, x1: 0 };
-  at += n.coveSwim;
+  // 6. THE ROCK TUNNEL: west, under the rocky point that runs out from the south shore.
+  section('The Rock Tunnel', LAKE_CAMERA.tunnel);
+  route.push('tunnel-water');
+  x = reedX - shape.reedBarHalfX - shape.pointAhead;
+  const rockEast = x;
+  const rockWest = x - n.tunnelLength;
+  const tunnelNorth = shape.reedBarZ - shape.tunnelHalfWidth;
+  const tunnelSouth = shape.reedBarZ + shape.tunnelHalfWidth;
+  box('rock-north', 'crag', rockWest, rockEast, shape.rockNorth, tunnelNorth, shape.rockTop, shape.depth, {}, false);
+  box('rock-tunnel', 'arch', rockWest, rockEast, tunnelNorth, tunnelSouth, shape.rockTop, shape.tunnelRoof, {}, false);
+  box('rock-south', 'crag', rockWest, rockEast, tunnelSouth, shape.shoreZ + 2, shape.rockTop, shape.depth, {}, false);
+  x = rockWest - shape.afterTunnel;
+  const coveX = x - shape.coveBeachHalfX;
+  box('cove-beach', 'bank', x - shape.coveBeachHalfX * 2, x, shape.reedBarZ - shape.coveBeachHalfZ, shape.reedBarZ + shape.coveBeachHalfZ, shape.shoreTop, shape.depth, { safe: safe(6) });
+  const westEdge = x - shape.coveBeachHalfX * 2 - 2;
+
+  // 7. CATTAIL COVE: the old pier's posts, north up the west shore to the pier's landing.
+  section('Cattail Cove', LAKE_CAMERA.cove);
+  let z = shape.reedBarZ - shape.coveBeachHalfZ;
   let postTop = shape.firstPostTop;
   for (let i = 0; i < n.postCount; i += 1) {
-    // The first post ends the cove; the rest are the start of the pier.
-    if (i === 1) section('The Old Pier');
-    if (i > 0) at += n.postGap;
-    round(`post-${i + 1}`, 'stump', at + n.postRadius, i % 2 === 0 ? 0 : shape.postSide, n.postRadius, postTop);
-    at += n.postRadius * 2;
+    z -= n.postGap + n.postRadius;
+    round(`post-${i + 1}`, 'stump', coveX + (i % 2 === 0 ? 0 : shape.postSide), z, n.postRadius, postTop);
+    z -= n.postRadius;
     if (i < n.postCount - 1) postTop += n.postRise;
   }
-
-  // 6. THE OLD PIER: the boardwalk and the fishing dock.
-  at += n.postGap;
+  z -= n.postGap;
   const deck = postTop + n.postRise;
-  box('boardwalk', 'deck', at, at + shape.boardwalkLength, 0, shape.boardwalkHalfWidth, deck, deck - 0.4);
-  at += shape.boardwalkLength;
-  box('dock', 'deck', at, at + shape.dockLength, 0, shape.dockHalfWidth, deck, deck - 0.4);
-  at += shape.dockLength;
-  pool('cove-water', thirdPool, at + shape.pastDock);
+  // A square landing where the pier turns: room to stand while the camera comes round.
+  box('landing', 'deck', coveX - shape.landingHalf, coveX + shape.landingHalf, z - shape.landingHalf * 2, z, deck, deck - 0.4);
+  const pierZ = z - shape.landingHalf;
 
-  // The crocodiles: spread along each long swim, taking turns right and left of the way across.
+  // 8. THE OLD PIER: the boardwalk east out over the lake, and the fishing dock.
+  section('The Old Pier', LAKE_CAMERA.pier);
+  x = coveX + shape.landingHalf;
+  box('boardwalk', 'deck', x, x + shape.boardwalkLength, pierZ - shape.boardwalkHalfWidth, pierZ + shape.boardwalkHalfWidth, deck, deck - 0.4);
+  x += shape.boardwalkLength;
+  box('dock', 'deck', x, x + shape.dockLength, pierZ - shape.dockHalfWidth, pierZ + shape.dockHalfWidth, deck, deck - 0.4);
+  x += shape.dockLength;
+
+  // The water. Each pool's edge that is not shore or rock is where a log boom floats.
+  pool('shore-water', -shape.westOfBeach, channelWest, shape.woodedSouth, shape.shoreZ);
+  pool('channel-water', channelWest, channelEast, northEdge, shape.shoreZ);
+  pool('cove-water', headlandX, channelWest, northEdge, woodedNorth);
+  pool('logs-water', barX, headlandX, northEdge, woodedNorth);
+  pool('open-water', reedX, barX, northEdge, shape.shoreZ);
+  pool('tunnel-water', westEdge, reedX, shape.rockNorth, shape.shoreZ);
+  pool('pier-water', westEdge, reedX, northEdge, shape.rockNorth);
+
+  // The crocodiles: spread along the long swim, each `crocAside` to the side of the way down, taking turns west and east.
   const enemies: EnemySpot[] = [];
-  for (const [name, swim] of [['reed', reedSwim], ['cove', coveSwim]] as const) {
-    const length = swim.to - swim.from;
-    for (let i = 0; i < n.crocCount; i += 1) {
-      const along = swim.from + (length * (i + 1)) / (n.crocCount + 1);
-      const share = (along - swim.from) / length;
-      const side = i % 2 === 0 ? 1 : -1;
-      const x = swim.x0 + (swim.x1 - swim.x0) * share + side * n.crocAside;
-      // Its water: across, inside the lake; along, inside the swim, clear of the shores at either end.
-      const half = length / (2 * n.crocCount);
-      enemies.push({
-        id: `croc-${name}-${i + 1}`,
-        kind: 'crocodile',
-        x,
-        y: shape.surface - CROC.lurkDepth,
-        z: -along,
-        arena: {
-          minX: Math.max(-shape.halfWidth + 1, x - n.crocPatch),
-          maxX: Math.min(shape.halfWidth - 1, x + n.crocPatch),
-          minZ: -Math.min(swim.to - 2, along + half),
-          maxZ: -Math.max(swim.from + 2, along - half),
-        },
-        surface: shape.surface,
-        floor: shape.floor,
-      });
-    }
+  const swimLength = Math.hypot(openSwim.x1 - openSwim.x0, openSwim.z1 - openSwim.z0);
+  const along = { x: (openSwim.x1 - openSwim.x0) / swimLength, z: (openSwim.z1 - openSwim.z0) / swimLength };
+  for (let i = 0; i < n.crocCount; i += 1) {
+    const share = (i + 1) / (n.crocCount + 1);
+    const side = i % 2 === 0 ? 1 : -1;
+    // West and a little north of the way down is open lake; east of it is the wooded island.
+    const cx = Math.max(reedX + 2, Math.min(woodedWest - 2, openSwim.x0 + (openSwim.x1 - openSwim.x0) * share - along.z * side * n.crocAside));
+    const cz = Math.max(northEdge + 2, openSwim.z0 + (openSwim.z1 - openSwim.z0) * share + along.x * side * n.crocAside);
+    // Its water reaches this far up and down the lake from where it waits: never the whole swim, so on Easy it can be passed wide.
+    const half = Math.min(swimLength / (2 * n.crocCount), n.crocPatch * 1.5);
+    enemies.push({
+      id: `croc-open-${i + 1}`,
+      kind: 'crocodile',
+      x: cx,
+      y: shape.surface - CROC.lurkDepth,
+      z: cz,
+      // Its water: inside the open water, clear of the bars at either end.
+      arena: {
+        minX: Math.max(reedX + 1, cx - n.crocPatch),
+        maxX: Math.min(woodedWest - 1, cx + n.crocPatch),
+        minZ: Math.max(northEdge + 1, cz - half),
+        maxZ: Math.min(openSwim.z1 - 2, cz + half),
+      },
+      surface: shape.surface,
+      floor: shape.floor,
+    });
   }
 
   return {
@@ -258,8 +364,8 @@ export function buildLake(difficulty: Difficulty, numbers: LakeNumbers = LAKE_DI
       crocHits: n.crocHits,
     },
     solids,
-    spawn: { x: 0, y: shape.shoreTop, z: 0 },
-    leaf: { x: 0, y: deck + 1.3, z: -(at - 1.5), radius: 0.7 },
+    spawn: { x: shape.beachLength / 2, y: shape.shoreTop, z: shape.shoreZ - 1 },
+    leaf: { x: x - 1.5, y: deck + 1.3, z: pierZ, radius: 0.7 },
     water,
     breath: n.breath,
     fallY: shape.fallY,

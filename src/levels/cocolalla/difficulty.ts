@@ -13,53 +13,59 @@ import type { Difficulty } from '../../game/difficulty';
 
 export interface LakeNumbers {
   /**
-   * THE SHORE PATH (section 1): boulders in a line across the shallows, from
-   * the pebble beach to a grassy point. A missed hop lands in the lake.
-   *   boulderCount    how many.
+   * THE SHORE PATH (section 1): boulders in a line along the south shore,
+   * from the pebble beach to a grassy point. A missed hop lands in the lake.
+   * The same boulders, climbing, cross the cove in section 3 until the rope
+   * swings are built.
+   *   boulderCount    how many on the shore path.
    *   boulderRadius   how big each top is, from its middle to its edge.
    *   boulderGap      the open water between one and the next, and either end.
    */
   boulderCount: number;
   boulderRadius: number;
   boulderGap: number;
-  /** THE REED SHALLOWS (section 2): how far it is to swim from the grassy point to the rock island. A crocodile stretch. */
-  reedSwim: number;
   /**
-   * THE SUNKEN LOGS (section 3): logs and boulders in turn, from the rock
-   * island to the gravel bar. The bar is too high to climb onto from the
-   * water, so a missed jump means swimming back to a log and going on from there.
-   *   logCount    how many logs (a boulder follows each).
+   * THE CROCODILE CROSSING (section 2): how far it is up the east channel
+   * from the grassy point to the rock island. The long swim of section 5
+   * comes back the same distance, so this also sets how long that is.
+   */
+  crossing: number;
+  /**
+   * THE SUNKEN LOGS (section 4): logs and boulders in turn, from the headland
+   * to the gravel bar, with a zigzag of three boulders after the second log.
+   * The bar is too high to climb onto from the water, so a missed jump means
+   * swimming back to a log and going on from there.
+   *   logCount    how many logs (three at least).
    *   logWidth    how wide each log is. Wider is easier to stay on.
    *   logGap      the open water between one piece and the next, and before the bar.
    */
   logCount: number;
   logWidth: number;
   logGap: number;
-  /** THE ROCK TUNNEL (section 4): how long the way under the rocky point is, front to back. The only way on is to dive through it. */
+  /** THE ROCK TUNNEL (section 6): how long the way under the rocky point is. The only way on is to dive through it. */
   tunnelLength: number;
-  /** CATTAIL COVE (section 5): how far it is to swim from the reed bar to the first post of the old pier. A crocodile stretch. */
-  coveSwim: number;
   /**
-   * THE OLD PIER (section 6): posts that climb out of the water to the
-   * boardwalk, which runs out to the fishing dock. The low posts can be
-   * climbed onto from the water; the boardwalk and the dock cannot.
+   * CATTAIL COVE and THE OLD PIER (sections 7 and 8): posts that climb out of
+   * the water to the pier's landing; the boardwalk runs from there out to the
+   * fishing dock. The low posts can be climbed onto from the water; the
+   * landing, the boardwalk and the dock cannot.
    *   postCount    how many.
    *   postRadius   how big each top is.
-   *   postGap      the open water between one and the next, and before the boardwalk.
-   *   postRise     how much higher each is than the one before, and the boardwalk than the last.
+   *   postGap      the open water between one and the next, and before the landing.
+   *   postRise     how much higher each is than the one before, and the landing than the last.
    */
   postCount: number;
   postRadius: number;
   postGap: number;
   postRise: number;
   /**
-   * THE CROCODILES, in the two long swims (The Reed Shallows and Cattail
-   * Cove). The owner's rules: on Easy every one can be avoided without
-   * diving or precise timing, and Normal and Hard make them a real threat.
-   *   crocCount    how many in each of the two swims.
-   *   crocAside    how far to the side of the way across each waits (they
-   *                take turns, right then left). On Easy far enough that a
-   *                hero swimming straight across never comes into its water.
+   * THE CROCODILES, in the long swim (The Open Water, section 5). The
+   * owner's rules: on Easy every one can be avoided without diving or precise
+   * timing, and Normal and Hard make them a real threat.
+   *   crocCount    how many.
+   *   crocAside    how far to the side of the way down the lake each waits
+   *                (they take turns, west then east). On Easy far enough that
+   *                a hero swimming straight down never comes into its water.
    *   crocPatch    how far either side of where it waits its water reaches:
    *                a hero in that water is stalked.
    *   crocSpeed    how fast it swims after a hero. A hero swims 3.6 at the surface.
@@ -78,7 +84,7 @@ export interface LakeNumbers {
   crocRest: number;
   crocHits: number;
   crocLine: boolean;
-  /** Which banks are checkpoints, counted along the route: 1 the grassy point, 2 the rock island, 3 the gravel bar, 4 the reed bar. The beach always is. */
+  /** Which banks are checkpoints, counted along the route: 1 the grassy point, 2 the rock island, 3 the headland, 4 the gravel bar, 5 the reed bar, 6 the cove's beach. The beach always is. */
   checkpoints: number[];
   /** Seconds a hero can stay underwater. Left out, breath never runs out (Easy, by the owner's rule). */
   breath?: number;
@@ -97,36 +103,33 @@ export interface LakeNumbers {
 export const LAKE_DIFFICULTY: Record<Difficulty, LakeNumbers> = {
   easy: {
     boulderCount: 5, boulderRadius: 1.6, boulderGap: 0.9,
-    reedSwim: 34,
+    crossing: 28,
     logCount: 3, logWidth: 2.4, logGap: 1,
     tunnelLength: 4,
-    coveSwim: 34,
     postCount: 4, postRadius: 1, postGap: 0.9, postRise: 0.5,
-    crocCount: 1, crocAside: 11, crocPatch: 4, crocSpeed: 1.5, crocReach: 3.5, crocWarning: 2, crocRest: 1.6, crocHits: 1, crocLine: true,
-    checkpoints: [1, 2, 3, 4],
+    crocCount: 1, crocAside: 9, crocPatch: 4, crocSpeed: 1.5, crocReach: 3.5, crocWarning: 2, crocRest: 1.6, crocHits: 1, crocLine: true,
+    checkpoints: [1, 2, 3, 4, 5, 6],
     hearts: 5, protection: 1.5, knockback: 0.5, coyoteTime: 0.2, ledgeHelp: 0.5,
   },
   normal: {
     boulderCount: 6, boulderRadius: 1.2, boulderGap: 1.8,
-    reedSwim: 46,
+    crossing: 36,
     logCount: 3, logWidth: 1.6, logGap: 2,
     tunnelLength: 6,
-    coveSwim: 48,
     postCount: 5, postRadius: 0.75, postGap: 1.6, postRise: 0.6,
     crocCount: 1, crocAside: 0, crocPatch: 9, crocSpeed: 2.4, crocReach: 4.5, crocWarning: 1, crocRest: 1, crocHits: 1, crocLine: false,
-    checkpoints: [1, 2, 3, 4],
+    checkpoints: [1, 2, 3, 4, 5, 6],
     breath: 16,
     hearts: 3, protection: 1, knockback: 1.2, coyoteTime: 0.12, ledgeHelp: 0.3,
   },
   hard: {
     boulderCount: 7, boulderRadius: 0.85, boulderGap: 2.6,
-    reedSwim: 52,
+    crossing: 42,
     logCount: 4, logWidth: 1, logGap: 2.8,
     tunnelLength: 9,
-    coveSwim: 54,
     postCount: 6, postRadius: 0.55, postGap: 2.3, postRise: 0.6,
     crocCount: 2, crocAside: 3, crocPatch: 10, crocSpeed: 2.9, crocReach: 5.5, crocWarning: 0.7, crocRest: 0.75, crocHits: 2, crocLine: false,
-    checkpoints: [2, 4],
+    checkpoints: [2, 4, 6],
     breath: 11,
     hearts: 2, protection: 0.6, knockback: 2, coyoteTime: 0.06, ledgeHelp: 0.15,
   },

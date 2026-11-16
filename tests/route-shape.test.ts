@@ -10,11 +10,11 @@ import { ROUTE_RULE, routeFaults, routeShape } from '../src/game/route-shape';
 import { LEVELS } from '../src/levels';
 
 /**
- * Levels built before the rule, waiting to be reshaped. The owner's order:
- * Cocolalla Lake in milestone nine, the Bouncing Grove in a later milestone.
+ * Levels built before the rule, waiting to be reshaped. Cocolalla Lake was
+ * reshaped in milestone nine; the Bouncing Grove waits for a later milestone.
  * Take a level's line out when it is reshaped. Never add one.
  */
-const WAITING = ['bouncing-grove', 'cocolalla'];
+const WAITING = ['bouncing-grove'];
 
 /** A level that is only a line of small banks through the given corners, each stretch with its camera facing. */
 const through = (corners: [number, number][], facings: number[] = []): Level => {
