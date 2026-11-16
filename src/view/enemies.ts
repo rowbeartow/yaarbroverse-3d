@@ -90,6 +90,8 @@ export const ENEMY_MODELS: Record<EnemyKind, EnemyModelSpec> = {
 export const modelFilesOf = (level: Level): string[] => {
   const kinds = new Set<EnemyKind>((level.enemies ?? []).map((spot) => spot.kind));
   if (level.boss) kinds.add(level.boss.look.model);
+  // Crocodile stepping stones are drawn from the crocodile's model too.
+  if (level.solids.some((s) => s.motion?.kind === 'float')) kinds.add('crocodile');
   return [...kinds].map((kind) => ENEMY_MODELS[kind].file);
 };
 

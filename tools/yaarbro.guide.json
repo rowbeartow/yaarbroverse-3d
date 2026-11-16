@@ -15,7 +15,11 @@
     { "name": "tread", "file": "Meshy_API_Swim_tread.glb", "retarget": true, "loop": true, "stay": true },
     { "name": "swim", "file": "Meshy_API_Swim_surface.glb", "retarget": true, "loop": true, "stay": true },
     { "name": "underwater", "file": "Meshy_API_Swim_underwater.glb", "retarget": true, "loop": true, "stay": true },
-    { "name": "climb", "file": "Meshy_API_Swim_climb_out.glb", "retarget": true, "stay": true }
+    { "name": "climb", "file": "Meshy_API_Swim_climb_out.glb", "retarget": true, "stay": true },
+    { "name": "rope_reach", "file": "Meshy_API_Rope_catch.glb", "retarget": true, "from": 0.44, "to": 0.6, "stay": true, "airborne": true },
+    { "name": "rope_catch", "file": "Meshy_API_Rope_catch.glb", "retarget": true, "from": 0.6, "to": 1.1, "stay": true },
+    { "name": "rope_hang", "file": "Meshy_API_Rope_hang.glb", "retarget": true, "loop": true, "stay": true },
+    { "name": "rope_release", "file": "Meshy_API_Rope_release.glb", "retarget": true, "from": 1.45, "to": 2.05, "stay": true, "airborne": true }
   ],
 
   "cleanup_about": "Each part fixes something seen to be wrong in a pose test. belt: the belt and buckle stay with the hips. beard: the lower beard stays on the chest, and the cloth in front of the chest stays off the head. shading: smooth, with edges kept sharp on the buckle and the boot soles, and at any fold sharper than smooth_up_to degrees.",

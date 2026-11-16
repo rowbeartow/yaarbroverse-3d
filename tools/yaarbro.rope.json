@@ -1,0 +1,10 @@
+{
+  "about": "Yaarbro's rope clips, made by tools/meshy-rig-animate.mjs from Meshy's animation library (14 credits: the rig and three clips). rope_catch is the jump up and catch from 'Jump and Hang on Bar' (the reach and the catch are cut from it in tools/yaarbro.guide.json); rope_hang is 'Rope Hang Idle', both hands on the rope; rope_release is the swing and let go from 'Swing on Rope to Ground'.",
+  "model_url": "https://github.com/rowbeartow/yaarbroverse-3d/releases/download/hero-models/Meshy_AI_Animation_Idle_11_withSkin.glb",
+  "height_meters": 1.8,
+  "library": [
+    { "name": "rope_catch", "action_id": 485, "library_name": "Jump and Hang on Bar" },
+    { "name": "rope_hang", "action_id": 477, "library_name": "Rope Hang Idle" },
+    { "name": "rope_release", "action_id": 494, "library_name": "Swing on Rope to Ground" }
+  ]
+}

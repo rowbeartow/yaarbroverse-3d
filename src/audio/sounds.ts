@@ -79,6 +79,8 @@ export interface SoundDef {
 const GROVE = ['bouncing-grove', 'sandbox'] as const;
 /** Sounds only Cocolalla Lake plays. */
 const LAKE = ['cocolalla'] as const;
+/** Sounds of rope swings, for the levels that hang any. */
+const ROPES = ['cocolalla'] as const;
 /** Sounds of deep water, for the levels that have any. */
 const WATER = ['cocolalla', 'sandbox'] as const;
 
@@ -240,6 +242,18 @@ export const SOUNDS = {
     group: 'World', label: 'Wind before a bough moves', mix: 'cue', level: -3, vary: 0.04,
     what: 'A gust that swells just before a windy bough rises or sinks: its tell. The owner picked choice B.',
     source: { files: ['gust.wav'] },
+  },
+  ropeGrab: {
+    home: ROPES,
+    group: 'World', label: 'Taking hold of a rope', mix: 'action', level: 0, vary: 0.06,
+    what: 'A short creak of rope and bough taking the weight, the moment a hero grabs a rope swing. Choice A, waiting for the owner to pick.',
+    source: { files: ['rope-grab.wav'] },
+  },
+  ropeRelease: {
+    home: ROPES,
+    group: 'World', label: 'Letting go of a rope', mix: 'action', level: -2, vary: 0.06,
+    what: 'A soft whoosh as a hero lets go of a rope swing and flies on. Choice A, waiting for the owner to pick.',
+    source: { files: ['rope-release.wav'] },
   },
   waterIn: {
     home: WATER,

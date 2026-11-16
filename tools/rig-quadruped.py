@@ -528,12 +528,28 @@ def weigh_jaw(mesh, armature, guide):
             groups[name] = mesh.vertex_groups.new(name=name)
     head_ward = {name for name in groups if name in ('head', 'neck', 'jaw')}
     moved = 0
+    # "jaw_keeps_weights": only the head bone's share of a point below the mouth goes to the jaw, and
+    # every other weight is left as it was, so the head and neck move in every other clip as before (Caputo).
+    keeps = guide.get('jaw_keeps_weights', False)
     for v in mesh.data.vertices:
         ahead = -v.co.y
         if ahead < -hinge.y - 0.08:
             continue
         # Only points that belong to the head now.
         mine = {mesh.vertex_groups[g.group].name: g.weight for g in v.groups}
+        if keeps:
+            share = min(1.0, max(0.0, (ahead - back.y * -1) / (front.y * -1 - back.y * -1)))
+            line = back.z + (front.z - back.z) * share
+            head_share = mine.get('head', 0.0)
+            if v.co.z >= line or head_share <= 0.0:
+                continue
+            jaw = head_share * smoothstep((ahead - (-hinge.y - 0.08)) / 0.08)
+            if jaw <= 0.0:
+                continue
+            groups['head'].add([v.index], head_share - jaw, 'REPLACE')
+            groups['jaw'].add([v.index], jaw, 'REPLACE')
+            moved += 1
+            continue
         if sum(w for n, w in mine.items() if n in head_ward) < 0.5 * max(1e-6, sum(mine.values())):
             continue
         share = min(1.0, max(0.0, (ahead - back.y * -1) / (front.y * -1 - back.y * -1)))
@@ -1273,9 +1289,146 @@ class Quadruped:
         self.ear('r', flick=30 * abs(math.cos(2 * math.pi * rate * t)) * envelope(0.0))
         self.tail_curve(t, sway=lambda at: 35 * envelope(0.3) * math.sin(2 * math.pi * rate * (at - 0.3)), lift=lambda at: -20, lag=0.025)
 
+    def jaw(self, open_degrees):
+        """Opens the lower jaw by `open_degrees`, for a character whose guide gives it one."""
+        if 'jaw' in {b.name for b in self.armature.data.bones}:
+            self.poser.place('jaw', turn=pitch(-open_degrees))
+
+    # ----- Rope swings (milestone nine) -----
+    #
+    # He catches a rope in his teeth and hangs from it. The game turns his
+    # whole body nose up by ROPE_TILT degrees while he hangs (src/view/ropes.ts
+    # has the same number), and puts the tip of his jaw on the rope; these
+    # clips pose him in his own body's frame, so "down" for a dangling leg is
+    # mostly back toward his tail.
+
+    ROPE_TILT = 70.0
+
+    def hanging_down(self, tilt):
+        """Which way is down, in the body's own frame, when it is turned nose up by `tilt` degrees."""
+        a = math.radians(tilt)
+        return Vector((0.0, math.sin(a), -math.cos(a)))
+
+    def dangle(self, leg, down, reach=0.9, ahead=0.0, toes=-35.0):
+        """Lets a leg hang toward `down` at `reach` of its length, its paw `ahead` metres toward the belly side of that line."""
+        upper, lower, paw = self.legs[leg]
+        p = self.poser
+        top = p.head(upper)
+        length = (p.rest_head(lower) - p.rest_head(upper)).length + (p.rest_head(paw) - p.rest_head(lower)).length
+        belly = Vector((0.0, -1.0, 0.0)) - down * down.dot(Vector((0.0, -1.0, 0.0)))
+        if belly.length > 1e-4:
+            belly.normalize()
+        p.reach(upper, lower, paw, top + down * length * reach + belly * ahead, toes, planted=False, soft=True)
+
+    def hang_pose(self, time, swing=0.0, kick=0.0, bite=0.0, look=22.0):
+        """
+        Hanging from his teeth. `swing` (-1 to 1) is where the swing is: his
+        legs and tail trail a little behind it. `kick` draws the hind legs up,
+        `bite` opens the jaw by that many degrees, `look` tips his head up so
+        his jaw meets the rope.
+        """
+        down = self.hanging_down(self.ROPE_TILT)
+        self.trunk(arch=-4 + 3 * swing, lean=0.0)
+        self.blade('l', rise=0.04)
+        self.blade('r', rise=0.04)
+        self.head(follow=1.0, turn=pitch(look))
+        self.jaw(bite)
+        self.ear('l', flick=10)
+        self.ear('r', flick=10)
+        for leg in ('front_l', 'front_r'):
+            self.dangle(leg, down, reach=0.86, ahead=0.06 + 0.05 * swing, toes=-30)
+        for side, leg in ((1, 'hind_l'), (-1, 'hind_r')):
+            self.dangle(leg, down, reach=0.9 - 0.25 * kick, ahead=0.04 + 0.06 * swing + 0.12 * kick, toes=-45)
+        self.tail_curve(time, sway=lambda at: 10 * math.sin(TAU * at / 1.6), lift=lambda at: -100 - 10 * swing, lag=0.08)
+
+    REACH_SECONDS = 0.4
+
+    def rope_reach(self, phase):
+        """
+        Reaching for a rope in mid-air: stretched long, head up and jaws wide,
+        front paws reaching up beside his head. The game plays it once as a
+        rope comes near and holds its last pose.
+        """
+        e = smoothstep(phase)
+        self.trunk(rise=0.04 * e, lean=18 * e, arch=-10 * e)
+        self.blade('l', rise=0.05 * e)
+        self.blade('r', rise=0.05 * e)
+        self.head(follow=0.8, turn=pitch(30 * e))
+        self.jaw(34 * e)
+        self.ear('l', flick=20 * e)
+        self.ear('r', flick=20 * e)
+        for leg in ('front_l', 'front_r'):
+            self.paw(leg, forward=0.32 * e, lift=0.45 * e, toes=20 * e, out=0.04)
+        for leg in ('hind_l', 'hind_r'):
+            self.paw(leg, forward=-0.35 * e, lift=0.12 * e, toes=-55 * e, out=0.03)
+        self.tail_curve(phase * self.REACH_SECONDS, sway=lambda at: 0.0, lift=lambda at: -110 * smoothstep(max(0.0, at) / self.REACH_SECONDS), lag=0.04)
+
+    CATCH_SECONDS = 0.45
+
+    def rope_catch(self, phase):
+        """
+        The catch: his jaws snap shut on the rope in the first fifth of the
+        clip, his head jerks with the weight, and his body swings in under
+        it to hang. It starts from the reach and ends on the hang.
+        """
+        t = phase * self.CATCH_SECONDS
+        bite = keyed([(0.0, 34.0), (0.18, 0.0), (1.0, 0.0)], phase)
+        jolt = keyed([(0.0, 0.0), (0.2, 1.0), (0.55, -0.4), (1.0, 0.0)], phase)
+        settle = smoothstep(phase / 0.8)
+        down = self.hanging_down(self.ROPE_TILT * (0.4 + 0.6 * settle))
+        self.trunk(arch=-10 + 6 * settle + 6 * jolt, lean=18 * (1 - settle))
+        self.blade('l', rise=0.05)
+        self.blade('r', rise=0.05)
+        self.head(follow=1.0, turn=pitch(30 - 8 * settle + 6 * jolt))
+        self.jaw(bite)
+        self.ear('l', flick=20 - 10 * settle)
+        self.ear('r', flick=20 - 10 * settle)
+        for leg in ('front_l', 'front_r'):
+            self.dangle(leg, down, reach=0.86, ahead=0.06 + 0.12 * (1 - settle) + 0.08 * jolt, toes=-30)
+        for leg in ('hind_l', 'hind_r'):
+            self.dangle(leg, down, reach=0.9, ahead=0.04 - 0.1 * jolt, toes=-45)
+        self.tail_curve(t, sway=lambda at: 0.0, lift=lambda at: -110 + 20 * keyed([(0.0, 0.0), (0.25, 1.0), (1.0, 0.0)], min(1.0, max(0.0, at / self.CATCH_SECONDS))), lag=0.05)
+
+    HANG_SECONDS = 1.6
+
+    def rope_hang(self, phase):
+        """Hanging on: a slow breath of movement in the legs and tail, so he is never a stuffed toy. The game swings him."""
+        a = TAU * phase
+        self.hang_pose(phase * self.HANG_SECONDS, swing=0.3 * math.sin(a), kick=0.15 * (1 + math.sin(a + 1.2)) / 2)
+
+    RELEASE_SECONDS = 0.5
+
+    def rope_release(self, phase):
+        """
+        Letting go: his jaws open in the first tenth, he flings his head and
+        front paws forward and up and kicks off with his hind legs, ending
+        stretched out the way his jump is over the top.
+        """
+        t = phase * self.RELEASE_SECONDS
+        open_ = keyed([(0.0, 0.0), (0.12, 30.0), (0.5, 12.0), (1.0, 0.0)], phase)
+        e = smoothstep(phase / 0.7)
+        down = self.hanging_down(self.ROPE_TILT * (1 - e))
+        self.trunk(rise=0.03 * e, lean=12 * e, arch=-12 * e)
+        self.blade('l', rise=0.04)
+        self.blade('r', rise=0.04)
+        self.head(follow=1.0 - 0.4 * e, turn=pitch(22 - 18 * e))
+        self.jaw(open_)
+        if e < 0.5:
+            for leg in ('front_l', 'front_r'):
+                self.dangle(leg, down, reach=0.86, ahead=0.06 + 0.3 * e, toes=-30)
+            for leg in ('hind_l', 'hind_r'):
+                self.dangle(leg, down, reach=0.9 - 0.4 * e, ahead=0.04 + 0.2 * e, toes=-45)
+        else:
+            k = (e - 0.5) / 0.5
+            for leg in ('front_l', 'front_r'):
+                self.paw(leg, forward=0.3 * k, lift=0.36 * k, toes=12 * k, out=0.03)
+            for leg in ('hind_l', 'hind_r'):
+                self.paw(leg, forward=-0.48 * k, lift=0.12 * k, toes=-66 * k, out=0.03)
+        self.tail_curve(t, sway=lambda at: 0.0, lift=lambda at: -105 - 10 * smoothstep(max(0.0, at) / self.RELEASE_SECONDS), lag=0.05)
+
     # Clips in which a paw on the ground may be asked for more than its leg's length.
     # In the water no paw is on the ground.
-    stretched = ('jump', 'falling', 'pounce', 'paddle', 'underwater')
+    stretched = ('jump', 'falling', 'pounce', 'paddle', 'underwater', 'rope_reach', 'rope_catch', 'rope_hang', 'rope_release')
 
     def clips(self):
         """Every clip: its name, the function that poses it, and how long it lasts in seconds."""
@@ -1291,6 +1444,10 @@ class Quadruped:
             ('paddle', self.paddle, self.setting('paddle', 'seconds', 0.6)),
             ('underwater', self.underwater, self.setting('underwater', 'seconds', 0.9)),
             ('shake', self.shake, self.SHAKE_SECONDS),
+            ('rope_reach', self.rope_reach, self.REACH_SECONDS),
+            ('rope_catch', self.rope_catch, self.CATCH_SECONDS),
+            ('rope_hang', self.rope_hang, self.HANG_SECONDS),
+            ('rope_release', self.rope_release, self.RELEASE_SECONDS),
         ]
 
     def report(self, lasts):
@@ -1504,7 +1661,7 @@ class Crocodile(Quadruped):
     """
 
     # In the water no paw is on the ground.
-    stretched = ('lurk', 'swim', 'dive', 'lunge', 'hit', 'defeated')
+    stretched = ('lurk', 'swim', 'dive', 'lunge', 'hit', 'defeated', 'float', 'turn_snap')
 
     def tuck(self, kick=0.0, splay=0.0):
         """Folds the legs back along the sides, as a crocodile does when it swims. `kick` paddles the hind feet a little."""
@@ -1512,10 +1669,6 @@ class Crocodile(Quadruped):
             self.paw(leg, forward=-0.2, lift=0.1 + splay * 0.04, toes=-55, out=0.02 + splay * 0.05)
         for side, leg in ((1, 'hind_l'), (-1, 'hind_r')):
             self.paw(leg, forward=-0.22 + 0.04 * kick * side, lift=0.09, toes=-65, out=0.04 + splay * 0.05)
-
-    def jaw(self, open_degrees):
-        if 'jaw' in {b.name for b in self.armature.data.bones}:
-            self.poser.place('jaw', turn=pitch(-open_degrees))
 
     def body_wave(self, phase, body, tail, lag, tail_lift=0.0, head_follow=0.35, head_pitch=0.0, rise=0.0, lean=0.0):
         """A swimming wave: the hips swing one way as the chest swings the other, and the tail sweeps after them."""
@@ -1585,6 +1738,42 @@ class Crocodile(Quadruped):
         self.tuck(splay=1.0)
         self.tail_curve(phase, sway=lambda at: 14 * (1 - smoothstep(at)) * math.sin(TAU * at * 2), lift=lambda at: 0.0, lag=0.06)
 
+    # ----- Stepping stones (milestone nine) -----
+
+    def float(self, phase):
+        """
+        Floating high at the surface as a stepping stone: long and straight,
+        head lifted so its snout and eyes stand clear, tail laid out behind,
+        legs spread a little to the sides as a basking crocodile's are. A
+        slow breath and a lazy tail. The game sets how high it floats.
+        """
+        a = TAU * phase
+        self.trunk(rise=0.008 * math.sin(a * 2), lean=1.5, hips_yaw=1.5 * math.sin(a), chest_yaw=-1.0 * math.sin(a))
+        self.head(follow=0.3, turn=yaw(4.0 * math.sin(a - 0.8)) @ pitch(7.0 + 1.0 * math.sin(a * 2)))
+        for side, leg in ((1, 'front_l'), (-1, 'front_r')):
+            self.paw(leg, forward=-0.05, lift=0.06, toes=-30, out=0.12)
+        for side, leg in ((1, 'hind_l'), (-1, 'hind_r')):
+            self.paw(leg, forward=-0.12, lift=0.06, toes=-40, out=0.12)
+        self.jaw(0.0)
+        self.tail_curve(phase * 4.0, sway=lambda at: 8 * math.sin(TAU * at / 4.0), lift=lambda at: 0.0, lag=0.25)
+
+    SNAP_SECONDS = 1.0
+
+    def turn_snap(self, phase):
+        """
+        Stood on too long: it swings its head round to its left and up toward
+        its own back, jaws wide, and snaps them shut half way through the
+        clip, then straightens out again. The game plays this on Hard.
+        """
+        turn = keyed([(0.0, 0.0), (0.3, 1.0), (0.62, 1.0), (1.0, 0.0)], phase)
+        opened = keyed([(0.0, 0.0), (0.18, 10.0), (0.38, 48.0), (0.47, 50.0), (0.52, 0.0), (0.6, 6.0), (0.66, 0.0), (1.0, 0.0)], phase)
+        jerk = keyed([(0.0, 0.0), (0.47, 0.0), (0.52, 1.0), (0.7, 0.0), (1.0, 0.0)], phase)
+        self.trunk(rise=0.02 * turn, hips_yaw=-8 * turn, chest_yaw=28 * turn, chest_roll=-6 * turn, lean=3 * turn)
+        self.head(follow=1.0, turn=yaw(48 * turn + 6 * jerk) @ pitch(16 * turn - 6 * jerk))
+        self.jaw(opened)
+        self.tuck(splay=1.0 - 0.5 * turn)
+        self.tail_curve(phase, sway=lambda at: -30 * keyed([(0.0, 0.0), (0.3, 1.0), (0.62, 1.0), (1.0, 0.0)], min(1.0, max(0.0, at))), lift=lambda at: 0.0, lag=0.05)
+
     def clips(self):
         return [
             ('lurk', self.lurk, 6.0),
@@ -1593,10 +1782,13 @@ class Crocodile(Quadruped):
             ('lunge', self.lunge, self.LUNGE_SECONDS),
             ('hit', self.hit, 0.45),
             ('defeated', self.defeated, self.DEFEATED_SECONDS),
+            ('float', self.float, 4.0),
+            ('turn_snap', self.turn_snap, self.SNAP_SECONDS),
         ]
 
     def report(self, lasts):
         say(f"lunge: the jaws snap shut {0.45 * lasts['lunge']:.2f} s into the clip")
+        say(f"turn_snap: the jaws snap shut {0.5 * lasts['turn_snap']:.2f} s into the clip")
 
 
 # ---------- 6: save ----------

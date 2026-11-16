@@ -68,3 +68,50 @@ test('the Bouncing Grove keeps its camera looking straight up the route', async 
   await frames(page, 6);
   expect(await facing(page)).toBe(0);
 });
+
+test('the rope swings are drawn over the cove, and a hero who jumps at one takes hold and swings', async ({ page }) => {
+  const problems = await open(page, 'level=cocolalla');
+  await play(page, 'Yaarbro', 'easy');
+  const ropes = (): Promise<{ id: string; angle: number }[]> => page.evaluate(() => (window as unknown as { __grove: { ropes: { id: string; angle: number }[] } }).__grove.ropes);
+  expect((await ropes()).map((rope) => rope.id)).toEqual(['rope-1', 'rope-2']);
+  // Stand at the rock island's west edge. The camera looks north there, so the rope is to the left.
+  await standOn(page, 'island');
+  await settled(page, 0);
+  // In the air within reach of the rope, as at the top of a jump from the island's edge: the hero takes hold with no button.
+  // (The run-up and the jump are played by the rule tests; timed key presses are unreliable on a slow machine.)
+  await page.evaluate(() => {
+    const { game } = (window as unknown as { __grove: { game: { x: number; y: number; z: number; vx: number; vy: number; vz: number; grounded: boolean; groundId: string | null; level: { ropes: { id: string; x: number; y: number; z: number; length: number }[] } } } }).__grove;
+    const rope = game.level.ropes[0];
+    Object.assign(game, { x: rope.x + 0.6, y: rope.y - rope.length - 1.2, z: rope.z, vx: -4, vy: 2, vz: 0, grounded: false, groundId: null });
+  });
+  const swinging = (): Promise<string | null> => page.evaluate(() => (window as unknown as { __grove: { game: { ropeId: string | null } } }).__grove.game.ropeId);
+  await expect.poll(swinging, { timeout: 30_000 }).toBe('rope-1');
+  // It swings: the rope leaves the straight-down it hung at.
+  await expect.poll(async () => Math.abs((await ropes())[0].angle), { timeout: 20_000 }).toBeGreaterThan(0.3);
+  // Letting go on Easy lands on the rock stack, wherever in the swing it is.
+  await page.keyboard.press('Space');
+  await expect.poll(async () => (await snapshot(page)).groundId, { timeout: 30_000 }).toBe('stack');
+  expect(problems).toEqual([]);
+});
+
+test('the crocodile stepping stones lie under the water until a hero is near, then come up to be stood on', async ({ page }) => {
+  const problems = await open(page, 'level=cocolalla');
+  await play(page, 'Yaarbro', 'easy');
+  const stones = (): Promise<{ id: string; phase: string; y: number; shown: boolean }[]> =>
+    page.evaluate(() => (window as unknown as { __grove: { stones: { id: string; phase: string; y: number; shown: boolean }[] } }).__grove.stones);
+  // From the beach they are far off: every one lies under the water, out of sight.
+  const far = await stones();
+  expect(far.length).toBeGreaterThanOrEqual(10);
+  expect(far.every((stone) => stone.phase === 'gone' && !stone.shown)).toBe(true);
+  // On the grassy point the row is near: the first comes up and is drawn, its back about level with the water.
+  await standOn(page, 'point');
+  await expect.poll(async () => (await stones())[0].phase, { timeout: 30_000 }).toBe('rest');
+  const up = (await stones())[0];
+  expect(up.shown).toBe(true);
+  expect(Math.abs(up.y)).toBeLessThan(0.5);
+  // Standing on it: on Easy it holds, and the hero stays on its back.
+  await standOn(page, 'stone-1');
+  await frames(page, 12);
+  expect((await snapshot(page)).groundId).toBe('stone-1');
+  expect(problems).toEqual([]);
+});

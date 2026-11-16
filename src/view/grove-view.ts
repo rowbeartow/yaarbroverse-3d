@@ -39,6 +39,9 @@ import { Scatter, buildForest, type Forest } from './forest';
 import { bossFighting } from '../game/boss';
 import { BossView } from './boss';
 import { FIGHT_CAMERA, fightView } from './boss-camera';
+import { CrocStones } from './croc-stones';
+import { Hanger, RopesView } from './ropes';
+import { nearestRopeEnd } from '../game/rope';
 import { ROUTE_CAMERA, cameraFor, followsRoute, forwardOf, turnToward } from './route-camera';
 import { ENEMY_MODELS, EnemyView, modelFilesOf } from './enemies';
 import { HERO_MODEL_FILES, buildHero, type HeroView } from './heroes';
@@ -53,6 +56,8 @@ import { MIST_BOTTOM, MIST_TOP, animateMushroom, blobShadow, buildSolids, placeM
 
 /** Where the camera sits relative to the hero: behind, above, looking ahead and down. */
 const CAMERA = { back: 12, up: 8, lookAhead: 4.5, lookUp: 1, fieldOfView: 50 };
+/** A hero in the air reaches out for a rope whose end is this near its grip (metres). */
+const ROPE_REACH_SHOWN = 2.8;
 
 /** Which way the sunlight travels from: left, above and a little behind the camera. */
 const SUN_FROM = new Vector3(-0.52, 0.76, 0.4).normalize();
@@ -106,6 +111,10 @@ interface LevelView extends LevelSolids {
   scatter: Scatter;
   /** The level's pools, if it has any. */
   water: WaterView | null;
+  /** The level's ropes, if it has any. */
+  ropes: RopesView | null;
+  /** The level's crocodile stepping stones, if it has any. */
+  stones: CrocStones | null;
 }
 
 /**
@@ -153,6 +162,8 @@ export class GroveView {
   private swimEvents: GameEvent[] = [];
   /** Climbing out of the water, until the hero stands on what it climbed onto. */
   private climbingOut = false;
+  /** Hangs the hero from a rope (see ropes.ts). */
+  private readonly hanger = new Hanger();
   /** How far into the underwater look the picture is, 0 to 1. */
   private under = 0;
   /** Seconds until the next ring behind a swimmer at the surface, and the next bubbles from one underwater. */
@@ -294,8 +305,16 @@ export class GroveView {
     root.add(solids.group, forest.group, scatter.build(this.materials));
     const water = level.water?.length ? new WaterView(level.water, this.materials, this.tier.simple, !forest.lakeBed) : null;
     if (water) root.add(water.group);
+    const ropes = level.ropes?.length ? new RopesView(level, this.materials) : null;
+    this.hanger.reset();
+    if (ropes) root.add(ropes.group);
+    const stoneModel = level.solids.some((s) => s.motion?.kind === 'float') ? this.assets.models.get(ENEMY_MODELS.crocodile.file) : undefined;
+    const stones = stoneModel ? new CrocStones(level, stoneModel, this.tier.simple, water) : null;
+    if (stones) root.add(stones.group);
     this.levelView?.water?.dispose();
-    this.levelView = { ...solids, root, forest, scatter, water };
+    this.levelView?.ropes?.dispose();
+    this.levelView?.stones?.dispose();
+    this.levelView = { ...solids, root, forest, scatter, water, ropes, stones };
     this.swimEvents = [];
     this.under = 0;
     this.hero = buildHero(heroName, this.assets, this.tier.simple);
@@ -356,6 +375,12 @@ export class GroveView {
         if (this.climbingOut) this.hero?.react('out');
         this.climbingOut = false;
       } else if (event.type === 'climb') this.climbingOut = true;
+      else if (event.type === 'piece' && event.what === 'snap') this.levelView?.stones?.snap(event.id);
+      else if (event.type === 'piece') this.levelView?.stones?.event(event.id, event.what);
+      else if (event.type === 'rope' && event.what === 'grab') {
+        this.hero?.react('catch');
+        this.levelView?.ropes?.caught(event.id);
+      } else if (event.type === 'rope') this.hero?.react('letgo');
       else if (event.type === 'fall') {
         this.blink = MOVE.returnPause;
       } else if (event.type === 'strike') {
@@ -406,6 +431,9 @@ export class GroveView {
     let turn = game.facing - hero.root.rotation.y;
     turn = Math.atan2(Math.sin(turn), Math.cos(turn));
     hero.root.rotation.y += turn * (1 - Math.exp(-14 * dt));
+    // On a rope the hero hangs in line with it, hands at its end; off it, upright again.
+    // Reaching out as a rope comes near in the air; hanging from one.
+    const ropeNear = !game.swinging && !game.grounded && !game.swimming && game.ropes.length > 0 && nearestRopeEnd(game) < ROPE_REACH_SHOWN;
     hero.animate(
       {
         pace: Math.min(Math.hypot(game.vx, game.vz) / MOVE.walkSpeed, 1),
@@ -415,9 +443,13 @@ export class GroveView {
         pounce: game.pouncing > 0 ? 1 - game.pouncing / MOVE.pounceTime : null,
         water: game.swimming ? (game.under ? 'under' : 'surface') : null,
         climbing: game.climbing > 0 ? 1 - game.climbing / SWIM.climbTime : null,
+        rope: game.swinging ? 'hang' : ropeNear ? 'reach' : null,
       },
       dt,
     );
+    // On a rope the hero hangs by the hands (or teeth) from its end, the body swinging with it; the rope's end follows.
+    const holding = this.hanger.update(hero.root, hero, game.swinging, dt);
+    levelView.ropes?.update(dt, game.ropes, holding);
     // The ghost: where the recording says, doing what it says. It fades out
     // when it is on top of the player's own hero, so the hero is never hidden.
     if (this.ghost) {
@@ -494,6 +526,7 @@ export class GroveView {
 
     // Pieces that move, where the rules have them now.
     for (const piece of levelView.moving) placeMoving(piece, this.clock, dt);
+    levelView.stones?.update(level.solids, game.grounded ? game.groundId : null, dt);
 
     // Mushrooms and the golden leaf.
     for (const mushroom of levelView.mushrooms.values()) animateMushroom(mushroom, dt);
@@ -673,6 +706,16 @@ export class GroveView {
       drawCalls: this.drawn.calls,
       triangles: this.drawn.triangles,
     };
+  }
+
+  /** The crocodile stepping stones drawn and what each is doing, for the browser checks. */
+  stoneInfo(): ReturnType<CrocStones['info']> {
+    return this.levelView?.stones?.info() ?? [];
+  }
+
+  /** The ropes drawn and how far each has swung, for the browser checks. */
+  ropeInfo(game: Game): { id: string; angle: number }[] {
+    return this.levelView?.ropes?.info(game.ropes) ?? [];
   }
 
   /** What the boss on screen is showing, for the browser checks, or null when the level has none. */

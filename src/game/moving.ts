@@ -18,6 +18,20 @@
 //             shiver). `start` is how far into its rhythm it is when a run
 //             begins, so boughs in a row can take turns.
 //
+//   float     A crocodile stepping stone: a crocodile's back, one of a row.
+//             It lies under the water, not there to stand on, until a hero
+//             comes within `wake` metres of the row's first crocodile (`from`);
+//             that starts the row's clock. Then, `delay` seconds into the
+//             row's clock, this one comes up (`rise` seconds, a splash), so a
+//             wave of crocodiles surfaces along the row. It stays up for `up`
+//             seconds from the start of its rise, the last `tell` of them its
+//             warning, then goes under, and comes up again `period` seconds
+//             after it last did: the row keeps its rhythm, and a player reads
+//             it and times each step. With `period` at Infinity (Easy) the
+//             wave runs once and they stay up. A back dips `dip` metres while
+//             a hero stands on it. With `snap` (Hard), a hero who stays on one
+//             that long is snapped at: a heart. A swimmer cannot climb onto one.
+//
 // Where a hero can stand is always where the piece is now: its top moves, or
 // tilts, and `topAt` in level.ts gives the height at any point. The drawing
 // reads the same numbers every frame, so its edge and the rules' edge agree.
@@ -30,7 +44,19 @@ import type { Solid } from './level';
 export type Motion =
   | { kind: 'tip'; tell: number; dip: number; rate: number }
   | { kind: 'crumble'; tell: number; falls: boolean; sag: number; back: number }
-  | { kind: 'sway'; rise: number; rest: number; move: number; tell: number; start: number };
+  | { kind: 'sway'; rise: number; rest: number; move: number; tell: number; start: number }
+  | {
+      kind: 'float';
+      wake: number;
+      from: { x: number; z: number };
+      delay: number;
+      rise: number;
+      up: number;
+      period: number;
+      tell: number;
+      dip: number;
+      snap: number;
+    };
 
 export type PiecePhase =
   /** tip: level or settling back; crumble: whole; sway: resting low. */
@@ -61,20 +87,30 @@ export interface Piece {
   thickness: number;
   /** tip: how far the far end is below the middle, in metres; negative when the near end is down. */
   dip: number;
-  /** crumble: how fast it is falling. */
+  /** crumble: how fast it is falling. float: how far it has dipped under a hero's weight. */
   speed: number;
-  /** sway: in the tell before its next move. */
+  /** sway and float: in the tell before its next move. */
   telling: boolean;
+  /** float: seconds since its row woke (below 0 until it has), and seconds a hero has stood on it without a break. */
+  since?: number;
+  onFor?: number;
 }
 
 /** Something a moving piece began, for sounds and drawing. */
 export interface PieceEvent {
   id: string;
   kind: Motion['kind'];
-  /** The tell began; it began to move; it fell away; it came back. */
-  what: 'tell' | 'move' | 'fall' | 'back';
+  /** The tell began; it began to move; it fell away; it came back; a crocodile stood on too long snapped. */
+  what: 'tell' | 'move' | 'fall' | 'back' | 'snap';
 }
 
+/** A crocodile stepping stone under the water is this far below where its back floats (out of sight), and takes this long to go under. */
+export const FLOAT_LOW = 1.7;
+export const FLOAT_SINK = 0.6;
+/** How fast a back dips under a hero's weight, and comes back up, in metres a second. */
+const FLOAT_DIP_RATE = 1.2;
+/** A back this far under its floating height is under the water: not there to stand on. */
+const FLOAT_UNDER = 0.5;
 /** How far below the mist a fallen piece has to go before it is gone. */
 const GONE_BELOW = -12;
 const FALL_GRAVITY = 20;
@@ -83,14 +119,37 @@ const SETTLE_RATE = 0.5;
 const SAG_RATE = 0.3;
 
 export const newPiece = (s: Solid): Piece => ({
-  phase: s.motion?.kind === 'sway' ? swayPhase(s.motion, 0).phase : 'rest',
+  phase: s.motion?.kind === 'sway' ? swayPhase(s.motion, 0).phase : s.motion?.kind === 'float' ? 'gone' : 'rest',
   clock: 0,
   baseTop: s.top,
   thickness: s.top - s.bottom,
-  dip: 0,
+  dip: s.motion?.kind === 'float' ? FLOAT_LOW : 0,
   speed: 0,
   telling: false,
+  ...(s.motion?.kind === 'float' ? { since: -1, onFor: 0 } : {}),
 });
+
+/**
+ * Where a crocodile stepping stone is in its row's rhythm, `since` seconds
+ * after the row woke: its phase, how far under it is (0 floating, 1 out of
+ * sight), whether it is giving its warning, and how many seconds are left
+ * before it goes under (Infinity when it never will).
+ */
+export const floatPhase = (m: Extract<Motion, { kind: 'float' }>, since: number): { phase: PiecePhase; under: number; telling: boolean; left: number } => {
+  const c = since - m.delay;
+  if (since < 0 || c < 0) return { phase: 'gone', under: 1, telling: false, left: 0 };
+  const rhythm = Number.isFinite(m.period);
+  const k = rhythm ? c % m.period : c;
+  if (k < m.rise) return { phase: 'rise', under: 1 - smooth(k / m.rise), telling: false, left: 0 };
+  // Without a rhythm (Easy) it stays up from here on.
+  if (!rhythm) return { phase: 'rest', under: 0, telling: false, left: Infinity };
+  if (k < m.up) {
+    const telling = k >= m.up - m.tell;
+    return { phase: telling ? 'tell' : 'rest', under: 0, telling, left: m.up - k };
+  }
+  if (k < m.up + FLOAT_SINK) return { phase: 'sink', under: smooth((k - m.up) / FLOAT_SINK), telling: false, left: 0 };
+  return { phase: 'gone', under: 1, telling: false, left: 0 };
+};
 
 /** A copy of the level's solids in which every moving one is this game's own, at rest. */
 export const ownPieces = (solids: Solid[]): Solid[] =>
@@ -126,23 +185,25 @@ const place = (s: Solid): void => {
   if (m.kind === 'tip') {
     // The middle stays put; the far end (forward, which is -z) is `dip` lower.
     s.slopeZ = p.dip / s.halfZ;
-  } else if (m.kind === 'crumble') {
-    // `dip` is how far it has sagged or fallen.
+  } else if (m.kind === 'crumble' || m.kind === 'float') {
+    // `dip` is how far it has sagged or fallen, or how far under a crocodile's back is.
     top = p.baseTop - p.dip;
   } else {
     top = p.baseTop + m.rise * swayPhase(m, p.clock).lift;
   }
   s.top = top;
   s.bottom = top - p.thickness;
-  s.gone = p.phase === 'gone';
+  s.gone = p.phase === 'gone' || (m.kind === 'float' && p.dip > FLOAT_UNDER);
 };
 
 /**
  * Moves every moving piece on by `dt` seconds. `standing` is the solid the
  * hero stands on (null in the air), and `forward` how far along that solid
- * from its middle the hero stands, in metres, forward positive. Returns what began.
+ * from its middle the hero stands, in metres, forward positive. `hero` is where
+ * the hero is, seen from above: crocodile stepping stones come up when one is
+ * near. Returns what began.
  */
-export const stepPieces = (solids: Solid[], standing: string | null, forward: number, dt: number): PieceEvent[] => {
+export const stepPieces = (solids: Solid[], standing: string | null, forward: number, dt: number, hero?: { x: number; z: number }): PieceEvent[] => {
   const events: PieceEvent[] = [];
   for (const s of solids) {
     const p = s.piece;
@@ -210,6 +271,29 @@ export const stepPieces = (solids: Solid[], standing: string | null, forward: nu
         p.speed = 0;
         say('back');
       }
+    } else if (m.kind === 'float') {
+      // The row's clock starts when a hero first comes near its first crocodile; every crocodile in the row has the same.
+      const since = p.since ?? -1;
+      if (since < 0 && hero !== undefined && Math.hypot(hero.x - m.from.x, hero.z - m.from.z) <= m.wake) p.since = 0;
+      else if (since >= 0) p.since = since + dt;
+      const now = floatPhase(m, p.since ?? -1);
+      if (now.phase !== p.phase) {
+        if (now.phase === 'rise') say('back');
+        if (now.phase === 'sink') say('fall');
+      }
+      if (now.telling && !p.telling) say('tell');
+      p.phase = now.phase;
+      p.telling = now.telling;
+      // Under a hero's weight the back dips a little; it bobs back up when they leave.
+      const weight = on ? m.dip : 0;
+      p.speed += Math.max(-FLOAT_DIP_RATE * dt, Math.min(FLOAT_DIP_RATE * dt, weight - p.speed));
+      p.dip = p.speed + FLOAT_LOW * now.under;
+      // Stood on too long, it turns and snaps (Hard). The clock starts again from the next step on it.
+      p.onFor = on && p.dip <= FLOAT_UNDER ? (p.onFor ?? 0) + dt : 0;
+      if (p.onFor >= m.snap) {
+        say('snap');
+        p.onFor = 0;
+      }
     } else {
       p.clock += dt;
       const now = swayPhase(m, p.clock);
@@ -227,10 +311,17 @@ export const stepPieces = (solids: Solid[], standing: string | null, forward: nu
 export const resetPieces = (solids: Solid[]): void => {
   for (const s of solids) {
     if (!s.piece || !s.motion || s.motion.kind === 'sway') continue;
-    s.piece.phase = 'rest';
+    const float = s.motion.kind === 'float';
+    s.piece.phase = float ? 'gone' : 'rest';
     s.piece.clock = 0;
-    s.piece.dip = 0;
+    s.piece.dip = float ? FLOAT_LOW : 0;
     s.piece.speed = 0;
+    s.piece.telling = false;
+    if (float) {
+      // The row sleeps again until a hero comes near.
+      s.piece.since = -1;
+      s.piece.onFor = 0;
+    }
     place(s);
   }
 };
@@ -243,6 +334,11 @@ export const resetPieces = (solids: Solid[]): void => {
 export const steadyFor = (s: Solid): number => {
   const m = s.motion;
   if (!m || !s.piece) return Infinity;
+  if (m.kind === 'float') {
+    // A crocodile's back: steady for what is left of its time up, and not at all while it rises or sinks.
+    const now = floatPhase(m, s.piece.since ?? -1);
+    return now.phase === 'rest' || now.phase === 'tell' ? now.left : 0;
+  }
   if (m.kind !== 'sway') return Infinity;
   const now = swayPhase(m, s.piece.clock);
   return now.phase === 'rest' || now.phase === 'high' ? now.left : 0;

@@ -92,7 +92,8 @@ export const climbOut = (
 ): { solid: Solid; x: number; z: number } | null => {
   let best: { solid: Solid; x: number; z: number; far: number } | null = null;
   for (const s of solids) {
-    if (s.gone || s.bounce) continue;
+    // Nobody climbs onto a crocodile's back from the water: it is jumped onto from the rocks.
+    if (s.gone || s.bounce || s.motion?.kind === 'float') continue;
     const rise = s.top - water.surface;
     if (rise < -0.2 || rise > maxRise) continue;
     if (!touchesFromAbove(s, x, z, SWIM.radius + SWIM.climbReach)) continue;

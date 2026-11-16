@@ -15,8 +15,6 @@ export interface LakeNumbers {
   /**
    * THE SHORE PATH (section 1): boulders in a line along the south shore,
    * from the pebble beach to a grassy point. A missed hop lands in the lake.
-   * The same boulders, climbing, cross the cove in section 3 until the rope
-   * swings are built.
    *   boulderCount    how many on the shore path.
    *   boulderRadius   how big each top is, from its middle to its edge.
    *   boulderGap      the open water between one and the next, and either end.
@@ -30,6 +28,40 @@ export interface LakeNumbers {
    * comes back the same distance, so this also sets how long that is.
    */
   crossing: number;
+  /**
+   * The crocodiles a hero crosses on (section 2), in two rows with a rock
+   * between. A row lies under the water until a hero comes near its first
+   * crocodile; then they surface one after another along it, each with a
+   * splash, so a wave runs up the row.
+   *   stoneGap      about how much open water lies between one back and the
+   *                 next. With `crossing`, it sets how many crocodiles there are.
+   *   stoneStagger  seconds between one crocodile surfacing and the next.
+   *   stoneUp       seconds each stays up, from the start of its rise.
+   *   stonePeriod   seconds from one surfacing to its next: the row's rhythm.
+   *                 Left out, the wave runs once and they stay up, so timing
+   *                 does not matter (the owner's rule for Easy).
+   *   stoneTell     how long before going under it shudders and growls: its warning.
+   *   stoneSnap     seconds a hero can stand on one before it turns and snaps,
+   *                 which costs a heart (the owner's rule for Hard). Left out: never.
+   */
+  stoneGap: number;
+  stoneStagger: number;
+  stoneUp: number;
+  stonePeriod?: number;
+  stoneTell: number;
+  stoneSnap?: number;
+  /**
+   * THE SWINGING PINES (section 3): two rope swings across the cove, the
+   * first to a rock stack, the second up to the headland's ledge.
+   *   ropeHelp      true: letting go at any point in a swing lands the hero
+   *                 on the stack or the ledge (the owner's rule for Easy).
+   *   stackRadius   how big the rock stack's top is. Smaller needs a better-timed let-go.
+   *   ledgeAhead    how far past the second rope the ledge's edge is. Further
+   *                 means letting go nearer the top of the swing.
+   */
+  ropeHelp: boolean;
+  stackRadius: number;
+  ledgeAhead: number;
   /**
    * THE SUNKEN LOGS (section 4): logs and boulders in turn, from the headland
    * to the gravel bar, with a zigzag of three boulders after the second log.
@@ -113,7 +145,9 @@ export interface LakeNumbers {
 export const LAKE_DIFFICULTY: Record<Difficulty, LakeNumbers> = {
   easy: {
     boulderCount: 5, boulderRadius: 1.6, boulderGap: 0.9,
-    crossing: 28,
+    crossing: 34,
+    stoneGap: 1.3, stoneStagger: 0.3, stoneUp: 4, stoneTell: 0,
+    ropeHelp: true, stackRadius: 3.4, ledgeAhead: 3.2,
     logCount: 3, logWidth: 2.4, logGap: 1,
     tunnelLength: 4,
     postCount: 4, postRadius: 1, postGap: 0.9, postRise: 0.5,
@@ -123,7 +157,9 @@ export const LAKE_DIFFICULTY: Record<Difficulty, LakeNumbers> = {
   },
   normal: {
     boulderCount: 6, boulderRadius: 1.2, boulderGap: 1.8,
-    crossing: 36,
+    crossing: 48,
+    stoneGap: 1.9, stoneStagger: 1.1, stoneUp: 2.9, stonePeriod: 6.5, stoneTell: 0.8,
+    ropeHelp: false, stackRadius: 3, ledgeAhead: 3.6,
     logCount: 3, logWidth: 1.6, logGap: 2,
     tunnelLength: 6,
     postCount: 5, postRadius: 0.75, postGap: 1.6, postRise: 0.6,
@@ -134,7 +170,9 @@ export const LAKE_DIFFICULTY: Record<Difficulty, LakeNumbers> = {
   },
   hard: {
     boulderCount: 7, boulderRadius: 0.85, boulderGap: 2.6,
-    crossing: 42,
+    crossing: 54,
+    stoneGap: 2.2, stoneStagger: 0.95, stoneUp: 2.1, stonePeriod: 5, stoneTell: 0.5, stoneSnap: 0.8,
+    ropeHelp: false, stackRadius: 2.2, ledgeAhead: 4.2,
     logCount: 4, logWidth: 1, logGap: 2.8,
     tunnelLength: 9,
     postCount: 6, postRadius: 0.55, postGap: 2.3, postRise: 0.6,

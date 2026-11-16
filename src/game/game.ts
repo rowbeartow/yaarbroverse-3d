@@ -8,6 +8,7 @@ import { ENEMY, callSidekick, dismissSidekick, newEnemy, sendHome, stepEnemy, ty
 import { MOVE, STEP, knockSpeed, type HeroName } from './hero';
 import { pushOutside, surfaceBelow, topAt, touchesFromAbove, type Level, type Solid } from './level';
 import { ownPieces, resetPieces, stepPieces, type PieceEvent } from './moving';
+import { HANG, ROPE, grab, handOf, handSpeed, letGo, newRope, ropeInReach, stepHeld, stepLoose, type RopeState } from './rope';
 import { SWIM, climbOut, inWater, waterAt, type Water } from './swim';
 
 /** What the player is asking for during one step. */
@@ -63,6 +64,8 @@ export type GameEvent =
   | { type: 'climb'; solidId: string }
   /** Ran out of breath underwater: a moment down, then back to the last safe bank. */
   | { type: 'breathless' }
+  /** Took hold of a rope, or let go of it (see rope.ts). */
+  | { type: 'rope'; id: string; what: 'grab' | 'release' }
   /** A moving piece (see moving.ts) began its tell, began to move, fell away or came back. */
   | ({ type: 'piece' } & PieceEvent)
   | { type: 'goal' };
@@ -145,6 +148,15 @@ export class Game {
   private climb: { fromX: number; fromY: number; fromZ: number; solidId: string; x: number; y: number; z: number } | null = null;
   /** Ran out of breath: going back to the last safe bank counts as running out of hearts. */
   private breathOut = false;
+  /** The level's ropes, as they are now, and the one the hero is swinging on (see rope.ts). */
+  readonly ropes: RopeState[];
+  swinging: RopeState | null = null;
+  /** The rope last let go of: it cannot be grabbed again until the hero has landed or gone into the water. */
+  lastRope: string | null = null;
+  /** Thrown from a rope with help, and still in the air: the stick cannot spoil the throw. */
+  private thrown = false;
+  /** How far the hero was from the rope's end when it took hold: it slides to the end over a moment, never jumps there. */
+  private ropeSlip = { x: 0, y: 0, z: 0 };
 
   private safeSpot: { x: number; y: number; z: number; id: string | null };
   private pending: GameEvent[] = [];
@@ -173,6 +185,7 @@ export class Game {
     this.tuning = level.enemyTuning ?? { warning: 1, speed: 1, rest: 1 };
     this.enemies = (level.enemies ?? []).map((spot) => newEnemy(spot, this.tuning));
     this.boss = level.boss ? newBoss(level.boss) : null;
+    this.ropes = (level.ropes ?? []).map(newRope);
     const under = surfaceBelow(level, this.x, this.z, this.y, MOVE.footRadius);
     this.groundId = under ? under.id : null;
     this.safeSpot = { ...level.spawn, id: under?.safe ? under.id : null };
@@ -187,6 +200,25 @@ export class Game {
   /** Seconds of breath when full: the level's, or never running out. */
   get maxBreath(): number {
     return this.level.breath ?? Infinity;
+  }
+
+  /** The id of the rope the hero is swinging on, or null. */
+  get ropeId(): string | null {
+    return this.swinging ? this.swinging.rope.id : null;
+  }
+
+  /**
+   * Stands the hero on the solid `id`, in its middle, before the run starts,
+   * as if the level began there: for a preview page that shows one part of a
+   * level (see `__grovePreview` in src/main.ts). Unknown ids are ignored.
+   */
+  startOn(id: string): void {
+    const s = this.level.solids.find((each) => each.id === id);
+    if (!s) return;
+    const x = s.safeAt?.x ?? s.x;
+    const z = s.safeAt?.z ?? s.z;
+    Object.assign(this, { x, y: s.top, z, vx: 0, vy: 0, vz: 0, grounded: true, groundId: s.id });
+    this.safeSpot = { x, y: s.top, z, id: s.id };
   }
 
   /** The pool the hero is swimming in, if any. */
@@ -258,6 +290,10 @@ export class Game {
     this.knocked = true;
     this.rolling = false;
     this.pouncing = 0;
+    // A hit knocks a hero off a rope.
+    if (this.swinging) this.lastRope = this.swinging.rope.id;
+    this.swinging = null;
+    this.thrown = false;
     this.protectedFor = MOVE.hurtProtection * this.level.protection;
     if (this.hearts <= 0) this.fainting = MOVE.faintPause;
     this.pending.push({ type: 'hurt', left: this.hearts });
@@ -286,6 +322,10 @@ export class Game {
     this.breath = this.maxBreath;
     this.climbing = 0;
     this.climb = null;
+    this.swinging = null;
+    this.lastRope = null;
+    this.thrown = false;
+    for (const rope of this.ropes) Object.assign(rope, newRope(rope.rope));
     // Tipping logs and crumbling moss are as they were at the start.
     resetPieces(this.level.solids);
     // The older player's rule: every enemy that is not beaten starts over at
@@ -320,7 +360,14 @@ export class Game {
     // Pieces that move go first, and carry a hero standing on one.
     const standingOn = this.grounded && this.groundId ? level.solids.find((s) => s.id === this.groundId) : undefined;
     const forward = standingOn ? standingOn.z - this.z : 0;
-    for (const event of stepPieces(level.solids, standingOn ? standingOn.id : null, forward, dt)) this.events.push({ type: 'piece', ...event });
+    for (const event of stepPieces(level.solids, standingOn ? standingOn.id : null, forward, dt, this)) {
+      this.events.push({ type: 'piece', ...event });
+      // A crocodile stood on too long snaps: a heart, and a throw off its back.
+      if (event.what === 'snap' && standingOn?.id === event.id && this.hurt(standingOn.x, standingOn.z)) {
+        this.events.push(...this.pending);
+        this.pending = [];
+      }
+    }
     if (standingOn?.piece) {
       if (standingOn.gone) {
         this.grounded = false;
@@ -345,11 +392,36 @@ export class Game {
 
     // A fresh press of Jump is remembered for a moment, so pressing just
     // before landing still jumps.
+    const jumpWasHeld = this.jumpWasHeld;
     if (jumpHeld && !this.jumpWasHeld) this.buffer = MOVE.jumpBuffer;
     this.jumpWasHeld = input.jump;
 
     const previousY = this.y;
-    if (this.swimming || this.climbing > 0) {
+    // Ropes: one nobody holds swings itself still; a hero in the air within reach of one takes hold.
+    for (const rope of this.ropes) if (rope !== this.swinging) stepLoose(rope, dt);
+    if (this.grounded || this.swimming) {
+      this.lastRope = null;
+      this.thrown = false;
+    }
+    if (!this.swinging && !this.grounded && !this.swimming && this.climbing <= 0 && !frozen && this.ropes.length > 0) {
+      const within = ropeInReach(this.ropes, this.x, this.y, this.z, Boolean(level.ropeHelp), this.lastRope, HANG[this.hero]);
+      if (within) {
+        grab(within, this.vx, this.vz);
+        const end = handOf(within);
+        this.ropeSlip = { x: this.x - end.x, y: this.y - (end.y - HANG[this.hero]), z: this.z - end.z };
+        this.swinging = within;
+        this.rolling = false;
+        this.pouncing = 0;
+        this.knocked = false;
+        this.thrown = false;
+        this.buffer = 0;
+        this.events.push({ type: 'rope', id: within.rope.id, what: 'grab' });
+      }
+    }
+    if (this.swinging) {
+      this.swingOn(this.swinging, jumpHeld && !jumpWasHeld, dt);
+      this.moveWasHeld = Boolean(input.move);
+    } else if (this.swimming || this.climbing > 0) {
       this.swim(moveX, moveZ, jumpHeld, frozen ? false : Boolean(input.move), dt);
       this.moveWasHeld = Boolean(input.move);
     } else {
@@ -396,7 +468,7 @@ export class Game {
         }
         this.vy = Math.min(this.vy, MOVE.pounceExitRise);
       }
-    } else if (this.knocked && !this.grounded && stickLength < 0.01) {
+    } else if (!this.grounded && (this.thrown || (this.knocked && stickLength < 0.01))) {
       // Thrown by a hit, with the stick let go: nothing slows the throw until
       // the hero lands, so it carries clear of whatever did the hurting.
     } else {
@@ -645,6 +717,39 @@ export class Game {
       this.safeSpot = { x: ground.safeAt?.x ?? ground.x, y: ground.top, z: ground.safeAt?.z ?? ground.z, id: ground.id };
       this.events.push({ type: 'safe', solidId: ground.id });
     }
+  }
+
+  /** One step on a rope: the hero hangs from its end as it swings, and Jump lets go (see rope.ts). */
+  private swingOn(state: RopeState, letGoNow: boolean, dt: number): void {
+    stepHeld(state, dt);
+    const hand = handOf(state);
+    const speed = handSpeed(state);
+    const slip = Math.exp(-ROPE.slide * dt);
+    this.ropeSlip = { x: this.ropeSlip.x * slip, y: this.ropeSlip.y * slip, z: this.ropeSlip.z * slip };
+    this.x = hand.x + this.ropeSlip.x;
+    this.y = hand.y - HANG[this.hero] + this.ropeSlip.y;
+    this.z = hand.z + this.ropeSlip.z;
+    this.vx = speed.x;
+    this.vy = speed.y;
+    this.vz = speed.z;
+    this.grounded = false;
+    this.groundId = null;
+    this.coyote = 0;
+    this.canCutJump = false;
+    this.facing = Math.atan2(state.rope.ahead.x, state.rope.ahead.z);
+    if (!letGoNow) return;
+    const landing = this.level.solids.find((s) => s.id === state.rope.to);
+    const away = letGo(state, this, landing, Boolean(this.level.ropeHelp));
+    this.vx = away.x;
+    this.vy = away.y;
+    this.vz = away.z;
+    // The flight carries on its own unless the player steers; a throw with help cannot be steered at all.
+    this.knocked = true;
+    this.thrown = away.thrown;
+    this.buffer = 0;
+    this.swinging = null;
+    this.lastRope = state.rope.id;
+    this.events.push({ type: 'rope', id: state.rope.id, what: 'release' });
   }
 
   /** Dropped into deep water: from now on the hero swims. */

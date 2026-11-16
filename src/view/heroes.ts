@@ -3,7 +3,7 @@
 // Yaarbro in his blue tunic with the orange beard, Caputo grey-brown with dark
 // stripes, long fangs and green eyes.
 
-import type { Group } from 'three';
+import type { Group, Vector3 } from 'three';
 import type { HeroName } from '../game/hero';
 import type { Assets } from './assets';
 import { HERO_MODELS, ModelHero, STAND_IN, wantsStandIn } from './hero-model';
@@ -23,6 +23,8 @@ export interface Pose {
   water?: 'surface' | 'under' | null;
   /** How far through climbing out of the water, 0 to 1, or null when not climbing. */
   climbing?: number | null;
+  /** On a rope: reaching out for one coming near, or hanging from one. Left out otherwise. */
+  rope?: 'reach' | 'hang' | null;
 }
 
 /** What the browser checks can ask about the hero on screen. */
@@ -42,8 +44,12 @@ export interface HeroView {
   /** Where a portrait camera should look, and from how far. */
   portrait: { height: number; distance: number };
   animate(pose: Pose, dt: number): void;
-  /** Something just happened: a jump, a landing, a bounce off a mushroom, or the end of climbing out of the water. */
-  react(event: 'jump' | 'land' | 'bounce' | 'out'): void;
+  /** Something just happened: a jump, a landing, a bounce off a mushroom, the end of climbing out of the water, taking hold of a rope or letting go. */
+  react(event: 'jump' | 'land' | 'bounce' | 'out' | 'catch' | 'letgo'): void;
+  /** Where the hero holds a rope, in the world, as drawn now (see hero-model.ts). False for a hero with no grip. */
+  grip(into: Vector3): boolean;
+  /** How much the hero is held by a rope right now, 0 to 1. */
+  readonly held: number;
   info(): HeroInfo;
   /** For a ghost: how much of it shows, from 0 (gone) to 1. */
   fade(share: number): void;
