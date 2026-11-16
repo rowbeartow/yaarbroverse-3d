@@ -224,6 +224,8 @@ export function buildLake(difficulty: Difficulty, numbers: LakeNumbers = LAKE_DI
   // The headland reaches from the wooded island out past the logs' line; its middle parts the cove's water from the logs'.
   const headlandX = x - shape.headlandHalfX;
   box('headland', 'crag', x - shape.headlandHalfX * 2, x, lineZ - shape.headlandNorth, woodedNorth, shape.headlandTop, shape.depth, { safe: safe(3) });
+  // Behind the ledge the island's bank is a rock face, so the ledge reads as the end of the way, not a path inland.
+  box('headland-back', 'crag', x - shape.headlandHalfX * 2 - 1, x + 1, woodedNorth, woodedNorth + 4, shape.woodedTop + 0.4, shape.depth, {}, false);
   x -= shape.headlandHalfX * 2;
 
   // 4. THE SUNKEN LOGS: west along the island's north shore, with a zigzag out into the channel.
