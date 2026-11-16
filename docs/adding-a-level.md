@@ -24,7 +24,9 @@ Each section of the level says which way the camera faces through it: `facing` o
 
 `ROUTE_SHAPE=1 npx vitest run tests/route-shape.test.ts --silent=false` prints every level's numbers. Put them on the route plan the owner approves.
 
-The Bouncing Grove and Cocolalla Lake were built before the rule and are on the test's waiting list until each is reshaped. The camera that turns to a section's `facing` is being built in milestone nine; until it is, the camera looks along -z everywhere. No new level goes on the waiting list.
+The Bouncing Grove and Cocolalla Lake were built before the rule and are on the test's waiting list until each is reshaped. No new level goes on the waiting list.
+
+The camera does the rest (`src/view/route-camera.ts`): it turns to the next section's `facing` when the hero stands on the last solid of the section before, so end every section on a safe, roomy solid. It keeps that facing through a swim. A section can also ask the camera to sit further back and higher with `pull` (1.5 is half as far again): use it where the route comes back toward the camera, so the player sees what is ahead. The stick follows the camera, so up is always away from it. A level whose sections give no `facing` or `pull` keeps the camera looking along -z.
 
 ## The files
 

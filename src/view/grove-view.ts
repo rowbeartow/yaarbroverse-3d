@@ -39,6 +39,7 @@ import { Scatter, buildForest, type Forest } from './forest';
 import { bossFighting } from '../game/boss';
 import { BossView } from './boss';
 import { FIGHT_CAMERA, fightView } from './boss-camera';
+import { ROUTE_CAMERA, cameraFor, followsRoute, forwardOf, turnToward } from './route-camera';
 import { ENEMY_MODELS, EnemyView, modelFilesOf } from './enemies';
 import { HERO_MODEL_FILES, buildHero, type HeroView } from './heroes';
 import { buildLake } from './lake';
@@ -164,6 +165,11 @@ export class GroveView {
   private lastFrame = 0;
   private smoothedRate = 0;
   private drawn = { calls: 0, triangles: 0 };
+  /** The camera that follows the route (route-camera.ts): whether this level turns it, the solid the hero last stood on, and where the camera has eased to. */
+  private turns = false;
+  private lastStood: string | null = null;
+  private yaw = 0;
+  private pull = 1;
 
   /**
    * Sets up the 3D picture and downloads what it needs to show `first`, the
@@ -524,6 +530,13 @@ export class GroveView {
     this.follow.x = ease(this.follow.x, aim.x, 7, dt);
     this.follow.z = ease(this.follow.z, aim.z, 7, dt);
     this.follow.y = ease(this.follow.y, followY, game.grounded || game.swimming ? 5 : 2.6, dt);
+    // The camera turns to follow the route, from the solid the hero stands on or last stood on.
+    if (this.turns) {
+      if (game.groundId) this.lastStood = game.groundId;
+      const wanted = cameraFor(level, this.lastStood);
+      this.yaw = turnToward(this.yaw, wanted.facing, dt);
+      this.pull = ease(this.pull, wanted.pull, ROUTE_CAMERA.pull, dt);
+    }
     this.aimCamera();
     this.aimUnderwater(game);
     this.aimSun();
@@ -544,15 +557,33 @@ export class GroveView {
   /** Puts the camera straight on the hero, with no easing (after a restart). */
   snapCamera(game: Game): void {
     this.follow = { x: game.x, y: game.y, z: game.z };
+    this.turns = followsRoute(game.level);
+    this.lastStood = game.groundId;
+    const wanted = this.turns ? cameraFor(game.level, this.lastStood) : { facing: 0, pull: 1 };
+    this.yaw = wanted.facing;
+    this.pull = wanted.pull;
     if (this.hero) this.hero.root.rotation.y = game.facing;
+  }
+
+  /** Which way the camera faces now, in degrees seen from above (0 looks along -z). The stick follows it. */
+  get facing(): number {
+    return this.yaw;
+  }
+
+  /** How far to the side of the route's own line the camera and its aim sit: a level whose camera never turns keeps the old lean toward the middle. */
+  private lean(): { camera: number; look: number; sun: number } {
+    return this.turns ? { camera: 1, look: 1, sun: 1 } : { camera: 0.85, look: 0.92, sun: 0.9 };
   }
 
   private aimCamera(): void {
     const { x, y, z } = this.follow;
     // In a boss fight the camera sits further back and higher, so the whole arena shows (see boss-camera.ts).
     const { back, up } = fightView(this.fight, { x, z }, this.level?.boss);
-    this.camera.position.set(x * 0.85, y + CAMERA.up * up, z + CAMERA.back * back);
-    this.camera.lookAt(x * 0.92, y + CAMERA.lookUp, z - CAMERA.lookAhead);
+    const lean = this.lean();
+    const ahead = forwardOf(this.yaw);
+    const behind = CAMERA.back * back * this.pull;
+    this.camera.position.set(x * lean.camera - ahead.x * behind, y + CAMERA.up * up * this.pull, z - ahead.z * behind);
+    this.camera.lookAt(x * lean.look + ahead.x * CAMERA.lookAhead, y + CAMERA.lookUp, z + ahead.z * CAMERA.lookAhead);
   }
 
   /**
@@ -569,8 +600,12 @@ export class GroveView {
     const pool = game.water ?? level.water?.find((w) => this.follow.x >= w.minX && this.follow.x <= w.maxX && this.follow.z >= w.minZ && this.follow.z <= w.maxZ);
     if (share > 0 && pool) {
       const { x, y, z } = this.follow;
-      const behind = Math.min(z + UNDERWATER.back, pool.maxZ - 0.3);
-      const close = new Vector3(x, Math.min(y + UNDERWATER.up, underwaterCeiling(pool, level.solids, x, behind, UNDERWATER.below)), behind);
+      // Close behind the swimmer, the way the camera faces, and never outside the pool.
+      const ahead = forwardOf(this.yaw);
+      const hold = (value: number, low: number, high: number): number => Math.max(low + 0.3, Math.min(high - 0.3, value));
+      const behindX = hold(x - ahead.x * UNDERWATER.back, pool.minX, pool.maxX);
+      const behind = hold(z - ahead.z * UNDERWATER.back, pool.minZ, pool.maxZ);
+      const close = new Vector3(behindX, Math.min(y + UNDERWATER.up, underwaterCeiling(pool, level.solids, behindX, behind, UNDERWATER.below)), behind);
       // On the way in or out, the camera never looks at the swimmer through rock (an arch over the water):
       // where the spot between the two views cannot see it, it cuts to whichever end can, the nearer first.
       const swimmer = { x, y: y + 0.5, z };
@@ -581,7 +616,10 @@ export class GroveView {
         spot = order.find((end) => !sightBlocked(level.solids, end === 1 ? close : above, swimmer)) ?? 1;
       }
       this.camera.position.copy(above.lerp(close, spot));
-      const look = new Vector3(x * 0.92, y + CAMERA.lookUp, z - CAMERA.lookAhead).lerp(new Vector3(x, y + 0.4, z - UNDERWATER.lookAhead), spot);
+      const look = new Vector3(x * this.lean().look + ahead.x * CAMERA.lookAhead, y + CAMERA.lookUp, z + ahead.z * CAMERA.lookAhead).lerp(
+        new Vector3(x + ahead.x * UNDERWATER.lookAhead, y + 0.4, z + ahead.z * UNDERWATER.lookAhead),
+        spot,
+      );
       this.camera.lookAt(look);
     }
     const p = this.camera.position;
@@ -599,7 +637,8 @@ export class GroveView {
    * moves in whole shadow-picture pixels, so shadow edges do not shimmer.
    */
   private aimSun(): void {
-    const middle = new Vector3(this.follow.x * 0.9, this.follow.y, this.follow.z - 14);
+    const ahead = forwardOf(this.yaw);
+    const middle = new Vector3(this.follow.x * this.lean().sun + ahead.x * 14, this.follow.y, this.follow.z + ahead.z * 14);
     if (this.tier.shadowSize > 0) {
       const right = new Vector3(0, 1, 0).cross(SUN_FROM).normalize();
       const up = SUN_FROM.clone().cross(right);

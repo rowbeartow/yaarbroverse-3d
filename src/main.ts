@@ -30,6 +30,7 @@ import { MOVE_NAME, STEP } from './game/hero';
 import { passageNear } from './game/swim';
 import type { Level } from './game/level';
 import { Controls } from './input/controls';
+import { stickToLevel } from './view/route-camera';
 import { levelFromAddress, listedLevels, shownLevels } from './levels';
 import { GhostStore } from './save/ghost-store';
 import { loadGhost, saveGhost, type GhostSlot } from './save/ghosts';
@@ -433,7 +434,8 @@ const boot = (): void => {
       let steps = 0;
       while (owed >= STEP && steps < 6) {
         before = { x: game.x, y: game.y, z: game.z };
-        game.step(mode === 'playing' ? controls.read() : IDLE);
+        // The stick follows the camera: up is away from it, whichever way it faces (src/view/route-camera.ts).
+        game.step(mode === 'playing' ? stickToLevel(controls.read(), view.facing) : IDLE);
         // After a fall, or after running out of hearts, the hero is somewhere else entirely: do not slide there.
         if (game.events.some((event) => event.type === 'fall' || event.type === 'restored')) before = { x: game.x, y: game.y, z: game.z };
         view.handle(game.events);
@@ -530,6 +532,10 @@ const boot = (): void => {
       /** The level's water, if it has any: pools drawn, splashes showing, and how far under the picture is. */
       get water() {
         return view ? view.waterInfo() : null;
+      },
+      /** Which way the camera faces now, in degrees seen from above (0 looks along -z). */
+      get facing() {
+        return view ? view.facing : 0;
       },
       get leafShown() {
         return view ? view.leafShown() : false;
