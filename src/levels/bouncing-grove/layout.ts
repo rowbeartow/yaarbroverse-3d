@@ -480,6 +480,7 @@ export function buildGrove(
     fallY: shape.fallY,
     coyoteTime: n.coyoteTime,
     ledgeHelp: n.ledgeHelp,
+    jumpAssist: n.jumpAssist,
     hearts: n.hearts,
     protection: n.protection,
     knockback: n.knockback,

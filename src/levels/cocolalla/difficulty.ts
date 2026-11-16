@@ -9,6 +9,7 @@
 // After changing a number, run `npm test`. The tests play the whole lake on
 // all three difficulties as each hero and fail if a change makes it impossible.
 
+import type { JumpAssist } from '../../game/assist';
 import type { Difficulty } from '../../game/difficulty';
 
 export interface LakeNumbers {
@@ -43,6 +44,10 @@ export interface LakeNumbers {
    *   stoneTell     how long before going under it shudders and growls: its warning.
    *   stoneSnap     seconds a hero can stand on one before it turns and snaps,
    *                 which costs a heart (the owner's rule for Hard). Left out: never.
+   *   stoneWait     true: each row's first crocodile comes up and stays up until
+   *                 the hero steps onto it, and the rest of the wave runs from
+   *                 that step, so a row always starts with a fair first jump
+   *                 (the owner's rule for Normal, 2026-11-16).
    */
   stoneGap: number;
   stoneStagger: number;
@@ -50,6 +55,7 @@ export interface LakeNumbers {
   stonePeriod?: number;
   stoneTell: number;
   stoneSnap?: number;
+  stoneWait: boolean;
   /**
    * THE SWINGING PINES (section 3): two rope swings across the cove, the
    * first to a rock stack, the second up to the headland's ledge.
@@ -140,13 +146,21 @@ export interface LakeNumbers {
   coyoteTime: number;
   /** Feet this far below a ledge still get lifted onto it. */
   ledgeHelp: number;
+  /**
+   * The jump assist (src/game/assist.ts): a jump aimed roughly at a small
+   * piece or a rope steers onto it, for a keyboard's eight directions.
+   *   reach   how far from where the jump would come down it can be, in metres.
+   *   angle   how far off the way the stick points, in degrees.
+   * Left out, none (Hard, by the owner's rule).
+   */
+  jumpAssist?: JumpAssist;
 }
 
 export const LAKE_DIFFICULTY: Record<Difficulty, LakeNumbers> = {
   easy: {
     boulderCount: 5, boulderRadius: 1.6, boulderGap: 0.9,
     crossing: 34,
-    stoneGap: 1.3, stoneStagger: 0.3, stoneUp: 4, stoneTell: 0,
+    stoneGap: 1.3, stoneStagger: 0.3, stoneUp: 4, stoneTell: 0, stoneWait: false,
     ropeHelp: true, stackRadius: 3.4, ledgeAhead: 3.2,
     logCount: 3, logWidth: 2.4, logGap: 1,
     tunnelLength: 4,
@@ -154,11 +168,12 @@ export const LAKE_DIFFICULTY: Record<Difficulty, LakeNumbers> = {
     crocCount: 1, crocUnderLogs: false, crocHunt: false, crocLead: 0, crocAside: 9, crocPatch: 4, crocSpeed: 1.5, crocReach: 3.5, crocWarning: 2, crocRest: 1.6, crocHits: 1, crocLine: true,
     checkpoints: [1, 2, 3, 4, 5, 6],
     hearts: 5, protection: 1.5, knockback: 0.5, coyoteTime: 0.2, ledgeHelp: 0.5,
+    jumpAssist: { reach: 1.6, angle: 35 },
   },
   normal: {
     boulderCount: 6, boulderRadius: 1.2, boulderGap: 1.8,
     crossing: 48,
-    stoneGap: 1.9, stoneStagger: 1.1, stoneUp: 2.9, stonePeriod: 6.5, stoneTell: 0.8,
+    stoneGap: 1.9, stoneStagger: 1.4, stoneUp: 4, stonePeriod: 8, stoneTell: 0.8, stoneWait: true,
     ropeHelp: false, stackRadius: 3, ledgeAhead: 3.6,
     logCount: 3, logWidth: 1.6, logGap: 2,
     tunnelLength: 6,
@@ -167,11 +182,12 @@ export const LAKE_DIFFICULTY: Record<Difficulty, LakeNumbers> = {
     checkpoints: [1, 2, 3, 4, 5, 6],
     breath: 16,
     hearts: 3, protection: 1, knockback: 1.2, coyoteTime: 0.12, ledgeHelp: 0.3,
+    jumpAssist: { reach: 1, angle: 25 },
   },
   hard: {
     boulderCount: 7, boulderRadius: 0.85, boulderGap: 2.6,
     crossing: 54,
-    stoneGap: 2.2, stoneStagger: 0.95, stoneUp: 2.1, stonePeriod: 5, stoneTell: 0.5, stoneSnap: 0.8,
+    stoneGap: 2.2, stoneStagger: 0.95, stoneUp: 2.1, stonePeriod: 5, stoneTell: 0.5, stoneSnap: 0.8, stoneWait: false,
     ropeHelp: false, stackRadius: 2.2, ledgeAhead: 4.2,
     logCount: 4, logWidth: 1, logGap: 2.8,
     tunnelLength: 9,

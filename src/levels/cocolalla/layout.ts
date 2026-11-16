@@ -92,14 +92,16 @@ export const LAKE_SHAPE = {
   /**
    * The crocodile stepping stones: how far in from the channel's west side
    * their line runs, how far left and right of it they lie in turn, half the
-   * size of a back (along the crocodile, and across it), how high a back
+   * size of a back (along the crocodile, and across it: the footing is the
+   * whole crocodile as drawn, head to tail, and src/view/croc-stones.ts
+   * draws it to this size), how high a back
    * floats, how near a hero must come to a row's first crocodile to wake the
    * row, and how long one takes to come up.
    */
-  crossIn: 2.5,
+  crossIn: 3.2,
   stoneSide: 0.5,
-  stoneHalfX: 1.5,
-  stoneHalfZ: 0.6,
+  stoneHalfX: 2.3,
+  stoneHalfZ: 0.75,
   stoneTop: 0.4,
   /** How deep a crocodile's body reaches under its back: shallow enough to swim under. */
   stoneThickness: 0.55,
@@ -178,8 +180,12 @@ export const LAKE_SHAPE = {
 /** Which way the camera faces through each section, in degrees seen from above (0 looks north, 270 west), and where it sits further back. */
 export const LAKE_CAMERA = {
   shore: 0,
-  /** Turned a little to look up the channel from over the water, not from over the island. */
-  crossing: 330,
+  /**
+   * Straight up the rows of crocodiles, so up on the keys runs along them. A
+   * precise stretch lines the camera up with the way across: a keyboard has
+   * only eight directions (the owner's rule, 2026-11-16).
+   */
+  crossing: 0,
   pines: 0,
   logs: 0,
   /** The swim comes back toward the camera: it sits further back and higher, so the water ahead shows. */
@@ -254,6 +260,7 @@ export function buildLake(difficulty: Difficulty, numbers: LakeNumbers = LAKE_DI
     let z = from;
     /** The first crocodile of the row being laid, and how far along its row this one is. */
     let row = { x: 0, z: 0 };
+    let rowFirst = '';
     let along = 0;
     for (let i = 0; i < count; i += 1) {
       if (i === first) {
@@ -265,6 +272,7 @@ export function buildLake(difficulty: Difficulty, numbers: LakeNumbers = LAKE_DI
       const x = crossX + (i % 2 === 0 ? -shape.stoneSide : shape.stoneSide);
       if (i === 0 || i === first) {
         row = { x, z };
+        rowFirst = `stone-${i + 1}`;
         along = 0;
       }
       add({
@@ -273,6 +281,7 @@ export function buildLake(difficulty: Difficulty, numbers: LakeNumbers = LAKE_DI
         motion: {
           kind: 'float', wake: shape.stoneWake, from: row, delay: along * n.stoneStagger, rise: shape.stoneRise,
           up: n.stoneUp, period: n.stonePeriod ?? Infinity, tell: n.stoneTell, dip: shape.stoneDip, snap: n.stoneSnap ?? Infinity,
+          ...(n.stoneWait ? { waitFor: rowFirst } : {}),
         },
       });
       along += 1;
@@ -470,6 +479,7 @@ export function buildLake(difficulty: Difficulty, numbers: LakeNumbers = LAKE_DI
     water,
     ropes,
     ropeHelp: n.ropeHelp,
+    jumpAssist: n.jumpAssist,
     breath: n.breath,
     fallY: shape.fallY,
     coyoteTime: n.coyoteTime,

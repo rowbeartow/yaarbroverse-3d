@@ -16,11 +16,16 @@ import { AnimationMixer, Box3, Group, LoopOnce, LoopRepeat, MeshLambertMaterial,
 import type { GLTF } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { clone as cloneRigged } from 'three/examples/jsm/utils/SkeletonUtils.js';
 import type { Level, Solid } from '../game/level';
-import { floatPhase, type Motion } from '../game/moving';
+import { FLOAT_LOW, floatPhase, type Motion } from '../game/moving';
 import type { WaterView } from './water';
 
-/** How long a stepping stone is, nose to tail: much bigger than the lake's hunting crocodiles (2.6 m), so its back holds a hero. */
-export const STONE_LENGTH = 4.6;
+/**
+ * A stepping stone is drawn exactly as long, nose to tail, as its solid is
+ * (the longer side), so every part of the crocodile a player can see is
+ * footing (the owner's rule, 2026-11-16). The lake's are 4.6 m, much bigger
+ * than its hunting crocodiles (2.6 m), so a back holds a hero.
+ */
+export const stoneLength = (s: Solid): number => 2 * Math.max(s.halfX, s.halfZ);
 
 type Float = Extract<Motion, { kind: 'float' }>;
 
@@ -92,7 +97,8 @@ export class CrocStones {
       const box = new Box3().setFromObject(model);
       const size = box.getSize(new Vector3());
       const middle = box.getCenter(new Vector3());
-      const scale = STONE_LENGTH / Math.max(size.z, 0.001);
+      const length = stoneLength(s);
+      const scale = length / Math.max(size.z, 0.001);
       model.scale.multiplyScalar(scale);
       model.position.set(-middle.x * scale, -middle.y * scale, -middle.z * scale);
       const tilt = new Group();
@@ -103,7 +109,7 @@ export class CrocStones {
       const alongX = s.halfX >= s.halfZ;
       root.rotation.y = (alongX ? Math.PI / 2 : 0) + (index % 2 ? Math.PI : 0);
       root.name = `stone-${s.id}`;
-      const ahead = new Vector3(0, 0, STONE_LENGTH * 0.42).applyAxisAngle(new Vector3(0, 1, 0), root.rotation.y);
+      const ahead = new Vector3(0, 0, length * 0.42).applyAxisAngle(new Vector3(0, 1, 0), root.rotation.y);
       this.stones.push({
         id: s.id,
         motion: s.motion as Float,
@@ -158,12 +164,12 @@ export class CrocStones {
       const s = solids.find((each) => each.id === stone.id);
       const piece = s?.piece;
       if (!s || !piece) continue;
-      const now = floatPhase(stone.motion, piece.since ?? -1);
+      const now = floatPhase(stone.motion, piece.since ?? -1, piece.clock);
       stone.phase = piece.phase;
       // Out of sight under the water: not drawn at all, so it costs nothing. Just before its turn, bubbles where it lies.
-      const hidden = piece.phase === 'gone' && now.under >= 1;
+      const hidden = piece.phase === 'gone' && now.under >= 1 && piece.dip >= FLOAT_LOW - 0.01;
       stone.root.visible = !hidden;
-      const soon = piece.phase === 'gone' && (piece.since ?? -1) >= 0 && floatPhase(stone.motion, (piece.since ?? -1) + 0.6).phase === 'rise';
+      const soon = piece.phase === 'gone' && floatPhase(stone.motion, (piece.since ?? -1) >= 0 ? (piece.since ?? -1) + 0.6 : -1, piece.clock >= 0 ? piece.clock + 0.6 : -1).phase === 'rise';
       stone.nextBubble -= dt;
       if ((soon || piece.telling) && stone.nextBubble <= 0 && this.water) {
         stone.nextBubble = piece.telling ? 0.05 : 0.08;

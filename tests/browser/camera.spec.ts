@@ -23,8 +23,9 @@ test('the camera turns to follow the lake: north along the shore, up the channel
   await play(page, 'Yaarbro', 'easy');
   expect(Math.abs(await facing(page))).toBeLessThan(1);
   // It turns on the bank a section ends on, before the hero sets out.
+  // Straight up the crocodile stepping stones from the grassy point, so up on the keys runs along the row.
   await standOn(page, 'point');
-  await settled(page, -30);
+  await settled(page, 0);
   await standOn(page, 'island');
   await settled(page, 0);
   await standOn(page, 'reed-bar');
@@ -39,6 +40,16 @@ test('up on the keys is away from the camera, whichever way it faces', async ({ 
   await play(page, 'Yaarbro', 'easy');
   // On the beach the camera looks north: up walks north, toward the water.
   let before = await snapshot(page);
+  await page.keyboard.down('ArrowUp');
+  await expect.poll(async () => (await snapshot(page)).z, { timeout: 20_000 }).toBeLessThan(before.z - 1);
+  await page.keyboard.up('ArrowUp');
+  expect(Math.abs((await snapshot(page)).x - before.x)).toBeLessThan(0.5);
+
+  // On the grassy point it looks straight up the crocodiles' row: up walks north along it, not at an angle.
+  await standOn(page, 'point');
+  await settled(page, 0);
+  await frames(page, 2);
+  before = await snapshot(page);
   await page.keyboard.down('ArrowUp');
   await expect.poll(async () => (await snapshot(page)).z, { timeout: 20_000 }).toBeLessThan(before.z - 1);
   await page.keyboard.up('ArrowUp');

@@ -8,6 +8,7 @@
 // After changing a number, run `npm test`. The tests play the whole level on
 // all three difficulties and fail if a change makes one impossible to finish.
 
+import type { JumpAssist } from '../../game/assist';
 import type { BossNumbers } from '../../game/boss';
 import type { Difficulty } from '../../game/difficulty';
 
@@ -219,6 +220,14 @@ export interface GroveNumbers {
   coyoteTime: number;
   /** Feet this far below a ledge still get lifted onto it. */
   ledgeHelp: number;
+  /**
+   * The jump assist (src/game/assist.ts): a jump aimed roughly at a small
+   * piece or a rope steers onto it, for a keyboard's eight directions.
+   *   reach   how far from where the jump would come down it can be, in metres.
+   *   angle   how far off the way the stick points, in degrees.
+   * Left out, none (Hard, by the owner's rule).
+   */
+  jumpAssist?: JumpAssist;
 }
 
 /** The chief throws, then charges as well once a third of its health is gone, then calls its sidekicks too in its last third. */
@@ -281,6 +290,7 @@ export const GROVE_DIFFICULTY: Record<Difficulty, GroveNumbers> = {
     chiefSidekicks: 1,
     coyoteTime: 0.2,
     ledgeHelp: 0.5,
+    jumpAssist: { reach: 1.6, angle: 35 },
   },
   normal: {
     logWidth: 1.6,
@@ -334,6 +344,7 @@ export const GROVE_DIFFICULTY: Record<Difficulty, GroveNumbers> = {
     chiefSidekicks: 2,
     coyoteTime: 0.12,
     ledgeHelp: 0.3,
+    jumpAssist: { reach: 1, angle: 25 },
   },
   hard: {
     logWidth: 1.0,

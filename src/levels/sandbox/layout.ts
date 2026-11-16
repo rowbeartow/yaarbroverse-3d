@@ -78,6 +78,7 @@ export function buildSandbox(difficulty: Difficulty, numbers: SandboxNumbers = S
     fallY: -6,
     coyoteTime: n.coyoteTime,
     ledgeHelp: n.ledgeHelp,
+    jumpAssist: n.jumpAssist,
     hearts: n.hearts,
     protection: n.protection,
     knockback: n.knockback,

@@ -4,6 +4,7 @@
 // Directions: x is left (-) and right (+), y is up, z is toward the camera (+)
 // and away from it (-). Levels run away from the camera, so "forward" is -z.
 
+import type { JumpAssist } from './assist';
 import type { BossSpot } from './boss';
 import type { EnemySpot, EnemyTuning } from './enemy';
 import type { Motion, Piece } from './moving';
@@ -110,6 +111,8 @@ export interface Level {
   ropes?: Rope[];
   /** True when letting go of a rope at any point lands the hero safely on what the rope leads to (Easy). */
   ropeHelp?: boolean;
+  /** The jump assist (see assist.ts): how strongly a jump aimed roughly at a small piece or a rope is steered onto it. Left out, none (Hard). */
+  jumpAssist?: JumpAssist;
   /** The boss the level ends with, if it has one. The goal cannot be taken until it is beaten. */
   boss?: BossSpot;
   /** Ids of the solids in the order a run crosses them, start to goal. A pool's id stands for swimming across it, and a rope's for swinging on it. */

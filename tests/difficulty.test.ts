@@ -38,12 +38,13 @@ describe('difficulty names', () => {
 
 describe('Bouncing Grove difficulty numbers', () => {
   it('has a full set of numbers and a start-screen line for each difficulty', () => {
-    const names = Object.keys(normal).sort();
+    // The jump assist is left out on Hard (the owner's rule): tests/assist.test.ts has it.
+    const names = Object.keys(normal).filter((name) => name !== 'jumpAssist').sort();
     for (const difficulty of DIFFICULTIES) {
       const numbers = GROVE_DIFFICULTY[difficulty];
-      expect(Object.keys(numbers).sort()).toEqual(names);
+      expect(Object.keys(numbers).filter((name) => name !== 'jumpAssist').sort()).toEqual(names);
       // Every other number is above zero, but for the two that switch a scout's walking and chasing off.
-      const { scoutPatrol, scoutChase, enemyAimLine, chief, mossFalls, mossSag, windStart, ...rest } = numbers;
+      const { scoutPatrol, scoutChase, enemyAimLine, chief, mossFalls, mossSag, windStart, jumpAssist, ...rest } = numbers;
       // Whether moss falls is a switch; how far it sags is 0 where it falls; the boughs' rhythm may start anywhere.
       expect(typeof mossFalls).toBe('boolean');
       expect(mossSag).toBeGreaterThanOrEqual(0);

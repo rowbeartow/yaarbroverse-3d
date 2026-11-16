@@ -27,6 +27,7 @@ How it fits together:
   - `ghost.ts`: records where a hero was during a run and gives it back at any moment, as small text for storage. Looked at only: the rules never see a ghost.
   - `boss.ts`: bosses. Any level can end with one: an arena that starts the fight, a loop of warning, attack and rest, stages that change its attacks as it loses health, sidekicks it can call, and a goal kept back until it is beaten. `docs/adding-a-level.md` says how to give a level one.
   - `route-shape.ts`: the route rule. Routes turn: it measures how much of a level's route runs away from the camera, across the screen and back toward it, and how often it turns; `tests/route-shape.test.ts` holds every level to the minimum. A section's `facing` says which way the camera faces there. `docs/adding-a-level.md` has the rule.
+  - `assist.ts`: the jump assist (Easy and Normal): a jump aimed roughly at small footing or a rope steers onto it, for a keyboard's eight directions. The keyboard rule (`tests/keyboard.test.ts`) plays every level through eight keys relative to the camera; `docs/adding-a-level.md` has both.
   - `rope.ts`: rope swings any level can hang: a hero in the air takes hold, swings out and back, and lets go with Jump to fly on; with help (Easy) letting go anywhere lands safely. `docs/adding-a-level.md` says how to hang one.
   - `swim.ts`: water any level can have: pools a hero swims in (never a fall), diving, swimming up, breath, climbing out. `game.ts` steps it. `docs/adding-a-level.md` says how to use it.
   - `moving.ts`: pieces that move: a solid can tip, crumble or sway, and carries a hero standing on it; and the crocodile stepping stone, which lies low until a hero is near, holds from the first step on it, then goes under (and on Hard snaps). Each game keeps its own copy of a level's moving pieces. `docs/adding-a-level.md` says how to use them.
@@ -66,7 +67,7 @@ Node 22 (`.nvmrc`).
 
 - Install: `npm ci`
 - Run locally: `npm run dev`, then open the address it prints
-- Test the rules: `npm test` (fast, no browser). `GROVE_TIMES=1 npx vitest run tests/sections.test.ts --silent=false` prints how long the bot's perfect run takes to the end of each section.
+- Test the rules: `npm test` (fast, no browser). It includes the keyboard rule: the bot plays every level on Easy and Normal through eight keys (`tests/helpers/keyboard.ts`). `GROVE_TIMES=1 npx vitest run tests/sections.test.ts --silent=false` prints how long the bot's perfect run takes to the end of each section.
 - Build: `npm run build` (prepares the assets, and fails if the download goes over 20 MB)
 - Start-up, measured: with the built game served, `node tools/startup-measure.mjs` prints what a visit downloads before Play works and how long it takes on a 20 megabit connection (the top of that file says the rest).
 - Pictures for the docs: `node scripts/screenshot.mjs` (see the top of that file)
