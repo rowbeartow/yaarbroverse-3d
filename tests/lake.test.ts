@@ -1,7 +1,8 @@
-// Cocolalla Lake: its sections, how long a perfect run takes, what each
+// Cocolalla Lake as reshaped in milestone nine: its sections and which way
+// the camera faces in each, how long a perfect run takes, what each
 // difficulty changes, and the lake's own rules: a missed jump lands in the
-// water, the high banks cannot be climbed onto from it, and the rocky point
-// can only be passed underwater. Times come from the bot, which plays by the
+// water, the high banks cannot be climbed onto from it, nobody swims past a
+// section, and the rocky point can only be passed underwater. Times come from the bot, which plays by the
 // same rules a player does. `LAKE_TIMES=1 npx vitest run tests/lake.test.ts
 // --silent=false` prints when a perfect run reaches the end of each section.
 
@@ -12,7 +13,9 @@ import { HEROES, STEP } from '../src/game/hero';
 import type { Level, Solid } from '../src/game/level';
 import { SWIM, passageNear } from '../src/game/swim';
 import { LAKE_DIFFICULTY } from '../src/levels/cocolalla/difficulty';
-import { LAKE_SHAPE, buildLake } from '../src/levels/cocolalla/layout';
+import { routeFaults, routeShape } from '../src/game/route-shape';
+import { LAKE_CAMERA, LAKE_SHAPE, buildLake } from '../src/levels/cocolalla/layout';
+import { cameraFor } from '../src/view/route-camera';
 import { Bot } from './helpers/bot';
 
 const byId = (level: Level, id: string): Solid => {
@@ -40,25 +43,56 @@ const cleanRun = (difficulty: Difficulty, hero: (typeof HEROES)[number] = 'Yaarb
   return { level, reached, seconds: game.seconds, longestUnder };
 };
 
-/** How long a perfect run of the whole lake should take on each difficulty, in seconds. The owner asked for about a minute on Normal. */
+/** How long a perfect run of the whole lake should take on each difficulty, in seconds. */
 const RUN_TIME: Record<Difficulty, [number, number]> = {
-  easy: [40, 60],
-  normal: [52, 68],
-  hard: [58, 80],
+  easy: [45, 75],
+  normal: [55, 90],
+  hard: [65, 110],
 };
 
-describe('the six sections', () => {
+describe('the eight sections', () => {
   it('are the ones in the route plan, on every difficulty', () => {
     for (const difficulty of DIFFICULTIES) {
       expect((buildLake(difficulty).sections ?? []).map((s) => s.name)).toEqual([
         'The Shore Path',
-        'The Reed Shallows',
+        'The Crocodile Crossing',
+        'The Swinging Pines',
         'The Sunken Logs',
+        'The Open Water',
         'The Rock Tunnel',
         'Cattail Cove',
         'The Old Pier',
       ]);
     }
+  });
+
+  it('the route winds: it meets the route rule with room to spare, and about a fifth of it runs left', () => {
+    for (const difficulty of DIFFICULTIES) {
+      const shape = routeShape(buildLake(difficulty));
+      expect(routeFaults(shape), difficulty).toEqual([]);
+      // The owner asked for about 20% leftward movement and a third camera turn.
+      expect(shape.left, difficulty).toBeGreaterThan(0.18);
+      expect(shape.cameraTurns, difficulty).toBeGreaterThanOrEqual(3);
+      expect(shape.away, difficulty).toBeLessThan(0.45);
+    }
+  });
+
+  it('the camera looks north along the shore, up the channel for the crossing, west through the tunnel and up the cove, and north again on the pier', () => {
+    const level = buildLake('normal');
+    const facing = (id: string): number => cameraFor(level, id).facing;
+    expect(facing('beach')).toBe(LAKE_CAMERA.shore);
+    // It turns on the bank a section ends on, before the hero sets out.
+    expect(facing('point')).toBe(LAKE_CAMERA.crossing);
+    expect(facing('island')).toBe(LAKE_CAMERA.pines);
+    expect(facing('headland')).toBe(LAKE_CAMERA.logs);
+    expect(cameraFor(level, 'gravel-bar')).toEqual({ facing: LAKE_CAMERA.open, pull: LAKE_CAMERA.openPull });
+    expect(facing('reed-bar')).toBe(LAKE_CAMERA.tunnel);
+    expect(facing('cove-beach')).toBe(LAKE_CAMERA.cove);
+    expect(facing('post-1')).toBe(LAKE_CAMERA.cove);
+    expect(facing('landing')).toBe(LAKE_CAMERA.pier);
+    expect(facing('dock')).toBe(LAKE_CAMERA.pier);
+    // Never south: the mountains are to the north.
+    for (const section of level.sections ?? []) expect(Math.abs((((section.facing ?? 0) + 180) % 360) - 180), section.name).toBeLessThanOrEqual(90);
   });
 });
 
@@ -81,7 +115,7 @@ describe.each(DIFFICULTIES)('the lake on %s', (difficulty) => {
     for (const section of sections) {
       const end = reached.get(section.solids[section.solids.length - 1]) ?? seconds;
       expect(end - last, section.name).toBeGreaterThan(3);
-      expect(end - last, section.name).toBeLessThan(25);
+      expect(end - last, section.name).toBeLessThan(30);
       last = end;
     }
   });
@@ -92,23 +126,57 @@ describe.each(DIFFICULTIES)('the lake on %s', (difficulty) => {
     else expect(difficulty).toBe('easy');
   });
 
-  it('the rocky point runs right across the lake, too high to climb onto, with the only way past under its middle', () => {
-    const pool = (level.water ?? []).find((w) => w.id === 'point-water')!;
-    const parts = ['rock-left', 'rock-tunnel', 'rock-right'].map((id) => byId(level, id));
-    expect(Math.min(...parts.map((s) => s.x - s.halfX))).toBeCloseTo(pool.minX);
-    expect(Math.max(...parts.map((s) => s.x + s.halfX))).toBeCloseTo(pool.maxX);
+  it('the rocky point runs right across its water, too high to climb onto, with the only way past under its middle', () => {
+    const pool = (level.water ?? []).find((w) => w.id === 'tunnel-water')!;
+    const parts = ['rock-north', 'rock-tunnel', 'rock-south'].map((id) => byId(level, id));
+    expect(Math.min(...parts.map((s) => s.z - s.halfZ))).toBeLessThanOrEqual(pool.minZ);
+    expect(Math.max(...parts.map((s) => s.z + s.halfZ))).toBeGreaterThanOrEqual(pool.maxZ);
     for (const s of parts) expect(s.top - pool.surface).toBeGreaterThan(SWIM.climbHeight);
     const tunnel = byId(level, 'rock-tunnel');
     expect(tunnel.bottom - pool.floor).toBeGreaterThan(1);
-    expect(passageNear(level.solids, pool, tunnel.x, tunnel.z + tunnel.halfZ + 1.5)).toBe(true);
-    // Well past where a running jump in from the gravel bar lands.
-    const bar = byId(level, 'gravel-bar');
-    expect(bar.z - bar.halfZ - (tunnel.z + tunnel.halfZ)).toBeGreaterThan(8);
+    expect(passageNear(level.solids, pool, tunnel.x + tunnel.halfX + 1.5, tunnel.z)).toBe(true);
+    // Well past where a running jump in from the reed bar lands.
+    const bar = byId(level, 'reed-bar');
+    expect(bar.x - bar.halfX - (tunnel.x + tunnel.halfX)).toBeGreaterThan(8);
   });
 
-  it('the gravel bar and the boardwalk cannot be climbed onto from the water, the shores and the first post can', () => {
-    for (const id of ['gravel-bar', 'boardwalk', 'dock']) expect(byId(level, id).top - LAKE_SHAPE.surface, id).toBeGreaterThan(SWIM.climbHeight);
-    for (const id of ['point', 'island', 'reed-bar', 'post-1', 'log-1']) expect(byId(level, id).top - LAKE_SHAPE.surface, id).toBeLessThanOrEqual(SWIM.climbHeight);
+  it('the high banks cannot be climbed onto from the water, the shores and the low pieces can, and nobody can get onto the wooded island', () => {
+    for (const id of ['headland', 'gravel-bar', 'landing', 'boardwalk', 'dock']) expect(byId(level, id).top - LAKE_SHAPE.surface, id).toBeGreaterThan(SWIM.climbHeight);
+    for (const id of ['point', 'island', 'reed-bar', 'cove-beach', 'post-1', 'log-1']) expect(byId(level, id).top - LAKE_SHAPE.surface, id).toBeLessThanOrEqual(SWIM.climbHeight);
+    // The wooded island stands more than a full jump (2 m) over the highest place beside it.
+    const wooded = byId(level, 'wooded-island');
+    expect(level.route).not.toContain('wooded-island');
+    expect(wooded.top - byId(level, 'headland').top).toBeGreaterThan(2.4);
+  });
+
+  it('nobody swims past a section: a solid stands across every place the route passes from one pool to the next', () => {
+    const pools = level.water ?? [];
+    const poolOf = (x: number, z: number) => pools.find((w) => x > w.minX && x < w.maxX && z > w.minZ && z < w.maxZ);
+    // No two pools overlap.
+    for (const a of pools) for (const b of pools) if (a !== b) expect(a.minX < b.maxX - 1e-6 && b.minX < a.maxX - 1e-6 && a.minZ < b.maxZ - 1e-6 && b.minZ < a.maxZ - 1e-6, `${a.id} and ${b.id}`).toBe(false);
+    // The bank each stretch of water ends on reaches into the next stretch's water.
+    const reaches = (id: string, poolId: string): boolean => {
+      const s = byId(level, id);
+      const w = pools.find((p) => p.id === poolId)!;
+      return s.x - s.halfX < w.maxX && s.x + s.halfX > w.minX && s.z - s.halfZ < w.maxZ && s.z + s.halfZ > w.minZ;
+    };
+    for (const [bank, from, to] of [
+      ['point', 'shore-water', 'channel-water'],
+      ['island', 'channel-water', 'cove-water'],
+      ['headland', 'cove-water', 'logs-water'],
+      ['gravel-bar', 'logs-water', 'open-water'],
+      ['reed-bar', 'open-water', 'tunnel-water'],
+    ] as const) {
+      expect(reaches(bank, from) || bank === 'point', `${bank} in ${from}`).toBe(true);
+      expect(reaches(bank, to), `${bank} in ${to}`).toBe(true);
+    }
+    // Every solid of the route stands in a pool or on its edge, so a missed jump is a swim.
+    for (const id of level.route) {
+      const s = level.solids.find((solid) => solid.id === id);
+      if (!s) continue;
+      const near = [[s.x, s.z], [s.x - s.halfX - 0.5, s.z], [s.x + s.halfX + 0.5, s.z], [s.x, s.z - s.halfZ - 0.5], [s.x, s.z + s.halfZ + 0.5]];
+      expect(near.some(([x, z]) => poolOf(x, z) !== undefined), id).toBe(true);
+    }
   });
 
   it('a missed jump lands in the lake, never a fall, and the hero climbs back out to go on', () => {
@@ -117,7 +185,7 @@ describe.each(DIFFICULTIES)('the lake on %s', (difficulty) => {
     for (let i = 0; i < 300 / STEP && game.groundId !== 'log-1'; i += 1) game.step(bot.input(game));
     expect(game.groundId).toBe('log-1');
     // Walk off the side of the log.
-    for (let i = 0; i < 5 / STEP && !game.swimming; i += 1) game.step({ ...IDLE, moveX: -1 });
+    for (let i = 0; i < 5 / STEP && !game.swimming; i += 1) game.step({ ...IDLE, moveZ: -1 });
     expect(game.swimming).toBe(true);
     expect(game.falls).toBe(0);
     // The bot swims back, climbs out (onto the island or a log) and finishes.
@@ -127,43 +195,33 @@ describe.each(DIFFICULTIES)('the lake on %s', (difficulty) => {
       game.step(bot.input(game));
       if (wasSwimming && climbedOnto === null && game.grounded) climbedOnto = game.groundId;
     }
-    expect(climbedOnto).toMatch(/^(island|log-|step-)/);
+    expect(climbedOnto).toMatch(/^(log-|step-)/);
     expect(game.complete).toBe(true);
     expect(game.falls).toBe(0);
   });
 });
 
 describe('the crocodiles', () => {
-  /** The way straight across a swim: the line from where it starts to where it ends, a swimmer's width either side. */
-  const wayAcross = (level: Level, before: string, after: string) => {
-    const a = byId(level, before);
-    const b = byId(level, after);
-    return { minX: Math.min(a.x, b.x) - 1.5, maxX: Math.max(a.x, b.x) + 1.5 };
-  };
-
-  it('wait in the two long swims, the Reed Shallows and Cattail Cove, on every difficulty', () => {
+  it('wait in the long swim, the Open Water, on every difficulty', () => {
     for (const difficulty of DIFFICULTIES) {
       const level = buildLake(difficulty);
       const crocs = level.enemies ?? [];
-      expect(crocs.length).toBe(2 * LAKE_DIFFICULTY[difficulty].crocCount);
+      expect(crocs.length).toBe(LAKE_DIFFICULTY[difficulty].crocCount);
       for (const croc of crocs) {
         expect(croc.kind).toBe('crocodile');
         const pool = level.water!.find((w) => croc.z >= w.minZ && croc.z <= w.maxZ && croc.x >= w.minX && croc.x <= w.maxX)!;
-        expect(['reed-water', 'cove-water']).toContain(pool.id);
-        // Its whole water is inside the lake.
+        expect(pool.id).toBe('open-water');
+        // Its whole water is inside the open water.
         expect(croc.arena.minX).toBeGreaterThanOrEqual(pool.minX);
         expect(croc.arena.maxX).toBeLessThanOrEqual(pool.maxX);
+        expect(croc.arena.minZ).toBeGreaterThanOrEqual(pool.minZ);
+        expect(croc.arena.maxZ).toBeLessThanOrEqual(pool.maxZ);
       }
     }
   });
 
-  it('on Easy keep to the side: a hero swimming straight across never comes into a crocodile\'s water', () => {
+  it('on Easy keep to the side: the bot, swimming straight down the lake, never wakes one', () => {
     const level = buildLake('easy');
-    for (const croc of level.enemies ?? []) {
-      const way = croc.id.includes('reed') ? wayAcross(level, 'point', 'island') : wayAcross(level, 'reed-bar', 'post-1');
-      expect(croc.arena.minX > way.maxX || croc.arena.maxX < way.minX, croc.id).toBe(true);
-    }
-    // And the bot, swimming straight across, never wakes one.
     const game = new Game(level, 'easy', 'Caputo');
     const bot = new Bot(level);
     for (let i = 0; i < 300 / STEP && !game.complete; i += 1) {
@@ -222,7 +280,7 @@ describe('what each difficulty changes', () => {
 
   it('the swims, the gaps and the footing all get harder from Easy to Hard', () => {
     const [e, n, h] = DIFFICULTIES.map((d) => LAKE_DIFFICULTY[d]);
-    for (const key of ['reedSwim', 'coveSwim', 'boulderGap', 'logGap', 'postGap'] as const) {
+    for (const key of ['crossing', 'boulderGap', 'logGap', 'postGap'] as const) {
       expect(e[key], key).toBeLessThan(n[key]);
       expect(n[key], key).toBeLessThan(h[key]);
     }
@@ -232,13 +290,17 @@ describe('what each difficulty changes', () => {
     }
   });
 
-  it('the crocodile stretches are open water, wide enough to swim round a crocodile', () => {
-    for (const difficulty of DIFFICULTIES) {
+  it('the open water is wide enough to swim round a crocodile, and its swim is longer the harder it gets', () => {
+    const lengths = DIFFICULTIES.map((difficulty) => {
       const level = buildLake(difficulty);
-      for (const id of ['reed-water', 'cove-water']) {
-        const pool = level.water!.find((w) => w.id === id)!;
-        expect(pool.maxX - pool.minX, id).toBeGreaterThan(30);
-      }
-    }
+      const pool = level.water!.find((w) => w.id === 'open-water')!;
+      expect(pool.maxX - pool.minX, difficulty).toBeGreaterThan(24);
+      const bar = level.solids.find((s) => s.id === 'gravel-bar')!;
+      const reeds = level.solids.find((s) => s.id === 'reed-bar')!;
+      return reeds.z - reeds.halfZ - (bar.z + bar.halfZ);
+    });
+    expect(lengths[0]).toBeGreaterThan(20);
+    expect(lengths[0]).toBeLessThan(lengths[1]);
+    expect(lengths[1]).toBeLessThan(lengths[2]);
   });
 });

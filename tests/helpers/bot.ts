@@ -50,7 +50,18 @@ export class Bot {
     }
     if (game.grounded && game.groundId) this.index = level.route.indexOf(game.groundId);
     if (game.swimming && game.waterId) {
-      this.index = level.route.indexOf(game.waterId);
+      const swum = level.route.indexOf(game.waterId);
+      if (swum >= 0) this.index = swum;
+      else {
+        // Water that is not part of the way on: a missed jump. Swim for the next piece if it can be
+        // climbed onto from the water, or else back to the nearest piece before it that can.
+        const pool = game.water as Water;
+        const reachable = (id: string | undefined): boolean => {
+          const solid = level.solids.find((s) => s.id === id);
+          return solid !== undefined && solid.top - pool.surface <= SWIM.climbHeight;
+        };
+        while (this.index >= 0 && !reachable(level.route[this.index + 1])) this.index -= 1;
+      }
       return this.swimSafely(game);
     }
     if (game.climbing > 0) return { moveX: 0, moveZ: 0, jump: false };

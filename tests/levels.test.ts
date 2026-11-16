@@ -90,11 +90,13 @@ describe.each(LEVELS.map((level) => [level.id, level] as const))('the level %s',
       expect(new Set([...ids, ...pools]).size).toBe(ids.length + pools.length);
       expect(level.route.length).toBeGreaterThan(0);
       for (const id of level.route) expect([...ids, ...pools]).toContain(id);
-      // Every pool is deep, above the height a fall counts from, and crossed on the way.
+      // Every pool is deep and above the height a fall counts from. It is crossed on the way,
+      // or it is where a missed jump lands: then a solid of the route stands in it or at its edge.
       for (const water of level.water ?? []) {
         expect(water.surface - water.floor).toBeGreaterThan(2.5);
         expect(water.floor).toBeGreaterThan(level.fallY);
-        expect(level.route).toContain(water.id);
+        const beside = level.solids.some((s) => level.route.includes(s.id) && s.x + s.halfX >= water.minX && s.x - s.halfX <= water.maxX && s.z + s.halfZ >= water.minZ && s.z - s.halfZ <= water.maxZ);
+        expect(level.route.includes(water.id) || beside, water.id).toBe(true);
       }
       for (const section of level.sections ?? []) for (const id of section.solids) expect(ids).toContain(id);
       for (const id of Object.keys(level.hints ?? {})) expect(ids).toContain(id);

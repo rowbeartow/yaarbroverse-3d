@@ -48,7 +48,7 @@ const STEP_SOUND: Record<SolidKind, SoundName> = {
   arch: 'stepMoss',
   boulder: 'stepMoss',
   crag: 'stepMoss',
-  deck: 'stepWood',
+  deck: 'stepWood', island: 'stepMoss',
 };
 
 /** Kinds that sound soft underfoot: a push-off or landing on them uses the moss steps. */

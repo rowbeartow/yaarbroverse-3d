@@ -1035,6 +1035,8 @@ export const buildSolids = (level: Level, materials: Materials, decor: Decor, ra
     else if (s.kind === 'boulder') shape.add(boulder(s, materials, level));
     else if (s.kind === 'crag') shape.add(crag(s, materials, level));
     else if (s.kind === 'deck') shape.add(deck(s, materials, level));
+    // A wooded island is part of the lake's surroundings: `lake.ts` draws it.
+    else if (s.kind === 'island') shape.visible = false;
     else if (s.kind === 'bough') {
       // The last bough is the great cedar's, with the leaf. The others are limbs to walk along.
       shape.add(s.id === level.route[level.route.length - 1] ? bough(s, materials) : limb(s, materials, level));

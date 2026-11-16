@@ -48,12 +48,13 @@ test.describe('the level list', () => {
       });
       return names.sort();
     });
-    expect(named).toEqual(['lake-mountains', 'lake-shore']);
-    // Stand at the near end of the last bank: the leaf is straight ahead.
-    await standOn(page, 'dock', 2);
-    await page.keyboard.down('ArrowUp');
+    expect(named).toEqual(['lake-boom', 'lake-island', 'lake-mountains', 'lake-shore']);
+    // Stand on the fishing dock: the pier runs east, and the camera looks north there, so the leaf is to the right.
+    await standOn(page, 'dock', 0);
+    await expect.poll(() => page.evaluate(() => Math.abs((window as unknown as { __grove: { facing: number } }).__grove.facing)), { timeout: 30_000 }).toBeLessThan(5);
+    await page.keyboard.down('ArrowRight');
     await expect(page.locator('#end')).toBeVisible({ timeout: 20_000 });
-    await page.keyboard.up('ArrowUp');
+    await page.keyboard.up('ArrowRight');
     await expect(page.locator('#end-level')).toHaveText('Cocolalla Lake');
     expect(problems).toEqual([]);
   });
