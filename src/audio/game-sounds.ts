@@ -162,6 +162,9 @@ export class GameSounds {
         else if (event.kind === 'tip' && event.what === 'move') sound.play('creak', { volume: volume * 0.7 });
         else if (event.kind === 'crumble' && event.what === 'tell') sound.play('mossRustle', { volume });
         else if (event.kind === 'crumble' && event.what === 'fall') sound.play('mossFall', { volume });
+        // A log or post that sinks: the creak of wood as its tell, and a soft splash as it goes under and as it comes back up.
+        else if (event.kind === 'sink' && event.what === 'tell') sound.play('creak', { volume });
+        else if (event.kind === 'sink' && (event.what === 'fall' || event.what === 'back')) sound.play('surfacing', { volume: volume * 0.8 });
         // A crocodile stepping stone: a quiet splash as it comes up or goes under, its growl as its hold runs out, its bite if it snaps.
         else if (event.kind === 'float' && event.what === 'tell') sound.play('crocTell', { volume: volume * 0.8 });
         else if (event.kind === 'float' && event.what === 'snap') sound.play('crocBite', { volume });

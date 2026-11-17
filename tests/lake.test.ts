@@ -354,8 +354,11 @@ describe('the crocodiles', () => {
     const game = new Game(level, 'hard', 'Yaarbro');
     const croc = game.enemies.find((each) => each.spot.id === 'croc-logs')!;
     const log = byId(level, 'log-2');
-    Object.assign(game, { x: log.x, z: log.z, y: log.top, grounded: true, groundId: 'log-2', vx: 0, vy: 0, vz: 0 });
+    // On a boulder between the logs, which never sinks.
+    const rock = byId(level, 'step-1');
+    Object.assign(game, { x: rock.x, z: rock.z, y: rock.top, grounded: true, groundId: 'step-1', vx: 0, vy: 0, vz: 0 });
     for (let i = 0; i < 5 / STEP; i += 1) game.step(IDLE);
+    expect(game.groundId).toBe('step-1');
     expect(croc.phase).toBe('concealed');
     // Off the side of the log, into the water.
     Object.assign(game, { x: log.x, z: log.z - 2.5, y: -SWIM.float, grounded: false, groundId: null, swimming: true, waterId: 'logs-water' });
@@ -482,5 +485,55 @@ describe('what each difficulty changes', () => {
     expect(lengths[0]).toBeGreaterThan(20);
     expect(lengths[0]).toBeLessThan(lengths[1]);
     expect(lengths[1]).toBeLessThan(lengths[2]);
+  });
+});
+
+describe('the logs and posts that sink', () => {
+  const standOn = (difficulty: 'easy' | 'normal' | 'hard', id: string, seconds: number): Game => {
+    const level = buildLake(difficulty);
+    const game = new Game(level, difficulty, 'Yaarbro');
+    const s = game.level.solids.find((each) => each.id === id)!;
+    Object.assign(game, { x: s.x, z: s.z, y: s.top, grounded: true, groundId: id, vx: 0, vy: 0, vz: 0 });
+    for (let i = 0; i < seconds / STEP; i += 1) {
+      // Nothing else in the lake matters here.
+      game.protectedFor = 10;
+      game.step(IDLE);
+    }
+    return game;
+  };
+
+  it.each(['log-1', 'post-1'])('on Easy %s only bobs under a hero, and holds', (id) => {
+    const game = standOn('easy', id, 20);
+    expect(game.groundId).toBe(id);
+    expect(game.swimming).toBe(false);
+  });
+
+  it.each([
+    ['normal', 'log-1'],
+    ['hard', 'log-1'],
+    ['normal', 'post-1'],
+    ['hard', 'post-1'],
+    ['hard', 'post-6'],
+  ] as const)('on %s a hero who waits on %s goes down with it and swims: no fall, no heart lost', (difficulty, id) => {
+    const game = standOn(difficulty, id, 6);
+    expect(game.swimming).toBe(true);
+    expect(game.falls).toBe(0);
+    expect(game.heartsLost).toBe(0);
+  });
+
+  it.each(DIFFICULTIES)('on %s every log and post sinks or bobs, sooner on Hard, and no boulder between them does', (difficulty) => {
+    const level = buildLake(difficulty);
+    const pieces = level.solids.filter((s) => /^(log|post)-\d+$/.test(s.id));
+    expect(pieces.length).toBeGreaterThan(6);
+    for (const piece of pieces) expect(piece.motion).toMatchObject({ kind: 'sink', sinks: difficulty !== 'easy' });
+    for (const rock of level.solids.filter((s) => /^step-\d+$/.test(s.id))) expect(rock.motion).toBeUndefined();
+    // Every one of them stands in deep water, so going down with one is a swim.
+    for (const piece of pieces) expect(level.water!.some((w) => piece.x > w.minX && piece.x < w.maxX && piece.z > w.minZ && piece.z < w.maxZ)).toBe(true);
+  });
+
+  it('gives less warning on Hard than on Normal', () => {
+    const tell = (difficulty: 'normal' | 'hard', id: string): number => (buildLake(difficulty).solids.find((s) => s.id === id)!.motion as { tell: number }).tell;
+    expect(tell('hard', 'log-1')).toBeLessThan(tell('normal', 'log-1'));
+    expect(tell('hard', 'post-1')).toBeLessThan(tell('normal', 'post-1'));
   });
 });

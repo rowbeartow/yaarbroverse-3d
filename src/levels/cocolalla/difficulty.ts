@@ -80,6 +80,14 @@ export interface LakeNumbers {
   logCount: number;
   logWidth: number;
   logGap: number;
+  /**
+   * The logs sink (a `sink` piece, see src/game/moving.ts). The boulders between them never do: they are where to stop.
+   *   logSinks   true: a log goes under `logTell` seconds after a hero lands on it, and comes back
+   *              up `logBack` seconds later. False (Easy): it only bobs under the hero, and holds.
+   */
+  logSinks: boolean;
+  logTell: number;
+  logBack: number;
   /** THE ROCK TUNNEL (section 6): how long the way under the rocky point is. The only way on is to dive through it. */
   tunnelLength: number;
   /**
@@ -96,6 +104,10 @@ export interface LakeNumbers {
   postRadius: number;
   postGap: number;
   postRise: number;
+  /** The old posts sink the same way as the logs: `postSinks`, `postTell` seconds after a hero lands, back up `postBack` seconds later. */
+  postSinks: boolean;
+  postTell: number;
+  postBack: number;
   /**
    * THE CROCODILES, in the long swim (The Open Water, section 5). The
    * owner's rules: on Easy every one can be avoided without diving or precise
@@ -162,9 +174,9 @@ export const LAKE_DIFFICULTY: Record<Difficulty, LakeNumbers> = {
     crossing: 34,
     stoneGap: 1.3, stoneStagger: 0.3, stoneUp: 4, stoneTell: 0, stoneWait: false,
     ropeHelp: true, stackRadius: 3.4, ledgeAhead: 3.2,
-    logCount: 3, logWidth: 2.4, logGap: 1,
+    logCount: 3, logWidth: 2.4, logGap: 1, logSinks: false, logTell: 0.6, logBack: 0,
     tunnelLength: 4,
-    postCount: 4, postRadius: 1, postGap: 0.9, postRise: 0.5,
+    postCount: 4, postRadius: 1, postGap: 0.9, postRise: 0.5, postSinks: false, postTell: 0.6, postBack: 0,
     crocCount: 1, crocUnderLogs: false, crocHunt: false, crocLead: 0, crocAside: 9, crocPatch: 4, crocSpeed: 1.5, crocReach: 3.5, crocWarning: 2, crocRest: 1.6, crocHits: 1, crocLine: true,
     checkpoints: [1, 2, 3, 4, 5, 6],
     hearts: 5, protection: 1.5, knockback: 0.5, coyoteTime: 0.2, ledgeHelp: 0.5,
@@ -175,9 +187,9 @@ export const LAKE_DIFFICULTY: Record<Difficulty, LakeNumbers> = {
     crossing: 48,
     stoneGap: 1.9, stoneStagger: 1.4, stoneUp: 4, stonePeriod: 8, stoneTell: 0.8, stoneWait: true,
     ropeHelp: false, stackRadius: 3, ledgeAhead: 3.6,
-    logCount: 3, logWidth: 1.6, logGap: 2,
+    logCount: 3, logWidth: 1.6, logGap: 2, logSinks: true, logTell: 1.2, logBack: 2.5,
     tunnelLength: 6,
-    postCount: 5, postRadius: 0.75, postGap: 1.6, postRise: 0.6,
+    postCount: 5, postRadius: 0.75, postGap: 1.6, postRise: 0.6, postSinks: true, postTell: 1.5, postBack: 2.5,
     crocCount: 1, crocUnderLogs: false, crocHunt: true, crocLead: 0.6, crocAside: 4, crocPatch: 9, crocSpeed: 2.9, crocReach: 4.5, crocWarning: 1, crocRest: 1, crocHits: 1, crocLine: false,
     checkpoints: [1, 2, 3, 4, 5, 6],
     breath: 16,
@@ -189,9 +201,9 @@ export const LAKE_DIFFICULTY: Record<Difficulty, LakeNumbers> = {
     crossing: 54,
     stoneGap: 2.2, stoneStagger: 0.95, stoneUp: 2.1, stonePeriod: 5, stoneTell: 0.5, stoneSnap: 0.8, stoneWait: false,
     ropeHelp: false, stackRadius: 2.2, ledgeAhead: 4.2,
-    logCount: 4, logWidth: 1, logGap: 2.8,
+    logCount: 4, logWidth: 1, logGap: 2.8, logSinks: true, logTell: 0.7, logBack: 2.5,
     tunnelLength: 9,
-    postCount: 6, postRadius: 0.55, postGap: 2.3, postRise: 0.6,
+    postCount: 6, postRadius: 0.55, postGap: 2.3, postRise: 0.6, postSinks: true, postTell: 0.9, postBack: 2.5,
     crocCount: 2, crocUnderLogs: true, crocHunt: true, crocLead: 1.2, crocAside: 5, crocPatch: 10, crocSpeed: 3.3, crocReach: 5.5, crocWarning: 0.7, crocRest: 0.75, crocHits: 2, crocLine: false,
     checkpoints: [2, 4, 6],
     breath: 11,

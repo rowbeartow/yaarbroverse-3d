@@ -14,14 +14,15 @@
 //      stack and then up to a ledge on the island's headland. Left.
 //   4. The Sunken Logs: logs and boulders west along the island's north
 //      shore, with a zigzag out into the channel, to a gravel bar too high
-//      to climb onto from the water. Left.
+//      to climb onto from the water. The logs sink a moment after a hero
+//      lands (on Easy they only bob); the boulders are where to stop. Left.
 //   5. The Open Water: a long swim south down the middle of the lake, back
 //      toward the camera, to a reed bar. The crocodiles' water: on Normal and
 //      Hard they hunt a swimmer anywhere in it.
 //   6. The Rock Tunnel: west, with a dive through the passage under the
 //      rocky point, to a small beach in the west cove. The camera turns west. Away.
 //   7. Cattail Cove: old pier posts north up the west shore to the pier's
-//      landing. Right.
+//      landing. The posts sink too (on Easy they only sag). Right.
 //   8. The Old Pier: the boardwalk east out over the lake to the fishing
 //      dock and the golden leaf. The camera turns north again. Right.
 //      (The monster pike fight goes on the dock in a later milestone.)
@@ -41,6 +42,7 @@ import { CROC } from '../../game/crocodile';
 import type { Difficulty } from '../../game/difficulty';
 import type { EnemySpot } from '../../game/enemy';
 import type { Level, Section, Solid } from '../../game/level';
+import type { Motion } from '../../game/moving';
 import type { Rope } from '../../game/rope';
 import type { Water } from '../../game/swim';
 import { LAKE_DIFFICULTY, type LakeNumbers } from './difficulty';
@@ -136,6 +138,11 @@ export const LAKE_SHAPE = {
   headlandTop: 2.6,
   /** The sunken logs: how long each is, its top, and how thick. The boulders between them are higher. */
   logLength: 5,
+  /** Sinking logs and posts: how far one settles under a hero, how far under the water it goes, and how long going under takes (a base, and more for each metre it has to go). */
+  sinkBob: 0.14,
+  sinkUnder: 0.6,
+  sinkDown: 0.5,
+  sinkDownEach: 0.25,
   logTop: 0.5,
   logThickness: 1,
   stepBoulderTop: 0.9,
@@ -227,6 +234,14 @@ export function buildLake(difficulty: Difficulty, numbers: LakeNumbers = LAKE_DI
     add({ id, kind, shape: 'round', x, z, halfX: radius, halfZ: radius, top, bottom: shape.depth });
   const pool = (id: string, west: number, east: number, north: number, south: number): void => {
     water.push({ id, minX: west, maxX: east, minZ: north, maxZ: south, surface: shape.surface, floor: shape.floor });
+  };
+  /**
+   * A log or post that sinks (see moving.ts): it settles `sinkBob` under a hero, and if it `sinks`, goes right under
+   * `tell` seconds after they land, the higher it stands the longer it takes, and is back `back` seconds later.
+   */
+  const sinking = (top: number, sinks: boolean, tell: number, back: number): Motion => {
+    const depth = top - shape.surface + shape.sinkUnder;
+    return { kind: 'sink', tell, sinks, bob: shape.sinkBob, depth, down: shape.sinkDown + depth * shape.sinkDownEach, back };
   };
   /** Bank number `number` (the beach is 0) is a checkpoint on this difficulty. */
   const safe = (number: number): boolean => number === 0 || n.checkpoints.includes(number);
@@ -325,7 +340,7 @@ export function buildLake(difficulty: Difficulty, numbers: LakeNumbers = LAKE_DI
   let steps = 0;
   for (let i = 0; i < n.logCount; i += 1) {
     x -= n.logGap;
-    box(`log-${i + 1}`, 'log', x - shape.logLength, x, lineZ - n.logWidth / 2, lineZ + n.logWidth / 2, shape.logTop, shape.logTop - shape.logThickness);
+    box(`log-${i + 1}`, 'log', x - shape.logLength, x, lineZ - n.logWidth / 2, lineZ + n.logWidth / 2, shape.logTop, shape.logTop - shape.logThickness, { motion: sinking(shape.logTop, n.logSinks, n.logTell, n.logBack) });
     x -= shape.logLength;
     if (i === n.logCount - 1) break;
     if (i === 1) {
@@ -387,7 +402,7 @@ export function buildLake(difficulty: Difficulty, numbers: LakeNumbers = LAKE_DI
   let postTop = shape.firstPostTop;
   for (let i = 0; i < n.postCount; i += 1) {
     z -= n.postGap + n.postRadius;
-    round(`post-${i + 1}`, 'stump', coveX + (i % 2 === 0 ? 0 : shape.postSide), z, n.postRadius, postTop);
+    round(`post-${i + 1}`, 'stump', coveX + (i % 2 === 0 ? 0 : shape.postSide), z, n.postRadius, postTop).motion = sinking(postTop, n.postSinks, n.postTell, n.postBack);
     z -= n.postRadius;
     if (i < n.postCount - 1) postTop += n.postRise;
   }
