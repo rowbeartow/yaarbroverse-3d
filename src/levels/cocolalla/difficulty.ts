@@ -132,7 +132,27 @@ export interface LakeNumbers {
    *   crocLine     whether a line shows where it will lunge, through its tell. Easy only, as with every enemy.
    */
   crocCount: number;
-  /** True: one more crocodile waits under the sunken logs (section 4), for anyone who falls in. Hard only. */
+  /**
+   * THE LAND AND AIR ENEMIES, which behave as they do in the grove. Each waits on a wide, flat
+   * place and never over a jump, a swing or a piece that sinks, so hazards do not stack.
+   *   pointScout      true: a marmot scout on the grassy point at the end of the Shore Path.
+   *   dockScouts      how many marmot scouts wait on the fishing dock, before the golden leaf.
+   *   barMosquito     true: a giant mosquito over the gravel bar at the end of the Sunken Logs.
+   *   scoutPatrol     how fast a scout walks its beat in plain view. 0: it hides where it is until a hero comes (Easy).
+   *   scoutChase      how fast a scout comes after a hero on its ground. 0: it only throws. A hero runs at 6.
+   *   scoutHealth     strikes that beat a scout.
+   *   mosquitoFollow  how fast the mosquito keeps up with a hero under it.
+   *   mosquitoPause   times how long it gets ready before a dive and rests after one. Smaller: it dives more often.
+   */
+  pointScout: boolean;
+  dockScouts: number;
+  barMosquito: boolean;
+  scoutPatrol: number;
+  scoutChase: number;
+  scoutHealth: number;
+  mosquitoFollow: number;
+  mosquitoPause: number;
+  /** True: one more crocodile waits under the sunken logs (section 4), for anyone who falls in or goes down with a log. Normal and Hard. */
   crocUnderLogs: boolean;
   crocHunt: boolean;
   crocLead: number;
@@ -178,6 +198,7 @@ export const LAKE_DIFFICULTY: Record<Difficulty, LakeNumbers> = {
     tunnelLength: 4,
     postCount: 4, postRadius: 1, postGap: 0.9, postRise: 0.5, postSinks: false, postTell: 0.6, postBack: 0,
     crocCount: 1, crocUnderLogs: false, crocHunt: false, crocLead: 0, crocAside: 9, crocPatch: 4, crocSpeed: 1.5, crocReach: 3.5, crocWarning: 2, crocRest: 1.6, crocHits: 1, crocLine: true,
+    pointScout: false, dockScouts: 1, barMosquito: false, scoutPatrol: 0, scoutChase: 0, scoutHealth: 1, mosquitoFollow: 3, mosquitoPause: 1,
     checkpoints: [1, 2, 3, 4, 5, 6],
     hearts: 5, protection: 1.5, knockback: 0.5, coyoteTime: 0.2, ledgeHelp: 0.5,
     jumpAssist: { reach: 1.6, angle: 35 },
@@ -190,7 +211,8 @@ export const LAKE_DIFFICULTY: Record<Difficulty, LakeNumbers> = {
     logCount: 3, logWidth: 1.6, logGap: 2, logSinks: true, logTell: 1.2, logBack: 2.5,
     tunnelLength: 6,
     postCount: 5, postRadius: 0.75, postGap: 1.6, postRise: 0.6, postSinks: true, postTell: 1.5, postBack: 2.5,
-    crocCount: 1, crocUnderLogs: false, crocHunt: true, crocLead: 0.6, crocAside: 4, crocPatch: 9, crocSpeed: 2.9, crocReach: 4.5, crocWarning: 1, crocRest: 1, crocHits: 1, crocLine: false,
+    crocCount: 1, crocUnderLogs: true, crocHunt: true, crocLead: 0.6, crocAside: 4, crocPatch: 9, crocSpeed: 2.9, crocReach: 4.5, crocWarning: 1, crocRest: 1, crocHits: 1, crocLine: false,
+    pointScout: true, dockScouts: 1, barMosquito: true, scoutPatrol: 1.6, scoutChase: 2.6, scoutHealth: 1, mosquitoFollow: 5, mosquitoPause: 0.6,
     checkpoints: [1, 2, 3, 4, 5, 6],
     breath: 16,
     hearts: 3, protection: 1, knockback: 1.2, coyoteTime: 0.12, ledgeHelp: 0.3,
@@ -205,6 +227,7 @@ export const LAKE_DIFFICULTY: Record<Difficulty, LakeNumbers> = {
     tunnelLength: 9,
     postCount: 6, postRadius: 0.55, postGap: 2.3, postRise: 0.6, postSinks: true, postTell: 0.9, postBack: 2.5,
     crocCount: 2, crocUnderLogs: true, crocHunt: true, crocLead: 1.2, crocAside: 5, crocPatch: 10, crocSpeed: 3.3, crocReach: 5.5, crocWarning: 0.7, crocRest: 0.75, crocHits: 2, crocLine: false,
+    pointScout: true, dockScouts: 2, barMosquito: true, scoutPatrol: 2.2, scoutChase: 4.6, scoutHealth: 2, mosquitoFollow: 6.5, mosquitoPause: 0.45,
     checkpoints: [2, 4, 6],
     breath: 11,
     hearts: 2, protection: 0.6, knockback: 2, coyoteTime: 0.06, ledgeHelp: 0.15,

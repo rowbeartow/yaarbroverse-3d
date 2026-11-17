@@ -138,6 +138,14 @@ export const LAKE_SHAPE = {
   headlandTop: 2.6,
   /** The sunken logs: how long each is, its top, and how thick. The boulders between them are higher. */
   logLength: 5,
+  /** The scouts and the mosquito: how far in from its ground's edge a scout waits and keeps, and how high the mosquito hovers and may fly over its ground. */
+  scoutIn: 1.6,
+  /** How much further east the grassy point reaches when a scout lives on it: the scout's own ground. */
+  scoutRoom: 6,
+  scoutInset: 0.7,
+  mosquitoHover: 3.4,
+  mosquitoFloor: 0.8,
+  mosquitoCeiling: 5,
   /** Sinking logs and posts: how far one settles under a hero, how far under the water it goes, and how long going under takes (a base, and more for each metre it has to go). */
   sinkBob: 0.14,
   sinkUnder: 0.6,
@@ -258,7 +266,9 @@ export function buildLake(difficulty: Difficulty, numbers: LakeNumbers = LAKE_DI
   x += n.boulderGap;
   // The point's west edge is where the shore's water ends and the east channel's begins.
   const channelWest = x;
-  box('point', 'bank', channelWest, channelWest + shape.pointLength, shape.pathZ - shape.pointHalfWidth, shape.pathZ + shape.pointHalfWidth, shape.shoreTop, shape.depth, { safe: safe(1) });
+  // With a scout on it the point reaches further east, so the scout has ground of its own away from the first crocodile jump.
+  const pointEast = channelWest + shape.pointLength + (n.pointScout ? shape.scoutRoom : 0);
+  box('point', 'bank', channelWest, pointEast, shape.pathZ - shape.pointHalfWidth, shape.pathZ + shape.pointHalfWidth, shape.shoreTop, shape.depth, { safe: safe(1) });
   const channelEast = channelWest + shape.channelWidth;
 
   // 2. THE CROCODILE CROSSING: north up the east channel on the backs of crocodiles, with a rock half way.
@@ -460,7 +470,7 @@ export function buildLake(difficulty: Difficulty, numbers: LakeNumbers = LAKE_DI
     });
   }
 
-  // On Hard one more waits under the sunken logs, for anyone who falls in: it hunts all of the logs' water.
+  // On Normal and Hard one more waits under the sunken logs, for anyone who falls in or goes down with a log: it hunts all of the logs' water.
   if (n.crocUnderLogs) {
     const cx = (barX + headlandX) / 2;
     enemies.push({
@@ -475,6 +485,31 @@ export function buildLake(difficulty: Difficulty, numbers: LakeNumbers = LAKE_DI
       surface: shape.surface,
       floor: shape.floor,
     });
+  }
+
+  // The land and air enemies, as in the grove. Each has a wide, flat place to itself: none is over a jump, a swing or a piece that sinks.
+  const find = (id: string): Solid => solids.find((s) => s.id === id)!;
+  const patch = (s: Solid, inset: number): EnemySpot['arena'] => ({ minX: s.x - s.halfX + inset, maxX: s.x + s.halfX - inset, minZ: s.z - s.halfZ + inset, maxZ: s.z + s.halfZ - inset });
+  if (n.pointScout) {
+    // On the grassy point's east end, away from where the boulders bring a hero in and from the first crocodile.
+    const point = find('point');
+    // Its ground is the point's east end only. It never comes west of it, and does not notice a hero stepping onto the crocodiles.
+    const west = point.x + point.halfX - shape.scoutRoom + shape.scoutInset;
+    const arena = { ...patch(point, shape.scoutInset), minX: west };
+    enemies.push({ id: 'scout-point', kind: 'marmot', x: point.x + point.halfX - shape.scoutIn, y: point.top, z: arena.maxZ - 0.9, beat: { x: point.x + point.halfX - shape.scoutIn, z: arena.minZ + 0.9 }, arena, notice: 0 });
+  }
+  if (n.barMosquito) {
+    // Over the middle of the gravel bar, which is wide and solid: it meets a hero who has finished the logs.
+    const bar = find('gravel-bar');
+    enemies.push({ id: 'mosquito-bar', kind: 'mosquito', x: bar.x, y: bar.top + shape.mosquitoHover, z: bar.z, arena: patch(bar, 0.4), floor: bar.top + shape.mosquitoFloor, ceiling: bar.top + shape.mosquitoCeiling });
+  }
+  {
+    // On the fishing dock, which is wide, and never on the narrow boardwalk: the last thing between a hero and the golden leaf.
+    const dock = find('dock');
+    for (let i = 0; i < n.dockScouts; i += 1) {
+      const side = i === 0 ? 1 : -1;
+      enemies.push({ id: `scout-dock-${i + 1}`, kind: 'marmot', x: dock.x + (i === 0 ? 0.5 : -0.5), y: dock.top, z: dock.z + side * (dock.halfZ - shape.scoutIn), beat: { x: dock.x + (i === 0 ? 0.5 : -0.5), z: dock.z + side * 0.8 }, arena: patch(dock, shape.scoutInset), notice: shape.scoutInset });
+    }
   }
 
   // To collect. So far one trail: a huckleberry over each boulder of the Shore Path, which shows the way along them.
@@ -498,6 +533,13 @@ export function buildLake(difficulty: Difficulty, numbers: LakeNumbers = LAKE_DI
       crocReach: n.crocReach,
       crocHits: n.crocHits,
       crocLead: n.crocLead,
+      patrolSpeed: n.scoutPatrol,
+      chaseSpeed: n.scoutChase,
+      followSpeed: n.mosquitoFollow,
+      hoverAbove: shape.mosquitoHover,
+      divePause: n.mosquitoPause,
+      scoutHits: n.scoutHealth,
+      mosquitoHits: 1,
     },
     solids,
     spawn: { x: shape.beachLength / 2, y: shape.shoreTop, z: shape.shoreZ - 1 },

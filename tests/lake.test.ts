@@ -289,10 +289,10 @@ describe('the rope swings', () => {
 });
 
 describe('the crocodiles', () => {
-  it('wait in the long swim, the Open Water, on every difficulty, and on Hard one more under the sunken logs', () => {
+  it('wait in the long swim, the Open Water, on every difficulty, and on Normal and Hard one more under the sunken logs', () => {
     for (const difficulty of DIFFICULTIES) {
       const level = buildLake(difficulty);
-      const crocs = level.enemies ?? [];
+      const crocs = (level.enemies ?? []).filter((each) => each.kind === 'crocodile');
       const numbers = LAKE_DIFFICULTY[difficulty];
       expect(crocs.length).toBe(numbers.crocCount + (numbers.crocUnderLogs ? 1 : 0));
       for (const croc of crocs) {
@@ -314,7 +314,7 @@ describe('the crocodiles', () => {
     const bot = new Bot(level);
     for (let i = 0; i < 300 / STEP && !game.complete; i += 1) {
       game.step(bot.input(game));
-      for (const croc of game.enemies) expect(croc.phase).toBe('concealed');
+      for (const croc of game.enemies) if (croc.kind === 'crocodile') expect(croc.phase).toBe('concealed');
     }
     expect(game.complete).toBe(true);
     expect(game.heartsLost).toBe(0);
@@ -349,7 +349,7 @@ describe('the crocodiles', () => {
     }
   });
 
-  it('on Hard the one under the sunken logs leaves a hero on the logs alone, and comes for one who falls in', () => {
+  it('on Hard (and Normal) the one under the sunken logs leaves a hero on the logs alone, and comes for one who falls in', () => {
     const level = buildLake('hard');
     const game = new Game(level, 'hard', 'Yaarbro');
     const croc = game.enemies.find((each) => each.spot.id === 'croc-logs')!;
@@ -370,7 +370,8 @@ describe('the crocodiles', () => {
       game.step(IDLE);
     }
     expect(Math.hypot(croc.x - game.x, croc.z - game.z)).toBeLessThan(before - 3);
-    expect(buildLake('normal').enemies!.some((each) => each.id === 'croc-logs')).toBe(false);
+    expect(buildLake('normal').enemies!.some((each) => each.id === 'croc-logs')).toBe(true);
+    expect(buildLake('easy').enemies!.some((each) => each.id === 'croc-logs')).toBe(false);
   });
 
   it('on Easy they do not hunt: a swimmer treading water where they went in is left alone', () => {
@@ -535,5 +536,49 @@ describe('the logs and posts that sink', () => {
     const tell = (difficulty: 'normal' | 'hard', id: string): number => (buildLake(difficulty).solids.find((s) => s.id === id)!.motion as { tell: number }).tell;
     expect(tell('hard', 'log-1')).toBeLessThan(tell('normal', 'log-1'));
     expect(tell('hard', 'post-1')).toBeLessThan(tell('normal', 'post-1'));
+  });
+});
+
+describe('the scouts and the mosquito', () => {
+  const count = (difficulty: Difficulty, kind: string): number => buildLake(difficulty).enemies!.filter((each) => each.kind === kind).length;
+
+  it('are as many as the plan says, counting the crocodiles this step has placed', () => {
+    expect(DIFFICULTIES.map((d) => count(d, 'marmot'))).toEqual([1, 2, 3]);
+    expect(DIFFICULTIES.map((d) => count(d, 'mosquito'))).toEqual([0, 1, 1]);
+  });
+
+  it.each(DIFFICULTIES)('on %s each has wide, solid ground to itself: no jump, swing or sinking piece is in its patch', (difficulty) => {
+    const level = buildLake(difficulty);
+    for (const spot of level.enemies!.filter((each) => each.kind !== 'crocodile')) {
+      const ground = level.solids.find((s) => spot.x > s.x - s.halfX && spot.x < s.x + s.halfX && spot.z > s.z - s.halfZ && spot.z < s.z + s.halfZ && !s.motion)!;
+      expect(ground, spot.id).toBeDefined();
+      // Wide and flat: at least 5 m each way.
+      expect(Math.min(ground.halfX, ground.halfZ) * 2, spot.id).toBeGreaterThanOrEqual(5);
+      // Its patch lies wholly on that one piece of ground.
+      expect(spot.arena.minX).toBeGreaterThanOrEqual(ground.x - ground.halfX);
+      expect(spot.arena.maxX).toBeLessThanOrEqual(ground.x + ground.halfX);
+      expect(spot.arena.minZ).toBeGreaterThanOrEqual(ground.z - ground.halfZ);
+      expect(spot.arena.maxZ).toBeLessThanOrEqual(ground.z + ground.halfZ);
+    }
+  });
+
+  it('the scout on the grassy point keeps to its own end: a hero stepping onto the first crocodile is outside what it notices', () => {
+    for (const difficulty of ['normal', 'hard'] as const) {
+      const level = buildLake(difficulty);
+      const scout = level.enemies!.find((each) => each.id === 'scout-point')!;
+      const first = level.solids.find((s) => s.id === 'stone-1')!;
+      expect(scout.arena.minX - (scout.notice ?? 0)).toBeGreaterThan(first.x + first.halfX + 1);
+    }
+    expect(buildLake('easy').enemies!.some((each) => each.id === 'scout-point')).toBe(false);
+  });
+
+  it.each(DIFFICULTIES.flatMap((d) => HEROES.map((h) => [d, h] as const)))('on %s the bot, as %s, finishes with no heart lost and beats the dock\'s scouts on the way to the leaf', (difficulty, hero) => {
+    const level = buildLake(difficulty);
+    const game = new Game(level, difficulty, hero);
+    const bot = new Bot(level);
+    for (let i = 0; i < 300 / STEP && !game.complete; i += 1) game.step(bot.input(game));
+    expect(game.complete).toBe(true);
+    expect(game.heartsLost).toBe(0);
+    expect(game.falls).toBe(0);
   });
 });
