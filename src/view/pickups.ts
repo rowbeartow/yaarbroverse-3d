@@ -53,7 +53,8 @@ const berryShape = (): BufferGeometry => {
     [0, -0.04, -0.13, 0.15],
     [0.01, 0.17, 0, 0.14],
   ]) {
-    const ball = new SphereGeometry(r, 10, 7);
+    // Coarse on purpose: about 260 triangles a cluster, so sixty in a level cost under 16 thousand.
+    const ball = new SphereGeometry(r, 8, 5);
     ball.translate(x, y, z);
     parts.push(paint(ball, blue, 0.6));
   }
