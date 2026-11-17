@@ -53,9 +53,9 @@ test('a card marks each finished difficulty with the best time, for the player w
   await finishSandbox(page, 'easy');
   await expect(mark(page, 'sandbox', 'easy')).toHaveAttribute('data-finished', 'true');
   await expect(mark(page, 'sandbox', 'easy').locator('.mark-time')).toHaveText(/^\d+:\d\d\.\d$/);
-  await expect(mark(page, 'sandbox', 'easy')).toHaveAttribute('aria-label', /^Easy: finished, best time \d+:\d\d\.\d$/);
+  await expect(mark(page, 'sandbox', 'easy')).toHaveAttribute('aria-label', /^Easy: finished, best time \d+:\d\d\.\d, most huckleberries in a run \d of 5, hidden leaves found \d of 1$/);
   await expect(mark(page, 'sandbox', 'normal')).toHaveAttribute('data-finished', 'false');
-  await expect(mark(page, 'sandbox', 'hard')).toHaveAttribute('aria-label', 'Hard: not finished yet');
+  await expect(mark(page, 'sandbox', 'hard')).toHaveAttribute('aria-label', 'Hard: not finished yet, most huckleberries in a run 0 of 5, hidden leaves found 0 of 1');
   // The other area's card is untouched.
   await expect(mark(page, 'bouncing-grove', 'easy')).toHaveAttribute('data-finished', 'false');
 
