@@ -1,6 +1,6 @@
 // Builds the lake preview page: the game itself (its scenery, light, camera,
-// heroes, sounds and rules), opening on Cocolalla Lake at the crocodile
-// stepping stones or the rope swings, on the difficulty and hero picked on
+// heroes, sounds and rules), opening on Cocolalla Lake at the Shore Path's
+// huckleberries, the crocodile stepping stones or the rope swings, on the difficulty and hero picked on
 // the page, with the test bot playing ("Watch") or you ("Play it yourself").
 // The owner looks at a change to the lake's pieces on it before it merges.
 //
@@ -9,7 +9,7 @@
 //
 //   folder   where to put the page. Anything already there is replaced.
 //
-// The page opens on the crocodiles, on Normal, as Yaarbro, watching. Its own
+// The page opens on the first place in `PLACES`, on Normal, as Yaarbro, watching. Its own
 // part is tools/preview/lake-preview.ts; the rest is src/ as it is now.
 //
 // Like the other preview pages, it is made to be published as a private

@@ -81,6 +81,62 @@ body {
   background: var(--shade);
 }
 
+/* Huckleberries and hidden leaves found this run, under the hearts. */
+#found {
+  position: absolute;
+  top: calc(max(12px, env(safe-area-inset-top)) + 92px);
+  left: max(16px, env(safe-area-inset-left));
+  margin: 0;
+  padding: 5px 12px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  border-radius: 999px;
+  background: var(--shade);
+  color: #fff6dd;
+  font-size: 15px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+#found.got {
+  animation: found-pop 0.25s ease-out;
+}
+
+@keyframes found-pop {
+  40% {
+    transform: scale(1.12);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #found.got {
+    animation: none;
+  }
+}
+
+.berry-dot,
+.leaf-dot {
+  display: inline-block;
+  flex: none;
+  width: 14px;
+  height: 14px;
+}
+
+.berry-dot {
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #8f93f0, #3b3f9c 60%, #23246b);
+}
+
+.leaf-dot {
+  border-radius: 0 70% 0 70%;
+  background: linear-gradient(135deg, #ffe27a, #d99a16);
+}
+
+#found .leaf-dot {
+  margin-left: 8px;
+}
+
 #hearts svg {
   width: clamp(26px, 3.6vw, 36px);
   height: clamp(26px, 3.6vw, 36px);
@@ -974,6 +1030,29 @@ dd {
 .mark[data-finished='false'] .mark-time {
   color: #7b8474;
   font-weight: 600;
+}
+
+/* What a player has collected on a level, under its marks on the card. */
+.mark-finds {
+  grid-column: 2 / -1;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin-top: -2px;
+  font-size: clamp(12px, 1.8vh, 14px);
+  font-weight: 600;
+  color: #4f5b50;
+  font-variant-numeric: tabular-nums;
+}
+
+.mark-finds .leaf-dot {
+  margin-left: 8px;
+}
+
+.mark-finds .berry-dot,
+.mark-finds .leaf-dot {
+  width: 11px;
+  height: 11px;
 }
 
 /* ---------- Bests on the end card ---------- */

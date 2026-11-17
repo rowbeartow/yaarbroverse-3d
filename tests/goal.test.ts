@@ -70,6 +70,10 @@ describe('the run record', () => {
       heartsLost: 1,
       beaten: 0,
       complete: true,
+      berries: 0,
+      berriesIn: 0,
+      leaves: [],
+      leavesIn: 0,
     });
     expect(summary.seconds).toBeGreaterThan(1);
   });
