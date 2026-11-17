@@ -10,7 +10,6 @@
 import {
   AdditiveBlending,
   BoxGeometry,
-  CanvasTexture,
   DoubleSide,
   Group,
   InstancedMesh,
@@ -91,7 +90,7 @@ export const surfaceMaterial = (simple: boolean): Material => {
  * Rock for a pool's sides and floor, with light from above rippling over it
  * below the surface: bright threads that drift, as sunlight through waves does.
  */
-export const basinMaterial = (rock: Lit, surface: number): Lit => {
+export const basinMaterial = (rock: Lit, surface: number, patchy = false): Lit => {
   const material = rock.clone();
   const before = rock.onBeforeCompile;
   material.onBeforeCompile = (shader, renderer) => {
@@ -99,7 +98,17 @@ export const basinMaterial = (rock: Lit, surface: number): Lit => {
     shader.uniforms.uTime = WIND.time;
     shader.vertexShader = shader.vertexShader
       .replace('#include <common>', '#include <common>\nvarying vec3 vWaterWorld;')
-      .replace('#include <worldpos_vertex>', '#include <worldpos_vertex>\nvWaterWorld = (modelMatrix * vec4(transformed, 1.0)).xyz;');
+      .replace(
+        '#include <worldpos_vertex>',
+        `#include <worldpos_vertex>
+        {
+          vec4 waterWorld = vec4(transformed, 1.0);
+          #ifdef USE_INSTANCING
+            waterWorld = instanceMatrix * waterWorld;
+          #endif
+          vWaterWorld = (modelMatrix * waterWorld).xyz;
+        }`,
+      );
     shader.fragmentShader = shader.fragmentShader
       .replace('#include <common>', '#include <common>\nvarying vec3 vWaterWorld;\nuniform float uTime;')
       .replace(
@@ -115,13 +124,22 @@ export const basinMaterial = (rock: Lit, surface: number): Lit => {
             c = pow(1.0 - c, 7.0);
             float fade = exp(-depth * 0.28);
             vec3 tint = vec3(0.16, 0.42, 0.44);
+            ${patchy ? `
+            // A lake bed: silt, sand and darker weedy ground in broad patches, and the ripples of light
+            // brighter in some places than others, so the floor never reads as one repeating tile.
+            vec2 q = vWaterWorld.xz;
+            float broad = sin(q.x * 0.11 + sin(q.y * 0.07) * 2.0) * sin(q.y * 0.09 + sin(q.x * 0.05) * 2.3);
+            float fine = sin(q.x * 0.43 + q.y * 0.31) * sin(q.y * 0.52 - q.x * 0.27);
+            float bedPatch = clamp(0.5 + broad * 0.6 + fine * 0.25, 0.0, 1.0);
+            gl_FragColor.rgb *= mix(vec3(0.42, 0.52, 0.32), vec3(1.4, 1.25, 1.0), bedPatch);
+            c *= 0.35 + 0.9 * clamp(0.5 + sin(q.x * 0.17 - t * 0.2) * sin(q.y * 0.13 + t * 0.15), 0.0, 1.0);` : ''}
             gl_FragColor.rgb = mix(gl_FragColor.rgb, gl_FragColor.rgb * tint * 1.6, min(depth * 0.6, 0.75));
             gl_FragColor.rgb += vec3(0.55, 0.85, 0.8) * c * 0.5 * fade;
           }
         }`,
       );
   };
-  material.customProgramCacheKey = () => `basin:${surface.toFixed(3)}:${rock.customProgramCacheKey()}`;
+  material.customProgramCacheKey = () => `basin:${surface.toFixed(3)}:${patchy}:${rock.customProgramCacheKey()}`;
   return material;
 };
 
@@ -159,28 +177,6 @@ interface Ring {
 }
 
 const hidden = new Matrix4().makeScale(0, 0, 0);
-
-/** A soft shaft of light: bright at the top, fading downward and at both sides. */
-const shaftPicture = (): CanvasTexture => {
-  const canvas = document.createElement('canvas');
-  canvas.width = 32;
-  canvas.height = 128;
-  const context = canvas.getContext('2d', { willReadFrequently: true })!;
-  const image = context.createImageData(32, 128);
-  for (let y = 0; y < 128; y += 1) {
-    for (let x = 0; x < 32; x += 1) {
-      const across = Math.sin((x / 31) * Math.PI);
-      const down = Math.pow(1 - y / 127, 1.6);
-      const value = Math.round(255 * across * across * down);
-      const at = (y * 32 + x) * 4;
-      image.data[at] = image.data[at + 1] = image.data[at + 2] = value;
-      image.data[at + 3] = 255;
-    }
-  }
-  context.putImageData(image, 0, 0);
-  const texture = new CanvasTexture(canvas);
-  return texture;
-};
 
 export class WaterView {
   readonly group = new Group();
@@ -253,37 +249,6 @@ export class WaterView {
       this.group.add(mesh);
       this.rings.push({ mesh, age: 0, life: 0, size: 1 });
     }
-    // Shafts of light slanting down from the surface, seen only from underwater.
-    const shaftLook = new MeshBasicMaterial({ map: shaftPicture(), color: 0xbfeee4, transparent: true, opacity: 0, depthWrite: false, blending: AdditiveBlending, side: DoubleSide, fog: false });
-    this.materials.push(shaftLook);
-    this.shaftLook = shaftLook;
-    for (const { water } of this.pools) {
-      const depth = water.surface - water.floor;
-      const area = (water.maxX - water.minX) * (water.maxZ - water.minZ);
-      const count = Math.min(8, Math.max(2, Math.round(area / 24)));
-      for (let i = 0; i < count; i += 1) {
-        const width = 1.8 + ((i * 7) % 5) * 0.4;
-        const shaft = new Mesh(new PlaneGeometry(width, depth * 1.1), shaftLook);
-        const u = ((i * 0.618) % 1);
-        const v = ((i * 0.381 + 0.2) % 1);
-        shaft.position.set(water.minX + 0.5 + u * (water.maxX - water.minX - 1), water.surface - depth * 0.55, water.minZ + 0.5 + v * (water.maxZ - water.minZ - 1));
-        // Slanting the way the sun comes from (from the left and behind the camera).
-        shaft.rotation.set(0, (i % 3) * 0.6, 0.32);
-        shaft.renderOrder = 4;
-        this.shafts.add(shaft);
-      }
-    }
-    this.shafts.visible = false;
-    this.group.add(this.shafts);
-  }
-
-  private readonly shafts = new Group();
-  private readonly shaftLook: MeshBasicMaterial;
-
-  /** How strongly the underwater things (the light shafts) show: 0 above water, 1 under. */
-  setUnder(share: number, time: number): void {
-    this.shafts.visible = share > 0.01;
-    this.shaftLook.opacity = share * (0.07 + Math.sin(time * 0.8) * 0.02);
   }
 
   /** What the browser checks can ask: how many pools are drawn, and how many droplets, bubbles and rings show now. */
@@ -430,7 +395,6 @@ export class WaterView {
     this.group.traverse((part) => {
       if (part instanceof Mesh) part.geometry.dispose();
     });
-    this.shaftLook.map?.dispose();
     for (const material of this.materials) material.dispose();
   }
 }

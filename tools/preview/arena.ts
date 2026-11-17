@@ -735,7 +735,6 @@ const start = async (): Promise<void> => {
       (scene.background as Color).copy(fog.color);
       fog.near = 30 + (0.5 - 30) * below;
       fog.far = 120 + (24 - 120) * below;
-      water.setUnder(below, WIND.time.value);
     }
     sun.target.position.set(follow.x, follow.y, follow.z - 4);
     sun.position.set(follow.x - 14, follow.y + 26, follow.z + 8);

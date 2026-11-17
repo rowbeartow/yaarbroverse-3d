@@ -49,6 +49,7 @@ import { buildLake } from './lake';
 import { Materials, WIND, installMist } from './materials';
 import { seeded } from './noise';
 import { MIST_COLOR } from './pictures';
+import { UnderwaterView } from './underwater';
 import { UNDERWATER_FOG, WaterView, sightBlocked, underwaterCeiling, underwaterDepth } from './water';
 import { MIST_FAR, MIST_NEAR, inDetail, inView } from './route';
 import { TIERS, TierChooser, frameRateGoal, isTierName, startingTier, type Tier, type TierName } from './quality';
@@ -115,6 +116,8 @@ interface LevelView extends LevelSolids {
   ropes: RopesView | null;
   /** The level's crocodile stepping stones, if it has any. */
   stones: CrocStones | null;
+  /** The world under the water (the surface from below, light shafts, specks), if the level has pools. */
+  under: UnderwaterView | null;
 }
 
 /**
@@ -122,7 +125,7 @@ interface LevelView extends LevelSolids {
  * surface, and the fog closes in and turns blue-green. How far back and up it
  * sits, how near and far the fog is, and how quickly the look comes and goes.
  */
-const UNDERWATER = { back: 4.6, up: 0.9, lookAhead: 3, fogNear: 0.5, fogFar: 24, below: 0.35, ease: 3.5 };
+const UNDERWATER = { back: 4.6, up: 0.9, lookAhead: 3, fogNear: 1, fogFar: 19, below: 0.35, ease: 3.5 };
 
 export class GroveView {
   private readonly scene = new Scene();
@@ -305,6 +308,8 @@ export class GroveView {
     root.add(solids.group, forest.group, scatter.build(this.materials));
     const water = level.water?.length ? new WaterView(level.water, this.materials, this.tier.simple, !forest.lakeBed) : null;
     if (water) root.add(water.group);
+    const under = level.water?.length ? new UnderwaterView(level.water, this.tier.simple) : null;
+    if (under) root.add(under.group);
     const ropes = level.ropes?.length ? new RopesView(level, this.materials) : null;
     this.hanger.reset();
     if (ropes) root.add(ropes.group);
@@ -314,7 +319,8 @@ export class GroveView {
     this.levelView?.water?.dispose();
     this.levelView?.ropes?.dispose();
     this.levelView?.stones?.dispose();
-    this.levelView = { ...solids, root, forest, scatter, water, ropes, stones };
+    this.levelView?.under?.dispose();
+    this.levelView = { ...solids, root, forest, scatter, water, ropes, stones, under };
     this.swimEvents = [];
     this.under = 0;
     this.hero = buildHero(heroName, this.assets, this.tier.simple);
@@ -662,7 +668,7 @@ export class GroveView {
     fog.color.copy(this.fogAbove).lerp(this.fogBelow, below);
     fog.near = this.mist.near + (UNDERWATER.fogNear - this.mist.near) * below;
     fog.far = this.mist.far + (UNDERWATER.fogFar - this.mist.far) * below;
-    water.setUnder(below, WIND.time.value);
+    this.levelView?.under?.update(p, below, fog.near, fog.far, WIND.time.value);
   }
 
   /**
