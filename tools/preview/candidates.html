@@ -1,4 +1,4 @@
-<title>Enemy Model Candidates</title>
+<title>Walblum Model Candidates</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <style>
   /* Layout: one column. Each enemy is a heading with its reference picture,
@@ -58,7 +58,7 @@
   .group-head { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 12px 24px; }
   .group-head > div { display: grid; gap: 4px; min-width: 0; flex: 1 1 280px; }
   .reference { margin: 0; display: grid; gap: 2px; justify-items: center; flex: 0 0 auto; }
-  .reference img { width: 132px; height: 132px; object-fit: contain; display: block; }
+  .reference img { width: auto; max-width: 100%; height: 132px; object-fit: contain; display: block; border-radius: 8px; }
   .reference figcaption { color: var(--quiet); font-size: 12px; }
 
   .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 250px), 1fr)); gap: 16px; }
@@ -80,8 +80,8 @@
 <main class="page">
   <header>
     <p class="eyebrow">Yaarbroverse 3D</p>
-    <h1>Pick the marmot scout and the giant mosquito</h1>
-    <p class="lede">Three candidates for each enemy, made by Meshy from the approved Caputo Mountain studies and shown in the grove’s light. None is rigged or animated yet, and nothing here is in the game. Tell me one letter for each.</p>
+    <h1>Pick Walblum</h1>
+    <p class="lede">Three candidates for Walblum, made by Meshy from his Caputo Mountain portrait and shown in the game’s light. None is rigged or animated yet, and nothing here is in the game. Tell me one letter.</p>
   </header>
 
   <div class="row" role="group" aria-label="View">
@@ -99,22 +99,19 @@
   <section class="words">
     <h2>What I see in them</h2>
     <ul id="findings">
-      <li><b>The art converted well.</b> Both studies came out as recognisable 3D characters on the first try, so I do not need a different reference picture.</li>
-      <li><b>Marmot A:</b> the cleanest shape. Four separate legs in a wide stance, strap and acorn pouch in place. Its hind feet splay out behind it.</li>
-      <li><b>Marmot B:</b> the face nearest the 2D scout, with the heavy angry brows. The strap came out as a harness that also runs over its rump, which the picture does not have, and the fur is spikier.</li>
-      <li><b>Marmot C:</b> close to A, a little narrower, hind legs tucked under. Brows between A and B.</li>
-      <li><b>Mosquito A:</b> pale wings on both sides, the nearest to the picture, but the two wings sit at different angles. Thinnest legs.</li>
-      <li><b>Mosquito B:</b> the largest wings and the fattest striped body. Its eyes read as plain yellow from the side.</li>
-      <li><b>Mosquito C:</b> the angriest face from the front, even wings, tidy legs.</li>
-      <li><b>On B and C the underside of the wings came out dark green.</b> That is paint, not shape. Whichever you pick, I make the wings pale and see-through when I rig it, so do not let wing colour decide.</li>
-      <li><b>If you want my pick:</b> marmot A and mosquito C, because they are the simplest to rig cleanly. Marmot B if the face matters more to you than the extra strap.</li>
+      <li><b>All three came out whole and recognisable:</b> the frown, the heavy brows, the cream muzzle, the whiskers and the tuft of head fur are his. The legs, webbed feet and tail are not in the portrait. They are what a muskrat has, and nothing else was added: no clothes, no props.</li>
+      <li><b>Walblum A</b> is nearest the portrait: smooth flat colour, a big round head, open hands. The simplest shape to rig. The whites of his eyes are brighter than in the portrait.</li>
+      <li><b>Walblum B</b> is the most like a real animal: darker, slimmer, long fingers, arms held out wide. His face is the least like the portrait, and his eyes came out pale.</li>
+      <li><b>Walblum C</b> is the scrappy one: shaggy fur, a big head on a little body, fists up. He already looks ready to kick something. His fists sit close to his chest, so his arms take more care to rig.</li>
+      <li><b>Whiskers:</b> on all three they hang down more than they stick out. I straighten them when I rig him, so do not let whiskers decide.</li>
+      <li><b>If you want my pick:</b> C for character, A if staying closest to the portrait matters more.</li>
       <li><b>I judged these from still pictures in flat light.</b> This session has no graphics card. You are the first to see them turning in the full light.</li>
     </ul>
   </section>
 
   <section class="words">
     <h2>Your call</h2>
-    <p>Reply with one letter for each, for example “marmot B, mosquito A”. If none of the three is right for an enemy, say what is off and I will ask you for a different reference picture before spending more credits.</p>
+    <p>Reply with one letter, for example “Walblum C”. Once you pick, I send you a link to download that model so you can save it to the <code>hero-models</code> release. If none of the three is right, say what is off and I will ask before spending more credits. These cost 120 of the 150 you allowed.</p>
   </section>
 </main>
 
