@@ -147,9 +147,16 @@ A level can have huckleberries and hidden leaves (`src/game/collect.ts`): give i
 - The game does the rest from the list: the counter under the hearts, the two lines on the end card, what the level's card says for each player, and the drawing (`src/view/pickups.ts`: every berry in a level is one draw).
 - `tests/collect.test.ts` runs over every level with pickups: ids are unique, none hangs inside a solid, and the bot still finishes and finds berries along the route.
 
+### Weed beds and log booms
+
+- **Weed**: give a pool `weeds`, a list of boxes seen from above. A swimmer at the surface in one goes at under half speed (`SWIM.weedSlow`); underwater there is none. Lay a bed across the straight line, so going round it or under it is a choice. `src/view/weed-beds.ts` draws every bed in a level in one draw, and never past the box.
+- **Log boom**: a `log` solid floating across a pool with `noClimb: true`, about 0.9 m thick with its middle at the surface. A swimmer cannot get onto it or through it: the way past is round its end, or under it. Leave a gap at one end, and put the next boom's gap at the other, so the swim changes direction. Keep the first boom further than a jump from any bank over the water, and end a boom at the real shore: `tests/lake.test.ts` found a gap that was inside an island.
+
 ## New enemies
 
 A level may reuse the marmot scout and the giant mosquito as they are. A new enemy is its own piece of work, done before the level: its behaviour in `src/game/enemy.ts`, its model made and rigged the way the handoff describes, and the owner's OK on the enemy preview page.
+
+**Where enemies go (the owner's rule, 2026-11-17): keep them out of the trickiest jump spots, so hazards do not stack.** Give each land or air enemy wide, flat, solid ground to itself, at least 5 m each way: never a jump, a swing, a narrow walkway or a piece that moves. If the only good ground is where a hard jump starts, make the ground bigger and give the enemy the far end, with a patch (`arena`) that stops short of the jump and `notice: 0`. A mosquito over water keeps to a stretch that does not include the way in. `tests/lake.test.ts` ("the scouts and the mosquito") holds the lake to this.
 
 ## Ending a level with a boss
 
