@@ -11,6 +11,7 @@
 // solid of kind `island` is drawn here as a steep, wooded rise. No pine stands
 // where it would come between the camera and the route.
 
+import { lakeBed } from './underwater';
 import {
   BackSide,
   BufferGeometry,
@@ -153,7 +154,7 @@ export const buildLake = (level: Level, materials: Materials, decor: Decor, rand
   // any backwater between pools) the lake carries on with the same look, out to
   // where the haze closes in. One bed lies under all of it.
   const openLook = surfaceMaterial(simple);
-  const bedLook = basinMaterial(materials.ground, water.surface);
+  const bedLook = basinMaterial(materials.ground, water.surface, true);
   const sheet = (x0: number, x1: number, z0: number, z1: number, cell = 2.5): void => {
     if (x1 - x0 < 0.05 || z1 - z0 < 0.05) return;
     // Points about every two and a half metres close by: enough for the waves to catch the light. Far off, far fewer.
@@ -191,6 +192,8 @@ export const buildLake = (level: Level, materials: Materials, decor: Decor, rand
   bed.position.set((water.minX + water.maxX) / 2, water.floor - 0.3, (water.minZ - reach * 2 + water.maxZ + 40) / 2);
   bed.receiveShadow = true;
   group.add(bed);
+  // On the bed, in the pools: rocks, weed and sunken logs (src/view/underwater.ts).
+  group.add(lakeBed(level, materials, water.floor - 0.3, simple));
 
   // ---------- The shore: south, west and east of the water ----------
   // To the north the west and east shores bend away, and the lake opens out toward the mountains.
