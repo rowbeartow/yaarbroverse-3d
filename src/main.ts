@@ -36,7 +36,8 @@ import { stickToLevel } from './view/route-camera';
 import { findLevel, levelFromAddress, listedLevels, shownLevels } from './levels';
 import { GhostStore } from './save/ghost-store';
 import { loadGhost, saveGhost, type GhostSlot } from './save/ghosts';
-import { Players, endBests, ghostOn, type EndBests, type Player as SavedPlayer } from './save/players';
+import { pickupCounts } from './game/collect';
+import { Players, endBests, ghostOn, type EndBests, type HaulOutcome, type Player as SavedPlayer } from './save/players';
 import { DiveHint, diveHintText } from './ui/dive-hint';
 import { Picker } from './ui/picker';
 import { Screens, isTouchDevice, loadChoice, needsTurning, type Choice } from './ui/screens';
@@ -75,6 +76,8 @@ const boot = (): void => {
   if (preview) choice = { hero: preview.hero ?? choice.hero, difficulty: preview.difficulty ?? choice.difficulty };
   let level: Level = entry.build(choice.difficulty);
   let game = new Game(level, choice.difficulty, choice.hero);
+  /** How many huckleberries and hidden leaves the level that is up has. */
+  let toFind = pickupCounts(level.pickups);
   let mode: Mode = 'start';
   let before = { x: game.x, y: game.y, z: game.z };
   let owed = 0;
@@ -152,10 +155,28 @@ const boot = (): void => {
     document.querySelector<HTMLElement>('#move-button')!,
   );
 
+  /** What saving this run's huckleberries and hidden leaves said, for the end card. */
+  let endFinds: HaulOutcome | null = null;
+  /** The run whose haul has been saved, so each run is saved once. */
+  let haulSaved: Game | null = null;
+  /**
+   * Saves what the run has collected so far for whoever is playing: when it
+   * ends, and when it is left or started over. Nothing collected is lost.
+   */
+  const saveHaul = (): HaulOutcome | null => {
+    if (!who || haulSaved === game || preview) return null;
+    haulSaved = game;
+    const { berries, leaves } = game.summary();
+    return players.collect(who.id, { levelId: entry.id, difficulty: choice.difficulty, berries, leaves });
+  };
+
   /** Builds the level and hero for the current choice and stands the hero at the start. */
   const setUp = (): void => {
+    saveHaul();
+    endFinds = null;
     level = entry.build(choice.difficulty);
     game = new Game(level, choice.difficulty, choice.hero);
+    toFind = pickupCounts(level.pickups);
     if (preview?.at) game.startOn(preview.at);
     before = { x: game.x, y: game.y, z: game.z };
     owed = 0;
@@ -335,6 +356,8 @@ const boot = (): void => {
     setUp();
     setMode('start');
   });
+  // Closing the page in the middle of a run keeps what it had collected.
+  window.addEventListener('pagehide', () => void saveHaul());
   document.querySelector('#reload')!.addEventListener('click', () => window.location.reload());
   window.addEventListener('keydown', (event) => {
     // Typing a name is not a key press for the game.
@@ -479,12 +502,15 @@ const boot = (): void => {
       screens.setSwimming(game.swimming);
       screens.setBreath(Number.isFinite(game.maxBreath) && (game.under || game.breath < game.maxBreath) ? game.breath / game.maxBreath : null);
       showBoss();
+      screens.setFound(level.pickups?.length ? { berries: game.berries, berriesIn: toFind.berry, leaves: game.leaves, leavesIn: toFind.leaf } : null);
       if (game.complete && mode === 'playing') {
         mode = 'ended';
         sound.stopLoops();
         controls.enabled = false;
         controls.release();
         sinceGoal = 0;
+        // What the run collected is saved whether or not it sets a best.
+        endFinds = saveHaul();
         // Only a run that reached the golden leaf is saved, for whoever is playing.
         if (who) {
           const { seconds, falls, complete } = game.summary();
@@ -499,7 +525,7 @@ const boot = (): void => {
         sinceGoal += dt;
         if (sinceGoal > 1.6) {
           screens.hush();
-          screens.showEnd(game.summary(), new Date(), endCard);
+          screens.showEnd(game.summary(), new Date(), endCard, endFinds);
         }
       }
     }
@@ -572,6 +598,10 @@ const boot = (): void => {
       /** Which way the camera faces now, in degrees seen from above (0 looks along -z). */
       get facing() {
         return view ? view.facing : 0;
+      },
+      /** How many huckleberries and hidden leaves are drawn now, or null in a level with none. */
+      get pickups() {
+        return view ? view.pickupsShown() : null;
       },
       get leafShown() {
         return view ? view.leafShown() : false;

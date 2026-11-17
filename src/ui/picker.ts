@@ -2,12 +2,15 @@
 // shows, for whoever is playing, which difficulties they have finished and
 // their best time on each. Every area is open from the start; nothing is locked.
 //
-// A card is a picture, the area's name and line, and three marks. Names and
+// A card is a picture, the area's name and line, and three marks; in a level
+// with huckleberries and hidden leaves, each mark also says what the player
+// has collected on that difficulty. Names and
 // times go on the page as plain text.
 
-import { DIFFICULTIES, DIFFICULTY_LABEL } from '../game/difficulty';
+import { pickupCounts } from '../game/collect';
+import { DIFFICULTIES, DIFFICULTY_LABEL, type Difficulty } from '../game/difficulty';
 import type { LevelEntry } from '../levels';
-import { progressOn, type Player } from '../save/players';
+import { findsOn, progressOn, type Player } from '../save/players';
 import { formatTime } from './screens';
 
 import type { HeroName } from '../game/hero';
@@ -15,6 +18,9 @@ import { showControls } from './controls-help';
 
 export class Picker {
   private readonly cards = new Map<string, { root: HTMLElement; pick: HTMLButtonElement; marks: HTMLElement; ghost: HTMLInputElement; ghostNote: HTMLElement; controls: HTMLElement }>();
+
+  /** How many huckleberries and hidden leaves each level has on each difficulty, counted once. */
+  private readonly toFind = new Map<string, Record<Difficulty, { berry: number; leaf: number }>>();
 
   constructor(
     container: HTMLElement,
@@ -25,6 +31,10 @@ export class Picker {
     private readonly onGhost: (on: boolean) => void,
   ) {
     container.dataset.count = String(levels.length);
+    for (const level of levels) {
+      const count = (difficulty: Difficulty): { berry: number; leaf: number } => pickupCounts(level.build(difficulty).pickups);
+      this.toFind.set(level.id, { easy: count('easy'), normal: count('normal'), hard: count('hard') });
+    }
     levels.forEach((level, index) => {
       const root = document.createElement('div');
       root.className = 'area';
@@ -128,6 +138,8 @@ export class Picker {
   show(player: Player): void {
     for (const [id, card] of this.cards) {
       const progress = progressOn(player, id);
+      const finds = findsOn(player, id);
+      const toFind = this.toFind.get(id);
       card.marks.replaceChildren(
         ...DIFFICULTIES.map((difficulty) => {
           const { finished, seconds } = progress[difficulty];
@@ -145,10 +157,23 @@ export class Picker {
           time.className = 'mark-time';
           time.textContent = seconds === null ? 'Not yet' : formatTime(seconds);
           mark.append(tick, label, time);
+          let collected = '';
+          const there = toFind?.[difficulty];
+          if (there && there.berry + there.leaf > 0) {
+            // What this player has collected here: the most huckleberries in one run, and the hidden leaves found so far.
+            const line = document.createElement('span');
+            line.className = 'mark-finds';
+            line.dataset.finds = difficulty;
+            const dot = (kind: string): HTMLElement => Object.assign(document.createElement('i'), { className: kind });
+            const { most, leaves } = finds.on[difficulty];
+            line.append(dot('berry-dot'), `${most}/${there.berry}`, dot('leaf-dot'), `${leaves}/${there.leaf}`);
+            mark.append(line);
+            collected = `, most huckleberries in a run ${most} of ${there.berry}, hidden leaves found ${leaves} of ${there.leaf}`;
+          }
           mark.setAttribute('role', 'img');
           mark.setAttribute(
             'aria-label',
-            seconds === null ? `${DIFFICULTY_LABEL[difficulty]}: not finished yet` : `${DIFFICULTY_LABEL[difficulty]}: finished, best time ${formatTime(seconds)}`,
+            (seconds === null ? `${DIFFICULTY_LABEL[difficulty]}: not finished yet` : `${DIFFICULTY_LABEL[difficulty]}: finished, best time ${formatTime(seconds)}`) + collected,
           );
           return mark;
         }),
