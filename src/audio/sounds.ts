@@ -246,13 +246,13 @@ export const SOUNDS = {
   ropeGrab: {
     home: ROPES,
     group: 'World', label: 'Taking hold of a rope', mix: 'action', level: 0, vary: 0.06,
-    what: 'A short creak of rope and bough taking the weight, the moment a hero grabs a rope swing. Choice A, waiting for the owner to pick.',
+    what: 'A short creak of rope and bough taking the weight, the moment a hero grabs a rope swing. The owner\'s pick, A (2026-11-17).',
     source: { files: ['rope-grab.wav'] },
   },
   ropeRelease: {
     home: ROPES,
     group: 'World', label: 'Letting go of a rope', mix: 'action', level: -2, vary: 0.06,
-    what: 'A soft whoosh as a hero lets go of a rope swing and flies on. Choice A, waiting for the owner to pick.',
+    what: 'A short, quick whoosh as a hero lets go of a rope swing and flies on. The owner\'s pick, B (2026-11-17).',
     source: { files: ['rope-release.wav'] },
   },
   waterIn: {
