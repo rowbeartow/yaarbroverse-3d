@@ -43,6 +43,7 @@ import { CrocStones } from './croc-stones';
 import { Hanger, RopesView } from './ropes';
 import { nearestRopeEnd } from '../game/rope';
 import { PickupsView } from './pickups';
+import { WeedBeds } from './weed-beds';
 import { ROUTE_CAMERA, cameraFor, followsRoute, forwardOf, turnToward } from './route-camera';
 import { ENEMY_MODELS, EnemyView, modelFilesOf } from './enemies';
 import { HERO_MODEL_FILES, buildHero, type HeroView } from './heroes';
@@ -121,6 +122,8 @@ interface LevelView extends LevelSolids {
   under: UnderwaterView | null;
   /** Huckleberries and hidden leaves, if the level has any. */
   pickups: PickupsView | null;
+  /** Beds of weed on the level's pools, if it has any. */
+  weeds: WeedBeds | null;
 }
 
 /**
@@ -326,7 +329,10 @@ export class GroveView {
     this.levelView?.pickups?.dispose();
     const pickups = level.pickups?.length ? new PickupsView(level.pickups, this.materials) : null;
     if (pickups) root.add(pickups.group);
-    this.levelView = { ...solids, root, forest, scatter, water, ropes, stones, under, pickups };
+    this.levelView?.weeds?.dispose();
+    const weeds = level.water?.some((pool) => pool.weeds?.length) ? new WeedBeds(level.water) : null;
+    if (weeds) root.add(weeds.group);
+    this.levelView = { ...solids, root, forest, scatter, water, ropes, stones, under, pickups, weeds };
     this.swimEvents = [];
     this.under = 0;
     this.hero = buildHero(heroName, this.assets, this.tier.simple);

@@ -91,6 +91,17 @@ export interface LakeNumbers {
   /** THE ROCK TUNNEL (section 6): how long the way under the rocky point is. The only way on is to dive through it. */
   tunnelLength: number;
   /**
+   * How far a side pocket runs off the tunnel's south wall, underwater, with a hidden leaf at its end.
+   * 0 (Easy): no pocket, and the leaf hangs low at the side of the tunnel itself.
+   */
+  tunnelPocket: number;
+  /**
+   * The tipping log off the Sunken Logs' zigzag, with a hidden leaf over its far end (see moving.ts):
+   * how long it creaks before it tips, and how far its end sinks under a hero.
+   */
+  leafLogTell: number;
+  leafLogDip: number;
+  /**
    * CATTAIL COVE and THE OLD PIER (sections 7 and 8): posts that climb out of
    * the water to the pier's landing; the boardwalk runs from there out to the
    * fishing dock. The low posts can be climbed onto from the water; the
@@ -206,7 +217,7 @@ export const LAKE_DIFFICULTY: Record<Difficulty, LakeNumbers> = {
     stoneGap: 1.3, stoneStagger: 0.3, stoneUp: 4, stoneTell: 0, stoneWait: false,
     ropeHelp: true, stackRadius: 3.4, ledgeAhead: 3.2,
     logCount: 3, logWidth: 2.4, logGap: 1, logSinks: false, logTell: 0.6, logBack: 0,
-    tunnelLength: 4,
+    tunnelLength: 4, tunnelPocket: 0, leafLogTell: 0.8, leafLogDip: 0.2,
     postCount: 4, postRadius: 1, postGap: 0.9, postRise: 0.5, postSinks: false, postTell: 0.6, postBack: 0,
     crocCount: 2, crocUnderLogs: false, crocHunt: false, crocLead: 0, crocAside: 9, crocPatch: 4, crocSpeed: 1.5, crocReach: 3.5, crocWarning: 2, crocRest: 1.6, crocHits: 1, crocLine: true,
     boomGap: 8, restRock: 'checkpoint', openMosquitoes: 0,
@@ -221,7 +232,7 @@ export const LAKE_DIFFICULTY: Record<Difficulty, LakeNumbers> = {
     stoneGap: 1.9, stoneStagger: 1.4, stoneUp: 4, stonePeriod: 8, stoneTell: 0.8, stoneWait: true,
     ropeHelp: false, stackRadius: 3, ledgeAhead: 3.6,
     logCount: 3, logWidth: 1.6, logGap: 2, logSinks: true, logTell: 1.2, logBack: 2.5,
-    tunnelLength: 6,
+    tunnelLength: 6, tunnelPocket: 2.6, leafLogTell: 0.45, leafLogDip: 0.7,
     postCount: 5, postRadius: 0.75, postGap: 1.6, postRise: 0.6, postSinks: true, postTell: 1.5, postBack: 2.5,
     crocCount: 3, crocUnderLogs: true, crocHunt: true, crocLead: 0.6, crocAside: 4, crocPatch: 9, crocSpeed: 2.9, crocReach: 4.5, crocWarning: 1, crocRest: 1, crocHits: 1, crocLine: false,
     boomGap: 5, restRock: 'rock', openMosquitoes: 1,
@@ -237,7 +248,7 @@ export const LAKE_DIFFICULTY: Record<Difficulty, LakeNumbers> = {
     stoneGap: 2.2, stoneStagger: 0.95, stoneUp: 2.1, stonePeriod: 5, stoneTell: 0.5, stoneSnap: 0.8, stoneWait: false,
     ropeHelp: false, stackRadius: 2.2, ledgeAhead: 4.2,
     logCount: 4, logWidth: 1, logGap: 2.8, logSinks: true, logTell: 0.7, logBack: 2.5,
-    tunnelLength: 9,
+    tunnelLength: 9, tunnelPocket: 4.6, leafLogTell: 0.3, leafLogDip: 1.1,
     postCount: 6, postRadius: 0.55, postGap: 2.3, postRise: 0.6, postSinks: true, postTell: 0.9, postBack: 2.5,
     crocCount: 5, crocUnderLogs: true, crocHunt: true, crocLead: 1.2, crocAside: 5, crocPatch: 10, crocSpeed: 3.3, crocReach: 5.5, crocWarning: 0.7, crocRest: 0.75, crocHits: 2, crocLine: false,
     boomGap: 4, restRock: 'none', openMosquitoes: 2,

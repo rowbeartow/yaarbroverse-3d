@@ -598,9 +598,15 @@ describe('the Open Water, rebuilt', () => {
     const west = (list: Solid[]): number => Math.min(...list.map((s) => s.x - s.halfX));
     const east = (list: Solid[]): number => Math.max(...list.map((s) => s.x + s.halfX));
     expect(west(first)).toBeCloseTo(pool.minX, 5);
-    expect(east(first)).toBeCloseTo(pool.maxX - gap, 5);
+    // Where the wooded island stands in the pool's east side, the water ends at its west face.
+    const wooded = byId(level, 'wooded-island');
+    const shore = (z: number): number => (z > wooded.z - wooded.halfZ && z < wooded.z + wooded.halfZ ? Math.min(pool.maxX, wooded.x - wooded.halfX) : pool.maxX);
+    expect(east(first)).toBeCloseTo(shore(first[0].z) - gap, 5);
+    // The gap is open water: no solid stands in it.
+    const gapX = shore(first[0].z) - gap / 2;
+    expect(level.solids.filter((s) => !s.id.startsWith('boom-') && Math.abs(gapX - s.x) < s.halfX && Math.abs(first[0].z - s.z) < s.halfZ && s.top > -1).map((s) => s.id)).toEqual([]);
     expect(west(second)).toBeCloseTo(pool.minX + gap, 5);
-    expect(east(second)).toBeCloseTo(pool.maxX, 5);
+    expect(east(second)).toBeCloseTo(shore(second[0].z), 5);
     for (const piece of [...first, ...second]) {
       // Nobody climbs onto one from the water, and there is room to swim under it.
       expect(piece.noClimb).toBe(true);
@@ -671,7 +677,7 @@ describe('the Open Water, rebuilt', () => {
     const pool = open(level);
     const gap = LAKE_DIFFICULTY.easy.boomGap;
     const gaps = [
-      { x: pool.maxX - gap / 2, z: booms(level, 1)[0].z },
+      { x: Math.max(...booms(level, 1).map((s) => s.x + s.halfX)) + gap / 2, z: booms(level, 1)[0].z },
       { x: pool.minX + gap / 2, z: booms(level, 2)[0].z },
     ];
     for (const croc of level.enemies!.filter((each) => each.kind === 'crocodile')) {
@@ -680,5 +686,110 @@ describe('the Open Water, rebuilt', () => {
         expect(outside, `${croc.id} and the gap at ${g.x.toFixed(0)}, ${g.z.toFixed(0)}`).toBeGreaterThan(1);
       }
     }
+  });
+});
+
+describe('what there is to collect on the lake', () => {
+  it.each(DIFFICULTIES)('on %s there are trails through every section and three hidden leaves, the same three on every difficulty', (difficulty) => {
+    const level = buildLake(difficulty);
+    const pickups = level.pickups!;
+    expect(pickups.filter((p) => p.kind === 'leaf').map((p) => p.id).sort()).toEqual(['leaf-logs', 'leaf-open', 'leaf-tunnel']);
+    const berries = pickups.filter((p) => p.kind === 'berry').length;
+    expect(berries).toBeGreaterThanOrEqual(50);
+    expect(berries).toBeLessThanOrEqual(70);
+    for (const start of ['shore-', 'croc-', 'swing-', 'log-', 'gap-', 'under-', 'dive-', 'post-', 'pier-']) expect(pickups.some((p) => p.id.startsWith(start)), start).toBe(true);
+  });
+
+  it.each(DIFFICULTIES)('on %s every pickup is somewhere a hero can be: over footing, on a swing, or in a pool with a way out', (difficulty) => {
+    const level = buildLake(difficulty);
+    for (const p of level.pickups!) {
+      if (p.id.startsWith('swing-')) continue;
+      const footing = level.solids.find((s) => p.y > s.top && p.y - s.top < 2.2 && Math.abs(p.x - s.x) <= s.halfX + 0.5 && Math.abs(p.z - s.z) <= s.halfZ + 0.5);
+      const pool = level.water!.find((w) => p.x > w.minX && p.x < w.maxX && p.z > w.minZ && p.z < w.maxZ && p.y < w.surface && p.y > w.floor + 0.3);
+      expect(footing ?? pool, p.id).toBeDefined();
+      if (!footing && pool) {
+        // Its pool has a shore or a low piece to climb out onto.
+        const wayOut = level.solids.some((s) => !s.noClimb && s.motion?.kind !== 'float' && s.top - pool.surface <= SWIM.climbHeight && s.top - pool.surface > -0.2 && s.x + s.halfX > pool.minX && s.x - s.halfX < pool.maxX && s.z + s.halfZ > pool.minZ && s.z - s.halfZ < pool.maxZ);
+        expect(wayOut, `${p.id} in ${pool.id}`).toBe(true);
+      }
+    }
+  });
+
+  const cases = DIFFICULTIES.flatMap((d) => HEROES.map((h) => [d, h] as const));
+  /** Swims toward each waypoint in turn, at its depth, and returns the game when the last is reached (or after 30 s). */
+  const swimVia = (game: Game, points: Array<{ x: number; z: number; y: number }>): void => {
+    let next = 0;
+    for (let i = 0; i < 30 / STEP && next < points.length; i += 1) {
+      const to = points[next];
+      const middle = game.y + game.bodyHeight / 2;
+      const dx = to.x - game.x;
+      const dz = to.z - game.z;
+      const far = Math.hypot(dx, dz);
+      if (far < 0.5 && Math.abs(middle - to.y) < 0.6) {
+        next += 1;
+        continue;
+      }
+      // Crocodiles are for the swimmer to dodge; here only the way and the breath are in question.
+      game.protectedFor = 10;
+      game.step({ moveX: far > 0.2 ? dx / far : 0, moveZ: far > 0.2 ? dz / far : 0, move: middle > to.y + 0.2, jump: middle < to.y - 0.3 });
+    }
+    expect(next, 'waypoints reached').toBe(points.length);
+  };
+  const inWater = (game: Game, waterId: string, x: number, z: number): void => {
+    Object.assign(game, { x, z, y: -SWIM.float, vx: 0, vy: 0, vz: 0, grounded: false, groundId: null, swimming: true, waterId, under: false });
+  };
+
+  it.each(cases)('on %s as %s the leaf on the tipping log is a jump from the zigzag\'s corner boulder and a walk to its far end', (difficulty, hero) => {
+    const level = buildLake(difficulty);
+    const game = new Game(level, difficulty, hero);
+    const corner = byId(level, 'step-3');
+    Object.assign(game, { x: corner.x, z: corner.z, y: corner.top, grounded: true, groundId: 'step-3', vx: 0, vy: 0, vz: 0 });
+    for (let i = 0; i < 8 / STEP && !game.collected.has('leaf-logs'); i += 1) {
+      game.protectedFor = 10;
+      const atEdge = game.groundId === 'step-3' && game.z < corner.z - corner.halfZ + 0.45;
+      game.step({ moveX: 0, moveZ: -1, jump: atEdge });
+    }
+    expect(game.collected.has('leaf-logs')).toBe(true);
+    expect(game.falls).toBe(0);
+  });
+
+  it.each(cases)('on %s as %s the leaf in the Open Water is a dive from the surface over it, with breath to spare', (difficulty, hero) => {
+    const level = buildLake(difficulty);
+    const game = new Game(level, difficulty, hero);
+    const leaf = level.pickups!.find((p) => p.id === 'leaf-open')!;
+    inWater(game, 'open-water', leaf.x, leaf.z - 0.5);
+    swimVia(game, [{ x: leaf.x, z: leaf.z, y: leaf.y + 0.3 }]);
+    expect(game.collected.has('leaf-open')).toBe(true);
+    if (Number.isFinite(game.maxBreath)) expect(game.breath).toBeGreaterThan(game.maxBreath / 2);
+    // On Easy it lies outside every crocodile's water: no crocodile has to be woken to take it.
+    if (difficulty === 'easy') {
+      for (const croc of level.enemies!.filter((each) => each.kind === 'crocodile')) {
+        expect(leaf.x < croc.arena.minX || leaf.x > croc.arena.maxX || leaf.z < croc.arena.minZ || leaf.z > croc.arena.maxZ, croc.id).toBe(true);
+      }
+    }
+  });
+
+  it.each(cases)('on %s as %s the leaf behind the dive is reached from the tunnel\'s mouth, and the swimmer gets out the far side on one breath', (difficulty, hero) => {
+    const level = buildLake(difficulty);
+    const game = new Game(level, difficulty, hero);
+    const leaf = level.pickups!.find((p) => p.id === 'leaf-tunnel')!;
+    const rock = byId(level, 'rock-tunnel');
+    const under = LAKE_SHAPE.tunnelRoof - 0.6;
+    inWater(game, 'tunnel-water', rock.x + rock.halfX + 2, rock.z);
+    swimVia(game, [
+      { x: rock.x + rock.halfX + 0.8, z: rock.z, y: under },
+      { x: rock.x, z: rock.z, y: under },
+      { x: leaf.x, z: leaf.z - 0.3, y: leaf.y + 0.4 },
+    ]);
+    expect(game.collected.has('leaf-tunnel')).toBe(true);
+    swimVia(game, [
+      { x: rock.x, z: rock.z, y: under },
+      { x: rock.x - rock.halfX - 1.5, z: rock.z, y: under },
+    ]);
+    // Up for air beyond the rock: never out of breath on the way.
+    for (let i = 0; i < 3 / STEP; i += 1) game.step({ ...IDLE, jump: true });
+    expect(game.under).toBe(false);
+    expect(game.heartsLost).toBe(0);
+    expect(game.x).toBeLessThan(rock.x - rock.halfX);
   });
 });

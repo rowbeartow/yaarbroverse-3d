@@ -46,7 +46,7 @@ import type { Difficulty } from '../../game/difficulty';
 import type { EnemySpot } from '../../game/enemy';
 import type { Level, Section, Solid } from '../../game/level';
 import type { Motion } from '../../game/moving';
-import type { Rope } from '../../game/rope';
+import { ROPE, type Rope } from '../../game/rope';
 import type { Water } from '../../game/swim';
 import { LAKE_DIFFICULTY, type LakeNumbers } from './difficulty';
 
@@ -141,6 +141,11 @@ export const LAKE_SHAPE = {
   headlandTop: 2.6,
   /** The sunken logs: how long each is, its top, and how thick. The boulders between them are higher. */
   logLength: 5,
+  /** The tipping log off the zigzag: the gap to it from the corner boulder, its size, and how fast it tips. */
+  leafLogGap: 1.2,
+  leafLogLength: 5,
+  leafLogHalfWidth: 0.7,
+  leafLogRate: 1.2,
   /**
    * The Open Water's furniture, placed by how far along the swim it is (0 the gravel bar, 1 the reed bar):
    * the two booms (the first further than a jump from the gravel bar), their thickness and the length of each log in them; the two weed beds and their size;
@@ -156,6 +161,8 @@ export const LAKE_SHAPE = {
   restAside: 5,
   restRadius: 2.2,
   restTop: 0.8,
+  /** How far under a rope's end a berry of a swing's trail hangs: about where the middle of a hero holding on passes. */
+  swingHang: 1.1,
   /** The scouts and the mosquito: how far in from its ground's edge a scout waits and keeps, and how high the mosquito hovers and may fly over its ground. */
   scoutIn: 1.6,
   /** How much further east the grassy point reaches when a scout lives on it: the scout's own ground. */
@@ -195,6 +202,8 @@ export const LAKE_SHAPE = {
   rockTop: 1.7,
   tunnelRoof: -1.9,
   tunnelHalfWidth: 3,
+  /** Half the width of the side pocket off the tunnel (Normal and Hard). */
+  pocketHalf: 1.3,
   /** The swim from the far side of the rocky point to the cove's beach, and half the beach's size. */
   afterTunnel: 6,
   coveBeachHalfX: 4,
@@ -381,6 +390,11 @@ export function buildLake(difficulty: Difficulty, numbers: LakeNumbers = LAKE_DI
       zx -= stride * shape.zigWest;
       zz -= stride * shape.zigNorth;
       step(`step-${(steps += 1)}`, zx, zz);
+      // Off the zigzag's far corner, away from the route: a tipping log running north, with a hidden leaf over its far end.
+      const tipNorth = zz - shape.stepBoulderRadius - shape.leafLogGap;
+      // It stays inside the logs' water, so going off it is a swim.
+      const tipLength = Math.min(shape.leafLogLength, tipNorth - (northEdge + 1));
+      box('leaf-log', 'log', zx - shape.leafLogHalfWidth, zx + shape.leafLogHalfWidth, tipNorth - tipLength, tipNorth, shape.stepBoulderTop, shape.stepBoulderTop - shape.logThickness, { motion: { kind: 'tip', tell: n.leafLogTell, dip: n.leafLogDip, rate: shape.leafLogRate } }, false);
       zx -= stride * shape.zigWest;
       zz += stride * shape.zigNorth;
       step(`step-${(steps += 1)}`, zx, zz);
@@ -418,7 +432,15 @@ export function buildLake(difficulty: Difficulty, numbers: LakeNumbers = LAKE_DI
   const tunnelSouth = shape.reedBarZ + shape.tunnelHalfWidth;
   box('rock-north', 'crag', rockWest, rockEast, shape.rockNorth, tunnelNorth, shape.rockTop, shape.depth, {}, false);
   box('rock-tunnel', 'arch', rockWest, rockEast, tunnelNorth, tunnelSouth, shape.rockTop, shape.tunnelRoof, {}, false);
-  box('rock-south', 'crag', rockWest, rockEast, tunnelSouth, shape.shoreZ + 2, shape.rockTop, shape.depth, {}, false);
+  // On Normal and Hard a pocket runs south off the middle of the tunnel, underwater and roofed with rock: a dead end, with a hidden leaf.
+  const pocketX = (rockWest + rockEast) / 2;
+  const pocketSouth = tunnelSouth + n.tunnelPocket;
+  if (n.tunnelPocket > 0) {
+    box('rock-pocket-east', 'crag', pocketX + shape.pocketHalf, rockEast, tunnelSouth, pocketSouth, shape.rockTop, shape.depth, {}, false);
+    box('rock-pocket-west', 'crag', rockWest, pocketX - shape.pocketHalf, tunnelSouth, pocketSouth, shape.rockTop, shape.depth, {}, false);
+    box('rock-pocket-roof', 'arch', pocketX - shape.pocketHalf, pocketX + shape.pocketHalf, tunnelSouth, pocketSouth, shape.rockTop, shape.tunnelRoof, {}, false);
+  }
+  box('rock-south', 'crag', rockWest, rockEast, pocketSouth, shape.shoreZ + 2, shape.rockTop, shape.depth, {}, false);
   x = rockWest - shape.afterTunnel;
   const coveX = x - shape.coveBeachHalfX;
   box('cove-beach', 'bank', x - shape.coveBeachHalfX * 2, x, shape.reedBarZ - shape.coveBeachHalfZ, shape.reedBarZ + shape.coveBeachHalfZ, shape.shoreTop, shape.depth, { safe: safe(6) });
@@ -505,6 +527,8 @@ export function buildLake(difficulty: Difficulty, numbers: LakeNumbers = LAKE_DI
     });
   }
 
+  /** How far east the Open Water's water reaches at `z`: to the wooded island's west face where the island stands, else to the pool's edge. */
+  const openEast = (z: number): number => (z > woodedNorth && z < shape.woodedSouth ? woodedWest : barX);
   // THE OPEN WATER's furniture (milestone ten). None of it is on the route: the way is still gravel bar, water, reed bar.
   {
     const open = water.find((w) => w.id === 'open-water')!;
@@ -517,7 +541,7 @@ export function buildLake(difficulty: Difficulty, numbers: LakeNumbers = LAKE_DI
     shape.boomAt.forEach((share, index) => {
       const z = at(share).z;
       const west = open.minX + (index === 1 ? n.boomGap : 0);
-      const east = open.maxX - (index === 0 ? n.boomGap : 0);
+      const east = openEast(z) - (index === 0 ? n.boomGap : 0);
       const pieces = Math.max(1, Math.round((east - west) / shape.boomPiece));
       const each = (east - west) / pieces;
       for (let i = 0; i < pieces; i += 1) {
@@ -573,13 +597,71 @@ export function buildLake(difficulty: Difficulty, numbers: LakeNumbers = LAKE_DI
     }
   }
 
-  // To collect. So far one trail: a huckleberry over each boulder of the Shore Path, which shows the way along them.
-  // (The rest of the lake's trails and its hidden leaves are laid once its new pieces are in.)
+  // TO COLLECT (see collect.ts). Huckleberries in trails along the way, with side trails that tempt a hero off it,
+  // and three hidden leaves in the hardest spots: on the tipping log, past a crocodile, and behind a dive.
   const byId = new Map(solids.map((s) => [s.id, s]));
-  const pickups: Pickup[] = sections[0].solids
-    .slice(1, -1)
-    .map((id) => byId.get(id)!)
-    .map((s, index) => ({ id: `shore-${index + 1}`, kind: 'berry' as const, x: s.x, y: s.top + COLLECT.hang, z: s.z }));
+  const pickups: Pickup[] = [];
+  const berry = (id: string, x: number, y: number, z: number): void => void pickups.push({ id, kind: 'berry', x, y, z });
+  const over = (id: string, s: Solid, dx = 0, dz = 0): void => berry(id, s.x + dx, s.top + COLLECT.hang, s.z + dz);
+  /** How deep a berry hangs for a swimmer at the surface to take it, and for one swimming under a boom or the tunnel's roof. */
+  const afloat = shape.surface - 0.6;
+  const underRoof = shape.tunnelRoof - 0.5;
+  // 1. The Shore Path: one over each boulder.
+  sections[0].solids.slice(1, -1).forEach((id, index) => over(`shore-${index + 1}`, byId.get(id)!));
+  // 2. The Crocodile Crossing: one over each back. On Hard it is toward one end, so each landing has to be placed.
+  solids.filter((s) => s.motion?.kind === 'float').forEach((s, index) => over(`croc-${index + 1}`, s, n.stoneSnap === undefined ? 0 : s.halfX * 0.55));
+  // 3. The Swinging Pines: an arc along each swing, where a hero's middle passes. The last marks where to let go.
+  ropes.forEach((r, index) => {
+    for (let k = 0; k < 4; k += 1) {
+      const angle = ROPE.swing * (-0.45 + 0.42 * k);
+      berry(`swing-${index + 1}-${k + 1}`, r.x + r.ahead.x * Math.sin(angle) * r.length, r.y - Math.cos(angle) * r.length - shape.swingHang, r.z + r.ahead.z * Math.sin(angle) * r.length);
+    }
+  });
+  // 4. The Sunken Logs: one over each end of each log, and the hidden leaf over the far end of the tipping log.
+  solids.filter((s) => /^log-\d+$/.test(s.id)).forEach((s, index) => {
+    over(`log-${index + 1}-a`, s, s.halfX * 0.55);
+    over(`log-${index + 1}-b`, s, -s.halfX * 0.55);
+  });
+  const leafLog = byId.get('leaf-log')!;
+  over('leaf-log-berry', leafLog, 0, leafLog.halfZ * 0.4);
+  pickups.push({ id: 'leaf-logs', kind: 'leaf', x: leafLog.x, y: leafLog.top + COLLECT.hang, z: leafLog.z - leafLog.halfZ + 0.9 });
+  // 5. The Open Water: a trail through each boom's gap and one under each boom on the straight line; and the hidden leaf
+  // deep down past a crocodile (on Easy beside its water, not in it).
+  {
+    const open = water.find((w) => w.id === 'open-water')!;
+    const lineX = (z: number): number => openSwim.x0 + ((openSwim.x1 - openSwim.x0) * (z - openSwim.z0)) / (openSwim.z1 - openSwim.z0);
+    shape.boomAt.forEach((share, index) => {
+      const z = openSwim.z0 + (openSwim.z1 - openSwim.z0) * share;
+      const gapX = index === 0 ? openEast(z) - n.boomGap / 2 : open.minX + n.boomGap / 2;
+      [-2.2, 0, 2.2].forEach((dz, k) => {
+        berry(`gap-${index + 1}-${k + 1}`, gapX, afloat, z + dz);
+        berry(`under-${index + 1}-${k + 1}`, lineX(z + dz), dz === 0 ? shape.surface - shape.boomHalf - 1.3 : shape.surface - 1.2, z + dz);
+      });
+    });
+    const croc = enemies.find((each) => each.id === 'croc-open-1')!;
+    const beside = n.crocHunt ? 0 : n.crocPatch + 1.6;
+    const leafX = Math.min(openEast(croc.z) - 1.5, croc.x + beside);
+    pickups.push({ id: 'leaf-open', kind: 'leaf', x: leafX, y: shape.floor + 1, z: croc.z });
+    berry('leaf-open-berry', leafX, shape.floor + 2.2, croc.z);
+  }
+  // 6. The Rock Tunnel: a trail that goes down to the gap and through it; and the hidden leaf at the end of the side
+  // pocket (on Easy, low at the side of the tunnel).
+  {
+    const rock = byId.get('rock-tunnel')!;
+    berry('dive-1', rock.x + rock.halfX + 3.2, afloat, rock.z);
+    berry('dive-2', rock.x + rock.halfX + 1.2, underRoof + 0.5, rock.z);
+    berry('dive-3', rock.x, underRoof, rock.z);
+    berry('dive-4', rock.x - rock.halfX - 1.2, underRoof + 0.5, rock.z);
+    pickups.push(
+      n.tunnelPocket > 0
+        ? { id: 'leaf-tunnel', kind: 'leaf', x: rock.x, y: shape.floor + 0.9, z: rock.z + rock.halfZ + n.tunnelPocket - 0.9 }
+        : { id: 'leaf-tunnel', kind: 'leaf', x: rock.x, y: shape.floor + 0.8, z: rock.z + rock.halfZ - 0.8 },
+    );
+  }
+  // 7. Cattail Cove: one over each post. 8. The Old Pier: along the boardwalk to the dock.
+  solids.filter((s) => /^post-\d+$/.test(s.id)).forEach((s, index) => over(`post-${index + 1}`, s));
+  const walk = byId.get('boardwalk')!;
+  for (let k = 0; k < 5; k += 1) over(`pier-${k + 1}`, walk, -walk.halfX + ((k + 0.5) * walk.halfX * 2) / 5);
 
   return {
     name: LAKE_NAME,
