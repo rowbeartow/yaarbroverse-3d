@@ -12,6 +12,10 @@
 //   - At the surface, Jump next to something low enough to reach climbs out
 //     onto it. Something no higher than the water (a shore) is walked out on.
 //   - The sides of a pool hold a swimmer in: the only way out is to climb.
+//   - A pool can have beds of weed (`weeds`): a swimmer at the surface in one
+//     is slowed. Round it or under it is quicker.
+//   - A solid marked `noClimb` (a floating log boom) cannot be climbed onto
+//     from the water: the way past is round its end, or under it.
 //   - Underwater the hero holds its breath. The level says for how long
 //     (`breath`); with none (Easy) it never runs out. It fills again at the
 //     surface. Running out is the same as losing the last heart: a moment
@@ -34,6 +38,8 @@ export interface Water {
   /** Height of the water's top, and of its bottom. */
   surface: number;
   floor: number;
+  /** Beds of weed floating on the pool, each a box seen from above. A swimmer at the surface in one is slowed; underwater there is none. */
+  weeds?: Array<{ minX: number; maxX: number; minZ: number; maxZ: number }>;
 }
 
 /** Distances are metres, times are seconds, speeds are metres per second. */
@@ -49,6 +55,8 @@ export const SWIM = {
   /** Top swimming speed at the surface, and underwater. */
   surfaceSpeed: 3.6,
   underSpeed: 4.2,
+  /** In a bed of weed, a swimmer at the surface goes at this share of that speed. Going round is quicker, and so is going under. */
+  weedSlow: 0.45,
   /** How quickly a swimmer reaches that speed, or slows down. */
   accel: 9,
   /** Down with the move button held, up with Jump held, and drifting up with neither. */
@@ -78,6 +86,9 @@ export const waterAt = (waters: readonly Water[] | undefined, x: number, z: numb
   return null;
 };
 
+/** True when (x, z) is in one of the pool's beds of weed. */
+export const inWeeds = (water: Water, x: number, z: number): boolean => (water.weeds ?? []).some((bed) => x >= bed.minX && x <= bed.maxX && z >= bed.minZ && z <= bed.maxZ);
+
 /** True when a hero's feet at this height are in this pool's water. */
 export const inWater = (water: Water, feetY: number): boolean => feetY < water.surface - SWIM.enter && feetY > water.floor - 1;
 
@@ -93,7 +104,7 @@ export const climbOut = (
   let best: { solid: Solid; x: number; z: number; far: number } | null = null;
   for (const s of solids) {
     // Nobody climbs onto a crocodile's back from the water: it is jumped onto from the rocks.
-    if (s.gone || s.bounce || s.motion?.kind === 'float') continue;
+    if (s.gone || s.bounce || s.noClimb || s.motion?.kind === 'float') continue;
     const rise = s.top - water.surface;
     if (rise < -0.2 || rise > maxRise) continue;
     if (!touchesFromAbove(s, x, z, SWIM.radius + SWIM.climbReach)) continue;

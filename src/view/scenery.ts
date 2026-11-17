@@ -952,9 +952,34 @@ const tippingLog = (s: Solid, materials: Materials): { shape: Group; view: Movin
 };
 
 /** Puts a moving piece where the rules say it is now. `time` drives the shake of a tell; `dt` is the seconds since the last frame. */
+/**
+ * A log or post that sinks: the piece as it would be drawn standing still,
+ * moved whole. A log lies on the water with nothing under it; a post is a
+ * tall stump whose foot stays out of sight below the lake bed as it goes down.
+ */
+const sinkingPiece = (s: Solid, materials: Materials): { shape: Group; view: MovingView } => {
+  const shape = new Group();
+  const holder = new Group();
+  const thickness = s.top - s.bottom;
+  const body = s.kind === 'stump' ? stump({ ...s, x: 0, z: 0, top: 0 }, materials) : log({ ...s, x: 0, z: 0, top: 0, bottom: -thickness }, materials);
+  holder.add(body);
+  shape.add(holder);
+  const view = { solid: s, holder, body };
+  placeMoving(view, 0);
+  return { shape, view };
+};
+
 export const placeMoving = (view: MovingView, time: number, dt = 0): void => {
   const { solid: s, holder, body } = view;
   holder.position.set(s.x, s.top, s.z);
+  if (s.motion?.kind === 'sink') {
+    // The tell: it rocks about its length, a little, and keeps rocking as it goes under.
+    const phase = s.piece?.phase ?? 'rest';
+    const rocking = phase === 'tell' || phase === 'sink' ? 1 : phase === 'sag' ? 0.35 : 0;
+    holder.rotation.z = Math.sin(time * 9 + s.x) * 0.045 * rocking;
+    holder.rotation.x = Math.sin(time * 7 + s.z) * 0.02 * rocking;
+    return;
+  }
   if (s.motion?.kind === 'tip') {
     // The rules' top rises `slopeZ` for each metre toward the camera. Turning
     // the log by this angle puts its top on that line; stretching it by
@@ -1023,7 +1048,7 @@ export const buildSolids = (level: Level, materials: Materials, decor: Decor, ra
     // A crocodile stepping stone is drawn from the crocodile's model: `croc-stones.ts`.
     if (s.motion?.kind === 'float') shape.visible = false;
     else if (s.motion) {
-      const made = s.motion.kind === 'tip' ? tippingLog(s, materials) : s.motion.kind === 'crumble' ? mossPad(s, materials) : windyBough(s, materials);
+      const made = s.motion.kind === 'tip' ? tippingLog(s, materials) : s.motion.kind === 'crumble' ? mossPad(s, materials) : s.motion.kind === 'sink' ? sinkingPiece(s, materials) : windyBough(s, materials);
       shape.add(made.shape);
       moving.push(made.view);
     } else if (s.kind === 'mushroom') {

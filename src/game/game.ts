@@ -11,7 +11,7 @@ import { MOVE, STEP, knockSpeed, type HeroName } from './hero';
 import { pushOutside, surfaceBelow, topAt, touchesFromAbove, type Level, type Solid } from './level';
 import { ownPieces, resetPieces, stepPieces, type PieceEvent } from './moving';
 import { HANG, ROPE, grab, handOf, handSpeed, letGo, newRope, ropeInReach, stepHeld, stepLoose, type RopeState } from './rope';
-import { SWIM, climbOut, inWater, waterAt, type Water } from './swim';
+import { SWIM, climbOut, inWater, inWeeds, waterAt, type Water } from './swim';
 
 /** What the player is asking for during one step. */
 export interface Input {
@@ -869,7 +869,7 @@ export class Game {
     this.buffer = 0;
 
     // Across: the way the stick points, slower than on land.
-    const top = this.under ? SWIM.underSpeed : SWIM.surfaceSpeed;
+    const top = this.under ? SWIM.underSpeed : SWIM.surfaceSpeed * (inWeeds(water, this.x, this.z) ? SWIM.weedSlow : 1);
     const wantX = moveX * top;
     const wantZ = moveZ * top;
     const change = SWIM.accel * dt;

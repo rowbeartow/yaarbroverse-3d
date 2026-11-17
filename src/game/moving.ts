@@ -1,4 +1,4 @@
-// Pieces that move: solids that tip, crumble or sway, and carry a hero standing
+// Pieces that move: solids that tip, crumble, sway or sink, and carry a hero standing
 // on them. Game rules only: nothing here draws anything. Any level can use
 // them: give a solid a `motion` (see `Motion` below) and the rules do the rest.
 //
@@ -39,6 +39,16 @@
 //             before the row (after a swim, say) finds it waiting again: the
 //             others go under and the first comes up and waits.
 //
+//   sink      A log or a post standing in water that goes under. The moment a
+//             hero lands it settles `bob` metres and rocks (the tell), and
+//             `tell` seconds later it either sinks (`sinks`), `depth` metres
+//             in `down` seconds, taking a hero who is still on it down into
+//             the water, and comes back up `back` seconds after it went
+//             under; or (`sinks: false`, Easy) it only bobs under the hero's
+//             weight and holds. It is not there to stand on while it is under.
+//             Only for pieces with deep water under them: a hero who goes
+//             down with one swims.
+//
 // Where a hero can stand is always where the piece is now: its top moves, or
 // tilts, and `topAt` in level.ts gives the height at any point. The drawing
 // reads the same numbers every frame, so its edge and the rules' edge agree.
@@ -52,6 +62,7 @@ export type Motion =
   | { kind: 'tip'; tell: number; dip: number; rate: number }
   | { kind: 'crumble'; tell: number; falls: boolean; sag: number; back: number }
   | { kind: 'sway'; rise: number; rest: number; move: number; tell: number; start: number }
+  | { kind: 'sink'; tell: number; sinks: boolean; bob: number; depth: number; down: number; back: number }
   | {
       kind: 'float';
       wake: number;
@@ -130,6 +141,11 @@ const FALL_GRAVITY = 20;
 /** How fast a tipping log settles back level with nobody on it, and a sagged moss pad rises back. */
 const SETTLE_RATE = 0.5;
 const SAG_RATE = 0.3;
+/** A sinking piece settles under a hero, and bobs back up, this fast, in metres a second; and comes back up from under the water in this many seconds. */
+const BOB_RATE = 0.6;
+const SINK_UP = 1.2;
+/** A sinking piece this far short of its full depth is under the water: not there to stand on. */
+const SINK_UNDER = 0.25;
 
 export const newPiece = (s: Solid): Piece => ({
   phase: s.motion?.kind === 'sway' ? swayPhase(s.motion, 0).phase : s.motion?.kind === 'float' ? 'gone' : 'rest',
@@ -209,7 +225,7 @@ const place = (s: Solid): void => {
   if (m.kind === 'tip') {
     // The middle stays put; the far end (forward, which is -z) is `dip` lower.
     s.slopeZ = p.dip / s.halfZ;
-  } else if (m.kind === 'crumble' || m.kind === 'float') {
+  } else if (m.kind === 'crumble' || m.kind === 'float' || m.kind === 'sink') {
     // `dip` is how far it has sagged or fallen, or how far under a crocodile's back is.
     top = p.baseTop - p.dip;
   } else {
@@ -217,7 +233,7 @@ const place = (s: Solid): void => {
   }
   s.top = top;
   s.bottom = top - p.thickness;
-  s.gone = p.phase === 'gone' || (m.kind === 'float' && p.dip > FLOAT_UNDER);
+  s.gone = p.phase === 'gone' || (m.kind === 'float' && p.dip > FLOAT_UNDER) || (m.kind === 'sink' && p.dip > m.depth - SINK_UNDER);
 };
 
 /**
@@ -294,6 +310,47 @@ export const stepPieces = (solids: Solid[], standing: string | null, forward: nu
         p.dip = 0;
         p.speed = 0;
         say('back');
+      }
+    } else if (m.kind === 'sink') {
+      p.clock += dt;
+      if (p.phase === 'rest') {
+        // Left alone it bobs back up. Stood on again once it is up, it begins again.
+        if (!on) p.dip = Math.max(0, p.dip - BOB_RATE * dt);
+        else if (p.dip <= 0) {
+          p.phase = 'tell';
+          p.clock = 0;
+          say('tell');
+        }
+      } else if (p.phase === 'tell') {
+        p.dip = Math.min(m.bob, p.dip + BOB_RATE * dt);
+        if (p.clock >= m.tell) {
+          p.phase = m.sinks ? 'sink' : 'sag';
+          p.clock = 0;
+          say(m.sinks ? 'fall' : 'move');
+        }
+      } else if (p.phase === 'sag') {
+        // Easy: it holds under the hero for as long as they like, and bobs back up a moment after they leave.
+        p.dip = Math.min(m.bob, p.dip + BOB_RATE * dt);
+        if (on) p.clock = 0;
+        else if (p.clock > 0.5) p.phase = 'rest';
+      } else if (p.phase === 'sink') {
+        p.dip = Math.min(m.depth, p.dip + ((m.depth - m.bob) / m.down) * dt);
+        if (p.dip >= m.depth) {
+          p.phase = 'gone';
+          p.clock = 0;
+        }
+      } else if (p.phase === 'gone') {
+        if (p.clock >= m.back) {
+          p.phase = 'rise';
+          p.clock = 0;
+          say('back');
+        }
+      } else if (p.phase === 'rise') {
+        p.dip = Math.max(0, p.dip - (m.depth / SINK_UP) * dt);
+        if (p.dip <= 0) {
+          p.phase = 'rest';
+          p.clock = 0;
+        }
       }
     } else if (m.kind === 'float') {
       const since = p.since ?? -1;
