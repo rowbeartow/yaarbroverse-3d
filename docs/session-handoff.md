@@ -17,6 +17,8 @@ Last updated: 2026-11-17 (milestone ten, making the lake worth playing: the owne
 5. The Open Water rebuilt: not started.
 6. The trails and hidden leaves placed through the whole lake: not started. A test is owed here: every hidden leaf can be reached on every difficulty as each hero, and no trail leads where a hero cannot get back from.
 
+**Work that is on a branch and nowhere else:** step 3's sinking logs and posts are built on `claude/backup-sinking-logs`, on top of step 2. That branch's copy of this file says what is in it and what to do with it. Do not delete it until its work has merged.
+
 **Waiting for the kids' picks (2026-11-17), both for the pike milestone:**
 
 - **Walblum's model**, three candidates: https://claude.ai/artifact/TnaX5sRabHkRvqg3PBem3E . Made with `tools/meshy-portrait-to-3d.mjs` and `tools/walblum.candidates.json`: his portrait in the private repo (`src/assets/canon/walblum-cutout-review.png`) stops at his folded arms, so Meshy's Image to Image drew a full-body picture from it for each candidate, and Image to 3D made a model from each picture. 120 credits (30 for the pictures, 90 for the models) of the 150 the owner allowed. Once they pick, give the owner a download link to that model so he can save it to the `hero-models` release, then record it here as the crocodile's is. The models were in the session's scratch folder, which does not last: if it is gone, download the picked one again from Meshy by its task number (`GET /openapi/v1/image-to-3d/<task>`, then its `model_urls.glb`), while Meshy still keeps it. Never make it again once picked.
