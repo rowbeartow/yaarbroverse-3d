@@ -27,6 +27,8 @@ interface Place {
 
 const PLACES: Place[] = [
   // First, so the page opens on it: the newest thing to look at.
+  { id: 'logs', label: 'Sinking logs', at: 'headland', until: 'gravel-bar' },
+  { id: 'posts', label: 'Sinking posts', at: 'cove-beach', until: 'landing' },
   { id: 'shore', label: 'Huckleberries on the Shore Path', at: 'beach', until: 'point' },
   { id: 'crocodiles', label: 'Crocodile stepping stones', at: 'point', until: 'island' },
   { id: 'ropes', label: 'Rope swings', at: 'island', until: 'headland' },
