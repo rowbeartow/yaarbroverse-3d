@@ -79,6 +79,10 @@ export interface SoundDef {
 const GROVE = ['bouncing-grove', 'sandbox'] as const;
 /** Sounds only Cocolalla Lake plays. */
 const LAKE = ['cocolalla'] as const;
+/** The marmot scout's sounds, for the levels that have one. */
+const SCOUTS = ['bouncing-grove', 'sandbox', 'cocolalla'] as const;
+/** The creak of wood that is about to move: the grove's tipping logs, and the lake's sinking logs and posts. */
+const WOOD = ['bouncing-grove', 'sandbox', 'cocolalla'] as const;
 /** Sounds of rope swings, for the levels that hang any. */
 const ROPES = ['cocolalla'] as const;
 /** Sounds of deep water, for the levels that have any. */
@@ -183,13 +187,13 @@ export const SOUNDS = {
     source: { files: ['croc-hit.wav'] },
   },
   marmotTell: {
-    home: GROVE,
+    home: SCOUTS,
     group: 'Enemies', label: "Marmot scout's warning", mix: 'cue', level: -4,
     what: 'A squeak as the scout rears up with its acorn. A squeaky toy, played a little lower.',
     source: { files: ['marmot-warning.wav'] },
   },
   marmotThrow: {
-    home: GROVE,
+    home: SCOUTS,
     group: 'Enemies', label: "Marmot scout's throw", mix: 'cue', level: -3,
     what: 'A quick, short swish as the acorn leaves its paw.',
     source: { files: ['marmot-throw.wav'] },
@@ -220,9 +224,9 @@ export const SOUNDS = {
     source: { files: ['checkpoint.wav'] },
   },
   creak: {
-    home: GROVE,
+    home: WOOD,
     group: 'World', label: 'Tipping log creak', mix: 'cue', level: -3, vary: 0.06,
-    what: 'A slow wooden creak when a hero lands on a tipping log (its tell), and again as it starts to tip. The owner picked choice A.',
+    what: 'A slow wooden creak when a hero lands on a tipping log (its tell), and again as it starts to tip. The owner picked choice A. Also the tell of a log or post that sinks, on the lake.',
     source: { files: ['creak.wav'] },
   },
   mossRustle: {

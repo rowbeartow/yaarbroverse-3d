@@ -50,6 +50,11 @@ test.describe('the level list', () => {
     });
     expect(named).toEqual(['lake-bed', 'lake-boom', 'lake-island', 'lake-mountains', 'lake-shore']);
     // Stand on the fishing dock: the pier runs east, and the camera looks north there, so the leaf is to the right.
+    // The dock's scout is the rule tests' business (the bot beats it there): here it is out of the way.
+    await page.evaluate(() => {
+      const { game } = (window as unknown as { __grove: { game: { enemies: Array<{ kind: string; phase: string }> } } }).__grove;
+      for (const enemy of game.enemies) if (enemy.kind === 'marmot') enemy.phase = 'defeated';
+    });
     await standOn(page, 'dock', 0);
     await expect.poll(() => page.evaluate(() => Math.abs((window as unknown as { __grove: { facing: number } }).__grove.facing)), { timeout: 30_000 }).toBeLessThan(5);
     await page.keyboard.down('ArrowRight');
@@ -113,8 +118,9 @@ test.describe("a level's own files", () => {
     const problems = await open(page, 'level=cocolalla');
     await expect.poll(async () => (await soundLevel(page)).level).toBe('cocolalla');
     await expect.poll(() => [...asked]).toContain('lake-music.mp3');
-    for (const file of ['crocodile.glb', 'yaarbro.glb', 'caputo.glb']) expect([...asked], file).toContain(file);
-    for (const file of ['marmot.glb', 'mosquito.glb', 'grove-music.mp3', 'boss-music.mp3', 'creak.wav']) expect([...asked], file).not.toContain(file);
+    // The lake has scouts and mosquitoes of its own now, and its logs creak: those are its files too.
+    for (const file of ['crocodile.glb', 'marmot.glb', 'mosquito.glb', 'creak.wav', 'yaarbro.glb', 'caputo.glb']) expect([...asked], file).toContain(file);
+    for (const file of ['grove-music.mp3', 'boss-music.mp3', 'moss-rustle.wav', 'gust.wav']) expect([...asked], file).not.toContain(file);
     expect(problems).toEqual([]);
   });
 });
