@@ -223,6 +223,16 @@ export const SOUNDS = {
     what: 'Three bright chime notes on reaching a safe mossy bank.',
     source: { files: ['checkpoint.wav'] },
   },
+  huckleberry: {
+    group: 'World', label: 'Picking up a huckleberry', mix: 'action', level: -6, vary: 0.06,
+    what: 'A round little drop, like a berry into a pail, each time a hero picks up a huckleberry. The owner picked choice B.',
+    source: { files: ['huckleberry.wav'] },
+  },
+  hiddenLeaf: {
+    group: 'World', label: 'Finding a hidden leaf', mix: 'cue', level: 0,
+    what: 'A soft chime of a second when a hero finds a hidden leaf. The owner picked choice A.',
+    source: { files: ['hidden-leaf.wav'] },
+  },
   creak: {
     home: WOOD,
     group: 'World', label: 'Tipping log creak', mix: 'cue', level: -3, vary: 0.06,

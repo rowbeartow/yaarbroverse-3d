@@ -139,6 +139,8 @@ export class GameSounds {
       else if (event.type === 'breathless') sound.play('heartsOut');
       else if (event.type === 'hurt') sound.play(event.left > 0 ? 'hit' : 'heartsOut');
       else if (event.type === 'safe') sound.play('checkpoint');
+      // Collecting: a little drop for each huckleberry, a chime for a hidden leaf.
+      else if (event.type === 'pickup') sound.play(event.kind === 'leaf' ? 'hiddenLeaf' : 'huckleberry');
       else if (event.type === 'strike') sound.play(event.kind === 'crocodile' ? 'crocHit' : 'strike');
       else if (event.type === 'goal') sound.playTune('leafTune');
       else if (event.type === 'boss') {
