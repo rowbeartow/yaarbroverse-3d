@@ -68,6 +68,11 @@ const ENEMIES: Record<string, { title: string; hovers: boolean; note: string }> 
     hovers: false,
     note: 'Each made from its own picture (Meshy Text to Image, then Image to 3D; the words are in tools/crocodile.candidates.json). Shown at one size here; its size in the lake is set when it is rigged.',
   },
+  walblum: {
+    title: 'Walblum',
+    hovers: false,
+    note: 'His portrait stops at his folded arms, so each candidate was made from its own full-body picture, drawn from the portrait (Meshy Image to Image, then Image to 3D; the words are in tools/walblum.candidates.json). He stands with his arms out so he can be rigged. Shown large here: in the game he is small enough to ride under Yaarbro’s arm.',
+  },
 };
 
 /** Reads a file that candidates.mjs wrote as base64 text. */
@@ -168,7 +173,7 @@ const start = async (): Promise<void> => {
       image.src = enemy.picture;
       image.alt = `The 2D picture every ${about.title.toLowerCase()} candidate was made from`;
       const caption = document.createElement('figcaption');
-      caption.textContent = 'The picture they were made from';
+      caption.textContent = enemy.name === 'walblum' ? 'The pictures A, B and C were made from' : 'The picture they were made from';
       figure.append(image, caption);
       (section.querySelector('.group-head') as HTMLElement).append(figure);
     }

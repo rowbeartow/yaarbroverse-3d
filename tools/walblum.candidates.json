@@ -1,0 +1,21 @@
+{
+  "about": "Walblum's three candidates, made by tools/meshy-portrait-to-3d.mjs from his canonical portrait in the owner's private repo. The portrait stops at his folded arms, so each picture asks for the same character, face and colours, shown whole: the rest of a muskrat (short legs, webbed hind feet, a long thin dark tail), nothing else added, no clothes. He stands upright with his arms out so the model can be rigged to kick.",
+  "name": "walblum",
+  "candidates": [
+    {
+      "label": "As drawn: the portrait's flat cartoon, shown whole",
+      "ai_model": "gpt-image-2",
+      "prompt": "Show this exact character as a full body, head to toe. Keep his face, his grumpy frown, his eyebrows, cream muzzle with freckles, whiskers, small round ears, spiky tuft of head fur, dark brown fur and dark grey paws exactly as in the reference, in the same flat cartoon style with bold black outlines. He is a small muskrat with no clothes: add only what the reference does not show, a short round body, short legs, dark grey webbed hind feet and a long thin dark scaly tail hanging behind him. He stands upright on his hind legs facing the viewer, arms held out to the sides away from his body, legs a little apart. Front view, plain white background, no ground, no shadow, nothing else in the picture."
+    },
+    {
+      "label": "Storybook 3D: hand-painted, like the heroes",
+      "ai_model": "nano-banana-2",
+      "prompt": "Show this exact character as a full body, head to toe, as a stylized 3D storybook game character with soft hand-painted fur. Keep his face, his grumpy frown, his heavy eyebrows, cream muzzle with freckles, long pale whiskers, small round ears, spiky tuft of head fur, dark brown fur and dark grey paws exactly as in the reference. He is a small muskrat with no clothes: add only what the reference does not show, a short round body, short legs, dark grey webbed hind feet and a long thin dark scaly tail hanging behind him. He stands upright on his hind legs facing the viewer, arms held out to the sides away from his body, legs a little apart. Front view, plain white background, no ground, no shadow, nothing else in the picture."
+    },
+    {
+      "label": "Small and scrappy: big head, little body",
+      "ai_model": "gpt-image-2",
+      "prompt": "Show this exact character as a full body, head to toe, as a stylized 3D storybook game character with hand-painted fur. Keep his face, his grumpy frown, his heavy eyebrows, cream muzzle with freckles, long pale whiskers, small round ears, spiky tuft of head fur, dark brown fur and dark grey paws exactly as in the reference. He is a very small, scrappy muskrat with no clothes, with a big head and a little body: add only what the reference does not show, short legs, big dark grey webbed hind feet and a long thin dark scaly tail hanging behind him. He stands upright on his hind legs facing the viewer, small fists held out to the sides away from his body, legs apart, ready for a fight. Front view, plain white background, no ground, no shadow, nothing else in the picture."
+    }
+  ]
+}
