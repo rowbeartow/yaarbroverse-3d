@@ -39,7 +39,7 @@ test.describe('the level list', () => {
     await expect(page.locator('#place')).toHaveText('Cocolalla Lake · Normal');
     const pools = await page.evaluate(() => (window as unknown as { __grove: { water: { pools: number } | null } }).__grove.water?.pools ?? 0);
     expect(pools).toBeGreaterThan(0);
-    // Its own surroundings: the shore, and the mountains across the water.
+    // Its own surroundings: the shore, the mountains across the water, and the rocks and weed on the lake bed.
     const named = await page.evaluate(() => {
       const view = (window as unknown as { __grove: { view: { scene: { traverse(visit: (node: { name: string }) => void): void } } } }).__grove.view;
       const names: string[] = [];
@@ -48,7 +48,7 @@ test.describe('the level list', () => {
       });
       return names.sort();
     });
-    expect(named).toEqual(['lake-boom', 'lake-island', 'lake-mountains', 'lake-shore']);
+    expect(named).toEqual(['lake-bed', 'lake-boom', 'lake-island', 'lake-mountains', 'lake-shore']);
     // Stand on the fishing dock: the pier runs east, and the camera looks north there, so the leaf is to the right.
     await standOn(page, 'dock', 0);
     await expect.poll(() => page.evaluate(() => Math.abs((window as unknown as { __grove: { facing: number } }).__grove.facing)), { timeout: 30_000 }).toBeLessThan(5);
