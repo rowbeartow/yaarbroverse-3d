@@ -2,8 +2,10 @@
 // them, a bank, a pool with a rock arch across it that only a swimmer
 // underwater gets past, a bank, a mushroom, and a high, wide bank that is the arena of the
 // practice boss, with the golden leaf on a ledge beyond it. The leaf cannot
-// be taken until the boss is beaten. Development only: see difficulty.ts.
+// be taken until the boss is beaten. A trail of huckleberries runs along the
+// logs, and a hidden leaf hangs underwater beneath the rock arch. Development only: see difficulty.ts.
 
+import { COLLECT, berryTrail, type Pickup } from '../../game/collect';
 import type { Difficulty } from '../../game/difficulty';
 import type { Level, Solid } from '../../game/level';
 import type { Water } from '../../game/swim';
@@ -53,6 +55,12 @@ export function buildSandbox(difficulty: Difficulty, numbers: SandboxNumbers = S
   at += arenaLength;
   box('bank-end', 'bank', at, at + 5, 3.5, top, -40);
   const reach = 1.3;
+  // To collect: a trail along the two logs, which a run down the middle picks up whole, and a hidden leaf under the arch, for a swimmer who dives.
+  const archZ = solids.find((s) => s.id === 'pool-arch')!.z;
+  const pickups: Pickup[] = [
+    ...berryTrail('logs', { x: 0, y: COLLECT.hang, z: -5 }, { x: 0, y: COLLECT.hang, z: -(13 + n.logGap) }, 5),
+    { id: 'leaf-arch', kind: 'leaf', x: 0, y: POOL.archBottom - 0.9, z: archZ },
+  ];
 
   return {
     name: SANDBOX_NAME,
@@ -74,6 +82,7 @@ export function buildSandbox(difficulty: Difficulty, numbers: SandboxNumbers = S
       numbers: n.boss,
     },
     water,
+    pickups,
     breath: n.breath,
     fallY: -6,
     coyoteTime: n.coyoteTime,

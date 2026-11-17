@@ -4,6 +4,7 @@
 
 import { steerJump } from './assist';
 import { BOSS, bossFighting, newBoss, resetBoss, stepBoss, type Boss, type BossAttack, type BossPhase } from './boss';
+import { pickupCounts, touchesPickup, type PickupKind } from './collect';
 import type { Difficulty } from './difficulty';
 import { ENEMY, callSidekick, dismissSidekick, newEnemy, sendHome, stepEnemy, type Enemy, type EnemyPhase, type EnemyTuning } from './enemy';
 import { MOVE, STEP, knockSpeed, type HeroName } from './hero';
@@ -69,6 +70,8 @@ export type GameEvent =
   | { type: 'rope'; id: string; what: 'grab' | 'release' }
   /** A moving piece (see moving.ts) began its tell, began to move, fell away or came back. */
   | ({ type: 'piece' } & PieceEvent)
+  /** Picked up a huckleberry or a hidden leaf (see collect.ts). `found` is how many of that kind this run has now. */
+  | { type: 'pickup'; id: string; kind: PickupKind; found: number }
   | { type: 'goal' };
 
 /** The record of a run, shown on the end card. */
@@ -84,6 +87,12 @@ export interface Summary {
   /** Enemies beaten. */
   beaten: number;
   complete: boolean;
+  /** Huckleberries picked up this run, and how many the level has. */
+  berries: number;
+  berriesIn: number;
+  /** The ids of the hidden leaves found this run, and how many the level has. */
+  leaves: string[];
+  leavesIn: number;
 }
 
 const EPSILON = 1e-4;
@@ -135,6 +144,11 @@ export class Game {
   stunned = 0;
   /** Out of hearts: counts down to going back to the last safe bank. */
   fainting = 0;
+  /** The ids of what has been collected this run (see collect.ts). A fall takes nothing away. */
+  readonly collected = new Set<string>();
+  /** How many huckleberries and hidden leaves this run has picked up. */
+  berries = 0;
+  leaves = 0;
   /** What happened during the most recent step. */
   events: GameEvent[] = [];
   /** In deep water (see swim.ts), and which pool. */
@@ -247,6 +261,7 @@ export class Game {
   }
 
   summary(): Summary {
+    const counts = pickupCounts(this.level.pickups);
     return {
       level: this.level.name,
       difficulty: this.difficulty,
@@ -256,6 +271,10 @@ export class Game {
       heartsLost: this.heartsLost,
       beaten: this.beaten,
       complete: this.complete,
+      berries: this.berries,
+      berriesIn: counts.berry,
+      leaves: (this.level.pickups ?? []).filter((pickup) => pickup.kind === 'leaf' && this.collected.has(pickup.id)).map((pickup) => pickup.id),
+      leavesIn: counts.leaf,
     };
   }
 
@@ -709,6 +728,15 @@ export class Game {
     // The goal: touch the golden leaf. A level with a boss keeps it out of reach until the boss is beaten.
     const { leaf } = level;
     const middleY = this.y + this.bodyHeight / 2;
+    // Huckleberries and hidden leaves: touched, they are picked up, and stay so.
+    if (level.pickups && this.collected.size < level.pickups.length) {
+      for (const pickup of level.pickups) {
+        if (this.collected.has(pickup.id) || !touchesPickup(pickup, this.x, middleY, this.z)) continue;
+        this.collected.add(pickup.id);
+        const found = pickup.kind === 'berry' ? (this.berries += 1) : (this.leaves += 1);
+        this.events.push({ type: 'pickup', id: pickup.id, kind: pickup.kind, found });
+      }
+    }
     const reach = leaf.radius + MOVE.bodyRadius;
     const distanceSquared = (this.x - leaf.x) ** 2 + (middleY - leaf.y) ** 2 + (this.z - leaf.z) ** 2;
     if (distanceSquared <= reach * reach && this.goalOpen) {
