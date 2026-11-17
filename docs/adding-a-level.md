@@ -134,6 +134,17 @@ Any level can have deep water: give the `Level` a `water` list of pools, each a 
 - Pieces that move and water: the crocodile stepping stone (see "Pieces that move") is the one moving piece made for water. The others have not been tried in it.
 - **A lake of several pools:** each pool's id may appear only once in `route`, so a run that swims, climbs out and swims again needs a pool for each swim. A pool need not be in `route` at all: it can be only the water a missed jump lands in, as long as a solid of the route stands in it or at its edge. Pools sit side by side and never overlap. A swimmer cannot cross from one pool into the next, so stand a solid across every place the route passes from one to the other (Cocolalla Lake's grassy point, rock island, headland, gravel bar and reed bar each straddle such a line), and make sure no low bank lets a swimmer skip a section. The lake scenery floats a log boom along the rest of the line.
 
+## Things to collect
+
+A level can have huckleberries and hidden leaves (`src/game/collect.ts`): give it `pickups`, a list of `{ id, kind: 'berry' | 'leaf', x, y, z }`, where (x, y, z) is the middle of the thing. A hero picks one up by touching it. `COLLECT.hang` is how high over a surface to hang one, and `berryTrail(id, from, to, count, arc)` lays a row of berries between two points, lifted in the middle by `arc` for a trail along a jump or a swing.
+
+- **Huckleberries come in trails.** A trail along the route shows the way, so a younger player can follow it. A side trail tempts a player off the easy line.
+- **Hidden leaves are few** (three a difficulty on the lake) and go in the hardest spots: behind a dive, past a crocodile, on a tipping log. Give each an id that stays the same on every difficulty it appears on and never changes: it is what a player's save remembers.
+- **Nothing is ever taken away.** A fall keeps what the run has collected, and what a run collected is saved for the player when the run ends or is left, finished or not (`Players.collect` in `src/save/players.ts`).
+- **They only count.** A pickup never blocks, hurts or helps, and the big golden leaf is still the goal. `tests/collect.test.ts` checks a run with pickups moves exactly as one without.
+- The game does the rest from the list: the counter under the hearts, the two lines on the end card, what the level's card says for each player, and the drawing (`src/view/pickups.ts`: every berry in a level is one draw).
+- `tests/collect.test.ts` runs over every level with pickups: ids are unique, none hangs inside a solid, and the bot still finishes and finds berries along the route.
+
 ## New enemies
 
 A level may reuse the marmot scout and the giant mosquito as they are. A new enemy is its own piece of work, done before the level: its behaviour in `src/game/enemy.ts`, its model made and rigged the way the handoff describes, and the owner's OK on the enemy preview page.

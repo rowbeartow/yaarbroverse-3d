@@ -42,6 +42,7 @@ import { FIGHT_CAMERA, fightView } from './boss-camera';
 import { CrocStones } from './croc-stones';
 import { Hanger, RopesView } from './ropes';
 import { nearestRopeEnd } from '../game/rope';
+import { PickupsView } from './pickups';
 import { ROUTE_CAMERA, cameraFor, followsRoute, forwardOf, turnToward } from './route-camera';
 import { ENEMY_MODELS, EnemyView, modelFilesOf } from './enemies';
 import { HERO_MODEL_FILES, buildHero, type HeroView } from './heroes';
@@ -118,6 +119,8 @@ interface LevelView extends LevelSolids {
   stones: CrocStones | null;
   /** The world under the water (the surface from below, light shafts, specks), if the level has pools. */
   under: UnderwaterView | null;
+  /** Huckleberries and hidden leaves, if the level has any. */
+  pickups: PickupsView | null;
 }
 
 /**
@@ -320,7 +323,10 @@ export class GroveView {
     this.levelView?.ropes?.dispose();
     this.levelView?.stones?.dispose();
     this.levelView?.under?.dispose();
-    this.levelView = { ...solids, root, forest, scatter, water, ropes, stones, under };
+    this.levelView?.pickups?.dispose();
+    const pickups = level.pickups?.length ? new PickupsView(level.pickups, this.materials) : null;
+    if (pickups) root.add(pickups.group);
+    this.levelView = { ...solids, root, forest, scatter, water, ropes, stones, under, pickups };
     this.swimEvents = [];
     this.under = 0;
     this.hero = buildHero(heroName, this.assets, this.tier.simple);
@@ -533,6 +539,7 @@ export class GroveView {
     // Pieces that move, where the rules have them now.
     for (const piece of levelView.moving) placeMoving(piece, this.clock, dt);
     levelView.stones?.update(level.solids, game.grounded ? game.groundId : null, dt);
+    levelView.pickups?.update(game.collected, game, this.clock, dt);
 
     // Mushrooms and the golden leaf.
     for (const mushroom of levelView.mushrooms.values()) animateMushroom(mushroom, dt);
@@ -727,6 +734,11 @@ export class GroveView {
   /** What the boss on screen is showing, for the browser checks, or null when the level has none. */
   bossInfo(): ReturnType<BossView['info']> | null {
     return this.boss ? this.boss.info() : null;
+  }
+
+  /** How many huckleberries and hidden leaves are drawn now, or null in a level with none. */
+  pickupsShown(): { berries: number; leaves: number } | null {
+    return this.levelView?.pickups?.shown ?? null;
   }
 
   /** Whether the golden leaf is drawn. */

@@ -6,6 +6,7 @@
 
 import type { JumpAssist } from './assist';
 import type { BossSpot } from './boss';
+import type { Pickup } from './collect';
 import type { EnemySpot, EnemyTuning } from './enemy';
 import type { Motion, Piece } from './moving';
 import type { Rope } from './rope';
@@ -113,6 +114,8 @@ export interface Level {
   ropeHelp?: boolean;
   /** The jump assist (see assist.ts): how strongly a jump aimed roughly at a small piece or a rope is steered onto it. Left out, none (Hard). */
   jumpAssist?: JumpAssist;
+  /** Huckleberries and hidden leaves to collect, if the level has any (see collect.ts). */
+  pickups?: Pickup[];
   /** The boss the level ends with, if it has one. The goal cannot be taken until it is beaten. */
   boss?: BossSpot;
   /** Ids of the solids in the order a run crosses them, start to goal. A pool's id stands for swimming across it, and a rope's for swinging on it. */

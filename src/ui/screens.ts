@@ -6,7 +6,7 @@ import { showControls } from './controls-help';
 import { DIFFICULTIES, DIFFICULTY_LABEL, isDifficulty, type Difficulty } from '../game/difficulty';
 import type { Summary } from '../game/game';
 import { HEROES, isHeroName, type HeroName } from '../game/hero';
-import type { EndBests } from '../save/players';
+import type { EndBests, HaulOutcome } from '../save/players';
 
 export interface Choice {
   hero: HeroName;
@@ -82,6 +82,7 @@ export class Screens {
   private readonly bossHealth = el('#boss-health');
   private bossShown = '';
   private heartsShown = '';
+  private foundShown = '';
   private readonly play = el<HTMLButtonElement>('#play');
   private messageTimer = 0;
   private readonly marks: Array<() => void> = [];
@@ -238,6 +239,32 @@ export class Screens {
   }
 
   /**
+   * Shows what this run has collected, or hides the counter (null) in a level
+   * with nothing to collect. Each pair is how many found, of how many there are.
+   */
+  setFound(found: { berries: number; berriesIn: number; leaves: number; leavesIn: number } | null): void {
+    const box = el('#found');
+    const key = found ? `${found.berries}/${found.berriesIn}/${found.leaves}/${found.leavesIn}` : '';
+    if (key === this.foundShown) return;
+    const more = this.foundShown !== '' && key !== '' && !key.startsWith('0/');
+    this.foundShown = key;
+    box.hidden = !found;
+    if (!found) return;
+    el('#found-berries').textContent = `${found.berries}/${found.berriesIn}`;
+    // A level with no hidden leaves shows huckleberries alone.
+    const leaves = found.leavesIn > 0;
+    el('#found-leaves').hidden = !leaves;
+    (box.querySelector('.leaf-dot') as HTMLElement).hidden = !leaves;
+    el('#found-leaves').textContent = `${found.leaves}/${found.leavesIn}`;
+    box.setAttribute('aria-label', `${found.berries} of ${found.berriesIn} huckleberries${leaves ? `, ${found.leaves} of ${found.leavesIn} hidden leaves` : ''}`);
+    if (more) {
+      box.classList.remove('got');
+      void box.offsetWidth;
+      box.classList.add('got');
+    }
+  }
+
+  /**
    * Shows how much breath is left, as a share of full (0 to 1), or hides the
    * bar (null): it is shown only while breath is running down or filling again.
    */
@@ -344,7 +371,20 @@ export class Screens {
    * time and fewest falls for this level, hero and difficulty as they stand
    * after the run; a best this run set is marked "New best". Null shows none.
    */
-  showEnd(summary: Summary, date: Date, bests: EndBests | null = null): void {
+  /**
+   * `finds` is what saving the run's haul said, for whoever is playing: whether
+   * it was their most huckleberries in a run, how many hidden leaves were new
+   * to them, and how many they have now found on this difficulty.
+   */
+  showEnd(summary: Summary, date: Date, bests: EndBests | null = null, finds: HaulOutcome | null = null): void {
+    el('#end-berries-box').hidden = summary.berriesIn === 0;
+    el('#end-leaves-box').hidden = summary.leavesIn === 0;
+    el('#end-berries').textContent = `${summary.berries} of ${summary.berriesIn}`;
+    el('#end-leaves').textContent = `${summary.leaves.length} of ${summary.leavesIn}`;
+    el('#end-berries-box').classList.toggle('is-new', Boolean(finds?.mostBerries));
+    el('#end-berries-best').textContent = finds?.mostBerries ? 'Your most yet!' : '';
+    el('#end-leaves-box').classList.toggle('is-new', Boolean(finds && finds.newLeaves > 0));
+    el('#end-leaves-best').textContent = !finds || summary.leavesIn === 0 ? '' : finds.newLeaves > 0 ? `New! ${finds.leavesFound} of ${summary.leavesIn} found so far` : `${finds.leavesFound} of ${summary.leavesIn} found so far`;
     const banner = el('#end-new');
     banner.hidden = !bests?.headline;
     banner.textContent = bests?.headline ?? '';

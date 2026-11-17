@@ -53,6 +53,41 @@ export interface Best {
   falls: number;
 }
 
+/**
+ * What a player has collected on one level (see src/game/collect.ts). Kept
+ * whether or not the run reached the golden leaf: nothing collected is ever
+ * taken away.
+ */
+export interface Finds {
+  /** Every huckleberry this player has ever picked up on the level, over all runs. */
+  berries: number;
+  /** For each difficulty: the most huckleberries in one run, and the ids of the hidden leaves found so far. */
+  on: Partial<Record<Difficulty, { most: number; leaves: string[] }>>;
+}
+
+/** What one run collected, as far as saving cares. */
+export interface Haul {
+  levelId: string;
+  difficulty: Difficulty;
+  /** Huckleberries picked up this run. */
+  berries: number;
+  /** The ids of the hidden leaves found this run. */
+  leaves: readonly string[];
+}
+
+/** What saving a run's haul changed. */
+export interface HaulOutcome {
+  /** More huckleberries than in any run before on this difficulty (and at least one). */
+  mostBerries: boolean;
+  /** Hidden leaves this player had not found before on this difficulty. */
+  newLeaves: number;
+  /** How many hidden leaves this player has now found on this difficulty. */
+  leavesFound: number;
+}
+
+/** No more ids than this are kept for one difficulty: a level has a handful of hidden leaves. */
+const MAX_LEAVES = 12;
+
 /** Bests by level id, then hero, then difficulty. Only runs that reached the leaf are here. */
 export type Bests = Record<string, Partial<Record<HeroName, Partial<Record<Difficulty, Best>>>>>;
 
@@ -65,6 +100,8 @@ export interface Player {
   hero: HeroName;
   difficulty: Difficulty;
   bests: Bests;
+  /** What this player has collected, by level id. Left out until they collect something. */
+  finds?: Record<string, Finds>;
   /** Where this player has turned the ghost on or off themselves, by difficulty. Left out: on for Normal and Hard, off for Easy. */
   ghost?: Partial<Record<Difficulty, boolean>>;
 }
@@ -133,10 +170,28 @@ const cleanBests = (saved: unknown): Bests => {
   return bests;
 };
 
+/** Keeps whatever in saved finds is sound and drops the rest. */
+const cleanFinds = (saved: unknown): Record<string, Finds> | null => {
+  if (!isRecord(saved)) return null;
+  const finds: Record<string, Finds> = {};
+  for (const [levelId, entry] of Object.entries(saved)) {
+    if (!ID.test(levelId) || !isRecord(entry)) continue;
+    const kept: Finds = { berries: isCount(entry.berries) ? Math.floor(entry.berries) : 0, on: {} };
+    for (const [difficulty, found] of Object.entries(isRecord(entry.on) ? entry.on : {})) {
+      if (!isDifficulty(difficulty) || !isRecord(found)) continue;
+      const leaves = Array.isArray(found.leaves) ? [...new Set(found.leaves.filter((id): id is string => typeof id === 'string' && ID.test(id)))].slice(0, MAX_LEAVES) : [];
+      kept.on[difficulty] = { most: isCount(found.most) ? Math.floor(found.most) : 0, leaves };
+    }
+    finds[levelId] = kept;
+  }
+  return Object.keys(finds).length ? finds : null;
+};
+
 const cleanPlayer = (saved: unknown): Player | null => {
   if (!isRecord(saved)) return null;
   const name = cleanName(saved.name);
   if (typeof saved.id !== 'string' || !ID.test(saved.id) || !name) return null;
+  const finds = cleanFinds(saved.finds);
   let ghost: Partial<Record<Difficulty, boolean>> | null = null;
   if (isRecord(saved.ghost)) {
     for (const [difficulty, on] of Object.entries(saved.ghost)) {
@@ -150,6 +205,7 @@ const cleanPlayer = (saved: unknown): Player | null => {
     hero: isHeroName(saved.hero) ? saved.hero : 'Yaarbro',
     difficulty: isDifficulty(saved.difficulty) ? saved.difficulty : 'normal',
     bests: cleanBests(saved.bests),
+    ...(finds ? { finds } : {}),
     ...(ghost ? { ghost } : {}),
   };
 };
@@ -272,6 +328,7 @@ export class Players {
     const player = this.get(id);
     if (!player) return false;
     player.bests = {};
+    delete player.finds;
     removeGhostsOf(this.ghosts, id);
     this.save();
     return true;
@@ -286,6 +343,31 @@ export class Players {
     removeGhostsOf(this.ghosts, id);
     this.save();
     return true;
+  }
+
+  /**
+   * Saves what a run collected, whether or not it reached the golden leaf.
+   * Call it once for a run, when the run is over or left. Huckleberries add
+   * to the player's total and may set the most in one run; hidden leaves are
+   * each kept once for the difficulty.
+   */
+  collect(id: string, haul: Haul): HaulOutcome {
+    const nothing: HaulOutcome = { mostBerries: false, newLeaves: 0, leavesFound: 0 };
+    const player = this.get(id);
+    if (!player || !ID.test(haul.levelId) || !isDifficulty(haul.difficulty) || !isCount(haul.berries)) return nothing;
+    const berries = Math.floor(haul.berries);
+    const found = [...new Set(haul.leaves.filter((leaf) => ID.test(leaf)))];
+    const before = player.finds?.[haul.levelId]?.on[haul.difficulty];
+    if (berries === 0 && found.length === 0) return { ...nothing, leavesFound: before?.leaves.length ?? 0 };
+    const entry = ((player.finds ??= {})[haul.levelId] ??= { berries: 0, on: {} });
+    const slot = (entry.on[haul.difficulty] ??= { most: 0, leaves: [] });
+    const fresh = found.filter((leaf) => !slot.leaves.includes(leaf)).slice(0, MAX_LEAVES - slot.leaves.length);
+    const mostBerries = berries > slot.most;
+    entry.berries += berries;
+    slot.most = Math.max(slot.most, berries);
+    slot.leaves.push(...fresh);
+    this.save();
+    return { mostBerries, newLeaves: fresh.length, leavesFound: slot.leaves.length };
   }
 
   /**
@@ -333,6 +415,13 @@ export const progressOn = (player: Player, levelId: string): Record<Difficulty, 
     seconds: bestTime(player, levelId, difficulty),
   });
   return { easy: on('easy'), normal: on('normal'), hard: on('hard') };
+};
+
+/** What a level's card shows of a player's collecting: for each difficulty the most huckleberries in a run and the hidden leaves found, and every huckleberry ever picked. */
+export const findsOn = (player: Player, levelId: string): { berries: number; on: Record<Difficulty, { most: number; leaves: number }> } => {
+  const finds = player.finds?.[levelId];
+  const on = (difficulty: Difficulty): { most: number; leaves: number } => ({ most: finds?.on[difficulty]?.most ?? 0, leaves: finds?.on[difficulty]?.leaves.length ?? 0 });
+  return { berries: finds?.berries ?? 0, on: { easy: on('easy'), normal: on('normal'), hard: on('hard') } };
 };
 
 /** One line of the end card's bests: the best as it now stands, and whether this run set it. */

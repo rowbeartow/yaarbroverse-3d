@@ -36,6 +36,7 @@
 // out on from the water; anything up to 1.35 is climbed onto; higher than
 // that can only be jumped onto.
 
+import { COLLECT, type Pickup } from '../../game/collect';
 import { CROC } from '../../game/crocodile';
 import type { Difficulty } from '../../game/difficulty';
 import type { EnemySpot } from '../../game/enemy';
@@ -461,8 +462,17 @@ export function buildLake(difficulty: Difficulty, numbers: LakeNumbers = LAKE_DI
     });
   }
 
+  // To collect. So far one trail: a huckleberry over each boulder of the Shore Path, which shows the way along them.
+  // (The rest of the lake's trails and its hidden leaves are laid once its new pieces are in.)
+  const byId = new Map(solids.map((s) => [s.id, s]));
+  const pickups: Pickup[] = sections[0].solids
+    .slice(1, -1)
+    .map((id) => byId.get(id)!)
+    .map((s, index) => ({ id: `shore-${index + 1}`, kind: 'berry' as const, x: s.x, y: s.top + COLLECT.hang, z: s.z }));
+
   return {
     name: LAKE_NAME,
+    pickups,
     enemies,
     enemyTuning: {
       warning: n.crocWarning,
