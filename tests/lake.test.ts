@@ -542,14 +542,16 @@ describe('the logs and posts that sink', () => {
 describe('the scouts and the mosquito', () => {
   const count = (difficulty: Difficulty, kind: string): number => buildLake(difficulty).enemies!.filter((each) => each.kind === kind).length;
 
-  it('are as many as the plan says, counting the crocodiles this step has placed', () => {
+  it('are as many as the plan says: 3, 8 and 12 enemies in all', () => {
     expect(DIFFICULTIES.map((d) => count(d, 'marmot'))).toEqual([1, 2, 3]);
-    expect(DIFFICULTIES.map((d) => count(d, 'mosquito'))).toEqual([0, 1, 1]);
+    expect(DIFFICULTIES.map((d) => count(d, 'mosquito'))).toEqual([0, 2, 3]);
+    expect(DIFFICULTIES.map((d) => count(d, 'crocodile'))).toEqual([2, 4, 6]);
   });
 
   it.each(DIFFICULTIES)('on %s each has wide, solid ground to itself: no jump, swing or sinking piece is in its patch', (difficulty) => {
     const level = buildLake(difficulty);
-    for (const spot of level.enemies!.filter((each) => each.kind !== 'crocodile')) {
+    // The mosquitoes over the Open Water are over open water; theirs is the next test.
+    for (const spot of level.enemies!.filter((each) => each.kind !== 'crocodile' && !each.id.startsWith('mosquito-open'))) {
       const ground = level.solids.find((s) => spot.x > s.x - s.halfX && spot.x < s.x + s.halfX && spot.z > s.z - s.halfZ && spot.z < s.z + s.halfZ && !s.motion)!;
       expect(ground, spot.id).toBeDefined();
       // Wide and flat: at least 5 m each way.
@@ -580,5 +582,103 @@ describe('the scouts and the mosquito', () => {
     expect(game.complete).toBe(true);
     expect(game.heartsLost).toBe(0);
     expect(game.falls).toBe(0);
+  });
+});
+
+describe('the Open Water, rebuilt', () => {
+  const open = (level: Level): NonNullable<Level['water']>[number] => level.water!.find((w) => w.id === 'open-water')!;
+  const booms = (level: Level, n: number): Solid[] => level.solids.filter((s) => s.id.startsWith(`boom-${n}-`));
+
+  it.each(DIFFICULTIES)('on %s two booms lie right across it, each with one gap, at opposite ends', (difficulty) => {
+    const level = buildLake(difficulty);
+    const pool = open(level);
+    const gap = LAKE_DIFFICULTY[difficulty].boomGap;
+    const first = booms(level, 1);
+    const second = booms(level, 2);
+    const west = (list: Solid[]): number => Math.min(...list.map((s) => s.x - s.halfX));
+    const east = (list: Solid[]): number => Math.max(...list.map((s) => s.x + s.halfX));
+    expect(west(first)).toBeCloseTo(pool.minX, 5);
+    expect(east(first)).toBeCloseTo(pool.maxX - gap, 5);
+    expect(west(second)).toBeCloseTo(pool.minX + gap, 5);
+    expect(east(second)).toBeCloseTo(pool.maxX, 5);
+    for (const piece of [...first, ...second]) {
+      // Nobody climbs onto one from the water, and there is room to swim under it.
+      expect(piece.noClimb).toBe(true);
+      expect(passageNear([piece], pool, piece.x, piece.z)).toBe(true);
+    }
+  });
+
+  it('a swimmer at the surface cannot get through a boom, and gets past by diving under it', () => {
+    const level = buildLake('normal');
+    const boom = booms(level, 1)[1];
+    const swimAt = (dive: boolean): Game => {
+      const game = new Game(level, 'normal', 'Yaarbro');
+      Object.assign(game, { x: boom.x, z: boom.z - 3, y: -SWIM.float, grounded: false, groundId: null, swimming: true, waterId: 'open-water' });
+      for (let i = 0; i < 4 / STEP; i += 1) {
+        game.protectedFor = 10;
+        // Toward the camera, which is the way the swim goes. Diving: down for the first second and a half.
+        game.step({ ...IDLE, moveZ: 1, move: dive && i < 1.5 / STEP });
+      }
+      return game;
+    };
+    expect(swimAt(false).z).toBeLessThan(boom.z);
+    expect(swimAt(true).z).toBeGreaterThan(boom.z + 1);
+  });
+
+  it('weed slows a swimmer at the surface, and not one underwater', () => {
+    const level = buildLake('normal');
+    const bed = open(level).weeds![0];
+    const speed = (under: boolean, inBed: boolean): number => {
+      const game = new Game(level, 'normal', 'Yaarbro');
+      const x = inBed ? (bed.minX + bed.maxX) / 2 : bed.maxX + 3;
+      Object.assign(game, { x, z: (bed.minZ + bed.maxZ) / 2, y: under ? -2.5 : -SWIM.float, grounded: false, groundId: null, swimming: true, waterId: 'open-water', under });
+      for (let i = 0; i < 0.4 / STEP; i += 1) {
+        game.protectedFor = 10;
+        game.step({ ...IDLE, moveX: -0.0001, moveZ: 0, move: under });
+      }
+      for (let i = 0; i < 0.8 / STEP; i += 1) {
+        game.protectedFor = 10;
+        game.step({ ...IDLE, moveX: 1, move: under });
+      }
+      return Math.hypot(game.vx, game.vz);
+    };
+    expect(open(level).weeds).toHaveLength(2);
+    expect(speed(false, true)).toBeCloseTo(SWIM.surfaceSpeed * SWIM.weedSlow, 1);
+    expect(speed(false, false)).toBeCloseTo(SWIM.surfaceSpeed, 1);
+    expect(speed(true, true)).toBeGreaterThan(SWIM.surfaceSpeed);
+  });
+
+  it('has a rest rock half way: a checkpoint on Easy, a rock on Normal, none on Hard', () => {
+    expect(byId(buildLake('easy'), 'rest-rock').safe).toBe(true);
+    expect(byId(buildLake('normal'), 'rest-rock').safe).toBe(false);
+    expect(buildLake('hard').solids.some((s) => s.id === 'rest-rock')).toBe(false);
+    // Low enough to climb onto from the water.
+    expect(byId(buildLake('easy'), 'rest-rock').top - LAKE_SHAPE.surface).toBeLessThanOrEqual(SWIM.climbHeight);
+  });
+
+  it('keeps its mosquitoes off the way in: none notices a hero until past the first boom', () => {
+    for (const difficulty of ['normal', 'hard'] as const) {
+      const level = buildLake(difficulty);
+      const boom = booms(level, 1)[0];
+      const over = level.enemies!.filter((each) => each.id.startsWith('mosquito-open'));
+      expect(over.length).toBe(LAKE_DIFFICULTY[difficulty].openMosquitoes);
+      for (const spot of over) expect(spot.arena.minZ).toBeGreaterThan(boom.z);
+    }
+  });
+
+  it('on Easy the gaps are clear of crocodiles: each waits further from both gaps than its water reaches', () => {
+    const level = buildLake('easy');
+    const pool = open(level);
+    const gap = LAKE_DIFFICULTY.easy.boomGap;
+    const gaps = [
+      { x: pool.maxX - gap / 2, z: booms(level, 1)[0].z },
+      { x: pool.minX + gap / 2, z: booms(level, 2)[0].z },
+    ];
+    for (const croc of level.enemies!.filter((each) => each.kind === 'crocodile')) {
+      for (const g of gaps) {
+        const outside = Math.max(croc.arena.minX - g.x, g.x - croc.arena.maxX, croc.arena.minZ - g.z, g.z - croc.arena.maxZ);
+        expect(outside, `${croc.id} and the gap at ${g.x.toFixed(0)}, ${g.z.toFixed(0)}`).toBeGreaterThan(1);
+      }
+    }
   });
 });

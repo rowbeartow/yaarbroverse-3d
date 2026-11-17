@@ -133,6 +133,17 @@ export interface LakeNumbers {
    */
   crocCount: number;
   /**
+   * THE OPEN WATER (section 5), rebuilt in milestone ten so the long swim is more than holding one direction.
+   *   boomGap         two log booms lie across the swim, each with one gap this wide, the first at the east end
+   *                   and the second at the west. Round through the gap, or dive under the boom anywhere.
+   *   restRock        a low rock half way to climb onto: 'checkpoint' (a fall comes back to it), 'rock', or 'none'.
+   *   openMosquitoes  giant mosquitoes over the swim. They dive at a swimmer at the surface; underwater nothing reaches but a crocodile.
+   * Two beds of weed lie on the straight line on every difficulty: a swimmer at the surface in one is slowed.
+   */
+  boomGap: number;
+  restRock: 'checkpoint' | 'rock' | 'none';
+  openMosquitoes: number;
+  /**
    * THE LAND AND AIR ENEMIES, which behave as they do in the grove. Each waits on a wide, flat
    * place and never over a jump, a swing or a piece that sinks, so hazards do not stack.
    *   pointScout      true: a marmot scout on the grassy point at the end of the Shore Path.
@@ -197,7 +208,8 @@ export const LAKE_DIFFICULTY: Record<Difficulty, LakeNumbers> = {
     logCount: 3, logWidth: 2.4, logGap: 1, logSinks: false, logTell: 0.6, logBack: 0,
     tunnelLength: 4,
     postCount: 4, postRadius: 1, postGap: 0.9, postRise: 0.5, postSinks: false, postTell: 0.6, postBack: 0,
-    crocCount: 1, crocUnderLogs: false, crocHunt: false, crocLead: 0, crocAside: 9, crocPatch: 4, crocSpeed: 1.5, crocReach: 3.5, crocWarning: 2, crocRest: 1.6, crocHits: 1, crocLine: true,
+    crocCount: 2, crocUnderLogs: false, crocHunt: false, crocLead: 0, crocAside: 9, crocPatch: 4, crocSpeed: 1.5, crocReach: 3.5, crocWarning: 2, crocRest: 1.6, crocHits: 1, crocLine: true,
+    boomGap: 8, restRock: 'checkpoint', openMosquitoes: 0,
     pointScout: false, dockScouts: 1, barMosquito: false, scoutPatrol: 0, scoutChase: 0, scoutHealth: 1, mosquitoFollow: 3, mosquitoPause: 1,
     checkpoints: [1, 2, 3, 4, 5, 6],
     hearts: 5, protection: 1.5, knockback: 0.5, coyoteTime: 0.2, ledgeHelp: 0.5,
@@ -211,7 +223,8 @@ export const LAKE_DIFFICULTY: Record<Difficulty, LakeNumbers> = {
     logCount: 3, logWidth: 1.6, logGap: 2, logSinks: true, logTell: 1.2, logBack: 2.5,
     tunnelLength: 6,
     postCount: 5, postRadius: 0.75, postGap: 1.6, postRise: 0.6, postSinks: true, postTell: 1.5, postBack: 2.5,
-    crocCount: 1, crocUnderLogs: true, crocHunt: true, crocLead: 0.6, crocAside: 4, crocPatch: 9, crocSpeed: 2.9, crocReach: 4.5, crocWarning: 1, crocRest: 1, crocHits: 1, crocLine: false,
+    crocCount: 3, crocUnderLogs: true, crocHunt: true, crocLead: 0.6, crocAside: 4, crocPatch: 9, crocSpeed: 2.9, crocReach: 4.5, crocWarning: 1, crocRest: 1, crocHits: 1, crocLine: false,
+    boomGap: 5, restRock: 'rock', openMosquitoes: 1,
     pointScout: true, dockScouts: 1, barMosquito: true, scoutPatrol: 1.6, scoutChase: 2.6, scoutHealth: 1, mosquitoFollow: 5, mosquitoPause: 0.6,
     checkpoints: [1, 2, 3, 4, 5, 6],
     breath: 16,
@@ -226,7 +239,8 @@ export const LAKE_DIFFICULTY: Record<Difficulty, LakeNumbers> = {
     logCount: 4, logWidth: 1, logGap: 2.8, logSinks: true, logTell: 0.7, logBack: 2.5,
     tunnelLength: 9,
     postCount: 6, postRadius: 0.55, postGap: 2.3, postRise: 0.6, postSinks: true, postTell: 0.9, postBack: 2.5,
-    crocCount: 2, crocUnderLogs: true, crocHunt: true, crocLead: 1.2, crocAside: 5, crocPatch: 10, crocSpeed: 3.3, crocReach: 5.5, crocWarning: 0.7, crocRest: 0.75, crocHits: 2, crocLine: false,
+    crocCount: 5, crocUnderLogs: true, crocHunt: true, crocLead: 1.2, crocAside: 5, crocPatch: 10, crocSpeed: 3.3, crocReach: 5.5, crocWarning: 0.7, crocRest: 0.75, crocHits: 2, crocLine: false,
+    boomGap: 4, restRock: 'none', openMosquitoes: 2,
     pointScout: true, dockScouts: 2, barMosquito: true, scoutPatrol: 2.2, scoutChase: 4.6, scoutHealth: 2, mosquitoFollow: 6.5, mosquitoPause: 0.45,
     checkpoints: [2, 4, 6],
     breath: 11,

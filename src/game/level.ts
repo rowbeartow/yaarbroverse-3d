@@ -35,6 +35,8 @@ export interface Solid {
   safe?: boolean;
   /** Where on a safe solid a fall returns you to, when that is not its middle: the doorstep of a boss's arena, say. */
   safeAt?: { x: number; z: number };
+  /** True for something floating that a swimmer cannot climb onto (a log boom): the way past is round it or under it. */
+  noClimb?: boolean;
   /** A piece that moves: tips, crumbles or sways (see moving.ts). Left out, it stays put. */
   motion?: Motion;
   /** A moving piece as it is now. The rules keep this; a level leaves it out. */

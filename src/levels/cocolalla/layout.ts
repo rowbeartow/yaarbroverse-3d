@@ -17,8 +17,11 @@
 //      to climb onto from the water. The logs sink a moment after a hero
 //      lands (on Easy they only bob); the boulders are where to stop. Left.
 //   5. The Open Water: a long swim south down the middle of the lake, back
-//      toward the camera, to a reed bar. The crocodiles' water: on Normal and
-//      Hard they hunt a swimmer anywhere in it.
+//      toward the camera, to a reed bar. Two log booms lie across it, each
+//      with one gap (round through it, or dive under the boom), beds of weed
+//      slow a swimmer at the surface, and there is a rest rock half way
+//      (not on Hard). The crocodiles' water: on Normal and Hard they hunt a
+//      swimmer anywhere in it, and giant mosquitoes dive at one at the surface.
 //   6. The Rock Tunnel: west, with a dive through the passage under the
 //      rocky point, to a small beach in the west cove. The camera turns west. Away.
 //   7. Cattail Cove: old pier posts north up the west shore to the pier's
@@ -138,6 +141,21 @@ export const LAKE_SHAPE = {
   headlandTop: 2.6,
   /** The sunken logs: how long each is, its top, and how thick. The boulders between them are higher. */
   logLength: 5,
+  /**
+   * The Open Water's furniture, placed by how far along the swim it is (0 the gravel bar, 1 the reed bar):
+   * the two booms (the first further than a jump from the gravel bar), their thickness and the length of each log in them; the two weed beds and their size;
+   * and the rest rock, how far off the line it stands, its size and its height (low enough to climb onto).
+   */
+  boomAt: [0.42, 0.74],
+  boomHalf: 0.45,
+  boomPiece: 5.5,
+  weedAt: [0.2, 0.88],
+  weedHalfX: 5,
+  weedHalfZ: 2.2,
+  restAt: 0.58,
+  restAside: 5,
+  restRadius: 2.2,
+  restTop: 0.8,
   /** The scouts and the mosquito: how far in from its ground's edge a scout waits and keeps, and how high the mosquito hovers and may fly over its ground. */
   scoutIn: 1.6,
   /** How much further east the grassy point reaches when a scout lives on it: the scout's own ground. */
@@ -485,6 +503,49 @@ export function buildLake(difficulty: Difficulty, numbers: LakeNumbers = LAKE_DI
       surface: shape.surface,
       floor: shape.floor,
     });
+  }
+
+  // THE OPEN WATER's furniture (milestone ten). None of it is on the route: the way is still gravel bar, water, reed bar.
+  {
+    const open = water.find((w) => w.id === 'open-water')!;
+    const at = (share: number, aside = 0): { x: number; z: number } => ({
+      x: openSwim.x0 + (openSwim.x1 - openSwim.x0) * share - along.z * aside,
+      z: openSwim.z0 + (openSwim.z1 - openSwim.z0) * share + along.x * aside,
+    });
+    // Two log booms right across, in lengths, each with one gap: the first at the east end, the second at the west.
+    // They float too low to stand under and cannot be climbed onto: round through the gap, or dive under.
+    shape.boomAt.forEach((share, index) => {
+      const z = at(share).z;
+      const west = open.minX + (index === 1 ? n.boomGap : 0);
+      const east = open.maxX - (index === 0 ? n.boomGap : 0);
+      const pieces = Math.max(1, Math.round((east - west) / shape.boomPiece));
+      const each = (east - west) / pieces;
+      for (let i = 0; i < pieces; i += 1) {
+        box(`boom-${index + 1}-${i + 1}`, 'log', west + each * i, west + each * (i + 1), z - shape.boomHalf, z + shape.boomHalf, shape.surface + shape.boomHalf, shape.surface - shape.boomHalf, { noClimb: true }, false);
+      }
+    });
+    // Beds of weed across the straight line, before the first boom and after the second.
+    open.weeds = shape.weedAt.map((share) => {
+      const middle = at(share);
+      return { minX: Math.max(open.minX, middle.x - shape.weedHalfX), maxX: Math.min(open.maxX, middle.x + shape.weedHalfX), minZ: middle.z - shape.weedHalfZ, maxZ: middle.z + shape.weedHalfZ };
+    });
+    // The rest rock, half way and a little off the line, low enough to climb onto.
+    if (n.restRock !== 'none') {
+      const spot = at(shape.restAt, -shape.restAside);
+      add({ id: 'rest-rock', kind: 'boulder', shape: 'round', x: spot.x, z: spot.z, halfX: shape.restRadius, halfZ: shape.restRadius, top: shape.restTop, bottom: shape.depth, safe: n.restRock === 'checkpoint' }, false);
+    }
+    // Giant mosquitoes over the swim. The first has the stretch between the booms, the second the stretch after them:
+    // none is over the way into the water, so the jump in is never under a dive.
+    const stretches = [[shape.boomAt[0], shape.boomAt[1]], [shape.boomAt[1], 0.97]];
+    for (let i = 0; i < n.openMosquitoes; i += 1) {
+      const [from, to] = stretches[i % stretches.length];
+      const home = at((from + to) / 2);
+      enemies.push({
+        id: `mosquito-open-${i + 1}`, kind: 'mosquito', x: home.x, y: shape.surface + shape.mosquitoHover, z: home.z,
+        arena: { minX: open.minX + 1, maxX: open.maxX - 1, minZ: at(from).z + 1.5, maxZ: at(to).z - 1.5 },
+        floor: shape.surface + shape.mosquitoFloor, ceiling: shape.surface + shape.mosquitoCeiling,
+      });
+    }
   }
 
   // The land and air enemies, as in the grove. Each has a wide, flat place to itself: none is over a jump, a swing or a piece that sinks.
