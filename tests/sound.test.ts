@@ -607,6 +607,20 @@ describe('a rope swing', () => {
   });
 });
 
+describe('collecting', () => {
+  it('plays a drop for a huckleberry and a chime for a hidden leaf', () => {
+    const game = new Game(buildLake('normal'), 'normal', 'Yaarbro');
+    const { speaker, sounds } = listening(game);
+    game.events = [{ type: 'pickup', id: 'shore-1', kind: 'berry', found: 1 }];
+    sounds.step(game);
+    expect(speaker.names()).toContain('huckleberry');
+    speaker.played.length = 0;
+    game.events = [{ type: 'pickup', id: 'leaf-logs', kind: 'leaf', found: 1 }];
+    sounds.step(game);
+    expect(speaker.names()).toEqual(['hiddenLeaf']);
+  });
+});
+
 describe('a crocodile stepping stone', () => {
   it('growls as its hold runs out, bites if it snaps, and splashes quietly as it comes up or goes under', () => {
     const game = new Game(buildLake('hard'), 'hard', 'Yaarbro');
