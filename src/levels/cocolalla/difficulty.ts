@@ -11,6 +11,7 @@
 
 import type { JumpAssist } from '../../game/assist';
 import type { Difficulty } from '../../game/difficulty';
+import type { FishingNumbers, Species, SpeciesNumbers } from '../../game/fishing';
 
 export interface LakeNumbers {
   /**
@@ -166,6 +167,11 @@ export interface LakeNumbers {
    *   mosquitoFollow  how fast the mosquito keeps up with a hero under it.
    *   mosquitoPause   times how long it gets ready before a dive and rests after one. Smaller: it dives more often.
    */
+  /**
+   * FISHING, from the jetty off the fishing dock (see src/game/fishing.ts for what each number does).
+   * Easy needs no timing: the cast lands beside the nearest fish, a fish hooks itself, and the line cannot snap.
+   */
+  fishing: FishingNumbers;
   pointScout: boolean;
   dockScouts: number;
   barMosquito: boolean;
@@ -210,8 +216,26 @@ export interface LakeNumbers {
   jumpAssist?: JumpAssist;
 }
 
+/**
+ * The four fish of Cocolalla (the owner's word, 2026-11-19), each in its own
+ * water and with its own way of biting and fighting. `zone` is metres out
+ * from the jetty; `size` is centimetres (game numbers, not canon).
+ *   perch   the shallows by the jetty. One nibble, then a bite; one short thrash.
+ *   bass    the middle water. Bold: often no nibble at all. Short, heavy thrashes.
+ *   trout   the middle water, further out. Shy: it nibbles first. Long runs.
+ *   pike    the deep water, one at a time. No nibble. Thrashes come fast.
+ * `more` is how many more nibbles each fish that nibbles at all gives on a difficulty.
+ */
+const FISH: Record<Species, SpeciesNumbers> = {
+  perch: { count: 3, zone: [4, 9], size: [12, 30], nibbles: [1, 1], calm: 2.2, thrash: 0.7, run: 1.2 },
+  bass: { count: 2, zone: [9, 14], size: [25, 55], nibbles: [0, 1], calm: 1.9, thrash: 1.0, run: 2.0 },
+  trout: { count: 2, zone: [13, 19], size: [30, 70], nibbles: [1, 2], calm: 1.6, thrash: 1.5, run: 3.0 },
+  pike: { count: 1, zone: [19, 23], size: [50, 110], nibbles: [0, 0], calm: 1.4, thrash: 1.3, run: 3.4 },
+};
+
 export const LAKE_DIFFICULTY: Record<Difficulty, LakeNumbers> = {
   easy: {
+    fishing: { castHelp: true, sweep: 5, notice: 3, spook: 0, biteWindow: Infinity, moreNibbles: 0, nibbleScares: false, snap: Infinity, tell: 1, drift: 0, reel: 3.2, species: FISH },
     boulderCount: 5, boulderRadius: 1.6, boulderGap: 0.9,
     crossing: 34,
     stoneGap: 1.3, stoneStagger: 0.3, stoneUp: 4, stoneTell: 0, stoneWait: false,
@@ -227,6 +251,7 @@ export const LAKE_DIFFICULTY: Record<Difficulty, LakeNumbers> = {
     jumpAssist: { reach: 1.6, angle: 35 },
   },
   normal: {
+    fishing: { castHelp: false, sweep: 7, notice: 2.5, spook: 0, biteWindow: 1.5, moreNibbles: 0, nibbleScares: false, snap: 1.5, tell: 0.7, drift: 0.3, reel: 3, species: FISH },
     boulderCount: 6, boulderRadius: 1.2, boulderGap: 1.8,
     crossing: 48,
     stoneGap: 1.9, stoneStagger: 1.4, stoneUp: 4, stonePeriod: 8, stoneTell: 0.8, stoneWait: true,
@@ -243,6 +268,7 @@ export const LAKE_DIFFICULTY: Record<Difficulty, LakeNumbers> = {
     jumpAssist: { reach: 1, angle: 25 },
   },
   hard: {
+    fishing: { castHelp: false, sweep: 10, notice: 1.2, spook: 0.5, biteWindow: 0.7, moreNibbles: 1, nibbleScares: true, snap: 0.8, tell: 0.4, drift: 0.8, reel: 2.8, species: FISH },
     boulderCount: 7, boulderRadius: 0.85, boulderGap: 2.6,
     crossing: 54,
     stoneGap: 2.2, stoneStagger: 0.95, stoneUp: 2.1, stonePeriod: 5, stoneTell: 0.5, stoneSnap: 0.8, stoneWait: false,

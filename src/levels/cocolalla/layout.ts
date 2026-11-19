@@ -44,6 +44,7 @@ import { COLLECT, type Pickup } from '../../game/collect';
 import { CROC } from '../../game/crocodile';
 import type { Difficulty } from '../../game/difficulty';
 import type { EnemySpot } from '../../game/enemy';
+import type { FishingSpot } from '../../game/fishing';
 import type { Level, Section, Solid } from '../../game/level';
 import type { Motion } from '../../game/moving';
 import { ROPE, type Rope } from '../../game/rope';
@@ -223,6 +224,17 @@ export const LAKE_SHAPE = {
   boardwalkLength: 16,
   dockHalfWidth: 4,
   dockLength: 6,
+  /**
+   * The fishing jetty off the dock's north side: its size, how far in from its end the fishing spot is and how wide,
+   * and the water a cast can reach: from this near to this far out, and this far to either side.
+   */
+  jettyHalfWidth: 1.6,
+  jettyLength: 3.4,
+  fishingIn: 1.1,
+  fishingRadius: 1.3,
+  fishingNear: 3,
+  fishingFar: 24,
+  fishingHalfWidth: 7,
   fallY: -6,
   depth: -40,
 } as const;
@@ -476,6 +488,23 @@ export function buildLake(difficulty: Difficulty, numbers: LakeNumbers = LAKE_DI
   x += shape.boardwalkLength;
   box('dock', 'deck', x, x + shape.dockLength, pierZ - shape.dockHalfWidth, pierZ + shape.dockHalfWidth, deck, deck - 0.4);
   x += shape.dockLength;
+  // The fishing jetty: a short walk out from the dock's north side, off the scouts' ground, with the lake open in front of it.
+  const dockX = x - shape.dockLength / 2;
+  const jettyNorth = pierZ - shape.dockHalfWidth - shape.jettyLength;
+  box('jetty', 'deck', dockX - shape.jettyHalfWidth, dockX + shape.jettyHalfWidth, jettyNorth, pierZ - shape.dockHalfWidth, deck, deck - 0.4, {}, false);
+  const fishing: FishingSpot = {
+    id: 'jetty-fishing',
+    solid: 'jetty',
+    x: dockX,
+    z: jettyNorth + shape.fishingIn,
+    radius: shape.fishingRadius,
+    ahead: { x: 0, z: -1 },
+    surface: shape.surface,
+    near: shape.fishingNear,
+    far: shape.fishingFar,
+    halfWidth: shape.fishingHalfWidth,
+    numbers: n.fishing,
+  };
 
   // The water. Each pool's edge that is not shore or rock is where a log boom floats.
   pool('shore-water', -shape.westOfBeach, channelWest, shape.woodedSouth, shape.shoreZ);
@@ -697,6 +726,7 @@ export function buildLake(difficulty: Difficulty, numbers: LakeNumbers = LAKE_DI
     water,
     ropes,
     ropeHelp: n.ropeHelp,
+    fishing,
     lightEnemies: true,
     enemySight: shape.enemySight,
     jumpAssist: n.jumpAssist,
