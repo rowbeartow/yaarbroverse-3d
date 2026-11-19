@@ -1,0 +1,16 @@
+{
+  "about": "The fish candidates for Cocolalla Lake, made by tools/meshy-picture-builds.mjs: one reference picture for each species, then two models from each picture (two of Meshy's model makers). One shared style that sits with the crocodile: stylized, hand-painted storybook look, chunky, friendly. Each fish is drawn from the side, body straight, fins spread and mouth closed, so the model comes out whole and is simple to rig.",
+  "imageModel": "nano-banana-2-1",
+  "imageCredits": 4,
+  "style": "A single {fish} character for a family-friendly 3D adventure game, stylized storybook look with hand-painted textures, chunky rounded body, big round friendly eye, {look} Exact side view facing left, body perfectly straight and level, every fin spread open and clearly separate from the body, tail fin fanned out, mouth closed. Plain white background, no water, no bubbles, no ground, no hook, nothing else in the picture.",
+  "builds": [
+    { "label": "Meshy 7.1", "credits": 30, "settings": { "ai_model": "latest" } },
+    { "label": "Meshy 6 Lite", "credits": 15, "settings": { "ai_model": "meshy-6-lite" } }
+  ],
+  "species": [
+    { "name": "bass", "fish": "bass fish", "look": "deep-bodied and stout with a big wide mouth, mossy green back, a dark blotchy stripe along its side, pale cream belly, spiny back fin. Bold and a bit greedy." },
+    { "name": "perch", "fish": "perch fish", "look": "small and plump, golden yellow sides with six dark olive bars running down from its back, bright orange lower fins, a tall spiky back fin, pale belly. Cheerful and perky." },
+    { "name": "trout", "fish": "trout fish", "look": "sleek and streamlined, silvery sides with a soft pink stripe from gill to tail, olive back, many small black speckles, a small fin near the tail. Quick and graceful." },
+    { "name": "pike", "fish": "pike fish", "look": "very long and narrow like a torpedo, a long flat duck-bill snout with a few small blunt white teeth peeking out, olive green sides with rows of pale yellow bean-shaped spots, pale belly, back fin set far back near the tail, reddish fins. A grumpy lake bully, but cartoon friendly, not scary." }
+  ]
+}

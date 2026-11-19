@@ -7,6 +7,7 @@
 // saying what each part shows. "Play it yourself" hands over the hero, with
 // the game's own keys and touch controls.
 
+import { SEEN_WITHIN } from '../../src/view/sight';
 import {
   ACESFilmicToneMapping,
   BoxGeometry,
@@ -677,7 +678,7 @@ const start = async (): Promise<void> => {
     const flicker = Math.max(blink, game.protectedFor);
     hero.root.visible = flicker <= 0 || Math.floor(flicker * 12) % 2 === 0;
     const tuning = level.enemyTuning ?? { warning: 1, speed: 1, rest: 1 };
-    enemies.forEach((each, i) => each.update(game.enemies[i], tuning, game.z, dt));
+    enemies.forEach((each, i) => each.update(game.enemies[i], tuning, Math.abs(game.enemies[i].z - game.z) < SEEN_WITHIN, dt));
     if (bossView && game.boss) bossView.update(game.boss, game.z, dt);
     // The golden leaf: out of sight until a boss in its way is beaten.
     leaf.visible = game.goalOpen && !game.complete;

@@ -8,6 +8,7 @@ import type { GLTF } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { BOSS, acornPaths, type Boss, type BossSpot } from '../game/boss';
 import { ENEMY, newEnemy, type Enemy, type EnemyPhase } from '../game/enemy';
 import { ENEMY_MODELS, EnemyView, type ClipKey } from './enemies';
+import { SEEN_WITHIN } from './sight';
 
 const ACORN_COLOR = 0x8a5a2b;
 /** The most acorns a throw can have on screen. */
@@ -115,7 +116,7 @@ export class BossView {
     const pose = this.choose(boss);
     this.clip = pose.clip;
     this.body.pose = pose;
-    this.body.update(this.stand, { warning: 1, speed: 1, rest: 1, aimLine: false }, heroZ, dt);
+    this.body.update(this.stand, { warning: 1, speed: 1, rest: 1, aimLine: false }, Math.abs(boss.z - heroZ) < SEEN_WITHIN, dt);
 
     // Acorns: in the paw through the warning of a throw, then in flight.
     for (const acorn of this.acorns) acorn.visible = false;

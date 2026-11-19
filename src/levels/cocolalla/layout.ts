@@ -171,6 +171,13 @@ export const LAKE_SHAPE = {
   mosquitoHover: 3.4,
   mosquitoFloor: 0.8,
   mosquitoCeiling: 5,
+  /**
+   * Drawing only, to keep the lake at 60 frames a second with room to spare:
+   * an enemy is drawn within this many metres of the hero, and never more than
+   * this many at once (the nearest). The lake's haze is clear, so the distance
+   * is as far as a lurking crocodile's eyes can be made out.
+   */
+  enemySight: { within: 45, most: 6 },
   /** Sinking logs and posts: how far one settles under a hero, how far under the water it goes, and how long going under takes (a base, and more for each metre it has to go). */
   sinkBob: 0.14,
   sinkUnder: 0.6,
@@ -690,6 +697,8 @@ export function buildLake(difficulty: Difficulty, numbers: LakeNumbers = LAKE_DI
     water,
     ropes,
     ropeHelp: n.ropeHelp,
+    lightEnemies: true,
+    enemySight: shape.enemySight,
     jumpAssist: n.jumpAssist,
     breath: n.breath,
     fallY: shape.fallY,

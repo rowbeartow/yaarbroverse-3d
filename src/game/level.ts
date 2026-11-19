@@ -106,6 +106,17 @@ export interface Level {
   enemies?: EnemySpot[];
   /** How this difficulty stretches the enemies' warnings, speed and rest. All 1 when left out. */
   enemyTuning?: EnemyTuning;
+  /**
+   * Drawing only, for a level whose frame budget is tight: draw its enemies
+   * from their lighter models where one exists (`light` in ENEMY_MODELS).
+   */
+  lightEnemies?: boolean;
+  /**
+   * Drawing only: an enemy is drawn when it is within `within` metres of the
+   * hero and among the `most` nearest. Left out, every enemy the mist does not
+   * hide is drawn (src/view/sight.ts).
+   */
+  enemySight?: { within: number; most: number };
   /** Pools of deep water, if the level has any (see swim.ts). A hero in one swims; it is never a fall. */
   water?: Water[];
   /** Seconds a hero can stay underwater before running out of breath. Left out, breath never runs out (Easy). */
