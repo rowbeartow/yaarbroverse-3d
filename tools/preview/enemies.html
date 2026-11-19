@@ -1,4 +1,4 @@
-<title>Enemy Movement Review</title>
+<title>Cocolalla Fish Moving</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <style>
   /* Layout: one column. Each enemy gets a window into the grove, its clip
@@ -89,8 +89,8 @@
 <main class="page">
   <header>
     <p class="eyebrow">Yaarbroverse 3D</p>
-    <h1>The crocodile, moving</h1>
-    <p class="lede">Your pick, crocodile C, the exact model the kids chose, on a skeleton with a clip for everything it will do in the lake. This is the file the game will load, in the game’s light, with the lake’s water drawn at the height it swims at. Nothing here is in the game until you say OK, and it is not placed in the lake until a later step.</p>
+    <h1>The fish, moving</h1>
+    <p class="lede">The kids’ picks (bass A, perch A, trout B, pike A), each on the same simple skeleton with the same four clips. These are the files the game loads, in the game’s light.</p>
   </header>
 
   <p id="status" role="status">Loading the models…</p>
@@ -104,29 +104,26 @@
   <section class="words">
     <h2>What to look for</h2>
     <ul>
-      <li><b>“Lurking”.</b> Only its eyes and the top of its snout show above the water, as you asked. This is how it waits, and how a player first spots it.</li>
-      <li><b>“Lunge and bite”.</b> The one that matters most. It gathers, throws its head forward with its jaws wide, and snaps them shut a third of a second in. In the game it will also shoot forward through the water; here it stays put, so you can see the bite.</li>
-      <li><b>“Surface swim” and “Underwater swim”.</b> It drives itself with long sweeps of the tail, legs folded back along its sides, the way a real crocodile swims.</li>
-      <li><b>The tail is straight now.</b> In Meshy’s model it was curled round to one side; I laid it out straight behind before giving it a skeleton.</li>
-      <li><b>“Beaten”.</b> It rolls onto its side and sinks out of sight.</li>
+      <li><b>“Swimming”.</b> A wave runs down the body and grows toward the tail fin, and the head swings a little the other way, as a real fish swims.</li>
+      <li><b>“Thrashing”.</b> The one that matters most in play: it is the tell to stop reeling. It should read as a fight from across the water.</li>
+      <li><b>“Landed”.</b> On its side on the boards, two slaps of the tail and a rest.</li>
+      <li><b>The pike.</b> The monster pike will be this model, much bigger and darker.</li>
     </ul>
   </section>
 
   <section class="words">
     <h2>What is not perfect</h2>
     <ul>
-      <li><b>The tell before a lunge is not in these clips.</b> The eyes sinking and a wake heading for the hero are the game moving the crocodile, in the next step, not a clip.</li>
-      <li><b>The jaw opens like a hinged box.</b> The model’s mouth is closed, so I cut the lower jaw free along the mouth line. The inside of the mouth is the same colour as the outside.</li>
-      <li><b>The legs only fold back.</b> It never walks: it lives in the water. When it lunges they splay a little.</li>
-      <li><b>It is a little simpler than on the candidates page:</b> 8 thousand triangles, down from 31 thousand, so several can swim at once without costing the lake its frames. The lake runs at 75 to 81 a second on your Mac, and must stay above 60.</li>
-      <li><b>Its size in the lake is set when it is placed.</b> Here it is drawn to fit the picture.</li>
-      <li><b>I judged these from still frames in flat light.</b> I cannot watch them move. You are the first to see them in motion, so trust your eye over my description.</li>
+      <li><b>The fins have no bones of their own.</b> Each follows the part of the body it grows from. That is the “simple” in simple rig.</li>
+      <li><b>No mouth opens.</b> The models’ mouths are closed. The monster pike needs jaws that snap, so its jaw is cut free in part two, the way the crocodile’s was.</li>
+      <li><b>They are simpler than on the candidates page:</b> 3 thousand triangles each (the pike 5 thousand), down from 31 thousand, so several can be in the water at the dock, the lake’s heaviest place.</li>
+      <li><b>I judged these from still frames in flat light.</b> I cannot watch them move. Trust your eye over my description.</li>
     </ul>
   </section>
 
   <section class="words">
     <h2>Your call</h2>
-    <p>Reply OK and I will merge the crocodile’s file into the repository. It does not appear in the game until it is placed in the lake. Or tell me what is off, clip by clip, in your own words.</p>
+    <p>Tell me what is off, clip by clip, in your own words, and I will change it. If nothing is off, there is nothing to do.</p>
   </section>
 </main>
 

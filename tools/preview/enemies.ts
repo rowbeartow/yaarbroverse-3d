@@ -108,6 +108,15 @@ const ABOUT: Record<string, { title: string; hovers: boolean; clips: Record<stri
   },
 };
 
+/** The fish of Cocolalla Lake share one skeleton and one set of clips (tools/rig-fish.py). */
+const FISH_CLIPS: Record<string, ClipNote> = {
+  idle: { label: 'Holding still', note: 'Waiting in the water, or looking at a lure. A slow wave down the tail.' },
+  swim: { label: 'Swimming', note: 'Going somewhere: the wave runs down the body and grows toward the tail fin. The game moves it; the clip stays on the spot.' },
+  thrash: { label: 'Thrashing', note: 'Fighting the line. Three hard beats, the whole fish rolling and its head shaking. This is the tell to let the line run.' },
+  flop: { label: 'Landed', note: 'On the dock, on its side: two slaps of the tail, then a rest.' },
+};
+for (const [name, title] of [['bass', 'Bass'], ['perch', 'Perch'], ['trout', 'Trout'], ['pike', 'Pike']]) ABOUT[name] = { title, hovers: true, clips: FISH_CLIPS };
+
 /** Reads a file that enemies.mjs wrote as base64 text. */
 const bytesOf = async (address: string): Promise<ArrayBuffer> => {
   const reply = await fetch(address);
