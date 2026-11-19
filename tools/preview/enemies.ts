@@ -108,6 +108,17 @@ const ABOUT: Record<string, { title: string; hovers: boolean; clips: Record<stri
   },
 };
 
+/** A hero's fishing clips, for looking at before they go on the hero in the game. Its other clips are on the page too, with no notes. */
+ABOUT.yaarbro = {
+  title: 'Yaarbro, fishing',
+  hovers: false,
+  clips: {
+    fish_cast: { label: 'Cast', note: 'The rod goes back over his shoulder and whips forward. Made by Meshy from a description: its library has no fishing.', once: true },
+    fish_reel: { label: 'Reel', note: 'One hand holds the rod out, the other winds. It loops for as long as the button reels.' },
+    fish_show: { label: 'Landed', note: 'One hand up: this is where he holds the fish. From Meshy’s library ("Cheer with One Hand Up").', once: true },
+  },
+};
+
 /** The fish of Cocolalla Lake share one skeleton and one set of clips (tools/rig-fish.py). */
 const FISH_CLIPS: Record<string, ClipNote> = {
   idle: { label: 'Holding still', note: 'Waiting in the water, or looking at a lure. A slow wave down the tail.' },
