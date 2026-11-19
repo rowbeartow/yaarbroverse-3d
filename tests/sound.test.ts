@@ -621,6 +621,57 @@ describe('collecting', () => {
   });
 });
 
+describe('fishing', () => {
+  it('plays the cast, a quiet splash as the lure lands, the bite, a splash for the thrash, and the catch', () => {
+    const game = new Game(buildLake('normal'), 'normal', 'Yaarbro');
+    const { speaker, sounds } = listening(game);
+    const heard = (event: object): Array<{ name: string; volume?: number }> => {
+      speaker.played.length = 0;
+      game.events = [{ type: 'fishing', ...event } as never];
+      sounds.step(game);
+      return speaker.played.map((each) => ({ name: each.name, volume: each.options?.volume }));
+    };
+    expect(heard({ what: 'cast' }).map((each) => each.name)).toEqual(['fishCast']);
+    const plop = heard({ what: 'plop' });
+    expect(plop.map((each) => each.name)).toEqual(['fishSplash']);
+    expect(plop[0].volume).toBeLessThan(0.5);
+    expect(heard({ what: 'bite', species: 'bass' }).map((each) => each.name)).toEqual(['fishBite']);
+    const thrash = heard({ what: 'thrash', species: 'bass' });
+    expect(thrash.map((each) => each.name)).toEqual(['fishSplash']);
+    expect(thrash[0].volume ?? 1).toBe(1);
+    expect(heard({ what: 'landed', species: 'bass', size: 40 }).map((each) => each.name)).toEqual(['fishLanded']);
+    // Nothing for the moments that have no sound of their own.
+    for (const what of ['start', 'stop', 'nibble', 'hooked', 'tell', 'calm', 'missed', 'scared', 'snapped', 'away']) expect(heard({ what, species: 'bass' }), what).toEqual([]);
+  });
+
+  it('the reel winds only while the button reels a hooked fish, louder through a thrash', () => {
+    const game = new Game(buildLake('normal'), 'normal', 'Yaarbro');
+    const { speaker, sounds } = listening(game);
+    sounds.step(game);
+    // Silent to begin with: a loop that has never sounded is not even asked for.
+    expect(speaker.loops.get('fishReel') ?? 0).toBe(0);
+    Object.assign(game.fishing!, { phase: 'hooked', reeling: true, fight: 'calm' });
+    sounds.step(game);
+    expect(speaker.loops.get('fishReel')).toBe(0.7);
+    game.fishing!.fight = 'thrash';
+    sounds.step(game);
+    expect(speaker.loops.get('fishReel')).toBe(1);
+    game.fishing!.reeling = false;
+    sounds.step(game);
+    expect(speaker.loops.get('fishReel')).toBe(0);
+    Object.assign(game.fishing!, { phase: 'wait', reeling: true });
+    sounds.step(game);
+    expect(speaker.loops.get('fishReel')).toBe(0);
+  });
+
+  it('the fishing sounds are the lake’s own: a level with nowhere to fish never asks for the reel', () => {
+    const game = new Game(buildGrove('normal'), 'normal', 'Yaarbro');
+    const { speaker, sounds } = listening(game);
+    sounds.step(game);
+    expect(speaker.loops.has('fishReel')).toBe(false);
+  });
+});
+
 describe('a crocodile stepping stone', () => {
   it('growls as its hold runs out, bites if it snaps, and splashes quietly as it comes up or goes under', () => {
     const game = new Game(buildLake('hard'), 'hard', 'Yaarbro');

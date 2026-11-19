@@ -141,6 +141,14 @@ export class GameSounds {
       else if (event.type === 'safe') sound.play('checkpoint');
       // Collecting: a little drop for each huckleberry, a chime for a hidden leaf.
       else if (event.type === 'pickup') sound.play(event.kind === 'leaf' ? 'hiddenLeaf' : 'huckleberry');
+      else if (event.type === 'fishing') {
+        // Fishing: the cast, the lure landing (the splash, quietly), the bite, the thrash (the splash, as a warning) and the catch.
+        if (event.what === 'cast') sound.play('fishCast');
+        else if (event.what === 'plop') sound.play('fishSplash', { volume: 0.35 });
+        else if (event.what === 'bite') sound.play('fishBite');
+        else if (event.what === 'thrash') sound.play('fishSplash');
+        else if (event.what === 'landed') sound.play('fishLanded');
+      }
       else if (event.type === 'strike') sound.play(event.kind === 'crocodile' ? 'crocHit' : 'strike');
       else if (event.type === 'goal') sound.playTune('leafTune');
       else if (event.type === 'boss') {
@@ -227,6 +235,8 @@ export class GameSounds {
     // The roll rumbles while he is tucked and on the ground, louder the faster he goes.
     const rolling = game.rolling && game.grounded;
     this.sound.setLoop('roll', rolling ? Math.min(1, 0.35 + 0.65 * (Math.hypot(game.vx, game.vz) / MOVE.rollSpeed)) : 0);
+    // The reel winds while the button reels a hooked fish in, and strains louder through a thrash.
+    if (game.fishing) this.sound.setLoop('fishReel', game.fishing.phase === 'hooked' && game.fishing.reeling ? (game.fishing.fight === 'thrash' ? 1 : 0.7) : 0);
 
     // The mosquito's whine: the nearest one that is still about.
     let whine = 0;

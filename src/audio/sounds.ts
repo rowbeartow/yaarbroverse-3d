@@ -50,7 +50,7 @@ export type Source = { synth: SynthName } | { files: string[] };
 
 export interface SoundDef {
   /** The heading it goes under on the sound board. */
-  group: 'Footsteps' | 'Hero' | 'Water' | 'Enemies' | 'World' | 'Menu' | 'Music';
+  group: 'Footsteps' | 'Hero' | 'Water' | 'Fishing' | 'Enemies' | 'World' | 'Menu' | 'Music';
   label: string;
   /** One line for the sound board: when it plays and what it should sound like. */
   what: string;
@@ -268,6 +268,37 @@ export const SOUNDS = {
     group: 'World', label: 'Letting go of a rope', mix: 'action', level: -2, vary: 0.06,
     what: 'A short, quick whoosh as a hero lets go of a rope swing and flies on. The owner\'s pick, B (2026-11-17).',
     source: { files: ['rope-release.wav'] },
+  },
+  // Fishing: the owner's picks on the sound board, 2026-11-19 (choice A of each).
+  fishCast: {
+    home: LAKE,
+    group: 'Fishing', label: 'Casting', mix: 'action', level: -2, vary: 0.05,
+    what: 'A quick swish as the rod whips forward and the lure flies.',
+    source: { files: ['fish-cast.wav'] },
+  },
+  fishReel: {
+    home: LAKE,
+    group: 'Fishing', label: 'Reeling', mix: 'action', level: -5, loop: true,
+    what: 'A fishing reel winding, for as long as the button reels a hooked fish in.',
+    source: { files: ['fish-reel.wav'] },
+  },
+  fishBite: {
+    home: LAKE,
+    group: 'Fishing', label: 'A bite', mix: 'cue', level: 0,
+    what: 'A bloop as the bobber goes under: the moment to press.',
+    source: { files: ['fish-bite.wav'] },
+  },
+  fishSplash: {
+    home: LAKE,
+    group: 'Fishing', label: "A fish's splash", mix: 'cue', level: 0, vary: 0.06,
+    what: 'A hooked fish starts to thrash: the tell to let the line run. Played quietly when the lure lands.',
+    source: { files: ['fish-splash.wav'] },
+  },
+  fishLanded: {
+    home: LAKE,
+    group: 'Fishing', label: 'A fish is landed', mix: 'action', level: 0,
+    what: 'A little prize tune as the fish is held up.',
+    source: { files: ['fish-landed.wav'] },
   },
   waterIn: {
     home: WATER,
