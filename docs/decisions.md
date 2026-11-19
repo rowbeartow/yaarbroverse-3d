@@ -640,3 +640,32 @@ Reason: Claude's calls, building the owner's rules. Huckleberries: 56, 60 and 65
 
 ## 2026-11-17 The owner's OK on the rework, and the pickup sounds
 Reason: The owner's word. Walblum B is saved to the `hero-models` release. The pickup sounds: huckleberry B (a round little drop) and hidden leaf A (a soft chime), from the sound board. The rework: the Open Water is OK; merge it. Milestone ten is done; he checks the frame rate on Hard on the live site.
+
+## 2026-11-19 The owner's frame rate check, and the kids on the reworked lake
+Reason: The owner's word. The reworked lake runs at 60 frames a second throughout on Hard in Safari on his Mac, and the kids found it pretty fun. Exactly 60 leaves no margin for fishing, the pike and Walblum, so headroom comes first in milestone eleven, and the lake keeps that margin from then on.
+Supersedes: none
+
+## 2026-11-19 Fish at Cocolalla, and the fish book
+Reason: The owner's word. The fish at Cocolalla are bass, perch, trout and pike. Catches add up for each player in a fish book: how many of each, and the biggest of each. Fish models are made through the Meshy API in one shared style that sits with the crocodile, two candidates each, for the kids' picks; no more than 200 credits without asking. The monster pike is the picked pike, much bigger and darker, unless the kids ask for a model of its own. New sounds (cast, reel, bite, splash, landing a fish) go on the sound board as recordings for his OK first.
+Supersedes: none
+
+## 2026-11-19 The monster pike fight, as the owner set it out
+Reason: The owner's word, for the kids' OK on the design page. It starts as fishing at the dock. When the hero hooks the monster pike it is a tug of war: reel while it tires, let the line run while it thrashes, or the line snaps. Halfway through it drags the hero into the lake, and the second half is in the water: it circles and charges, and the hero strikes it when it surfaces to snap. The regen rule applies. Walblum is rescued in this fight. Beating it reaches the golden leaf at the dock. On Easy, fishing and the fight need no precise timing.
+Supersedes: none
+
+## 2026-11-19 Milestone eleven comes in two parts
+Reason: The owner's order. Part one: headroom on the lake; a design page for fishing and the pike fight, and fish model candidates, each for his and the kids' OK; then one pull request each for fishing at the dock with all four species, a simple fish rig in Blender by script, and the fish book on the end card and level card. Part two: Walblum's kick, Caputo's Claw Slash, the monster pike fight and the rescue.
+Supersedes: none
+
+## 2026-11-19 Headroom on the lake: a lighter mosquito, and only the nearest enemies drawn
+Reason: Claude's calls, making the two fixes the owner asked for. (1) The lake draws its giant mosquitoes from `assets/enemies/mosquito-light.glb`: the same skeleton, clips and picture with 5,164 triangles where the full model has 14,000 (`tools/thin-model.mjs`). The grove and its boss's sidekicks keep the full model. A level asks for lighter enemies with `lightEnemies`. (2) On the lake an enemy is drawn only within 45 m of the hero, measured flat in every direction, and never more than the six nearest; one that is warning or attacking within that distance is always drawn (`enemySight` on the level, `src/view/sight.ts`). Before, the lake drew all twelve of Hard's enemies everywhere, because the old rule only measured along the route's first direction and the lake winds. The grove keeps the old rule. Only the drawing changed: the rules still move every enemy.
+Counted with `tools/draw-measure.mjs` (the test browser, high tier, Hard, Yaarbro, fourteen places): the heaviest frame went from 921,462 triangles to 798,124 (13% fewer), and place by place there are 120 to 216 thousand fewer triangles (15% to 31%) and 10 to 24 fewer draw calls. Frames a second cannot be measured here: the owner checks them in Safari.
+Supersedes: "If it drops under 60, thin the mosquito's model for the lake or draw fewer of them at once" in `docs/session-handoff.md` (both are done).
+
+## 2026-11-19 The fish candidates
+Reason: Claude's calls. One reference picture for each fish from words (Meshy Text to Image, `nano-banana-2-1`, 4 credits each), then two models from each picture: A with Meshy 7.1 (30 credits) and B with Meshy 6 Lite (15). Two full-price models of each fish would have cost 240 credits, over the limit. 196 credits spent. The words are in `tools/fish.candidates.json`; `tools/meshy-picture-builds.mjs` made them. Each fish is drawn from the side, straight, fins spread and mouth closed, so one simple rig fits all four. The looks (a green bass with a blotchy stripe, a yellow barred perch with orange fins, a silver trout with a pink stripe, an olive pike with pale spots) are Claude's choices for the candidates, not canon, until the kids pick.
+Supersedes: none
+
+## 2026-11-19 The fishing and pike design, as proposed
+Reason: Claude's proposal on the design page (https://claude.ai/artifact/WM17aRk4LTHHDwveCCkfrs ), waiting for the owner's and the kids' OK. Nothing in it is settled or built. Its open questions: how Caputo holds the rod (proposed: in his jaws); where Walblum is (proposed: on a drifting log the pike circles; the Caputo Mountain notes say only that he is rescued from pike at Cocolalla); whether Walblum stays rescued when the hero is sent back mid-fight (proposed: yes, for that run); and whether a landed fish goes back in the lake (proposed: yes). Also proposed: the rescue is saved for each player, the new button is there from the start in every other level from then on, and on the lake it appears at the rescue on every run, so the lake's best times stay fair.
+Supersedes: none

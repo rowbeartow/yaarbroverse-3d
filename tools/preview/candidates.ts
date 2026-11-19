@@ -52,6 +52,7 @@ interface EnemyFile {
 }
 
 /** What each enemy is called on the page, and whether it stands or hovers. */
+const FISH_NOTE = 'Both made from the one picture, by two of Meshy’s model makers (the words are in tools/fish.candidates.json). Shown at one size here; each fish gets its own size in the lake.';
 const ENEMIES: Record<string, { title: string; hovers: boolean; note: string }> = {
   marmot: {
     title: 'Marmot scout',
@@ -68,6 +69,10 @@ const ENEMIES: Record<string, { title: string; hovers: boolean; note: string }> 
     hovers: false,
     note: 'Each made from its own picture (Meshy Text to Image, then Image to 3D; the words are in tools/crocodile.candidates.json). Shown at one size here; its size in the lake is set when it is rigged.',
   },
+  bass: { title: 'Bass', hovers: true, note: FISH_NOTE },
+  perch: { title: 'Perch', hovers: true, note: FISH_NOTE },
+  trout: { title: 'Trout', hovers: true, note: FISH_NOTE },
+  pike: { title: 'Pike', hovers: true, note: `${FISH_NOTE} The monster pike is the picked pike, much bigger and darker.` },
   walblum: {
     title: 'Walblum',
     hovers: false,

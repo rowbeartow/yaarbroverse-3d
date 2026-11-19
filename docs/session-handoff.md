@@ -1,8 +1,60 @@
 # Session handoff
 
-Last updated: 2026-11-17 (milestone ten, making the lake worth playing, is merged and live. Next: the owner's frame rate check on Hard, then fishing and the monster pike, with Walblum's kick and Caputo's Claw Slash.)
+Last updated: 2026-11-19 (milestone eleven, part one, is under way: the lake's headroom is done; the fishing design page and the fish model candidates wait for the owner's and the kids' OK. Nothing of fishing is built.)
 
 ## Start here
+
+**Milestone eleven, part one: fishing at Cocolalla.** What the owner asked for is in `docs/decisions.md` (2026-11-19). The order: (1) headroom on the lake; (2) a design page; (3) fish models, alongside; (4) then one pull request each for fishing at the dock with all four species, a simple fish rig in Blender by script, and the fish book on the end card and level card, with the new sounds on the sound board first. Stop after fishing merges and rewrite this handoff with part two next: Walblum's kick, Caputo's Claw Slash, the monster pike fight and the rescue.
+
+**Waiting on the owner (2026-11-19). Do not build fishing until he answers both:**
+
+1. **The design page**: https://claude.ai/artifact/WM17aRk4LTHHDwveCCkfrs . Fishing step by step (casting, waiting, the bite and its tell, reeling as a tug of war, landing), the four fish, the fish book, the pike fight in six phases, each per difficulty, and when the new button unlocks. It ends with five questions for him and the kids (`docs/decisions.md`, "The fishing and pike design, as proposed"). It is built by a script that is not in the repo; to change it, read the page with the Artifact tool and publish over the same address.
+2. **The fish candidates**: https://claude.ai/artifact/1h8T7Z81kdQBjd8ZC1Kcuh . Two each of bass, perch, trout and pike; he replies with a letter for each. All eight files were sent to him in the chat on 2026-11-19 so he can save the picks to the `hero-models` release; once he has, download the picks from the release to a scratch folder and check them against this table. Never make a picked fish again.
+
+| File | Bytes | SHA-256 starts | Meshy Image to 3D task |
+| --- | --- | --- | --- |
+| `bass-a.glb` | 4,292,620 | `0b293250cfce4502` | `01a1f52c-0dc4-71b5-8564-171a244bf294` |
+| `bass-b.glb` | 3,197,536 | `87caa8a9621806f7` | `01a1f52c-0f2d-7040-9fb8-7f7a959e7d4c` |
+| `perch-a.glb` | 4,474,100 | `50255cf9bbb4a47b` | `01a1f52c-0f9b-776d-947a-499465247a27` |
+| `perch-b.glb` | 3,541,508 | `c6946c08e327c72f` | `01a1f52c-0f9e-77dd-a0ed-43fe2e3d4197` |
+| `trout-a.glb` | 4,978,176 | `e366e0553cd58d36` | `01a1f52c-0fe8-7677-9914-7028f514d074` |
+| `trout-b.glb` | 3,414,568 | `db1f7bdbe91e7ad0` | `01a1f52c-0f1b-71a9-927d-88f30c7f301c` |
+| `pike-a.glb` | 4,750,672 | `10c7f2442efa488b` | `01a1f52c-0f3f-7013-8552-5704d31a7c92` |
+| `pike-b.glb` | 3,234,600 | `3a5f88ebdd3e11e0` | `01a1f52c-0f54-74a1-baa8-da7e4f02c941` |
+
+A is Meshy 7.1 and B is Meshy 6 Lite, both from the one picture of that fish. 196 Meshy credits spent of the 200 he allowed (16 on pictures, 180 on models); ask before spending more. Yaarbro has no casting or reeling clips: making them with Meshy's animation library (`tools/meshy-rig-animate.mjs`) costs credits, so ask first. Caputo's are written by `tools/rig-quadruped.py`.
+
+**Headroom on the lake: done, in the pull request this version of the handoff arrived in. If you are reading this on `main`, it has merged.** The owner measured the reworked lake at exactly 60 frames a second on Hard in Safari on his Mac, and the kids found it pretty fun. Two fixes (`docs/decisions.md`, "Headroom on the lake"): the lake's mosquitoes are drawn from a 5 thousand triangle copy of the model (`assets/enemies/mosquito-light.glb`, made by `node tools/thin-model.mjs mosquito 5000`; `lightEnemies` on the level), and the lake draws an enemy only within 45 m of the hero and never more than the six nearest (`enemySight` on the level, `src/view/sight.ts`, `tests/sight.test.ts`).
+
+Counted with `node tools/draw-measure.mjs cocolalla hard` (the test browser, high tier, Yaarbro):
+
+| Place | Before: draw calls, triangles, enemies drawn | After |
+| --- | --- | --- |
+| beach | 127, 666,628, 11 | 107, 478,640, 0 |
+| boulder-3 | 120, 680,604, 12 | 98, 492,614, 1 |
+| point | 163, 790,212, 12 | 139, 602,094, 1 |
+| mid-rock | 160, 770,303, 12 | 138, 582,313, 1 |
+| island | 138, 692,245, 12 | 114, 476,257, 0 |
+| headland | 158, 772,427, 12 | 135, 564,438, 1 |
+| step-2 | 140, 661,345, 12 | 121, 463,684, 2 |
+| gravel-bar | 144, 846,076, 12 | 132, 682,740, 6 |
+| open-water (mid swim) | 255, 882,227, 12 | 240, 716,562, 6 |
+| reed-bar | 302, 861,999, 12 | 292, 738,661, 6 |
+| tunnel-water (mid swim) | 257, 859,343, 12 | 247, 736,005, 6 |
+| cove-beach | 192, 831,283, 12 | 177, 689,618, 4 |
+| landing | 238, 843,020, 12 | 228, 719,682, 6 |
+| dock | 288, 921,462, 12 | 278, 798,124, 6 |
+
+The heaviest frame is 13% lighter (921 to 798 thousand triangles). **The dock is the heaviest place on the lake, and it is where fishing, the pike and Walblum go: count again with that tool after each piece of fishing, and keep the dock under the 921 thousand it drew before.**
+
+**Not checked, and the owner is the one who can:** the frame rate with the fixes, in Safari with `?fps` on Hard (a cloud session counts triangles, not frames a second); the lighter mosquito in the game's light (compared here only as outlines of the two models from the side and from above: legs, wings, antennae and beak are all there, the head and body are plainer); and whether an enemy can be seen to appear as the hero comes within 45 m of it or as the nearest six change.
+
+---
+
+The rest of this page is the record of earlier milestones, kept as it was written.
+
+## Milestones nine and ten, as written on 2026-11-17
+
 
 **Milestone nine: Cocolalla Lake reshaped.** The game is live at https://rowbeartow.github.io/yaarbroverse-3d/ . What the owner asked for and why is in `docs/decisions.md` (2026-11-15 and 2026-11-16): his playtest found the lake "just more jumping", the crocodiles easy to avoid, and every route a straight line up the screen.
 
