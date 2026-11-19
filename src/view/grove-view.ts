@@ -45,7 +45,8 @@ import { nearestRopeEnd } from '../game/rope';
 import { PickupsView } from './pickups';
 import { WeedBeds } from './weed-beds';
 import { ROUTE_CAMERA, cameraFor, followsRoute, forwardOf, turnToward } from './route-camera';
-import { ENEMY_MODELS, EnemyView, modelFilesOf } from './enemies';
+import { ENEMY_MODELS, EnemyView, modelFileFor, modelFilesOf } from './enemies';
+import { enemiesInSight } from './sight';
 import { HERO_MODEL_FILES, buildHero, type HeroView } from './heroes';
 import { buildLake } from './lake';
 import { Materials, WIND, installMist } from './materials';
@@ -293,8 +294,9 @@ export class GroveView {
     this.setGhost(null);
     this.enemies = (level.enemies ?? []).map((spot) => {
       const spec = ENEMY_MODELS[spot.kind];
-      const loaded = this.assets.models.get(spec.file);
-      if (!loaded) throw new Error(`The model file ${spec.file} was not loaded`);
+      const file = modelFileFor(spot.kind, level);
+      const loaded = this.assets.models.get(file);
+      if (!loaded) throw new Error(`The model file ${file} was not loaded`);
       const enemy = new EnemyView(spec, loaded, this.tier.simple);
       this.scene.add(enemy.root, ...enemy.extras);
       return enemy;
@@ -495,7 +497,9 @@ export class GroveView {
     }
     this.blink = Math.max(0, this.blink - dt);
     const tuning = level.enemyTuning ?? { warning: 1, speed: 1, rest: 1 };
-    this.enemies.forEach((enemy, i) => enemy.update(game.enemies[i], tuning, game.z, dt));
+    const busy = game.enemies.map((enemy) => enemy.phase === 'warning' || enemy.phase === 'attack');
+    const seen = enemiesInSight(game.enemies, game, level.enemySight, busy);
+    this.enemies.forEach((enemy, i) => enemy.update(game.enemies[i], tuning, seen[i], dt));
     if (this.boss && game.boss) this.boss.update(game.boss, game.z, dt);
 
     // The hero flickers while standing still after a fall, and for as long as

@@ -37,6 +37,8 @@ import { ENEMY, type Enemy, type EnemyKind, type EnemyPhase, type EnemyTuning } 
 export interface EnemyModelSpec {
   /** File name in assets/models/. */
   file: string;
+  /** A lighter copy of the model, for a level that asks for light enemies (`lightEnemies`). */
+  light?: string;
   /** How long the enemy is drawn, nose to tail, in metres. */
   length: number;
   /** Where the rules' place for it is on its body: the ground under its feet, or its middle. */
@@ -71,6 +73,8 @@ export const ENEMY_MODELS: Record<EnemyKind, EnemyModelSpec> = {
   },
   mosquito: {
     file: 'mosquito.glb',
+    // 5 thousand triangles where the full one has 14 (tools/thin-model.mjs).
+    light: 'mosquito-light.glb',
     length: 1.45,
     stands: false,
     clips: { idle: 'hover', warning: 'warning', attack: 'dive', rest: 'winded', defeated: 'defeated' },
@@ -89,16 +93,19 @@ export const ENEMY_MODELS: Record<EnemyKind, EnemyModelSpec> = {
 /** The model files one level needs: its enemies', and its boss's. They are fetched when the level is picked. */
 export const modelFilesOf = (level: Level): string[] => {
   const kinds = new Set<EnemyKind>((level.enemies ?? []).map((spot) => spot.kind));
-  if (level.boss) kinds.add(level.boss.look.model);
   // Crocodile stepping stones are drawn from the crocodile's model too.
   if (level.solids.some((s) => s.motion?.kind === 'float')) kinds.add('crocodile');
-  return [...kinds].map((kind) => ENEMY_MODELS[kind].file);
+  // A boss is always drawn from the full model.
+  const files = new Set([...kinds].map((kind) => modelFileFor(kind, level)));
+  if (level.boss) files.add(ENEMY_MODELS[level.boss.look.model].file);
+  return [...files];
 };
+
+/** The file one of a level's enemies is drawn from: the lighter one where the level asks and there is one. */
+export const modelFileFor = (kind: EnemyKind, level: Level): string => (level.lightEnemies ? ENEMY_MODELS[kind].light : undefined) ?? ENEMY_MODELS[kind].file;
 
 export type ClipKey = keyof EnemyModelSpec['clips'];
 
-/** Enemies further than this from the hero are neither moved nor drawn: the mist has them. */
-const SEEN_WITHIN = 70;
 const FADE_RATE = 14;
 /** How many times a second a struck enemy's flash turns over. */
 const FLASH_BLINKS = 15;
@@ -269,9 +276,8 @@ export class EnemyView {
     }
   }
 
-  /** Matches the picture to the rules. `near` is false for an enemy too far off to matter. */
-  update(enemy: Enemy, tuning: EnemyTuning, heroZ: number, dt: number): void {
-    const near = Math.abs(enemy.z - heroZ) < SEEN_WITHIN;
+  /** Matches the picture to the rules. `near` is false for an enemy too far off to matter (src/view/sight.ts): it is neither moved nor drawn. */
+  update(enemy: Enemy, tuning: EnemyTuning, near: boolean, dt: number): void {
     // Hidden: a scout that has not come out, a sidekick its boss has not called, and a beaten enemy once it has faded.
     // A crocodile lying low is still seen: its eyes and snout show above the water.
     const hidden = (enemy.phase === 'concealed' && !this.spec.swims) || enemy.dormant || (enemy.phase === 'defeated' && enemy.timer > ENEMY.fade);

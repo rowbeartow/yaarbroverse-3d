@@ -119,7 +119,9 @@ test.describe("a level's own files", () => {
     await expect.poll(async () => (await soundLevel(page)).level).toBe('cocolalla');
     await expect.poll(() => [...asked]).toContain('lake-music.mp3');
     // The lake has scouts and mosquitoes of its own now, and its logs creak: those are its files too.
-    for (const file of ['crocodile.glb', 'marmot.glb', 'mosquito.glb', 'creak.wav', 'yaarbro.glb', 'caputo.glb']) expect([...asked], file).toContain(file);
+    for (const file of ['crocodile.glb', 'marmot.glb', 'mosquito-light.glb', 'creak.wav', 'yaarbro.glb', 'caputo.glb']) expect([...asked], file).toContain(file);
+    // The lake draws its mosquitoes from the lighter model, and never fetches the full one.
+    expect([...asked]).not.toContain('mosquito.glb');
     for (const file of ['grove-music.mp3', 'boss-music.mp3', 'moss-rustle.wav', 'gust.wav']) expect([...asked], file).not.toContain(file);
     expect(problems).toEqual([]);
   });

@@ -13,6 +13,8 @@ import { beforeAll, describe, expect, it } from 'vitest';
 const ENEMIES: Record<string, { clips: readonly string[]; body: string; sinks?: readonly string[] }> = {
   marmot: { clips: ['defeated', 'hit', 'hop', 'idle', 'throw', 'walk', 'warning', 'winded'], body: 'hips' },
   mosquito: { clips: ['defeated', 'dive', 'hover', 'warning', 'winded'], body: 'body' },
+  // The lake's lighter mosquito (tools/thin-model.mjs): the same skeleton and clips.
+  'mosquito-light': { clips: ['defeated', 'dive', 'hover', 'warning', 'winded'], body: 'body' },
   crocodile: { clips: ['defeated', 'dive', 'float', 'hit', 'lunge', 'lurk', 'swim', 'turn_snap'], body: 'hips', sinks: ['defeated'] },
 };
 
@@ -32,10 +34,9 @@ describe('the enemy model files', () => {
     it(`${name}: the file is compressed, with a skeleton, and small`, () => {
       expect(statSync(path(name)).size).toBeLessThan(1.5 * 1024 * 1024);
       // Light enough for several on screen at once: the crocodiles share the lake's frame budget.
-      if (name === 'crocodile') {
-        const triangles = root().listMeshes().flatMap((mesh) => mesh.listPrimitives()).reduce((sum, primitive) => sum + (primitive.getIndices()?.getCount() ?? 0) / 3, 0);
-        expect(triangles).toBeLessThanOrEqual(8000);
-      }
+      const triangles = root().listMeshes().flatMap((mesh) => mesh.listPrimitives()).reduce((sum, primitive) => sum + (primitive.getIndices()?.getCount() ?? 0) / 3, 0);
+      if (name === 'crocodile') expect(triangles).toBeLessThanOrEqual(8000);
+      if (name === 'mosquito-light') expect(triangles).toBeLessThanOrEqual(5500);
       expect(root().listExtensionsUsed().map((extension) => extension.extensionName)).toEqual(
         expect.arrayContaining(['EXT_meshopt_compression', 'KHR_texture_basisu']),
       );
