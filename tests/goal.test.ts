@@ -75,6 +75,7 @@ describe('the run record', () => {
       leaves: [],
       leavesIn: 0,
       fish: [],
+      fishing: false,
     });
     expect(summary.seconds).toBeGreaterThan(1);
   });

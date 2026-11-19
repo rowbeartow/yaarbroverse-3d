@@ -96,8 +96,9 @@ export interface Summary {
   /** The ids of the hidden leaves found this run, and how many the level has. */
   leaves: string[];
   leavesIn: number;
-  /** The fish landed this run, in the order they were caught. */
+  /** The fish landed this run, in the order they were caught, and whether the level has anywhere to fish. */
   fish: Catch[];
+  fishing: boolean;
 }
 
 const EPSILON = 1e-4;
@@ -286,6 +287,7 @@ export class Game {
       leaves: (this.level.pickups ?? []).filter((pickup) => pickup.kind === 'leaf' && this.collected.has(pickup.id)).map((pickup) => pickup.id),
       leavesIn: counts.leaf,
       fish: [...this.catches],
+      fishing: Boolean(this.level.fishing),
     };
   }
 

@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
-import { frames, open, play, standOn } from './helpers';
+import { frames, open, pickPlayer, play, standOn } from './helpers';
 
 // Fishing in a real browser: the spot on the lake's jetty, the button that
 // says what it does, and a whole catch on Easy, where nothing needs timing.
@@ -72,6 +72,42 @@ test.describe('on the keyboard', () => {
     await page.keyboard.up('KeyX');
     await expect(page.locator('#message')).toContainText(' cm.');
     await expect(page.locator('#line')).toBeHidden();
+    expect(problems).toEqual([]);
+  });
+
+  test('a landed fish goes in the player’s fish book: on the end card, then on the lake’s card', async ({ page }) => {
+    const problems = await open(page, 'level=cocolalla');
+    // Before any fish: four grey shapes on the lake's card.
+    await expect(page.locator('.area[data-level="cocolalla"] .fish-entry')).toHaveCount(4);
+    await expect(page.locator('.area[data-level="cocolalla"] .fish-entry[data-caught="0"]')).toHaveCount(4);
+    await play(page, 'Yaarbro', 'easy');
+    await onJetty(page);
+    await page.keyboard.down('KeyX');
+    await expect.poll(async () => (await fishing(page)).phase).toBe('aim');
+    await page.keyboard.up('KeyX');
+    await expect.poll(async () => (await fishing(page)).phase, { timeout: 60_000 }).toBe('bite');
+    await page.keyboard.down('KeyX');
+    await expect.poll(async () => (await fishing(page)).catches, { timeout: 120_000 }).toBe(1);
+    await page.keyboard.up('KeyX');
+    // The first of its kind is the biggest yet.
+    await expect(page.locator('#message')).toContainText('Your biggest yet!');
+    await expect.poll(async () => (await fishing(page)).phase, { timeout: 30_000 }).toBe('off');
+    // On to the golden leaf: the end card says what was caught.
+    await standOn(page, 'dock', 0);
+    await page.keyboard.down('ArrowRight');
+    await expect(page.locator('#end')).toBeVisible({ timeout: 30_000 });
+    await page.keyboard.up('ArrowRight');
+    await expect(page.locator('#end-fish-box')).toBeVisible();
+    await expect(page.locator('#end-fish')).toHaveText(/^1 (perch|bass|trout|pike)$/);
+    await expect(page.locator('#end-fish-best')).toHaveText(/^Biggest (perch|bass|trout|pike) yet: \d+ cm!$/);
+    // Saved for the player: it is still there after the page is opened again.
+    await page.reload();
+    await pickPlayer(page);
+    const caught = page.locator('.area[data-level="cocolalla"] .fish-entry:not([data-caught="0"])');
+    await expect(caught).toHaveCount(1);
+    await expect(caught.locator('small')).toHaveText(/^1 · \d+ cm$/);
+    // The grove has nowhere to fish, so its card has no fish book.
+    await expect(page.locator('.area[data-level="bouncing-grove"] .fish-book')).toHaveCount(0);
     expect(problems).toEqual([]);
   });
 

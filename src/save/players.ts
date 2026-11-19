@@ -8,6 +8,7 @@
 // is left (or with nobody, as on a first visit). No browser code here: tests
 // hand it a pretend storage.
 
+import { SPECIES, type Catch, type Species } from '../game/fishing';
 import { isDifficulty, type Difficulty } from '../game/difficulty';
 import { isHeroName, type HeroName } from '../game/hero';
 import { removeGhostsOf } from './ghosts';
@@ -85,6 +86,24 @@ export interface HaulOutcome {
   leavesFound: number;
 }
 
+/**
+ * A player's fish book: for each kind of fish, how many they have landed and
+ * the biggest, in centimetres. It counts every fish from every run, finished
+ * or not, on any difficulty.
+ */
+export type FishBook = Partial<Record<Species, { count: number; biggest: number }>>;
+
+/** What saving a run's catch changed. */
+export interface CatchOutcome {
+  /** How many of each kind this run landed. */
+  caught: Partial<Record<Species, number>>;
+  /** The kinds whose biggest this run set, and how big. */
+  biggest: Partial<Record<Species, number>>;
+}
+
+/** No fish is bigger than this, in centimetres: a saved size over it is not a size. */
+const MAX_FISH = 400;
+
 /** No more ids than this are kept for one difficulty: a level has a handful of hidden leaves. */
 const MAX_LEAVES = 12;
 
@@ -102,6 +121,8 @@ export interface Player {
   bests: Bests;
   /** What this player has collected, by level id. Left out until they collect something. */
   finds?: Record<string, Finds>;
+  /** This player's fish book. Left out until they land a fish. */
+  fish?: FishBook;
   /** Where this player has turned the ghost on or off themselves, by difficulty. Left out: on for Normal and Hard, off for Easy. */
   ghost?: Partial<Record<Difficulty, boolean>>;
 }
@@ -187,11 +208,24 @@ const cleanFinds = (saved: unknown): Record<string, Finds> | null => {
   return Object.keys(finds).length ? finds : null;
 };
 
+/** Keeps whatever in a saved fish book is sound and drops the rest. */
+const cleanFish = (saved: unknown): FishBook | null => {
+  if (!isRecord(saved)) return null;
+  const book: FishBook = {};
+  for (const species of SPECIES) {
+    const entry = saved[species];
+    if (!isRecord(entry) || !isCount(entry.count) || !isCount(entry.biggest) || entry.count < 1 || entry.biggest < 1 || entry.biggest > MAX_FISH) continue;
+    book[species] = { count: Math.floor(entry.count), biggest: Math.round(entry.biggest) };
+  }
+  return Object.keys(book).length ? book : null;
+};
+
 const cleanPlayer = (saved: unknown): Player | null => {
   if (!isRecord(saved)) return null;
   const name = cleanName(saved.name);
   if (typeof saved.id !== 'string' || !ID.test(saved.id) || !name) return null;
   const finds = cleanFinds(saved.finds);
+  const fish = cleanFish(saved.fish);
   let ghost: Partial<Record<Difficulty, boolean>> | null = null;
   if (isRecord(saved.ghost)) {
     for (const [difficulty, on] of Object.entries(saved.ghost)) {
@@ -206,6 +240,7 @@ const cleanPlayer = (saved: unknown): Player | null => {
     difficulty: isDifficulty(saved.difficulty) ? saved.difficulty : 'normal',
     bests: cleanBests(saved.bests),
     ...(finds ? { finds } : {}),
+    ...(fish ? { fish } : {}),
     ...(ghost ? { ghost } : {}),
   };
 };
@@ -329,6 +364,7 @@ export class Players {
     if (!player) return false;
     player.bests = {};
     delete player.finds;
+    delete player.fish;
     removeGhostsOf(this.ghosts, id);
     this.save();
     return true;
@@ -368,6 +404,30 @@ export class Players {
     slot.leaves.push(...fresh);
     this.save();
     return { mostBerries, newLeaves: fresh.length, leavesFound: slot.leaves.length };
+  }
+
+  /**
+   * Adds a run's catch to a player's fish book, whether or not the run
+   * reached the golden leaf. Call it once for a run, when the run is over or
+   * left. Each fish adds to its kind's count and may set its biggest.
+   */
+  land(id: string, catches: readonly Catch[]): CatchOutcome {
+    const outcome: CatchOutcome = { caught: {}, biggest: {} };
+    const player = this.get(id);
+    if (!player) return outcome;
+    for (const fish of catches) {
+      if (!SPECIES.includes(fish.species) || !isCount(fish.size) || fish.size < 1 || fish.size > MAX_FISH) continue;
+      const size = Math.round(fish.size);
+      const entry = ((player.fish ??= {})[fish.species] ??= { count: 0, biggest: 0 });
+      entry.count += 1;
+      outcome.caught[fish.species] = (outcome.caught[fish.species] ?? 0) + 1;
+      if (size > entry.biggest) {
+        entry.biggest = size;
+        outcome.biggest[fish.species] = size;
+      }
+    }
+    if (Object.keys(outcome.caught).length) this.save();
+    return outcome;
   }
 
   /**
@@ -422,6 +482,22 @@ export const findsOn = (player: Player, levelId: string): { berries: number; on:
   const finds = player.finds?.[levelId];
   const on = (difficulty: Difficulty): { most: number; leaves: number } => ({ most: finds?.on[difficulty]?.most ?? 0, leaves: finds?.on[difficulty]?.leaves.length ?? 0 });
   return { berries: finds?.berries ?? 0, on: { easy: on('easy'), normal: on('normal'), hard: on('hard') } };
+};
+
+/** A player's fish book with every kind in it: none caught is a count of 0 and no biggest. */
+export const fishBookOf = (player: Pick<Player, 'fish'> | null): Record<Species, { count: number; biggest: number | null }> => {
+  const of = (species: Species): { count: number; biggest: number | null } => ({ count: player?.fish?.[species]?.count ?? 0, biggest: player?.fish?.[species]?.biggest ?? null });
+  return { perch: of('perch'), bass: of('bass'), trout: of('trout'), pike: of('pike') };
+};
+
+/**
+ * True when a fish just landed is the biggest of its kind this player has
+ * caught, counting the book and the fish landed earlier in the same run
+ * (`earlier`), which are not in the book until the run is saved.
+ */
+export const isBiggestYet = (player: Pick<Player, 'fish'> | null, earlier: readonly Catch[], fish: Catch): boolean => {
+  const before = Math.max(player?.fish?.[fish.species]?.biggest ?? 0, ...earlier.filter((each) => each.species === fish.species).map((each) => each.size));
+  return fish.size > before;
 };
 
 /** One line of the end card's bests: the best as it now stands, and whether this run set it. */

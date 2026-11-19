@@ -10,14 +10,16 @@
 import { pickupCounts } from '../game/collect';
 import { DIFFICULTIES, DIFFICULTY_LABEL, type Difficulty } from '../game/difficulty';
 import type { LevelEntry } from '../levels';
-import { findsOn, progressOn, type Player } from '../save/players';
+import { SPECIES } from '../game/fishing';
+import { findsOn, fishBookOf, progressOn, type Player } from '../save/players';
+import { SPECIES_NAME } from './fishing-words';
 import { formatTime } from './screens';
 
 import type { HeroName } from '../game/hero';
 import { showControls } from './controls-help';
 
 export class Picker {
-  private readonly cards = new Map<string, { root: HTMLElement; pick: HTMLButtonElement; marks: HTMLElement; ghost: HTMLInputElement; ghostNote: HTMLElement; controls: HTMLElement }>();
+  private readonly cards = new Map<string, { root: HTMLElement; pick: HTMLButtonElement; marks: HTMLElement; fish: HTMLElement | null; ghost: HTMLInputElement; ghostNote: HTMLElement; controls: HTMLElement }>();
 
   /** How many huckleberries and hidden leaves each level has on each difficulty, counted once. */
   private readonly toFind = new Map<string, Record<Difficulty, { berry: number; leaf: number }>>();
@@ -61,6 +63,12 @@ export class Picker {
       const marks = document.createElement('span');
       marks.className = 'marks';
       text.append(name, lead, marks);
+      // The player's fish book, on the card of a level with somewhere to fish.
+      const fish = level.build('easy').fishing ? document.createElement('span') : null;
+      if (fish) {
+        fish.className = 'fish-book';
+        text.append(fish);
+      }
       pick.append(picture, text);
       pick.addEventListener('click', () => this.choose(level, false));
       pick.addEventListener('keydown', (event) => {
@@ -89,7 +97,7 @@ export class Picker {
       controls.setAttribute('aria-label', 'Controls');
       root.append(pick, foot, controls);
       container.append(root);
-      this.cards.set(level.id, { root, pick, marks, ghost, ghostNote, controls });
+      this.cards.set(level.id, { root, pick, marks, fish, ghost, ghostNote, controls });
     });
   }
 
@@ -139,6 +147,30 @@ export class Picker {
     for (const [id, card] of this.cards) {
       const progress = progressOn(player, id);
       const finds = findsOn(player, id);
+      if (card.fish) {
+        const book = fishBookOf(player);
+        card.fish.setAttribute('role', 'img');
+        card.fish.setAttribute(
+          'aria-label',
+          `Fish book: ${SPECIES.map((species) => (book[species].count ? `${book[species].count} ${species}, biggest ${book[species].biggest} centimetres` : `no ${species} yet`)).join('; ')}`,
+        );
+        card.fish.replaceChildren(
+          ...SPECIES.map((species) => {
+            const { count, biggest } = book[species];
+            const entry = document.createElement('span');
+            entry.className = 'fish-entry';
+            entry.dataset.fish = species;
+            entry.dataset.caught = String(count);
+            const picture = Object.assign(document.createElement('img'), { src: `fish/${species}.webp`, alt: '', decoding: 'async' });
+            const name = document.createElement('b');
+            name.textContent = count ? SPECIES_NAME[species] : '?';
+            const line = document.createElement('small');
+            line.textContent = count ? `${count} · ${biggest} cm` : 'Not yet';
+            entry.append(picture, name, line);
+            return entry;
+          }),
+        );
+      }
       const toFind = this.toFind.get(id);
       card.marks.replaceChildren(
         ...DIFFICULTIES.map((difficulty) => {
