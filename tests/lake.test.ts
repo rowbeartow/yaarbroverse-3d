@@ -199,7 +199,8 @@ describe.each(DIFFICULTIES)('the lake on %s', (difficulty) => {
     expect(climbedOnto).toMatch(/^(log-|step-)/);
     expect(game.complete).toBe(true);
     expect(game.falls).toBe(0);
-  });
+    // The bot plays most of the lake twice here: about 2 seconds on a fast machine, and more than the usual 5 on a busy one (it timed out on the publish run of 2026-11-19).
+  }, 60_000);
 });
 
 describe('the rope swings', () => {
