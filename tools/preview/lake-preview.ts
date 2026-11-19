@@ -29,8 +29,8 @@ interface Place {
 }
 
 const PLACES: Place[] = [
-  // First, so the page opens on it: the newest thing to look at. Walk north onto the jetty to fish.
-  { id: 'fishing', label: 'Fishing from the jetty', at: 'dock', until: 'none' },
+  // First, so the page opens on it: the newest thing to look at. It starts on the jetty, well away from the golden leaf.
+  { id: 'fishing', label: 'Fishing from the jetty', at: 'jetty', until: 'none' },
   { id: 'logs', label: 'Sinking logs', at: 'headland', until: 'gravel-bar' },
   { id: 'open', label: 'The Open Water', at: 'gravel-bar', until: 'reed-bar' },
   { id: 'tunnel', label: 'The Rock Tunnel', at: 'reed-bar', until: 'cove-beach' },

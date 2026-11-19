@@ -223,7 +223,25 @@ export const LAKE_SHAPE = {
   boardwalkHalfWidth: 1.2,
   boardwalkLength: 16,
   dockHalfWidth: 4,
-  dockLength: 6,
+  /** Long enough that the golden leaf at its east end is well away from the jetty at its west end. */
+  dockLength: 9,
+  /** How far in from the dock's east end the golden leaf hangs, and how far from its west end the middle of the jetty is. */
+  leafFromEast: 1.2,
+  jettyFromWest: 2.4,
+  /**
+   * The ways out of the pier's water. A low rock beside the posts: how far east of their line, how far north of the rocky
+   * point, its size and its top (low enough to climb onto from the water, and to hop from back onto the second post).
+   * And steps up the dock's south side: the lowest one's top, the most one rises over the last (under a jump), their size,
+   * and how far in from the dock's east end the lowest is.
+   */
+  postRockAside: 3.2,
+  postRockOut: 2.2,
+  postRockRadius: 1.3,
+  postRockTop: 0.7,
+  dockStepTop: 0.9,
+  dockStepRise: 1.3,
+  dockStepSize: 1.8,
+  dockStepIn: 2.6,
   /**
    * The fishing jetty off the dock's north side: its size, how far in from its end the fishing spot is and how wide,
    * and the water a cast can reach: from this near to this far out, and this far to either side.
@@ -477,6 +495,9 @@ export function buildLake(difficulty: Difficulty, numbers: LakeNumbers = LAKE_DI
   }
   z -= n.postGap;
   const deck = postTop + n.postRise;
+  // A way out for whoever falls off the higher posts (the owner's rule: no stretch of water is a trap). A low rock just
+  // north of the rocky point, beside the second post, which is still low enough to hop back onto from it.
+  add({ id: 'post-rock', kind: 'boulder', shape: 'round', x: coveX + shape.postRockAside, z: shape.rockNorth - shape.postRockOut, halfX: shape.postRockRadius, halfZ: shape.postRockRadius, top: shape.postRockTop, bottom: shape.depth }, false);
   // A square landing where the pier turns: room to stand while the camera comes round.
   box('landing', 'deck', coveX - shape.landingHalf, coveX + shape.landingHalf, z - shape.landingHalf * 2, z, deck, deck - 0.4);
   const pierZ = z - shape.landingHalf;
@@ -489,7 +510,16 @@ export function buildLake(difficulty: Difficulty, numbers: LakeNumbers = LAKE_DI
   box('dock', 'deck', x, x + shape.dockLength, pierZ - shape.dockHalfWidth, pierZ + shape.dockHalfWidth, deck, deck - 0.4);
   x += shape.dockLength;
   // The fishing jetty: a short walk out from the dock's north side, off the scouts' ground, with the lake open in front of it.
-  const dockX = x - shape.dockLength / 2;
+  // The jetty leaves the dock's west end and the golden leaf is at its far east end, so going fishing never ends the level by accident.
+  const dockX = x - shape.dockLength + shape.jettyFromWest;
+  // Steps up out of the water on the dock's south side, away from the fishing: the pier's way out, and the way back after the pike.
+  const stepCount = Math.max(1, Math.ceil((deck - shape.dockStepTop) / shape.dockStepRise));
+  for (let i = 0; i < stepCount; i += 1) {
+    const top = shape.dockStepTop + ((deck - shape.dockStepTop) * i) / stepCount;
+    const east = x - shape.dockStepIn - i * shape.dockStepSize;
+    box(`dock-step-${i + 1}`, 'deck', east - shape.dockStepSize, east, pierZ + shape.dockHalfWidth, pierZ + shape.dockHalfWidth + shape.dockStepSize, top, top - 0.4, {}, false);
+    sections[sections.length - 1].solids.push(`dock-step-${i + 1}`);
+  }
   const jettyNorth = pierZ - shape.dockHalfWidth - shape.jettyLength;
   box('jetty', 'deck', dockX - shape.jettyHalfWidth, dockX + shape.jettyHalfWidth, jettyNorth, pierZ - shape.dockHalfWidth, deck, deck - 0.4, {}, false);
   // It is part of the pier, so the camera keeps looking north from it, out over the fishing water.
@@ -724,7 +754,7 @@ export function buildLake(difficulty: Difficulty, numbers: LakeNumbers = LAKE_DI
     },
     solids,
     spawn: { x: shape.beachLength / 2, y: shape.shoreTop, z: shape.shoreZ - 1 },
-    leaf: { x: x - 1.5, y: deck + 1.3, z: pierZ, radius: 0.7 },
+    leaf: { x: x - shape.leafFromEast, y: deck + 1.3, z: pierZ, radius: 0.7 },
     water,
     ropes,
     ropeHelp: n.ropeHelp,
