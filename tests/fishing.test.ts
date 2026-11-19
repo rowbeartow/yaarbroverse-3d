@@ -448,6 +448,37 @@ describe('fishing in the game', () => {
     }
   });
 
+  it('going fishing never ends the level by accident: the golden leaf is at the dock’s far end, well off the way to the jetty', () => {
+    for (const difficulty of DIFFICULTIES) {
+      const level = buildLake(difficulty);
+      const jetty = level.solids.find((s) => s.id === 'jetty')!;
+      const dock = level.solids.find((s) => s.id === 'dock')!;
+      const boardwalk = level.solids.find((s) => s.id === 'boardwalk')!;
+      // The way to the jetty: off the end of the boardwalk and across the dock to the jetty's foot.
+      const from = { x: boardwalk.x + boardwalk.halfX, z: boardwalk.z };
+      const to = { x: jetty.x, z: jetty.z + jetty.halfZ };
+      let nearest = Infinity;
+      for (let t = 0; t <= 1; t += 0.02) nearest = Math.min(nearest, Math.hypot(from.x + (to.x - from.x) * t - level.leaf.x, from.z + (to.z - from.z) * t - level.leaf.z));
+      expect(nearest, difficulty).toBeGreaterThan(5);
+      expect(Math.hypot(jetty.x - level.leaf.x, jetty.z - level.leaf.z), difficulty).toBeGreaterThan(6);
+      // And a hero who walks that way, with room to wander, does not finish the level.
+      for (const wander of [-1.5, 0, 1.5]) {
+        const game = new Game(level, difficulty, 'Yaarbro');
+        for (const enemy of game.enemies) Object.assign(enemy, { phase: 'defeated', timer: 99 });
+        game.startOn('boardwalk');
+        const via = { x: dock.x - dock.halfX + 2 + wander, z: dock.z + wander };
+        for (const goal of [via, { x: level.fishing!.x, z: level.fishing!.z }]) {
+          for (let i = 0; i < 12 / STEP && Math.hypot(goal.x - game.x, goal.z - game.z) > 0.4; i += 1) {
+            const far = Math.hypot(goal.x - game.x, goal.z - game.z);
+            game.step({ moveX: (goal.x - game.x) / far, moveZ: (goal.z - game.z) / far, jump: false });
+          }
+        }
+        expect(game.groundId, `${difficulty} ${wander}`).toBe('jetty');
+        expect(game.complete, `${difficulty} ${wander}`).toBe(false);
+      }
+    }
+  });
+
   it('off the spot the move button is the hero’s own move; on it, it fishes and the hero stands', () => {
     const level = buildLake('normal');
     const game = new Game(level, 'normal', 'Yaarbro');

@@ -797,3 +797,60 @@ describe('what there is to collect on the lake', () => {
     expect(game.x).toBeLessThan(rock.x - rock.halfX);
   });
 });
+
+describe('the ways out of the pier’s water', () => {
+  /** Walks and jumps a hero from where it stands toward a solid until it stands on it, or the seconds run out. */
+  const hopTo = (game: Game, id: string, seconds = 6): void => {
+    const target = game.level.solids.find((s) => s.id === id)!;
+    let rested: boolean = false;
+    for (let i = 0; i < seconds / STEP && game.groundId !== id; i += 1) {
+      const dx = target.x - game.x;
+      const dz = target.z - game.z;
+      const far = Math.hypot(dx, dz) || 1;
+      const here = game.level.solids.find((s) => s.id === game.groundId);
+      // Jump from near the edge of what it stands on, as a player would.
+      const atEdge = here ? Math.hypot(game.x - here.x, game.z - here.z) > Math.max(here.halfX, here.halfZ) - 0.5 : false;
+      // Jump is held through the air for a full jump, and let go for a moment on the ground so the next press is a fresh one.
+      const jump: boolean = game.grounded ? atEdge && rested : true;
+      rested = game.grounded && !jump;
+      game.step({ moveX: dx / far, moveZ: dz / far, jump });
+    }
+  };
+
+  for (const difficulty of DIFFICULTIES) {
+    for (const hero of HEROES) {
+      it(`on ${difficulty}, ${hero} climbs out onto the rock by the posts and hops back onto the second post`, () => {
+        const level = buildLake(difficulty);
+        const rock = byId(level, 'post-rock');
+        expect(rock.top - LAKE_SHAPE.surface).toBeLessThanOrEqual(SWIM.climbHeight);
+        expect(level.route).not.toContain('post-rock');
+        const game = new Game(level, difficulty, hero);
+        game.startOn('post-rock');
+        hopTo(game, 'post-2');
+        expect(game.groundId).toBe('post-2');
+        expect(game.falls).toBe(0);
+      });
+
+      it(`on ${difficulty}, ${hero} climbs the steps from the water up onto the dock`, () => {
+        const level = buildLake(difficulty);
+        const steps = level.solids.filter((s) => s.id.startsWith('dock-step-'));
+        expect(steps.length).toBeGreaterThanOrEqual(2);
+        expect(steps[0].top - LAKE_SHAPE.surface).toBeLessThanOrEqual(SWIM.climbHeight);
+        // No step, and not the last one up to the deck, rises more than a jump clears with room to spare.
+        const tops = [...steps.map((s) => s.top), byId(level, 'dock').top];
+        for (let i = 1; i < tops.length; i += 1) expect(tops[i] - tops[i - 1]).toBeLessThanOrEqual(1.5);
+        const game = new Game(level, difficulty, hero);
+        for (const enemy of game.enemies) Object.assign(enemy, { phase: 'defeated', timer: 99 });
+        game.startOn('dock-step-1');
+        for (let i = 1; i < steps.length; i += 1) {
+          hopTo(game, `dock-step-${i + 1}`);
+          expect(game.groundId).toBe(`dock-step-${i + 1}`);
+        }
+        hopTo(game, 'dock');
+        expect(game.groundId).toBe('dock');
+        expect(game.falls).toBe(0);
+        expect(game.swimming).toBe(false);
+      });
+    }
+  }
+});
