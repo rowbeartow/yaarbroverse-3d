@@ -57,7 +57,7 @@ for (const file of existsSync(join(SOURCE, 'models')) ? readdirSync(join(SOURCE,
  * makes them from the original files, which are too big to keep here.
  */
 const HEROES = [];
-for (const folder of ['heroes', 'enemies']) {
+for (const folder of ['heroes', 'enemies', 'fish']) {
   for (const file of existsSync(join(SOURCE, folder)) ? readdirSync(join(SOURCE, folder)).sort() : []) {
     if (file.endsWith('.glb')) HEROES.push({ from: `${folder}/${file}`, to: `models/${file}` });
   }

@@ -5,9 +5,9 @@
 //   node tools/compress-hero.mjs <original.glb> <name> [texture size] [folder]
 //
 //   original.glb   the file from Meshy, or from tools/rig-quadruped.py
-//   name           yaarbro, caputo, marmot, mosquito or crocodile: the file is saved as <name>.glb
+//   name           yaarbro, caputo, marmot, mosquito, crocodile, or a fish: the file is saved as <name>.glb
 //   texture size   the size of the colour picture, 2048 unless given
-//   folder         heroes unless given. An enemy goes in enemies: assets/enemies/<name>.glb
+//   folder         heroes unless given. An enemy goes in enemies (assets/enemies/<name>.glb), a fish in fish
 //
 // What it does:
 //   1. Fills the empty gaps in the model's pictures with the colours next to

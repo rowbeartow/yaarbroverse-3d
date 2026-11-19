@@ -1,0 +1,21 @@
+{
+  "about": "Yaarbro's fishing clips, made by tools/meshy-rig-animate.mjs (37 credits: the rig, two library clips and two Text to Motion clips). Meshy's library has no fishing, so fish_cast and fish_reel were made from these words. fish_throw is the library's 'Over Shoulder Throw', kept in case the cast from words does not read; fish_show is 'Cheer with One Hand Up', for holding a landed fish up.",
+  "model_url": "https://github.com/rowbeartow/yaarbroverse-3d/releases/download/hero-models/Meshy_AI_Animation_Idle_11_withSkin.glb",
+  "height_meters": 1.8,
+  "library": [
+    { "name": "fish_throw", "action_id": 421, "library_name": "Over Shoulder Throw" },
+    { "name": "fish_show", "action_id": 306, "library_name": "Cheer with One Hand Up" }
+  ],
+  "motions": [
+    {
+      "name": "fish_cast",
+      "prompt": "A person standing still holds a fishing rod in both hands in front of the chest, swings it back over the right shoulder, then whips it forward in an overhead cast and holds the rod pointing forward and slightly up. Feet stay planted in place.",
+      "duration": 3
+    },
+    {
+      "name": "fish_reel",
+      "prompt": "A person standing with feet planted holds a fishing rod out in front with the left hand at chest height and turns a reel handle with the right hand in small quick circles beside the rod, leaning back slightly against a pulling fish. Steady, staying in place, loops cleanly.",
+      "duration": 3
+    }
+  ]
+}
