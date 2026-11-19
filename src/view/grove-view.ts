@@ -42,9 +42,12 @@ import { FIGHT_CAMERA, fightView } from './boss-camera';
 import { CrocStones } from './croc-stones';
 import { Hanger, RopesView } from './ropes';
 import { nearestRopeEnd } from '../game/rope';
+import type { GLTF } from 'three/examples/jsm/loaders/GLTFLoader.js';
+import { SPECIES, type FishingEvent, type Species } from '../game/fishing';
+import { FISH_MODELS, FishingView } from './fishing';
 import { PickupsView } from './pickups';
 import { WeedBeds } from './weed-beds';
-import { ROUTE_CAMERA, cameraFor, followsRoute, forwardOf, turnToward } from './route-camera';
+import { ROUTE_CAMERA, cameraFor, followsRoute, forwardOf, placesCamera, turnToward } from './route-camera';
 import { ENEMY_MODELS, EnemyView, modelFileFor, modelFilesOf } from './enemies';
 import { enemiesInSight } from './sight';
 import { HERO_MODEL_FILES, buildHero, type HeroView } from './heroes';
@@ -125,6 +128,8 @@ interface LevelView extends LevelSolids {
   pickups: PickupsView | null;
   /** Beds of weed on the level's pools, if it has any. */
   weeds: WeedBeds | null;
+  /** The level's fishing spot drawn, if it has one. */
+  fishing: FishingView | null;
 }
 
 /**
@@ -161,6 +166,8 @@ export class GroveView {
   /** How far into its boss-fight place the camera is, 0 to 1. */
   private fight = 0;
   private heroName: HeroName | null = null;
+  /** What the fishing rules reported since the last frame, for the splashes. */
+  private fishingEvents: FishingEvent[] = [];
   private level: Level | null = null;
   private follow = { x: 0, y: 0, z: 0 };
   private lowestGround = 0;
@@ -334,7 +341,20 @@ export class GroveView {
     this.levelView?.weeds?.dispose();
     const weeds = level.water?.some((pool) => pool.weeds?.length) ? new WeedBeds(level.water) : null;
     if (weeds) root.add(weeds.group);
-    this.levelView = { ...solids, root, forest, scatter, water, ropes, stones, under, pickups, weeds };
+    this.levelView?.fishing?.dispose();
+    let fishing: FishingView | null = null;
+    if (level.fishing) {
+      const models = new Map<Species, GLTF>();
+      for (const species of SPECIES) {
+        const loaded = this.assets.models.get(FISH_MODELS[species]);
+        if (loaded) models.set(species, loaded);
+      }
+      const deck = level.solids.find((s) => s.id === level.fishing!.solid);
+      fishing = new FishingView(level.fishing, models, this.tier.simple, water, deck?.top ?? level.fishing.surface);
+      root.add(fishing.group);
+    }
+    this.fishingEvents = [];
+    this.levelView = { ...solids, root, forest, scatter, water, ropes, stones, under, pickups, weeds, fishing };
     this.swimEvents = [];
     this.under = 0;
     this.hero = buildHero(heroName, this.assets, this.tier.simple);
@@ -395,6 +415,7 @@ export class GroveView {
         if (this.climbingOut) this.hero?.react('out');
         this.climbingOut = false;
       } else if (event.type === 'climb') this.climbingOut = true;
+      else if (event.type === 'fishing') this.fishingEvents.push(event);
       else if (event.type === 'piece' && event.what === 'snap') this.levelView?.stones?.snap(event.id);
       else if (event.type === 'piece') this.levelView?.stones?.event(event.id, event.what);
       else if (event.type === 'rope' && event.what === 'grab') {
@@ -550,6 +571,11 @@ export class GroveView {
     for (const piece of levelView.moving) placeMoving(piece, this.clock, dt);
     levelView.stones?.update(level.solids, game.grounded ? game.groundId : null, dt);
     levelView.pickups?.update(game.collected, game, this.clock, dt);
+    if (levelView.fishing && game.fishing) {
+      for (const event of this.fishingEvents) levelView.fishing.event(event, game.fishing);
+      levelView.fishing.update(game.fishing, { x, y, z }, game.hero, dt);
+    }
+    this.fishingEvents = [];
 
     // Mushrooms and the golden leaf.
     for (const mushroom of levelView.mushrooms.values()) animateMushroom(mushroom, dt);
@@ -588,7 +614,7 @@ export class GroveView {
     this.follow.y = ease(this.follow.y, followY, game.grounded || game.swimming ? 5 : 2.6, dt);
     // The camera turns to follow the route, from the solid the hero stands on or last stood on.
     if (this.turns) {
-      if (game.groundId) this.lastStood = game.groundId;
+      if (game.groundId && placesCamera(level, game.groundId)) this.lastStood = game.groundId;
       const wanted = cameraFor(level, this.lastStood);
       this.yaw = turnToward(this.yaw, wanted.facing, dt);
       this.pull = ease(this.pull, wanted.pull, ROUTE_CAMERA.pull, dt);
@@ -744,6 +770,11 @@ export class GroveView {
   /** What the boss on screen is showing, for the browser checks, or null when the level has none. */
   bossInfo(): ReturnType<BossView['info']> | null {
     return this.boss ? this.boss.info() : null;
+  }
+
+  /** The fishing spot as drawn, or null in a level with none. */
+  fishingInfo(): ReturnType<FishingView['info']> | null {
+    return this.levelView?.fishing?.info() ?? null;
   }
 
   /** How many huckleberries and hidden leaves are drawn now, or null in a level with none. */

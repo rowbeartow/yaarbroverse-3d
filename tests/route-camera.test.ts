@@ -2,10 +2,11 @@
 // No screen needed: src/view/route-camera.ts has no 3D code.
 
 import { describe, expect, it } from 'vitest';
+import { buildLake } from '../src/levels/cocolalla/layout';
 import { IDLE, type Input } from '../src/game/game';
 import type { Level, Solid } from '../src/game/level';
 import { LEVELS } from '../src/levels';
-import { cameraFor, followsRoute, forwardOf, stickToLevel, turnToward, wrapDegrees } from '../src/view/route-camera';
+import { cameraFor, followsRoute, forwardOf, placesCamera, stickToLevel, turnToward, wrapDegrees } from '../src/view/route-camera';
 
 const bank = (id: string, x: number, z: number): Solid => ({ id, kind: 'bank', shape: 'round', x, z, halfX: 2, halfZ: 2, top: 0, bottom: -40 });
 
@@ -40,6 +41,24 @@ describe('which way the camera faces', () => {
     expect(followsRoute(level)).toBe(true);
     expect(followsRoute({ ...level, sections: [{ name: 'one', solids: ['a'] }] })).toBe(false);
     expect(followsRoute({ ...level, sections: undefined })).toBe(false);
+  });
+});
+
+describe('a solid off the route', () => {
+  it('in a section keeps that section’s facing: the lake’s fishing jetty looks north with the pier', () => {
+    const lake = buildLake('normal');
+    expect(lake.route).not.toContain('jetty');
+    expect(cameraFor(lake, 'jetty')).toEqual(cameraFor(lake, 'dock'));
+    expect(cameraFor(lake, 'jetty').facing).toBe(0);
+    expect(placesCamera(lake, 'jetty')).toBe(true);
+  });
+
+  it('in no section says nothing about the camera, so the view leaves it as it is', () => {
+    const lake = buildLake('easy');
+    const loose = lake.solids.find((solid) => !lake.route.includes(solid.id) && !(lake.sections ?? []).some((section) => section.solids.includes(solid.id)));
+    expect(loose).toBeDefined();
+    expect(placesCamera(lake, loose!.id)).toBe(false);
+    expect(placesCamera(lake, 'dock')).toBe(true);
   });
 });
 

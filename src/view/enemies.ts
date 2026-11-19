@@ -31,6 +31,7 @@ import {
 import type { GLTF } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { clone as cloneRigged } from 'three/examples/jsm/utils/SkeletonUtils.js';
 import { CROC } from '../game/crocodile';
+import { fishModelFiles } from './fishing';
 import type { Level } from '../game/level';
 import { ENEMY, type Enemy, type EnemyKind, type EnemyPhase, type EnemyTuning } from '../game/enemy';
 
@@ -97,6 +98,8 @@ export const modelFilesOf = (level: Level): string[] => {
   if (level.solids.some((s) => s.motion?.kind === 'float')) kinds.add('crocodile');
   // A boss is always drawn from the full model.
   const files = new Set([...kinds].map((kind) => modelFileFor(kind, level)));
+  // The fish of a level with a fishing spot.
+  if (level.fishing) for (const file of fishModelFiles()) files.add(file);
   if (level.boss) files.add(ENEMY_MODELS[level.boss.look.model].file);
   return [...files];
 };

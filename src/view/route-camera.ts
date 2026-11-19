@@ -27,11 +27,19 @@ export const cameraFor = (level: Level, lastSolid: string | null): { facing: num
   // Only solids count: a pool's id in the route stands for a swim.
   const route = level.route.filter((id) => solids.has(id));
   const at = lastSolid === null ? -1 : route.indexOf(lastSolid);
+  // A solid off the route (a fishing jetty, a rock to rest on) keeps the facing of the section it belongs to.
+  if (lastSolid !== null && at < 0) {
+    const own = sectionOf(lastSolid);
+    if (own) return { facing: own.facing ?? 0, pull: own.pull ?? 1 };
+  }
   // The camera looks the way of the solid the hero sets out for next, so it has turned before the hero leaves a bank.
   const next = route[Math.min(at + 1, route.length - 1)];
   const section = (next ? sectionOf(next) : undefined) ?? (lastSolid ? sectionOf(lastSolid) : undefined) ?? sections[0];
   return { facing: section?.facing ?? 0, pull: section?.pull ?? 1 };
 };
+
+/** True when a solid says anything about the camera: it is on the route, or in a section. Standing on any other leaves the camera as it is. */
+export const placesCamera = (level: Level, id: string): boolean => level.route.includes(id) || (level.sections ?? []).some((section) => section.solids.includes(id));
 
 /** An angle brought into -180 to 180. */
 export const wrapDegrees = (degrees: number): number => ((((degrees + 180) % 360) + 360) % 360) - 180;

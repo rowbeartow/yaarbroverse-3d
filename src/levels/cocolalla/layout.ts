@@ -492,6 +492,8 @@ export function buildLake(difficulty: Difficulty, numbers: LakeNumbers = LAKE_DI
   const dockX = x - shape.dockLength / 2;
   const jettyNorth = pierZ - shape.dockHalfWidth - shape.jettyLength;
   box('jetty', 'deck', dockX - shape.jettyHalfWidth, dockX + shape.jettyHalfWidth, jettyNorth, pierZ - shape.dockHalfWidth, deck, deck - 0.4, {}, false);
+  // It is part of the pier, so the camera keeps looking north from it, out over the fishing water.
+  sections[sections.length - 1].solids.push('jetty');
   const fishing: FishingSpot = {
     id: 'jetty-fishing',
     solid: 'jetty',
