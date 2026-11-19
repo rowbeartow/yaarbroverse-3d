@@ -37,7 +37,7 @@ import { findLevel, levelFromAddress, listedLevels, shownLevels } from './levels
 import { GhostStore } from './save/ghost-store';
 import { loadGhost, saveGhost, type GhostSlot } from './save/ghosts';
 import { pickupCounts } from './game/collect';
-import { Players, endBests, ghostOn, type EndBests, type HaulOutcome, type Player as SavedPlayer } from './save/players';
+import { Players, endBests, ghostOn, isBiggestYet, type CatchOutcome, type EndBests, type HaulOutcome, type Player as SavedPlayer } from './save/players';
 import { DiveHint, diveHintText } from './ui/dive-hint';
 import { fishingButton, fishingHint, fishingNews } from './ui/fishing-words';
 import { onSpot } from './game/fishing';
@@ -159,6 +159,8 @@ const boot = (): void => {
 
   /** What saving this run's huckleberries and hidden leaves said, for the end card. */
   let endFinds: HaulOutcome | null = null;
+  /** What saving this run's catch said, for the end card. */
+  let endFish: CatchOutcome | null = null;
   /** The run whose haul has been saved, so each run is saved once. */
   let haulSaved: Game | null = null;
   /**
@@ -169,6 +171,9 @@ const boot = (): void => {
     if (!who || haulSaved === game || preview) return null;
     haulSaved = game;
     const { berries, leaves } = game.summary();
+    // The catch goes in the player's fish book with the haul: both are kept whether or not the run is finished.
+    endFish = players.land(who.id, game.catches);
+    if (Object.keys(endFish.caught).length) picker.show(who);
     return players.collect(who.id, { levelId: entry.id, difficulty: choice.difficulty, berries, leaves });
   };
 
@@ -176,6 +181,7 @@ const boot = (): void => {
   const setUp = (): void => {
     saveHaul();
     endFinds = null;
+    endFish = null;
     level = entry.build(choice.difficulty);
     game = new Game(level, choice.difficulty, choice.hero);
     toFind = pickupCounts(level.pickups);
@@ -403,7 +409,9 @@ const boot = (): void => {
     };
     for (const event of events) {
       if (event.type === 'fishing') {
-        const words = fishingNews(event, isTouchDevice(), level.fishing?.numbers.snap === Infinity);
+        // The catch is already on the run's record: everything before its last fish is "earlier".
+        const biggest = event.what === 'landed' && isBiggestYet(who, game.catches.slice(0, -1), { species: event.species, size: event.size });
+        const words = fishingNews(event, isTouchDevice(), level.fishing?.numbers.snap === Infinity, biggest);
         if (words) news(words.text, words.seconds);
       } else if (event.type === 'fall') screens.say('Back to safety…', 2);
       else if (event.type === 'piece' && event.what === 'snap') news('Snap! Do not stand on a crocodile too long.', 2.5);
@@ -539,7 +547,7 @@ const boot = (): void => {
         sinceGoal += dt;
         if (sinceGoal > 1.6) {
           screens.hush();
-          screens.showEnd(game.summary(), new Date(), endCard, endFinds);
+          screens.showEnd(game.summary(), new Date(), endCard, endFinds, endFish);
         }
       }
     }

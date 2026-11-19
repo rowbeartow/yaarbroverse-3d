@@ -1,6 +1,6 @@
 # Session handoff
 
-Last updated: 2026-11-19 (milestone eleven, part one, is under way: the lake's headroom is live, the design is OK, the fish are picked and rigged, and fishing is playable from the jetty. Still to come in part one: the fish book, the sounds, and the heroes' fishing clips.)
+Last updated: 2026-11-19 (milestone eleven, part one, is under way: the lake's headroom is live, the design is OK, the fish are picked and rigged, and fishing is playable from the jetty. Still to come in part one: the sounds, and the heroes' fishing clips.)
 
 ## Start here
 
@@ -37,11 +37,12 @@ The candidates page (https://claude.ai/artifact/1h8T7Z81kdQBjd8ZC1Kcuh ) shows a
 
 **What fishing costs to draw** (`node tools/draw-measure.mjs cocolalla hard`, the test browser, high tier): the dock, the lake's heaviest place, draws 825,006 triangles in 321 draw calls with fishing, against 798,124 in 278 without it and 921,462 in 288 before the headroom work. So the triangles keep a tenth of margin under where the lake sat at 60, but the draw calls are now a little over what they were then: eight fish are eight more skinned models, and the jetty is new. Fishing is neither moved nor drawn more than 32 m from the spot, and every fish's dark shape is one draw. Draw calls in that tool move by ten or so from run to run (splashes and rings count). **The owner checks the frame rate at the jetty on Hard; if it is under 60, draw fewer fish (`count` in `FISH`) before anything else.** The monster pike and Walblum still have to fit.
 
+**The fish book: the pull request this version of the handoff arrived in. If you are reading this on `main`, it has merged.** Each player has one fish book for the whole game (`fish` on the player in `src/save/players.ts`: a count and a biggest for each kind; `Players.land` adds a run's catch, finished or not). It shows in the message when a fish is landed ("Your biggest yet!"), on the end card ("Fish caught") and on the lake's card on the picker (`.fish-book`, pictures in `public/fish/`). `tests/fish-book.test.ts` holds the saving; `tests/browser/fishing.spec.ts` follows one catch to the end card and the level card. `docs/decisions.md`, "The fish book".
+
 **What fishing does not have yet:**
 
 1. **Sounds.** None play. Cast, reel, bite, splash and landing a fish go on the sound board as recordings for the owner's OK first.
 2. **Hero clips.** A hero with a line out stands in its idle clip, and the rod is drawn in its grip. Yaarbro's clips are made (see below) but not on his model; Caputo's are to be written in `tools/rig-quadruped.py`. Both are a change to a hero: the hero preview page and the owner's OK come before that merges. If Caputo with the rod in his jaws looks bad, the owner's word is to switch to Caputo swatting at the fish.
-3. **The fish book** (next pull request): saved per player in `src/save/players.ts`, on the end card and the level card. Today a run's catches are only on its summary (`Summary.fish`) and in the message when a fish is landed.
 
 **Not checked, and the owner is the one who can:** how any of it moves (a cloud session saw six still frames of one catch on Easy and three on Hard); whether the dark shapes read as fish and the ring is easy to follow on the iPad; whether Easy really needs no timing for the younger player and Hard is work enough for the older; and the frame rate at the jetty.
 

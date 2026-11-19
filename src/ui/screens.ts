@@ -2,11 +2,13 @@
 // the "turn sideways" card and the short messages while playing. Plain web
 // page elements over the canvas, so text stays sharp and screen readers work.
 
+import type { Species } from '../game/fishing';
+import { biggestWords, catchWords } from './fishing-words';
 import { showControls } from './controls-help';
 import { DIFFICULTIES, DIFFICULTY_LABEL, isDifficulty, type Difficulty } from '../game/difficulty';
 import type { Summary } from '../game/game';
 import { HEROES, isHeroName, type HeroName } from '../game/hero';
-import type { EndBests, HaulOutcome } from '../save/players';
+import type { EndBests, CatchOutcome, HaulOutcome } from '../save/players';
 
 export interface Choice {
   hero: HeroName;
@@ -409,7 +411,15 @@ export class Screens {
    * it was their most huckleberries in a run, how many hidden leaves were new
    * to them, and how many they have now found on this difficulty.
    */
-  showEnd(summary: Summary, date: Date, bests: EndBests | null = null, finds: HaulOutcome | null = null): void {
+  showEnd(summary: Summary, date: Date, bests: EndBests | null = null, finds: HaulOutcome | null = null, fish: CatchOutcome | null = null): void {
+    // The run's catch, where the level has fishing: what was landed, and any biggest it set in the player's fish book.
+    const caught: Partial<Record<Species, number>> = {};
+    for (const each of summary.fish) caught[each.species] = (caught[each.species] ?? 0) + 1;
+    el('#end-fish-box').hidden = !summary.fishing;
+    el('#end-fish').textContent = catchWords(caught) || 'None';
+    const records = fish ? biggestWords(fish.biggest) : '';
+    el('#end-fish-box').classList.toggle('is-new', records !== '');
+    el('#end-fish-best').textContent = records;
     el('#end-berries-box').hidden = summary.berriesIn === 0;
     el('#end-leaves-box').hidden = summary.leavesIn === 0;
     el('#end-berries').textContent = `${summary.berries} of ${summary.berriesIn}`;

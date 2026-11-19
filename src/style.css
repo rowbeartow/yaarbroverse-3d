@@ -1096,6 +1096,49 @@ dd {
   height: 11px;
 }
 
+/* A player's fish book on a level's card: each kind's picture, how many
+   and the biggest. A kind not caught yet is a grey shape and a question mark. */
+.fish-book {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 4px;
+  margin-top: 6px;
+  padding-top: 6px;
+  border-top: 2px solid rgba(27, 42, 36, 0.12);
+}
+
+.fish-entry {
+  display: grid;
+  justify-items: center;
+  gap: 1px;
+  min-width: 0;
+  text-align: center;
+  font-size: clamp(11px, 1.6vh, 13px);
+  line-height: 1.15;
+  color: #4f5b50;
+}
+
+.fish-entry img {
+  width: 100%;
+  max-width: 56px;
+  height: auto;
+  aspect-ratio: 120 / 64;
+}
+
+.fish-entry b {
+  color: #1b2a24;
+}
+
+.fish-entry small {
+  font-size: inherit;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.fish-entry[data-caught='0'] img {
+  filter: brightness(0) opacity(0.22);
+}
+
 /* ---------- Bests on the end card ---------- */
 
 .new-best {

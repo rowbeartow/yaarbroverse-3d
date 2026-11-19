@@ -25,7 +25,7 @@ test('the start screen shows the grove as a card, picked, with nothing finished 
   const lake = page.locator('.area[data-level="cocolalla"]');
   await expect(lake.locator('.area-pick')).toHaveAttribute('aria-checked', 'false');
   await expect(lake.locator('.area-name')).toHaveText('Cocolalla Lake');
-  await expect.poll(() => lake.locator('img').evaluate((img) => (img as HTMLImageElement).naturalWidth)).toBeGreaterThan(100);
+  await expect.poll(() => lake.locator('img.area-picture').evaluate((img) => (img as HTMLImageElement).naturalWidth)).toBeGreaterThan(100);
   const card = page.locator('.area[data-level="bouncing-grove"]');
   await expect(card.locator('.area-pick')).toHaveAttribute('aria-checked', 'true');
   await expect(card.locator('.area-name')).toHaveText('The Bouncing Grove');
