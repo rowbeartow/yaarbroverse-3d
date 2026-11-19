@@ -14,7 +14,10 @@
 import type { Difficulty } from '../../src/game/difficulty';
 import type { Game } from '../../src/game/game';
 import type { HeroName } from '../../src/game/hero';
+import { SPECIES } from '../../src/game/fishing';
+import { IDLE } from '../../src/game/game';
 import { Bot } from '../../tests/helpers/bot';
+import { Fisher } from '../../tests/helpers/fisher';
 
 interface Place {
   id: string;
@@ -26,7 +29,8 @@ interface Place {
 }
 
 const PLACES: Place[] = [
-  // First, so the page opens on it: the newest thing to look at.
+  // First, so the page opens on it: the newest thing to look at. Walk north onto the jetty to fish.
+  { id: 'fishing', label: 'Fishing from the jetty', at: 'dock', until: 'none' },
   { id: 'logs', label: 'Sinking logs', at: 'headland', until: 'gravel-bar' },
   { id: 'open', label: 'The Open Water', at: 'gravel-bar', until: 'reed-bar' },
   { id: 'tunnel', label: 'The Rock Tunnel', at: 'reed-bar', until: 'cove-beach' },
@@ -58,6 +62,22 @@ const hero = HEROES.find((each) => each === asked.get('hero')) ?? 'Yaarbro';
 const watching = asked.get('mode') !== 'play';
 
 let bot = new Bot();
+/** Watching the fishing: the rule tests' fishing bot, after each kind of fish in turn. */
+let fisher: Fisher | null = null;
+let caught = 0;
+const fish = (game: Game) => {
+  const spot = game.level.fishing;
+  if (!spot || !game.fishing) return IDLE;
+  // Walk out onto the jetty first, with nothing on the dock in the way.
+  for (const enemy of game.enemies) Object.assign(enemy, { phase: 'defeated', timer: 99 });
+  const far = Math.hypot(spot.x - game.x, spot.z - game.z);
+  if (game.fishing.phase === 'off' && far > spot.radius * 0.5) return { ...IDLE, moveX: (spot.x - game.x) / far, moveZ: (spot.z - game.z) / far };
+  if (game.catches.length !== caught || !fisher) {
+    caught = game.catches.length;
+    fisher = new Fisher(SPECIES[caught % SPECIES.length]);
+  }
+  return fisher.input(game);
+};
 let playing: Game | null = null;
 /** The game time at which the bot came to stand where the place ends, or null. */
 let stoodSince: number | null = null;
@@ -75,7 +95,10 @@ const page = window as unknown as { __previewHold?: boolean };
           playing = game;
           bot = new Bot();
           stoodSince = null;
+          fisher = null;
+          caught = 0;
         }
+        if (place.id === 'fishing') return fish(game);
         return bot.input(game);
       }
     : undefined,

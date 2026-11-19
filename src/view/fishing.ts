@@ -17,6 +17,7 @@ import {
   CylinderGeometry,
   DoubleSide,
   Group,
+  InstancedMesh,
   Line,
   LineBasicMaterial,
   LoopRepeat,
@@ -24,6 +25,7 @@ import {
   MeshBasicMaterial,
   MeshLambertMaterial,
   MeshStandardMaterial,
+  Object3D,
   RingGeometry,
   SphereGeometry,
   Vector3,
@@ -43,7 +45,7 @@ export const fishModelFiles = (): string[] => SPECIES.map((species) => FISH_MODE
 /** How many times its real length a fish is drawn: seen from the camera, a real perch would be a speck. */
 const SHOWN = 3;
 /** Fishing is neither moved nor drawn when the hero is further than this from the spot. */
-const NEAR = 55;
+const NEAR = 32;
 /** Where a hero holds the rod, and where its tip is, from the hero's feet: metres ahead and up. */
 const GRIP: Record<HeroName, { ahead: number; up: number; tipAhead: number; tipUp: number }> = {
   Yaarbro: { ahead: 0.35, up: 1.05, tipAhead: 1.9, tipUp: 2.5 },
@@ -71,9 +73,9 @@ class FishView {
    * water over it. From the camera's height the fish itself is lost in the
    * water's colour; this is what a player casts at.
    */
-  readonly shade: Mesh;
+  shade: { x: number; z: number; facing: number } | null = null;
   /** How long the fish is drawn, in metres. */
-  private drawn = 1;
+  drawn = 1;
 
   constructor(readonly species: Species, source: GLTF, simple: boolean) {
     const model = cloneRigged(source.scene);
@@ -107,12 +109,6 @@ class FishView {
       this.actions[name] = action;
     }
     this.root.visible = false;
-    const shadeLook = new MeshBasicMaterial({ color: 0x0b3238, transparent: true, opacity: 0.42, depthWrite: false, fog: false });
-    this.materials.push(shadeLook);
-    this.shade = new Mesh(SHADE_SHAPE, shadeLook);
-    this.shade.rotation.order = 'YXZ';
-    this.shade.renderOrder = 3;
-    this.shade.visible = false;
   }
 
   /** Draws the fish `size` centimetres long. */
@@ -122,12 +118,8 @@ class FishView {
   }
 
   /** Lays the dark shape on the water at (x, z), along the way the fish faces, or hides it. */
-  shadeAt(x: number, surface: number, z: number, facing: number, shown: boolean): void {
-    this.shade.visible = shown;
-    if (!shown) return;
-    this.shade.position.set(x, surface + 0.04, z);
-    this.shade.rotation.set(-Math.PI / 2, facing, 0);
-    this.shade.scale.set(this.drawn * 0.32, this.drawn * 1.05, 1);
+  shadeAt(x: number, _surface: number, z: number, facing: number, shown: boolean): void {
+    this.shade = shown ? { x, z, facing } : null;
   }
 
   play(clip: Clip, dt: number): void {
@@ -160,6 +152,9 @@ export class FishingView {
   private readonly line: Line;
   private readonly linePoints = new Float32Array(LINE_POINTS * 3);
   private readonly looks: Material[] = [];
+  /** Every fish's dark shape on the water, in one draw. */
+  private readonly shades: InstancedMesh;
+  private readonly scratch = new Object3D();
   private clock = 0;
   /** Seconds the bobber has left to twitch (a nibble) and how far under it is (a bite). */
   private twitch = 0;
@@ -173,13 +168,18 @@ export class FishingView {
       for (let i = 0; i < spot.numbers.species[species].count; i += 1) {
         const view = new FishView(species, source, simple);
         this.fish.push(view);
-        this.group.add(view.root, view.shade);
+        this.group.add(view.root);
       }
     }
     const look = <T extends Material>(material: T): T => {
       this.looks.push(material);
       return material;
     };
+    this.shades = new InstancedMesh(SHADE_SHAPE, look(new MeshBasicMaterial({ color: 0x0b3238, transparent: true, opacity: 0.42, depthWrite: false, fog: false })), Math.max(1, this.fish.length));
+    this.shades.frustumCulled = false;
+    this.shades.renderOrder = 3;
+    this.scratch.rotation.order = 'YXZ';
+    this.group.add(this.shades);
     // The spot: a gold ring painted on the boards.
     this.mark = new Mesh(new RingGeometry(spot.radius * 0.62, spot.radius * 0.8, 40), look(new MeshBasicMaterial({ color: 0xf2c14e, transparent: true, opacity: 0.75, side: DoubleSide, depthWrite: false })));
     this.mark.rotation.x = -Math.PI / 2;
@@ -327,6 +327,21 @@ export class FishingView {
       view.play(thrashing ? 'thrash' : fish.mood === 'idle' || fish.mood === 'nibbling' || fish.mood === 'biting' ? 'idle' : 'swim', dt);
       if (thrashing && this.water && Math.random() < dt * 5) this.water.ring(where.x, where.z, 1.2, 0.8);
     }
+    this.layShades();
+  }
+
+  /** Puts every fish's dark shape where its fish is; one with none is drawn at no size. */
+  private layShades(): void {
+    this.fish.forEach((view, index) => {
+      const shade = view.shade;
+      this.scratch.position.set(shade?.x ?? 0, this.spot.surface + 0.04, shade?.z ?? 0);
+      this.scratch.rotation.set(-Math.PI / 2, shade?.facing ?? 0, 0);
+      if (shade) this.scratch.scale.set(view.drawn * 0.32, view.drawn * 1.05, 1);
+      else this.scratch.scale.setScalar(0);
+      this.scratch.updateMatrix();
+      this.shades.setMatrixAt(index, this.scratch.matrix);
+    });
+    this.shades.instanceMatrix.needsUpdate = true;
   }
 
   /** What is drawn, for the browser checks. */

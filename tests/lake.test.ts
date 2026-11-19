@@ -6,7 +6,7 @@
 // same rules a player does. `LAKE_TIMES=1 npx vitest run tests/lake.test.ts
 // --silent=false` prints when a perfect run reaches the end of each section.
 
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { DIFFICULTIES, type Difficulty } from '../src/game/difficulty';
 import { Game, IDLE } from '../src/game/game';
 import { HEROES, STEP, type HeroName } from '../src/game/hero';
@@ -17,6 +17,9 @@ import { routeFaults, routeShape } from '../src/game/route-shape';
 import { LAKE_CAMERA, LAKE_SHAPE, buildLake } from '../src/levels/cocolalla/layout';
 import { cameraFor } from '../src/view/route-camera';
 import { Bot } from './helpers/bot';
+
+// The bot plays the whole lake in many of these: a couple of seconds each on a fast machine, and well over the usual 5 on a busy one (two have timed out there).
+vi.setConfig({ testTimeout: 60_000 });
 
 const byId = (level: Level, id: string): Solid => {
   const found = level.solids.find((s) => s.id === id);

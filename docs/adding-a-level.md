@@ -152,6 +152,17 @@ A level can have huckleberries and hidden leaves (`src/game/collect.ts`): give i
 - **Weed**: give a pool `weeds`, a list of boxes seen from above. A swimmer at the surface in one goes at under half speed (`SWIM.weedSlow`); underwater there is none. Lay a bed across the straight line, so going round it or under it is a choice. `src/view/weed-beds.ts` draws every bed in a level in one draw, and never past the box.
 - **Log boom**: a `log` solid floating across a pool with `noClimb: true`, about 0.9 m thick with its middle at the surface. A swimmer cannot get onto it or through it: the way past is round its end, or under it. Leave a gap at one end, and put the next boom's gap at the other, so the swim changes direction. Keep the first boom further than a jump from any bank over the water, and end a boom at the real shore: `tests/lake.test.ts` found a gap that was inside an island.
 
+## Fishing
+
+A level can have a place to fish from (`src/game/fishing.ts`, whose top says how fishing goes): give the `Level` a `fishing` spot. Cocolalla Lake's jetty is the example.
+
+- **The spot** is a circle on a solid (`solid`, `x`, `z`, `radius`), with `ahead` pointing at the water (a step of length 1 seen from above), the water's `surface`, and the water a cast can reach: from `near` to `far` out and `halfWidth` to either side. Keep all of that water inside one pool and clear of every solid: `tests/fishing.test.ts` checks the lake's.
+- **Give it ground of its own.** On the spot the move button fishes instead of rolling or pouncing, and a hero with a line out stands still, so no enemy's ground may reach it (the owner's rule that hazards do not stack). The lake's is a short jetty off the dock, not on the route: fishing is always a choice, and a run for a best time walks past.
+- **Put its solid in a section** (`sections[...].solids`) even though it is off the route, so the camera keeps that section's facing, and make that facing look along `ahead`: the ring slides away from the camera and the stick moves it left and right.
+- **Its numbers** are a `FishingNumbers` for each difficulty in the level's `difficulty.ts`: what each fish is like (`species`: how many, how far out, how big, how it nibbles and fights) and what the difficulty changes. On Easy choose numbers that need no timing: `castHelp: true`, `biteWindow: Infinity`, `snap: Infinity`.
+- The game does the rest: the fish and their shadows, the ring, bobber, line and rod (`src/view/fishing.ts`), the button's label and the line bar, the words (`src/ui/fishing-words.ts`), and the run's catches on its summary. The fish models are fetched with the level's own files.
+- `tests/helpers/fisher.ts` is a bot that fishes: use it to prove every kind can be caught on every difficulty as each hero.
+
 ## New enemies
 
 A level may reuse the marmot scout and the giant mosquito as they are. A new enemy is its own piece of work, done before the level: its behaviour in `src/game/enemy.ts`, its model made and rigged the way the handoff describes, and the owner's OK on the enemy preview page.
