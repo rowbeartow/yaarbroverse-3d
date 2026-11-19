@@ -7,6 +7,7 @@ import { BOSS, bossFighting, newBoss, resetBoss, stepBoss, type Boss, type BossA
 import { pickupCounts, touchesPickup, type PickupKind } from './collect';
 import type { Difficulty } from './difficulty';
 import { ENEMY, callSidekick, dismissSidekick, newEnemy, sendHome, stepEnemy, type Enemy, type EnemyPhase, type EnemyTuning } from './enemy';
+import { dropLine, newFishing, onSpot, stepFishing, type Catch, type FishingEvent, type FishingState } from './fishing';
 import { MOVE, STEP, knockSpeed, type HeroName } from './hero';
 import { pushOutside, surfaceBelow, topAt, touchesFromAbove, type Level, type Solid } from './level';
 import { ownPieces, resetPieces, stepPieces, type PieceEvent } from './moving';
@@ -72,6 +73,8 @@ export type GameEvent =
   | ({ type: 'piece' } & PieceEvent)
   /** Picked up a huckleberry or a hidden leaf (see collect.ts). `found` is how many of that kind this run has now. */
   | { type: 'pickup'; id: string; kind: PickupKind; found: number }
+  /** Something happened at the fishing spot (see fishing.ts). */
+  | ({ type: 'fishing' } & FishingEvent)
   | { type: 'goal' };
 
 /** The record of a run, shown on the end card. */
@@ -93,6 +96,8 @@ export interface Summary {
   /** The ids of the hidden leaves found this run, and how many the level has. */
   leaves: string[];
   leavesIn: number;
+  /** The fish landed this run, in the order they were caught. */
+  fish: Catch[];
 }
 
 const EPSILON = 1e-4;
@@ -144,6 +149,10 @@ export class Game {
   stunned = 0;
   /** Out of hearts: counts down to going back to the last safe bank. */
   fainting = 0;
+  /** The level's fishing spot as it is now (see fishing.ts), or null when the level has none. */
+  readonly fishing: FishingState | null;
+  /** The fish landed this run. A fall takes none away. */
+  readonly catches: Catch[] = [];
   /** The ids of what has been collected this run (see collect.ts). A fall takes nothing away. */
   readonly collected = new Set<string>();
   /** How many huckleberries and hidden leaves this run has picked up. */
@@ -204,6 +213,7 @@ export class Game {
     this.enemies = (level.enemies ?? []).map((spot) => newEnemy(spot, this.tuning));
     this.boss = level.boss ? newBoss(level.boss) : null;
     this.ropes = (level.ropes ?? []).map(newRope);
+    this.fishing = level.fishing ? newFishing(level.fishing) : null;
     const under = surfaceBelow(level, this.x, this.z, this.y, MOVE.footRadius);
     this.groundId = under ? under.id : null;
     this.safeSpot = { ...level.spawn, id: under?.safe ? under.id : null };
@@ -275,6 +285,7 @@ export class Game {
       berriesIn: counts.berry,
       leaves: (this.level.pickups ?? []).filter((pickup) => pickup.kind === 'leaf' && this.collected.has(pickup.id)).map((pickup) => pickup.id),
       leavesIn: counts.leaf,
+      fish: [...this.catches],
     };
   }
 
@@ -286,6 +297,8 @@ export class Game {
    */
   hurt(fromX: number, fromZ: number): boolean {
     if (this.complete || this.protectedFor > 0 || this.hearts <= 0) return false;
+    // Hurt while fishing: the line is dropped, and a hooked fish gets away.
+    if (this.fishing) for (const event of dropLine(this.fishing)) this.pending.push({ type: 'fishing', ...event });
     this.hearts -= 1;
     this.heartsLost += 1;
     let awayX = this.x - fromX;
@@ -403,6 +416,21 @@ export class Game {
     // After the leaf, while standing still after a fall, and for a moment
     // after being hurt, the buttons do nothing.
     const frozen = this.complete || this.returning > 0 || this.stunned > 0 || this.fainting > 0;
+    // Fishing: on the spot the move button fishes, and while a line is out the hero stands and faces the water.
+    if (this.fishing && level.fishing) {
+      const spot = level.fishing;
+      const standing = !frozen && this.grounded && !this.swimming && this.climbing <= 0 && onSpot(spot, this.groundId, this.x, this.z);
+      const busy = this.fishing.phase !== 'off';
+      const across = -spot.ahead.z * input.moveX + spot.ahead.x * input.moveZ;
+      for (const event of stepFishing(this.fishing, spot, { button: standing && Boolean(input.move), jump: standing && input.jump, across }, standing, dt)) {
+        if (event.what === 'landed') this.catches.push({ species: event.species, size: event.size });
+        this.events.push({ type: 'fishing', ...event });
+      }
+      if (busy || this.fishing.phase !== 'off') {
+        input = IDLE;
+        this.facing = Math.atan2(spot.ahead.x, spot.ahead.z);
+      } else if (standing) input = { ...input, move: false };
+    }
     this.returning = Math.max(0, this.returning - dt);
     this.stunned = Math.max(0, this.stunned - dt);
     this.protectedFor = Math.max(0, this.protectedFor - dt);

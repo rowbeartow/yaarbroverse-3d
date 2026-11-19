@@ -74,6 +74,7 @@ describe('the run record', () => {
       berriesIn: 0,
       leaves: [],
       leavesIn: 0,
+      fish: [],
     });
     expect(summary.seconds).toBeGreaterThan(1);
   });

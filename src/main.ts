@@ -39,6 +39,8 @@ import { loadGhost, saveGhost, type GhostSlot } from './save/ghosts';
 import { pickupCounts } from './game/collect';
 import { Players, endBests, ghostOn, type EndBests, type HaulOutcome, type Player as SavedPlayer } from './save/players';
 import { DiveHint, diveHintText } from './ui/dive-hint';
+import { fishingButton, fishingHint, fishingNews } from './ui/fishing-words';
+import { onSpot } from './game/fishing';
 import { Picker } from './ui/picker';
 import { Screens, isTouchDevice, loadChoice, needsTurning, type Choice } from './ui/screens';
 import { Who, badge } from './ui/who';
@@ -400,7 +402,10 @@ const boot = (): void => {
       newsUntil = game.seconds + seconds;
     };
     for (const event of events) {
-      if (event.type === 'fall') screens.say('Back to safety…', 2);
+      if (event.type === 'fishing') {
+        const words = fishingNews(event, isTouchDevice(), level.fishing?.numbers.snap === Infinity);
+        if (words) news(words.text, words.seconds);
+      } else if (event.type === 'fall') screens.say('Back to safety…', 2);
       else if (event.type === 'piece' && event.what === 'snap') news('Snap! Do not stand on a crocodile too long.', 2.5);
       else if (event.type === 'hurt' && event.left > 0) news(`Oof! ${event.left} of ${level.hearts} hearts left.`, 2.5);
       else if (event.type === 'hurt') news('Out of hearts. Back to safety!', 2.5);
@@ -451,6 +456,8 @@ const boot = (): void => {
   // How to dive: the first time in the water in a run, and again when a swimmer
   // waits at the surface by a passage it can only get through underwater.
   const diveHint = new DiveHint();
+  /** Whether the hero stood on the fishing spot on the last frame, to say how to fish on stepping onto it. */
+  let wasAtSpot = false;
   const hintDive = (): void => {
     const water = game.water;
     const show = diveHint.step(
@@ -499,7 +506,14 @@ const boot = (): void => {
       // A preview page starts its place over when it says so.
       if (preview?.again?.(game)) play();
       screens.setHearts(game.hearts, level.hearts);
-      screens.setSwimming(game.swimming);
+      // At the fishing spot the round button fishes, and says so.
+      const atSpot = Boolean(level.fishing && game.fishing && game.grounded && onSpot(level.fishing, game.groundId, game.x, game.z));
+      const fishLabel = game.fishing ? fishingButton(atSpot, game.fishing.phase) : null;
+      if (fishLabel) screens.setFishing(fishLabel);
+      else screens.setSwimming(game.swimming);
+      if (atSpot && !wasAtSpot && game.fishing?.phase === 'off' && game.seconds >= newsUntil) screens.say(fishingHint(isTouchDevice()), 4);
+      wasAtSpot = atSpot;
+      screens.setLine(game.fishing?.phase === 'hooked' ? { strain: game.fishing.strain, fight: game.fishing.fight } : null);
       screens.setBreath(Number.isFinite(game.maxBreath) && (game.under || game.breath < game.maxBreath) ? game.breath / game.maxBreath : null);
       showBoss();
       screens.setFound(level.pickups?.length ? { berries: game.berries, berriesIn: toFind.berry, leaves: game.leaves, leavesIn: toFind.leaf } : null);
@@ -582,6 +596,10 @@ const boot = (): void => {
       /** The boss on screen, if the level has one, and whether the golden leaf is drawn. */
       get boss() {
         return view ? view.bossInfo() : null;
+      },
+      /** The level's fishing spot, if it has one: what is drawn, and what the rules have (phase, fish, catches). */
+      get fishing() {
+        return view && game.fishing ? { ...view.fishingInfo(), phase: game.fishing.phase, catches: game.catches.length } : null;
       },
       /** The level's water, if it has any: pools drawn, splashes showing, and how far under the picture is. */
       get water() {

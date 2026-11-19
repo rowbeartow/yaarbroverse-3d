@@ -313,6 +313,39 @@ export class Screens {
     }
   }
 
+  /**
+   * At the fishing spot the round button fishes, so it says what it does now
+   * (Fish, Cast, Hook!, Reel). Call `setSwimming` instead when it does not.
+   */
+  setFishing(label: string): void {
+    const key = `fish:${label}`;
+    if (key === this.moveShown) return;
+    this.moveShown = key;
+    const button = el('#move-button');
+    button.dataset.dive = 'false';
+    button.textContent = label;
+    button.setAttribute('aria-label', label);
+    button.classList.toggle('pulse', label === 'Hook!');
+  }
+
+  /**
+   * The fishing line while a fish is hooked: how strained it is (0 to 1) and
+   * what the fish is doing, or null to hide the bar.
+   */
+  setLine(line: { strain: number; fight: 'calm' | 'tell' | 'thrash' } | null): void {
+    const bar = el('#line');
+    if (line === null) {
+      if (!bar.hidden) bar.hidden = true;
+      return;
+    }
+    bar.hidden = false;
+    el('#line-strain').style.transform = `scaleX(${Math.max(0.06, Math.min(1, line.strain)).toFixed(3)})`;
+    bar.classList.toggle('tell', line.fight === 'tell');
+    bar.classList.toggle('thrash', line.fight === 'thrash');
+    bar.setAttribute('aria-label', line.fight === 'thrash' ? 'The fish is thrashing: let the line run' : 'The fish is tiring: reel');
+    bar.dataset.fight = line.fight;
+  }
+
   /** The controls on the pause screen, for this device and hero. */
   setControls(hero: HeroName): void {
     showControls(el('#paused-controls'), isTouchDevice(), hero);

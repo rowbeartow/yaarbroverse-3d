@@ -4,6 +4,7 @@
 // Directions: x is left (-) and right (+), y is up, z is toward the camera (+)
 // and away from it (-). Levels run away from the camera, so "forward" is -z.
 
+import type { FishingSpot } from './fishing';
 import type { JumpAssist } from './assist';
 import type { BossSpot } from './boss';
 import type { Pickup } from './collect';
@@ -117,6 +118,8 @@ export interface Level {
    * hide is drawn (src/view/sight.ts).
    */
   enemySight?: { within: number; most: number };
+  /** A place to fish from, if the level has one (see fishing.ts). */
+  fishing?: FishingSpot;
   /** Pools of deep water, if the level has any (see swim.ts). A hero in one swims; it is never a fall. */
   water?: Water[];
   /** Seconds a hero can stay underwater before running out of breath. Left out, breath never runs out (Easy). */

@@ -1,6 +1,6 @@
 # Session handoff
 
-Last updated: 2026-11-19 (milestone eleven, part one, is under way: the lake's headroom is live, the design is OK and the fish are picked and rigged. Fishing itself is not built.)
+Last updated: 2026-11-19 (milestone eleven, part one, is under way: the lake's headroom is live, the design is OK, the fish are picked and rigged, and fishing is playable from the jetty. Still to come in part one: the fish book, the sounds, and the heroes' fishing clips.)
 
 ## Start here
 
@@ -8,7 +8,7 @@ Last updated: 2026-11-19 (milestone eleven, part one, is under way: the lake's h
 
 **The design is settled** (`docs/decisions.md`, "The owner's answers on the fishing and pike design"): the page is https://claude.ai/artifact/WM17aRk4LTHHDwveCCkfrs , with his answers recorded at its foot. Caputo holds the rod in his jaws (if it looks bad: he swats at the fish). A landed fish goes back in the lake. **Walblum's rescue is the last thing in the level**: the page's phases 4 to 6 were changed to fit. It is built by a script that is not in the repo; to change it, read the page with the Artifact tool and publish over the same address.
 
-**The fish rig: the pull request this version of the handoff arrived in. If you are reading this on `main`, it has merged.** `tools/rig-fish.py` with `tools/fish.rig.json` rigs any of the four; the compressed files are `assets/fish/<name>.glb` (the build copies them to `media/models/`; nothing in the game loads them yet). Seven bones, four clips (`idle`, `swim`, `thrash`, `flop`); `tests/fish-files.test.ts` holds them. The movement page: https://claude.ai/artifact/TznKmhea4xUFvcL8DLQsRx (built by `tools/preview/enemies.mjs`, which knows the four fish).
+**The fish rig: pull request 84, merged 2026-11-19.** `tools/rig-fish.py` with `tools/fish.rig.json` rigs any of the four; the compressed files are `assets/fish/<name>.glb`. Seven bones, four clips (`idle`, `swim`, `thrash`, `flop`); `tests/fish-files.test.ts` holds them. The movement page: https://claude.ai/artifact/TznKmhea4xUFvcL8DLQsRx (built by `tools/preview/enemies.mjs`, which knows the four fish).
 
 - Rig a fish: `blender -b -P tools/rig-fish.py -- <picked original.glb> <out.glb> tools/fish.rig.json <bass, perch, trout or pike>`, then `node tools/compress-hero.mjs <out.glb> <name> 512 fish`.
 - **The picks are bass A, perch A, trout B and pike A.** Never make them again. The owner saves them to the `hero-models` release (he was sent fresh links on 2026-11-19); once they are there, download them from the release to a scratch folder and check them against this table.
@@ -22,11 +22,28 @@ Last updated: 2026-11-19 (milestone eleven, part one, is under way: the lake's h
 
 The candidates page (https://claude.ai/artifact/1h8T7Z81kdQBjd8ZC1Kcuh ) shows all eight; the four not picked are in `docs/decisions.md` only as a count.
 
-**Yaarbro's fishing clips are made but not on his model yet.** `tools/yaarbro.fish.json` asked Meshy for `fish_cast` and `fish_reel` (from words), `fish_throw` and `fish_show` (from its library): 37 credits. The four files (29 MB each) exist only on the session's machine that made them: if they are gone, run the plan again (it costs the 37 credits again, so ask first) or pose him by script. To put them on his model: strip each with `tools/strip-clip.mjs` into a `tools/yaarbro-fish-clips/` folder as the rope clips were, name them in `tools/yaarbro.guide.json`, and rebuild him (the command is in `CLAUDE.md`). Caputo's fishing clips are still to be written in `tools/rig-quadruped.py`. Nobody has looked at any of them.
+**Yaarbro's fishing clips are made but not on his model yet.** `tools/yaarbro.fish.json` asked Meshy for `fish_cast` and `fish_reel` (from words), `fish_throw` and `fish_show` (from its library): 37 credits. The four files, stripped small by `tools/strip-clip.mjs`, are in `tools/yaarbro-fish-clips/` (its README says how to put them on his model). Caputo's fishing clips are still to be written in `tools/rig-quadruped.py`. Nobody has looked at any of them.
 
 **Meshy credits in milestone eleven: 233** (196 on the fish, 37 on Yaarbro's clips). Ask before spending more.
 
-**Still to build, in order:** fishing at the dock (`src/game/fishing.ts`, its drawing, the Fish button, the bot, rule tests for casting, bites, reeling and the line snapping; the bot must catch every species on every difficulty as each hero); the fish book (saved per player in `src/save/players.ts`, on the end card and the level card); the sounds (cast, reel, bite, splash, landing a fish) as recordings on the sound board for his OK before they go in.
+**Fishing at the dock: the pull request this version of the handoff arrived in. If you are reading this on `main`, it has merged.** `docs/decisions.md` has it in words ("How fishing works, and its numbers" and "Where the lake's fishing is, and how it is drawn"), and `docs/adding-a-level.md` has the recipe ("Fishing").
+
+- The rules are `src/game/fishing.ts`; `game.ts` steps them while the hero stands on the spot. Every number is `fishing` (and `FISH`) in the lake's `difficulty.ts`. The spot is on a jetty off the dock's north side (`jetty` in the lake's `layout.ts`), off the route and off the scouts' ground.
+- Drawn by `src/view/fishing.ts`: the gold ring on the boards, the ring on the water, the bobber, line and rod, and the fish from `assets/fish/`, each with a dark shape on the water over it. The button's labels and the words are `src/ui/fishing-words.ts`; the line bar is `#line`.
+- `tests/fishing.test.ts` (37 tests) covers casting, bites, reeling and the line snapping, and the bot (`tests/helpers/fisher.ts`) catches every kind of fish on every difficulty as each hero. `tests/browser/fishing.spec.ts` plays a whole catch on Easy by keyboard and checks the touch button.
+- The lake preview page (`node tools/preview/lake.mjs <folder>`) opens on "Fishing from the jetty": watching, the fishing bot goes after each kind in turn.
+- A fix found on the way: stepping onto any solid that is off the route used to swing the camera to the level's first facing. A solid off the route now keeps its section's facing, and one in no section leaves the camera alone (`src/view/route-camera.ts`).
+- `tests/lake.test.ts` gives its bot tests 60 seconds each: two had timed out at the usual 5 on a busy machine.
+
+**What fishing costs to draw** (`node tools/draw-measure.mjs cocolalla hard`, the test browser, high tier): the dock, the lake's heaviest place, draws 825,006 triangles in 321 draw calls with fishing, against 798,124 in 278 without it and 921,462 in 288 before the headroom work. So the triangles keep a tenth of margin under where the lake sat at 60, but the draw calls are now a little over what they were then: eight fish are eight more skinned models, and the jetty is new. Fishing is neither moved nor drawn more than 32 m from the spot, and every fish's dark shape is one draw. Draw calls in that tool move by ten or so from run to run (splashes and rings count). **The owner checks the frame rate at the jetty on Hard; if it is under 60, draw fewer fish (`count` in `FISH`) before anything else.** The monster pike and Walblum still have to fit.
+
+**What fishing does not have yet:**
+
+1. **Sounds.** None play. Cast, reel, bite, splash and landing a fish go on the sound board as recordings for the owner's OK first.
+2. **Hero clips.** A hero with a line out stands in its idle clip, and the rod is drawn in its grip. Yaarbro's clips are made (see below) but not on his model; Caputo's are to be written in `tools/rig-quadruped.py`. Both are a change to a hero: the hero preview page and the owner's OK come before that merges. If Caputo with the rod in his jaws looks bad, the owner's word is to switch to Caputo swatting at the fish.
+3. **The fish book** (next pull request): saved per player in `src/save/players.ts`, on the end card and the level card. Today a run's catches are only on its summary (`Summary.fish`) and in the message when a fish is landed.
+
+**Not checked, and the owner is the one who can:** how any of it moves (a cloud session saw six still frames of one catch on Easy and three on Hard); whether the dark shapes read as fish and the ring is easy to follow on the iPad; whether Easy really needs no timing for the younger player and Hard is work enough for the older; and the frame rate at the jetty.
 
 **Headroom on the lake: pull request 82, merged 2026-11-19. Its publish run failed, so it did not go live with that merge:** a rule test that plays most of the lake twice (`tests/lake.test.ts`, "a missed jump lands in the lake") ran past the usual 5 second limit on the publish machine, though it passed in the pull request's own checks. It now has a 60 second limit, in the pull request this version of the handoff arrived in; that merged as pull request 83, its publish run succeeded, and the live site was checked on 2026-11-19: it serves `media/models/mosquito-light.glb`, the same size as the file here. The owner measured the reworked lake at exactly 60 frames a second on Hard in Safari on his Mac, and the kids found it pretty fun. Two fixes (`docs/decisions.md`, "Headroom on the lake"): the lake's mosquitoes are drawn from a 5 thousand triangle copy of the model (`assets/enemies/mosquito-light.glb`, made by `node tools/thin-model.mjs mosquito 5000`; `lightEnemies` on the level), and the lake draws an enemy only within 45 m of the hero and never more than the six nearest (`enemySight` on the level, `src/view/sight.ts`, `tests/sight.test.ts`).
 
