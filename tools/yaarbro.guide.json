@@ -4,7 +4,7 @@
   "body": "Meshy_AI_Animation_Idle_11_withSkin.glb",
   "hips": "Hips",
 
-  "clips_about": "stay: the hips are held over one spot. airborne: a body in the air is brought down to stand on the ground. lift: a body pushed into the ground is lifted out. hands_on_ground: these arms are raised until their hands are not below the ground. parts: two pieces of the clip joined together.",
+  "clips_about": "stay: the hips are held over one spot. airborne: a body in the air is brought down to stand on the ground. lift: a body pushed into the ground is lifted out. hands_on_ground: these arms are raised until their hands are not below the ground. parts: two pieces of the clip joined together. made: the clip is made by tools/prepare-rigged.py itself (Meshy has no fishing): keys are moments in the clip (at: a share of it, 0 to 1) saying where the hands are, how far the hips have moved, how many degrees the back leans back (lean), the head tips back (nod) and the shoulders rise (shrug); crank winds one hand round a small circle; strain is a pull that comes and goes on top.",
   "clips": [
     { "name": "idle", "file": "Meshy_AI_Animation_Idle_11_withSkin.glb", "loop": true },
     { "name": "walk", "file": "Meshy_AI_Animation_Walking_withSkin.glb", "loop": true },
@@ -21,8 +21,29 @@
     { "name": "rope_hang", "file": "Meshy_API_Rope_hang.glb", "retarget": true, "loop": true, "stay": true },
     { "name": "rope_release", "file": "Meshy_API_Rope_release.glb", "retarget": true, "from": 1.45, "to": 2.05, "stay": true, "airborne": true },
     { "name": "fish_cast", "file": "Meshy_API_Fish_cast.glb", "retarget": true, "stay": true },
-    { "name": "fish_reel", "file": "Meshy_API_Fish_reel.glb", "retarget": true, "loop": true, "stay": true },
-    { "name": "fish_show", "file": "Meshy_API_Fish_show.glb", "retarget": true, "stay": true }
+    { "name": "fish_reel", "file": "Meshy_AI_Animation_Idle_11_withSkin.glb", "loop": true, "made": {
+      "seconds": 1.0,
+      "bones": { "back": "Spine02", "head": "Head",
+        "left": { "shoulder": "LeftShoulder", "arm": ["LeftArm", "LeftForeArm", "LeftHand"], "leg": ["LeftUpLeg", "LeftLeg", "LeftFoot"] },
+        "right": { "shoulder": "RightShoulder", "arm": ["RightArm", "RightForeArm", "RightHand"], "leg": ["RightUpLeg", "RightLeg", "RightFoot"] } },
+      "keys": [{ "at": 0, "hips": [0, 0.14, -0.14], "lean": 13, "nod": -6, "right": [-0.16, -0.4, 1.48], "left": [0.1, -0.58, 1.6] }],
+      "crank": { "hand": "left", "radius": 0.09, "turns": 2 },
+      "strain": { "turns": 1, "lean": 9, "hips": [0, 0.06, -0.05], "right": [0, 0.07, 0.1], "left": [0, 0.05, 0.08] }
+    } },
+    { "name": "fish_show", "file": "Meshy_AI_Animation_Idle_11_withSkin.glb", "made": {
+      "seconds": 1.7,
+      "bones": { "back": "Spine02", "head": "Head",
+        "left": { "shoulder": "LeftShoulder", "arm": ["LeftArm", "LeftForeArm", "LeftHand"], "leg": ["LeftUpLeg", "LeftLeg", "LeftFoot"] },
+        "right": { "shoulder": "RightShoulder", "arm": ["RightArm", "RightForeArm", "RightHand"], "leg": ["RightUpLeg", "RightLeg", "RightFoot"] } },
+      "keys": [
+        { "at": 0, "hips": [0, 0.12, -0.12], "lean": 9, "nod": -6, "right": [-0.16, -0.4, 1.48], "left": [0.1, -0.58, 1.6] },
+        { "at": 0.2, "hips": [0, 0.02, -0.26], "lean": -22, "nod": -10, "right": [-0.34, -0.85, 1.2], "left": [0.34, -0.85, 1.2] },
+        { "at": 0.5, "hips": [0, 0, 0.02], "lean": 8, "nod": 16, "shrug": 14, "right": [-0.42, -0.42, 2.88], "left": [0.42, -0.42, 2.88] },
+        { "at": 0.64, "hips": [0, 0.02, -0.05], "lean": 5, "nod": 12, "shrug": 10, "right": [-0.42, -0.45, 2.76], "left": [0.42, -0.45, 2.76] },
+        { "at": 0.8, "hips": [0, 0, 0.02], "lean": 8, "nod": 16, "shrug": 14, "right": [-0.42, -0.42, 2.88], "left": [0.42, -0.42, 2.88] },
+        { "at": 1, "hips": [0, 0, 0], "lean": 7, "nod": 14, "shrug": 14, "right": [-0.42, -0.42, 2.85], "left": [0.42, -0.42, 2.85] }
+      ]
+    } }
   ],
 
   "cleanup_about": "Each part fixes something seen to be wrong in a pose test. belt: the belt and buckle stay with the hips. beard: the lower beard stays on the chest, and the cloth in front of the chest stays off the head. shading: smooth, with edges kept sharp on the buckle and the boot soles, and at any fold sharper than smooth_up_to degrees.",

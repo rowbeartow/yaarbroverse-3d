@@ -719,3 +719,14 @@ Supersedes: "Fishing ... the golden leaf is where it was" in "Where the lake's f
 ## 2026-11-19 The fishing sounds are in
 Reason: The owner's picks on the sound board: choice A of each. `fish-cast.wav` (a swish), `fish-reel.wav` (a reel winding, looped while the button reels a hooked fish, louder through a thrash), `fish-bite.wav` (a bloop as the bobber goes under), `fish-splash.wav` (a hooked fish starting to thrash, and quietly when the lure lands) and `fish-landed.wav` (a little prize tune). Bite and splash play in the warnings group, because a player acts on them; the others with the jumps and landings. All are the lake's own sounds, fetched when the lake is picked: the lake's sounds come to 1.66 MB of the 2.5 MB a level may have. `CREDITS.md` has the sources.
 Supersedes: none
+
+## 2026-11-19: Yaarbro's reel and "landed" clips are made in Blender on his own skeleton
+
+The owner's words on the first three clips: the cast is OK; the reel "should read as cranking the reel, with the rod bent and the line pulling"; "landed" should be "clearly the moment a fish comes in, with Yaarbro lifting the fish up to show it off, the fish in his hands"; build them in Blender on his rig if Meshy's library has nothing that reads right; show both again before merging.
+
+- Meshy's library has no fishing, so both are made by `tools/prepare-rigged.py` from keys in `tools/yaarbro.guide.json` (`"made"`). No credits spent.
+- The reel: knees bent, leaning back, right hand holding the rod at his belt, left hand winding twice a second, one heave a loop.
+- "Landed": he takes the fish in both hands and lifts it over his head, so it shows from behind, where the game's camera usually is.
+- The bent rod, the tight line and the fish in his hands are drawn by the preview page for now. They go into the game with the clips, after his OK.
+- Nothing about Yaarbro in the game changes until he says OK on the page.
+

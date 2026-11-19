@@ -25,6 +25,10 @@
 #     body in the air is brought down to stand on the ground, and a body
 #     pushed into the ground is lifted out of it.
 #   - Lifts a hand that a clip pushes below the ground back onto it.
+#   - Makes a clip itself where Meshy has nothing that reads right (`"made"`
+#     in the guide: Yaarbro reeling, and holding up a landed fish): a few
+#     moments say where the hands are and how the body leans, the arms and
+#     legs are bent to reach, and the feet stay where they stood.
 #   - Carries over a clip made on a later Meshy rig of the same character
 #     (`"retarget": true` in the guide): same bones, different rest pose.
 #
@@ -534,7 +538,134 @@ def make_clip(body, spec, source, home):
             poses[len(poses) - reach + i] = blend_poses(poses[len(poses) - reach + i], poses[0], share * share * (3 - 2 * share))
 
     armature.animation_data.action = None
-    action = bpy.data.actions.new(spec['name'])
+    say(f"clip {spec['name']}: {(len(poses) - 1) / FPS:.2f} s from {spec['file']}")
+    return write_clip(body, spec['name'], poses)
+
+
+# ---------- clips made here, pose by pose ----------
+#
+# A clip Meshy has nothing for (Yaarbro reeling in, and holding up his fish) is
+# made on his own skeleton. The guide gives a few moments ("keys"), each saying
+# where the hands are, how far the hips have moved and how the back leans; the
+# poses between are eased from one to the next. Everything is in metres on the
+# model as it stands at rest: x to his left, y behind him, z up.
+
+def world_head(body, name):
+    return body.armature.matrix_world @ body.armature.pose.bones[name].head
+
+
+def spin(body, name, turn, about=None):
+    """Turns a bone, and all that hangs from it, about a point (its own head unless told), by a rotation in the model's space."""
+    armature = body.armature
+    bone = armature.pose.bones[name]
+    about = about if about is not None else world_head(body, name)
+    world = armature.matrix_world
+    bone.matrix = world.inverted() @ Matrix.Translation(about) @ turn.to_matrix().to_4x4() @ Matrix.Translation(-about) @ world @ bone.matrix
+    bpy.context.view_layer.update()
+
+
+def lean(body, name, axis, degrees):
+    spin(body, name, Quaternion(Vector(axis), math.radians(degrees)))
+
+
+def aim(body, name, child, at):
+    """Turns a bone about its head until the joint at its far end is on the line to `at`."""
+    start = world_head(body, name)
+    now = world_head(body, child) - start
+    want = at - start
+    if now.length > 1e-6 and want.length > 1e-6:
+        spin(body, name, now.rotation_difference(want))
+
+
+def reach(body, upper, lower, end, target, pole):
+    """Bends a limb of two bones (arm and forearm, or thigh and shin) so its end is at `target`, the middle joint pushed toward `pole`."""
+    start = world_head(body, upper)
+    first = (world_head(body, lower) - start).length
+    second = (world_head(body, end) - world_head(body, lower)).length
+    line = target - start
+    far = min(max(line.length, abs(first - second) + 1e-4), first + second - 1e-4)
+    along = line.normalized()
+    side = pole - along * pole.dot(along)
+    side = side.normalized() if side.length > 1e-6 else Vector((0, 0, -1))
+    near = (first * first - second * second + far * far) / (2 * far)
+    off = math.sqrt(max(0.0, first * first - near * near))
+    aim(body, upper, lower, start + along * near + side * off)
+    aim(body, lower, end, start + along * far)
+
+
+MADE_FIELDS = {'hips': 3, 'left': 3, 'right': 3, 'lean': 1, 'twist': 1, 'nod': 1, 'shrug': 1, 'wrists': 1}
+
+
+def made_at(keys, share):
+    """What the guide's keys say at a share of the clip (0 to 1): each number eased from the key before to the key after."""
+    before = max((k for k in keys if k['at'] <= share), key=lambda k: k['at'], default=keys[0])
+    after = min((k for k in keys if k['at'] > share), key=lambda k: k['at'], default=before)
+    span = after['at'] - before['at']
+    t = (share - before['at']) / span if span > 0 else 0.0
+    t = t * t * (3 - 2 * t)
+    out = {}
+    for field, size in MADE_FIELDS.items():
+        a = before.get(field, [0.0] * size if size > 1 else 0.0)
+        b = after.get(field, a)
+        out[field] = Vector(a).lerp(Vector(b), t) if size > 1 else a + (b - a) * t
+    return out
+
+
+def made_clip(body, spec, source):
+    """Makes a clip from the guide's keys, starting from one pose of a clip he already has."""
+    made = spec['made']
+    armature = body.armature
+    bones = made['bones']
+    start, _ = source.frame_range
+    base = round(start + made.get('from', 0.0) * FPS)
+    armature.animation_data.action = source
+    bpy.context.scene.frame_set(base)
+    bpy.context.view_layer.update()
+    # Where his feet stand, and how they sit, in the pose he starts from: they stay there.
+    feet = {side: (world_head(body, bones[side]['leg'][2]), armature.pose.bones[bones[side]['leg'][2]].matrix.to_quaternion()) for side in ('left', 'right')}
+    frames = max(1, round(made['seconds'] * FPS))
+    poses = []
+    for frame in range(frames + 1):
+        share = frame / frames
+        now = made_at(made['keys'], share)
+        # A steady strain on top: the whole body pulling, so many times a clip.
+        pull = 0.0
+        if 'strain' in made:
+            pull = 0.5 - 0.5 * math.cos(2 * math.pi * share * made['strain']['turns'])
+            now['lean'] += pull * made['strain'].get('lean', 0.0)
+            now['hips'] += pull * Vector(made['strain'].get('hips', [0, 0, 0]))
+            now['right'] += pull * Vector(made['strain'].get('right', [0, 0, 0]))
+            now['left'] += pull * Vector(made['strain'].get('left', [0, 0, 0]))
+        # One hand winding: round a small circle that stands upright and points ahead.
+        if 'crank' in made:
+            crank = made['crank']
+            angle = 2 * math.pi * share * crank['turns']
+            now[crank['hand']] += crank['radius'] * Vector((0, -math.cos(angle), math.sin(angle)))
+        bpy.context.scene.frame_set(base)
+        body.shift(body.hips, now['hips'])
+        lean(body, body.hips.name, (0, 0, 1), now['twist'])
+        lean(body, bones['back'], (1, 0, 0), now['lean'])
+        for side, out in (('left', 1), ('right', -1)):
+            thigh, shin, foot = bones[side]['leg']
+            reach(body, thigh, shin, foot, feet[side][0], Vector((0.2 * out, -1, 0)))
+            pose = armature.pose.bones[foot]
+            pose.matrix = Matrix.Translation(pose.matrix.to_translation()) @ feet[side][1].to_matrix().to_4x4()
+            bpy.context.view_layer.update()
+            lean(body, bones[side]['shoulder'], (0, 1, 0), -out * now['shrug'])
+            arm, fore, hand = bones[side]['arm']
+            reach(body, arm, fore, hand, now[side], Vector((0.8 * out, 0.5, -0.7)))
+            lean(body, hand, (1, 0, 0), now['wrists'])
+        lean(body, bones['head'], (1, 0, 0), now['nod'])
+        poses.append(read_pose(armature))
+    armature.animation_data.action = None
+    say(f"clip {spec['name']}: {frames / FPS:.2f} s, made here from {len(made['keys'])} keys")
+    return write_clip(body, spec['name'], poses)
+
+
+def write_clip(body, name, poses):
+    """Writes a list of poses, one a frame, as a clip."""
+    armature = body.armature
+    action = bpy.data.actions.new(name)
     armature.animation_data.action = action
     moved = {body.hips.name}
     for frame, pose in enumerate(poses):
@@ -551,7 +682,6 @@ def make_clip(body, spec, source, home):
         for point in curve.keyframe_points:
             point.interpolation = 'LINEAR'
     armature.animation_data.action = None
-    say(f"clip {spec['name']}: {(len(poses) - 1) / FPS:.2f} s from {spec['file']}")
     return action
 
 
@@ -604,7 +734,7 @@ def main():
         spots.append(armature.matrix_world @ body.hips.matrix.to_translation())
     home = sum(spots, Vector()) / len(spots)
 
-    made = [make_clip(body, spec, sources[spec['file']], home) for spec in guide['clips']]
+    made = [made_clip(body, spec, sources[spec['file']]) if 'made' in spec else make_clip(body, spec, sources[spec['file']], home) for spec in guide['clips']]
     # Only the clips made here are saved, each on its own track so it is its own animation.
     for action in list(bpy.data.actions):
         if action not in made:

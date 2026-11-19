@@ -14,6 +14,10 @@ import {
   EquirectangularReflectionMapping,
   Group,
   HemisphereLight,
+  BufferGeometry,
+  Matrix4,
+  QuadraticBezierCurve3,
+  TubeGeometry,
   LinearFilter,
   LinearSRGBColorSpace,
   LoopOnce,
@@ -52,6 +56,8 @@ interface EnemyFile {
   model: string;
   color: string;
   clips: string[];
+  /** Not shown on its own: something a character holds in one of its clips (a name that starts with `held-`). */
+  held?: boolean;
 }
 
 interface ClipNote {
@@ -67,7 +73,7 @@ interface ClipNote {
  * clip, in metres of the model as it came from the rig, so the page shows
  * what a player sees above the surface. The game sets the real depth.
  */
-const ABOUT: Record<string, { title: string; hovers: boolean; clips: Record<string, ClipNote>; water?: Record<string, number> }> = {
+const ABOUT: Record<string, { title: string; hovers: boolean; clips: Record<string, ClipNote>; water?: Record<string, number>; holds?: Record<string, 'rod' | 'fish'>; reach?: number }> = {
   marmot: {
     title: 'Marmot scout',
     hovers: false,
@@ -110,12 +116,15 @@ const ABOUT: Record<string, { title: string; hovers: boolean; clips: Record<stri
 
 /** A hero's fishing clips, for looking at before they go on the hero in the game. Its other clips are on the page too, with no notes. */
 ABOUT.yaarbro = {
+  holds: { fish_reel: 'rod', fish_show: 'fish' },
+  // Stood further off, so a fish held over his head is in the picture.
+  reach: 4.9,
   title: 'Yaarbro, fishing',
   hovers: false,
   clips: {
     fish_cast: { label: 'Cast', note: 'The rod goes back over his shoulder and whips forward. Made by Meshy from a description: its library has no fishing.', once: true },
-    fish_reel: { label: 'Reel', note: 'One hand holds the rod out, the other winds. It loops for as long as the button reels.' },
-    fish_show: { label: 'Landed', note: 'One hand up: this is where he holds the fish. From Meshy’s library ("Cheer with One Hand Up").', once: true },
+    fish_reel: { label: 'Reel', note: 'Braced and leaning back against the fish, the rod bent over and the line tight, his left hand winding the reel round and round. It loops for as long as the button reels. Made in Blender on his own skeleton: Meshy has no fishing.', once: false },
+    fish_show: { label: 'Landed', note: 'The fish comes in: he bends to take it in both hands, heaves it up over his head and holds it there to show it off. Made in Blender on his own skeleton.', once: true },
   },
 };
 
@@ -151,6 +160,10 @@ interface Slot {
   /** Seconds a clip that plays once has been finished, before it starts again. */
   rested: number;
   bones: SkeletonHelper;
+  /** Puts what the character holds in the playing clip (a rod, a fish) in its hands. */
+  hold: (() => void) | null;
+  /** How far off the camera stands. */
+  reach: number;
   angle: number;
   turning: boolean;
   slow: boolean;
@@ -218,7 +231,31 @@ const start = async (): Promise<void> => {
 
   const slots = new Map<string, Slot>();
 
+  const open = async (enemy: EnemyFile): Promise<Awaited<ReturnType<GLTFLoader['parseAsync']>>> => {
+    const [bytes, color] = await Promise.all([bytesOf(enemy.model), pictures.loadAsync(enemy.color)]);
+    const model = await new GLTFLoader().parseAsync(bytes, '');
+    color.colorSpace = SRGBColorSpace;
+    color.flipY = false;
+    model.scene.traverse((node) => {
+      node.frustumCulled = false;
+      const mesh = node as Mesh;
+      if (!mesh.isMesh) return;
+      const material = mesh.material as MeshStandardMaterial;
+      // A see-through part (the mosquito's wings) casts no shadow of its own.
+      mesh.castShadow = !material.transparent;
+      material.map = color;
+      material.metalness = 0;
+      material.roughness = 0.85;
+      material.needsUpdate = true;
+    });
+    return model;
+  };
+  // What a character holds: `held-fish=<a rigged fish>` on the command line.
+  const heldFish = list.find((enemy) => enemy.name === 'held-fish');
+  const fishModel = heldFish ? (await open(heldFish)).scene : null;
+
   for (const enemy of list) {
+    if (enemy.held) continue;
     const about = ABOUT[enemy.name] ?? { title: enemy.name, hovers: false, clips: {} };
     const section = document.createElement('section');
     section.className = 'enemy';
@@ -240,22 +277,7 @@ const start = async (): Promise<void> => {
     (section.querySelector('.small') as HTMLElement).setAttribute('aria-label', `${about.title} view`);
     groups.append(section);
 
-    const [bytes, color] = await Promise.all([bytesOf(enemy.model), pictures.loadAsync(enemy.color)]);
-    const model = await new GLTFLoader().parseAsync(bytes, '');
-    color.colorSpace = SRGBColorSpace;
-    color.flipY = false;
-    model.scene.traverse((node) => {
-      node.frustumCulled = false;
-      const mesh = node as Mesh;
-      if (!mesh.isMesh) return;
-      const material = mesh.material as MeshStandardMaterial;
-      // A see-through part (the mosquito's wings) casts no shadow of its own.
-      mesh.castShadow = !material.transparent;
-      material.map = color;
-      material.metalness = 0;
-      material.roughness = 0.85;
-      material.needsUpdate = true;
-    });
+    const model = await open(enemy);
 
     // Drawn so its longest side is 1.6 m, measured standing at rest.
     const box = new Box3().setFromObject(model.scene);
@@ -296,6 +318,8 @@ const start = async (): Promise<void> => {
       once: false,
       rested: 0,
       bones,
+      hold: null,
+      reach: about.reach ?? REACH,
       angle: 0.9,
       turning: !STILL,
       slow: false,
@@ -303,6 +327,63 @@ const start = async (): Promise<void> => {
       lookAt: (size.y * scale) / 2 + lift,
     };
     slots.set(enemy.name, slot);
+
+    // A rod in his right hand, bent over with the line tight, or a fish across both hands.
+    if (about.holds) {
+      const right = model.scene.getObjectByName('RightHand');
+      const left = model.scene.getObjectByName('LeftHand');
+      const wood = new MeshStandardMaterial({ color: 0x6b4a2b, roughness: 0.8 });
+      const rod = new Mesh(new BufferGeometry(), wood);
+      rod.castShadow = true;
+      const reel = new Mesh(new CircleGeometry(0.045, 16), new MeshStandardMaterial({ color: 0x30343a, roughness: 0.5, side: DoubleSide }));
+      const line = new Mesh(new BufferGeometry(), new MeshStandardMaterial({ color: 0xf8f6ee, emissive: 0x777777 }));
+      line.frustumCulled = false;
+      const fish = new Group();
+      if (fishModel) {
+        const box = new Box3().setFromObject(fishModel);
+        const long = box.getSize(new Vector3());
+        const centre = box.getCenter(new Vector3());
+        // As big beside him as the game draws a good bass: a little over half his height.
+        const size = 0.85 / Math.max(long.x, long.y, long.z);
+        fishModel.scale.setScalar(size);
+        fishModel.position.set(-centre.x * size, -box.min.y * size, -centre.z * size);
+        fish.add(fishModel);
+      }
+      root.add(rod, reel, line, fish);
+      const a = new Vector3();
+      const b = new Vector3();
+      slot.hold = (): void => {
+        const what = slot.playing ? about.holds?.[slot.playing.getClip().name] : undefined;
+        rod.visible = reel.visible = line.visible = what === 'rod';
+        fish.visible = what === 'fish' && Boolean(fishModel) && (slot.playing as AnimationAction).time > 0.2;
+        if (!right || !left || !what) return;
+        root.updateMatrixWorld(true);
+        right.getWorldPosition(a);
+        left.getWorldPosition(b);
+        if (what === 'rod') {
+          // From the butt at his right hand, up and out ahead of him, the tip pulled over by the fish.
+          const butt = new Vector3(a.x, a.y - 0.07, a.z - 0.08);
+          const straight = new Vector3(a.x * 0.6, a.y + 0.95, a.z + 0.75);
+          const tip = new Vector3(a.x * 0.3, a.y + 0.62, a.z + 1.3);
+          const bend = new QuadraticBezierCurve3(butt, straight, tip);
+          rod.geometry.dispose();
+          rod.geometry = new TubeGeometry(bend, 20, 0.014, 6);
+          reel.position.copy(bend.getPoint(0.12));
+          reel.position.x += 0.03;
+          reel.rotation.y = Math.PI / 2;
+          line.geometry.dispose();
+          line.geometry = new TubeGeometry(new QuadraticBezierCurve3(tip, tip.clone().lerp(new Vector3(0.05, 0.02, tip.z + 1.25), 0.5), new Vector3(0.05, 0.02, tip.z + 1.25)), 2, 0.005, 5);
+          return;
+        }
+        // The fish lies across both hands, nose to his left.
+        const along = b.clone().sub(a).normalize();
+        const up = new Vector3(0, 1, 0);
+        const side = new Vector3().crossVectors(up, along).normalize();
+        fish.quaternion.setFromRotationMatrix(new Matrix4().makeBasis(side, new Vector3().crossVectors(along, side), along));
+        fish.position.copy(a).add(b).multiplyScalar(0.5);
+        fish.position.y += 0.03;
+      };
+    }
     new IntersectionObserver(([entry]) => (slot.visible = entry.isIntersecting)).observe(canvas);
 
     const heading = section.querySelector('h3') as HTMLElement;
@@ -381,10 +462,11 @@ const start = async (): Promise<void> => {
     camera.aspect = w / h;
     camera.updateProjectionMatrix();
     // The camera goes round the enemy, so the sun and the shadow stay put.
-    const reach = REACH;
+    const reach = slot.reach;
     camera.position.set(Math.sin(slot.angle) * reach, slot.lookAt + 0.7, Math.cos(slot.angle) * reach);
     camera.lookAt(0, slot.lookAt, 0);
     slot.root.visible = true;
+    slot.hold?.();
     renderer.render(scene, camera);
     slot.root.visible = false;
     slot.paper.clearRect(0, 0, w, h);
