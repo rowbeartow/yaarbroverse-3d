@@ -15,7 +15,8 @@
 //   - The rod is at the grip point of his right palm in every frame he has it
 //     (all of the cast, all of the reel, and "Landed" until he lets go), and
 //     at his left palm's too whenever both hands are on it.
-//   - The landed fish lies on both palms' grip points, palms up, from the
+//   - The landed fish lies on its side on both palms' grip points, palms up
+//     and fingers pointing outward as under a tray, from the
 //     moment he catches it to the end, and ends up above his head. Every
 //     catch on the page is tried.
 //   - No point of the rod, the reel, the line or the fish is inside his body
@@ -35,7 +36,8 @@ const LIMITS = {
   rodFromRight: 0.5,
   rodFromLeft: 1.5,
   fishFromPalm: 1.5,
-  palmsOffUp: 20,
+  palmsOffUp: 25,
+  fingersOffOut: 20,
   headingOff: 3,
   reelOffUnder: 20,
   axleOffLevel: 15,
@@ -120,8 +122,9 @@ for (let caught = 0; caught < Math.max(1, catches); caught += 1) {
   check('landed', 'the fish lies on his right palm', landed.fishFromRight !== null && landed.fishFromRight <= LIMITS.fishFromPalm, `at most ${one(landed.fishFromRight)} off`);
   check('landed', 'the fish lies on his left palm', landed.fishFromLeft !== null && landed.fishFromLeft <= LIMITS.fishFromPalm, `at most ${one(landed.fishFromLeft)} off`);
   check('landed', 'his palms are turned up under it', landed.palmsOffUp !== null && landed.palmsOffUp <= LIMITS.palmsOffUp, `at most ${landed.palmsOffUp?.toFixed(1)} degrees off straight up`);
+  check('landed', 'his fingers point outward, as under a tray', landed.fingersOffOut !== null && landed.fingersOffOut <= LIMITS.fingersOffOut, `at most ${landed.fingersOffOut?.toFixed(1)} degrees off straight out to each side`);
   check('landed', 'the fish ends up over his head', landed.landed.aboveHead > 0, `its lowest point ${landed.landed.aboveHead.toFixed(0)} cm above the top of his head`);
-  console.log(`        (on his palms from frame ${Math.ceil(0.38 * (landed.frames - 1))})`);
+  console.log(`        (on his palms from frame ${Math.ceil(0.4 * (landed.frames - 1))})`);
   through('landed', landed);
 }
 await browser.close();

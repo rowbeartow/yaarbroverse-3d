@@ -500,10 +500,10 @@ const start = async (): Promise<void> => {
     },
     /** A character's grip points, as the page is using them. */
     grips: (name: string): unknown => list.find((enemy) => enemy.name === name)?.grips,
-    /** Which catch he lands and whether the grip points are marked, for the still frames; `slide` tries the catch somewhere else along his palms. */
-    tackle(name: string, caught: number, marks: boolean, slide: number | null = null): void {
+    /** Which catch he lands and whether the grip points are marked, for the still frames. */
+    tackle(name: string, caught: number, marks: boolean): void {
       const tackle = slots.get(name)?.tackle;
-      if (tackle) Object.assign(tackle, { caught, marks, slide });
+      if (tackle) Object.assign(tackle, { caught, marks });
     },
   };
 

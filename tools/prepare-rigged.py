@@ -556,7 +556,7 @@ def make_clip(body, spec, source, home):
 # His model has no finger bones, so nothing is ever put "in his fingers". What
 # he holds is held at a grip point in the middle of each palm (`"grips"` in the
 # guide, measured on his skin). The rod is fixed in his right palm; his left
-# palm is turned up under it. A free palm is turned up, to carry a fish.
+# palm is turned up under it. A free palm is turned up with its fingers pointing out to its own side, as under a tray, to carry a fish.
 
 def world_head(body, name):
     return body.armature.matrix_world @ body.armature.pose.bones[name].head
@@ -717,12 +717,15 @@ def made_clip(body, spec, source, grips):
             grip = grips[side]
             palm, fingers = Vector(grip['palm']), Vector(grip['fingers'])
 
-            def turn_for(forearm, side=side, grip=grip, palm=palm, fingers=fingers):
+            def turn_for(forearm, side=side, grip=grip, palm=palm, fingers=fingers, out=out):
                 # His left palm is under the rod with its fingers across it, whichever way across runs on from his forearm.
                 over = under.cross(along)
                 held = rod_in_hand(grip, along, forearm) if side == 'right' else facing(palm, fingers, under, over if over.dot(forearm) > 0 else -over)
                 # A free hand is a palm turned up, to carry something, unless the key says which way it faces.
-                return held.slerp(facing(palm, fingers, faces[side], forearm), off[side])
+                # A palm turned up is under a tray: its fingers point out to its own side, and the forearm comes up from inside.
+                tray = faces[side].z > 0.5
+                point = made.get('fingers', [1, 0, 0])
+                return held.slerp(facing(palm, fingers, faces[side], Vector((out * point[0], point[1], point[2])) if tray else forearm), off[side])
 
             place_hand(body, bones[side] | {'out': out, 'pole': made.get('elbows', [0.8, 0.5, -0.7])}, grip, on_rod[side].lerp(now[side], off[side]), turn_for)
             if side == 'right':

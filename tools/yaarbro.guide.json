@@ -4,7 +4,7 @@
   "body": "Meshy_AI_Animation_Idle_11_withSkin.glb",
   "hips": "Hips",
 
-  "clips_about": "stay: the hips are held over one spot. airborne: a body in the air is brought down to stand on the ground. lift: a body pushed into the ground is lifted out. hands_on_ground: these arms are raised until their hands are not below the ground. parts: two pieces of the clip joined together. made: the clip is made by tools/prepare-rigged.py itself (Meshy has no fishing): keys are moments in the clip (at: a share of it, 0 to 1). butt is where his right palm holds the rod, heading and pitch are which way the rod points (degrees to his left of straight ahead, and up), and apart is how far along the rod his left palm is. free is how far both hands have let go of the rod (0 to 1) and left_off how far his left alone has; left and right are where his free palms are, turned up unless left_palm says which way his left faces. hips is how far the hips have moved; lean is degrees the back leans forward (less than nothing for back), side to one side, twist the hips' turn, nod the head tipping down, turn the head turning, shrug the shoulders rising. A key that leaves a number out keeps the one before. elbows is the way the elbows are pushed (out to the side, behind, up), out, back and down unless it says. cradle tips his upturned palms toward each other by so many degrees, which drops his wrists and cuffs away from what lies across them. waves come and go on top, so many turns a clip: a pull goes there and back, a swing one way then the other.",
+  "clips_about": "stay: the hips are held over one spot. airborne: a body in the air is brought down to stand on the ground. lift: a body pushed into the ground is lifted out. hands_on_ground: these arms are raised until their hands are not below the ground. parts: two pieces of the clip joined together. made: the clip is made by tools/prepare-rigged.py itself (Meshy has no fishing): keys are moments in the clip (at: a share of it, 0 to 1). butt is where his right palm holds the rod, heading and pitch are which way the rod points (degrees to his left of straight ahead, and up), and apart is how far along the rod his left palm is. free is how far both hands have let go of the rod (0 to 1) and left_off how far his left alone has; left and right are where his free palms are, turned up with the fingers pointing out to each hand's own side, as under a tray, unless left_palm says which way his left faces. hips is how far the hips have moved; lean is degrees the back leans forward (less than nothing for back), side to one side, twist the hips' turn, nod the head tipping down, turn the head turning, shrug the shoulders rising. A key that leaves a number out keeps the one before. elbows is the way the elbows are pushed (out to the side, behind, up), out, back and down unless it says. cradle tips his upturned palms toward each other by so many degrees (less than nothing tips them apart, which drops his wrists when his fingers point outward). waves come and go on top, so many turns a clip: a pull goes there and back, a swing one way then the other.",
   "clips": [
     { "name": "idle", "file": "Meshy_AI_Animation_Idle_11_withSkin.glb", "loop": true },
     { "name": "walk", "file": "Meshy_AI_Animation_Walking_withSkin.glb", "loop": true },
@@ -48,21 +48,21 @@
     { "name": "fish_show", "file": "Meshy_AI_Animation_Idle_11_withSkin.glb", "made": {
       "seconds": 2.8,
       "apart": 0.34,
-      "cradle": 14,
+      "cradle": -20,
+      "elbows": [0.3, 0.2, -1],
       "bones": { "back": "Spine02", "head": "Head",
         "left": { "shoulder": "LeftShoulder", "arm": ["LeftArm", "LeftForeArm", "LeftHand"], "leg": ["LeftUpLeg", "LeftLeg", "LeftFoot"] },
         "right": { "shoulder": "RightShoulder", "arm": ["RightArm", "RightForeArm", "RightHand"], "leg": ["RightUpLeg", "RightLeg", "RightFoot"] } },
       "keys": [
         { "at": 0, "hips": [0, 0.08, -0.12], "twist": -22, "lean": -4, "nod": 4, "butt": [0.08, -0.58, 1.5], "heading": 0, "pitch": 22 },
         { "at": 0.14, "hips": [0, 0.12, -0.14], "lean": -12, "nod": -6, "butt": [0.08, -0.55, 1.68], "pitch": 60 },
-        { "at": 0.2, "left": [0.2, -0.75, 1.85], "right": [-0.2, -0.75, 1.85] },
-        { "at": 0.34, "free": 1, "hips": [0, 0.04, -0.1], "twist": 0, "lean": -2, "nod": 8 },
-        { "at": 0.42, "hips": [0, 0.04, -0.17], "lean": 4, "left": [0.2, -0.75, 1.72], "right": [-0.2, -0.75, 1.72] },
-        { "at": 0.55, "hips": [0, 0.02, -0.04], "lean": 0, "nod": -4, "shrug": 8, "left": [0.2, -0.7, 2.62], "right": [-0.2, -0.7, 2.62] },
-        { "at": 0.68, "hips": [0, 0, 0.02], "lean": -2, "nod": -8, "shrug": 16, "left": [0.2, -0.3, 3.1], "right": [-0.2, -0.3, 3.1] },
-        { "at": 0.79, "hips": [0, 0.02, -0.05], "lean": 0, "nod": -6, "shrug": 12, "left": [0.2, -0.32, 3.0], "right": [-0.2, -0.32, 3.0] },
-        { "at": 0.9, "hips": [0, 0, 0.02], "lean": -2, "nod": -8, "shrug": 16, "left": [0.2, -0.3, 3.1], "right": [-0.2, -0.3, 3.1] },
-        { "at": 1, "hips": [0, 0, 0], "lean": -2, "nod": -8, "left": [0.2, -0.3, 3.08], "right": [-0.2, -0.3, 3.08] }
+        { "at": 0.2, "left": [0.28, -0.47, 3.08], "right": [-0.28, -0.47, 3.08] },
+        { "at": 0.36, "free": 1, "hips": [0, 0.02, 0], "twist": 0, "lean": -2, "nod": -10, "shrug": 14 },
+        { "at": 0.46, "hips": [0, 0.04, -0.16], "lean": 3, "nod": -6, "shrug": 8, "left": [0.28, -0.49, 2.94], "right": [-0.28, -0.49, 2.94] },
+        { "at": 0.6, "hips": [0, 0, 0.02], "lean": -2, "nod": -8, "shrug": 16, "left": [0.28, -0.47, 3.08], "right": [-0.28, -0.47, 3.08] },
+        { "at": 0.74, "hips": [0, 0.02, -0.05], "lean": 0, "nod": -6, "shrug": 12, "left": [0.28, -0.49, 2.98], "right": [-0.28, -0.49, 2.98] },
+        { "at": 0.88, "hips": [0, 0, 0.02], "lean": -2, "nod": -8, "shrug": 16, "left": [0.28, -0.47, 3.08], "right": [-0.28, -0.47, 3.08] },
+        { "at": 1, "hips": [0, 0, 0], "lean": -2, "nod": -8, "left": [0.28, -0.47, 3.06], "right": [-0.28, -0.47, 3.06] }
       ]
     } }
   ],

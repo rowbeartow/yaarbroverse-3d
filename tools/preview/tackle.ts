@@ -58,21 +58,21 @@ export interface Grips {
 }
 
 /** The catches he can be shown landing: a kind of fish and its length, as the fish book has it. */
-export const CATCHES: {
-  kind: string;
-  cm: number;
-  label: string;
-  slide?: number;
-}[] = [
+export const CATCHES: { kind: string; cm: number; label: string }[] = [
   { kind: 'bass', cm: 38, label: 'Bass, 38 cm' },
-  { kind: 'perch', cm: 20, label: 'Perch, 20 cm' },
-  { kind: 'trout', cm: 50, label: 'Trout, 50 cm' },
-  { kind: 'pike', cm: 80, label: 'Pike, 80 cm' },
-  // The biggest pike is as long as he is tall: slid toward its nose, its belly fins clear his cuffs as he lifts it.
-  { kind: 'pike', cm: 110, label: 'Pike, 110 cm', slide: 0.12 },
+  { kind: 'bass', cm: 25, label: 'Bass, 25 cm' },
+  { kind: 'bass', cm: 55, label: 'Bass, 55 cm' },
+  { kind: 'perch', cm: 12, label: 'Perch, 12 cm' },
+  { kind: 'perch', cm: 30, label: 'Perch, 30 cm' },
+  { kind: 'trout', cm: 30, label: 'Trout, 30 cm' },
+  { kind: 'trout', cm: 70, label: 'Trout, 70 cm' },
+  { kind: 'pike', cm: 50, label: 'Pike, 50 cm' },
+  { kind: 'pike', cm: 110, label: 'Pike, 110 cm' },
 ];
 /** A landed fish is drawn this many times its real length, so an ordinary bass is about as long as his arm. */
 export const HELD_TIMES_LIFE = 2;
+/** The shortest a landed fish is drawn, in metres on his model: long enough to lie across both palms, which are 56 cm apart there. A catch under about 31 cm is drawn as if it were that long. */
+export const HELD_AT_LEAST = 0.8;
 /** His height on the model as it comes, and in the game. */
 const MODEL_TALL = 2.87;
 const GAME_TALL = 2.2;
@@ -82,7 +82,7 @@ const GAME_TALL = 2.2;
  * water, he lets go of the rod, the rod is down on the boards, the fish lands
  * on his palms.
  */
-export const LANDED = { burst: 0.05, release: 0.2, down: 0.33, caught: 0.38 };
+export const LANDED = { burst: 0.05, release: 0.2, down: 0.33, caught: 0.4 };
 /** The moments of the cast: the line leaves the rod's tip, and the lure is down on the water. */
 export const CAST = { fly: 0.56, down: 0.86 };
 
@@ -109,6 +109,8 @@ interface Fish {
   long: number;
   mixer: AnimationMixer;
   thrash: AnimationAction | undefined;
+  /** How tall it is, belly to back. */
+  high: number;
   /** Its skin at rest, about its middle: three points a triangle. */
   skin: Vector3[];
   meshes: Mesh[];
@@ -149,8 +151,6 @@ export interface Tackle {
   caught: number;
   /** Draw a marker at each grip point. */
   marks: boolean;
-  /** For trying a catch somewhere else along his palms: used in place of that catch's `slide`. */
-  slide: number | null;
   place: (what: Held | undefined, share: number, clock: number) => void;
   placed: Placed;
   unit: number;
@@ -245,24 +245,26 @@ export const makeTackle = (
       kind,
       group,
       long,
+      high: high.y - low.y,
       mixer: fishMixer,
       thrash: thrashClip ? fishMixer.clipAction(thrashClip) : undefined,
       skin,
       meshes,
     });
   }
-  /** How low the fish's belly is under its middle line, a way along it from its middle (toward its nose is more), for a fish drawn `size` times its own. */
-  const bellyAt = (fish: Fish, along: number, size: number): number => {
+  /** How low the fish's underside is as it lies on its side (its left flank down), under its middle line, a way along it from its middle (toward its nose is more), for a fish drawn `size` times its own. */
+  const flankAt = (fish: Fish, along: number, size: number): number => {
     const z = Math.max(-0.48, Math.min(0.48, along / (fish.long * size))) * fish.long;
+    const y = 0;
     let lowest = Infinity;
     for (let i = 0; i < fish.skin.length; i += 3) {
       const [a, b, c] = [fish.skin[i], fish.skin[i + 1], fish.skin[i + 2]];
-      const area = (b.x - a.x) * (c.z - a.z) - (c.x - a.x) * (b.z - a.z);
+      const area = (b.y - a.y) * (c.z - a.z) - (c.y - a.y) * (b.z - a.z);
       if (Math.abs(area) < 1e-12) continue;
-      const u = ((0 - a.x) * (c.z - a.z) - (c.x - a.x) * (z - a.z)) / area;
-      const v = ((b.x - a.x) * (z - a.z) - (0 - a.x) * (b.z - a.z)) / area;
+      const u = ((y - a.y) * (c.z - a.z) - (c.y - a.y) * (z - a.z)) / area;
+      const v = ((b.y - a.y) * (z - a.z) - (y - a.y) * (b.z - a.z)) / area;
       if (u < 0 || v < 0 || u + v > 1) continue;
-      lowest = Math.min(lowest, a.y + u * (b.y - a.y) + v * (c.y - a.y));
+      lowest = Math.min(lowest, a.x + u * (b.x - a.x) + v * (c.x - a.x));
     }
     return (Number.isFinite(lowest) ? lowest : 0) * size;
   };
@@ -421,7 +423,6 @@ export const makeTackle = (
       CATCHES.findIndex((entry) => fishes.has(entry.kind)),
     ),
     marks: false,
-    slide: null,
     placed,
     unit,
     place(what, share, clock) {
@@ -477,8 +478,10 @@ export const makeTackle = (
         const fish = fishes.get(entry.kind) ?? null;
         placed.fish = fish;
         // As long beside him as the catch is: so many times life size in the game.
-        const size = fish ? ((entry.cm / 100) * HELD_TIMES_LIFE * (MODEL_TALL / GAME_TALL) * unit) / fish.long : 1;
-        // Where it lies across his upturned palms, nose to his right: its belly on the grip point of each.
+        // But never shorter than reaches across both his palms, however small the catch.
+        const size = fish ? (Math.max((entry.cm / 100) * HELD_TIMES_LIFE * (MODEL_TALL / GAME_TALL), HELD_AT_LEAST) * unit) / fish.long : 1;
+        // Where it lies across his upturned palms, on its side with its nose to his right: its flank on the grip point of each.
+        // A fish on its side is flat underneath, so nothing of it hangs down between his palms onto his wrists.
         const across = placed.gripRight.clone().sub(placed.gripLeft);
         const apart = across.length();
         across.normalize();
@@ -486,20 +489,13 @@ export const makeTackle = (
         const lying = new Vector3();
         const lyingTurn = new Quaternion();
         if (fish) {
-          // Slid along his palms by a share of its length, to keep its fins clear of his arms.
-          const slid = (tackle.slide ?? entry.slide ?? 0) * fish.long * size;
-          const front = bellyAt(fish, apart / 2 - slid, size);
-          const back = bellyAt(fish, -apart / 2 - slid, size);
+          const front = flankAt(fish, apart / 2, size);
+          const back = flankAt(fish, -apart / 2, size);
           const tilt = Math.atan2(front - back, apart);
           const nose = across.clone().multiplyScalar(Math.cos(tilt)).addScaledVector(above, -Math.sin(tilt));
           const top = above.clone().multiplyScalar(Math.cos(tilt)).addScaledVector(across, Math.sin(tilt));
-          lyingTurn.setFromRotationMatrix(new Matrix4().makeBasis(new Vector3().crossVectors(top, nose), top, nose));
-          lying
-            .copy(placed.gripRight)
-            .add(placed.gripLeft)
-            .multiplyScalar(0.5)
-            .addScaledVector(top, -(front + back) / 2)
-            .addScaledVector(nose, slid);
+          lyingTurn.setFromRotationMatrix(new Matrix4().makeBasis(top, new Vector3().crossVectors(nose, top), nose));
+          lying.copy(placed.gripRight).add(placed.gripLeft).multiplyScalar(0.5).addScaledVector(top, -(front + back) / 2);
         }
         let mouth = NEAR.clone();
         if (fish && share >= LANDED.burst) {
@@ -575,6 +571,8 @@ export interface Measured {
   fishFromLeft: number | null;
   /** Most his palms tip away from straight up while the fish lies on them. */
   palmsOffUp: number | null;
+  /** Most his fingers point away from straight out to each hand's own side while the fish lies on his palms. */
+  fingersOffOut: number | null;
   /** Frames in which some point of a thing is inside his body or head (his hands are not counted: they hold it). */
   through: Record<string, { frames: number; first: number; worst: number; parts: string[] }>;
   /** While reeling: how far the rod's heading is off the line's, how far the reel is off straight under the rod, how far its axle is off level, how high his palms are above his hips, the line's longest and shortest, and how far round the reel turns. */
@@ -740,6 +738,7 @@ export const measureClip = (model: Group, mixer: AnimationMixer, action: Animati
     fishFromRight: null,
     fishFromLeft: null,
     palmsOffUp: null,
+    fingersOffOut: null,
     through: {},
   };
   const worse = (now: number | null, value: number): number => Math.max(now ?? 0, value);
@@ -810,6 +809,10 @@ export const measureClip = (model: Group, mixer: AnimationMixer, action: Animati
       out.fishFromRight = worse(out.fishFromRight, toSkinOf(placed.gripRight, fish) * cm);
       out.fishFromLeft = worse(out.fishFromLeft, toSkinOf(placed.gripLeft, fish) * cm);
       out.palmsOffUp = worse(out.palmsOffUp, Math.max(placed.palmRight.angleTo(UP), placed.palmLeft.angleTo(UP)) * (180 / Math.PI));
+      // Out to each hand's own side is away from the other hand.
+      const outward = placed.gripRight.clone().sub(placed.gripLeft).setY(0).normalize();
+      const fingersOf = (grip: Grip): Vector3 => new Vector3().fromArray(grip.fingers).transformDirection((model.getObjectByName(grip.bone) as Object3D).matrixWorld).setY(0).normalize();
+      out.fingersOffOut = worse(out.fingersOffOut, Math.max(fingersOf(grips.right).angleTo(outward), fingersOf(grips.left).angleTo(outward.clone().negate())) * (180 / Math.PI));
       if (share >= 0.7) {
         let top = -Infinity;
         for (const part of parts) for (let i = 0; i < part.count; i += 1) if (/head/i.test(part.owner[i])) top = Math.max(top, part.points[i].y);
