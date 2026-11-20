@@ -2,16 +2,9 @@
 // the rod, its reel, the line and the fish he lands. Also the measuring that
 // tools/preview/fishing-measure.mjs runs over every frame of the fishing clips.
 //
-// Yaarbro's model has no finger bones, so nothing here is ever "in his
-// fingers". Everything he holds is held at a grip point in the middle of a
-// palm (`grips` in tools/yaarbro.guide.json):
-//   - The rod is fixed in his right palm for as long as he has it. It runs
-//     through that hand the same way in every clip.
-//   - With both hands on the rod, his left palm is under it, further along.
-//   - A landed fish lies across both palms, turned up.
-// The clips put his palms in the right places (tools/prepare-rigged.py); this
-// file only draws things where his palms are. These drawings are the page's
-// own stand-ins and the pattern for the game.
+// Where each thing goes is worked out by src/view/held-tackle.ts, which the
+// game draws from too; this file draws it on the page. The top of that file
+// says how he holds things: at a grip point in the middle of each palm.
 //
 // Lengths in this file are metres on his model as it comes (he is 2.87 m tall
 // there, 2.2 m in the game), turned into the page's units by `unit`.
@@ -20,7 +13,6 @@ import {
   CatmullRomCurve3,
   CylinderGeometry,
   Group,
-  Matrix4,
   Mesh,
   MeshBasicMaterial,
   MeshStandardMaterial,
@@ -37,25 +29,12 @@ import {
   type Object3D,
 } from 'three';
 import { AnimationMixer as Mixer } from 'three';
+import { CAST, GAME_TALL, LANDED, MODEL_TALL, ROD, ease, fishFlying, heldSize, lieAcross, lineBetween as lineOf, readHands as handsOf, reelOn, rodFalling, rodLine as rodOf, type Grip, type Grips, type RodPose } from '../../src/view/held-tackle';
+
+export type { Grip, Grips };
 
 /** Which fishing clip is playing: what he holds differs in each. */
 export type Held = 'cast' | 'reel' | 'landed';
-
-/** A grip point in the middle of a palm, in its hand bone's own space. */
-export interface Grip {
-  bone: string;
-  at: number[];
-  palm: number[];
-  fingers: number[];
-  /** The way the rod runs through this hand. */
-  rod?: number[];
-  /** The side of the rod its reel hangs on. */
-  reel?: number[];
-}
-export interface Grips {
-  right: Grip;
-  left: Grip;
-}
 
 /** The catches he can be shown landing: a kind of fish and its length, as the fish book has it. */
 export const CATCHES: { kind: string; cm: number; label: string }[] = [
@@ -69,35 +48,6 @@ export const CATCHES: { kind: string; cm: number; label: string }[] = [
   { kind: 'pike', cm: 50, label: 'Pike, 50 cm' },
   { kind: 'pike', cm: 110, label: 'Pike, 110 cm' },
 ];
-/** A landed fish is drawn this many times its real length, so an ordinary bass is about as long as his arm. */
-export const HELD_TIMES_LIFE = 2;
-/** The shortest a landed fish is drawn, in metres on his model: long enough to lie across both palms, which are 56 cm apart there. A catch under about 31 cm is drawn as if it were that long. */
-export const HELD_AT_LEAST = 0.8;
-/** His height on the model as it comes, and in the game. */
-const MODEL_TALL = 2.87;
-const GAME_TALL = 2.2;
-
-/**
- * The moments of the "Landed" clip, as shares of it: the fish breaks the
- * water, he lets go of the rod, the rod is down on the boards, the fish lands
- * on his palms.
- */
-export const LANDED = { burst: 0.05, release: 0.2, down: 0.33, caught: 0.4 };
-/** The moments of the cast: the line leaves the rod's tip, and the lure is down on the water. */
-export const CAST = { fly: 0.56, down: 0.86 };
-
-/** The rod: how long, how much of it is behind his right palm, how thick, how far it runs straight before it bends, and its reel. */
-export const ROD = {
-  long: 2.3,
-  behind: 0.12,
-  thick: 0.02,
-  straight: 0.8,
-  reelAt: 0.56,
-  reelRadius: 0.085,
-  reelWide: 0.06,
-  knobOut: 0.055,
-};
-
 interface Loaded {
   scene: Group;
   animations: AnimationClip[];
@@ -109,8 +59,6 @@ interface Fish {
   long: number;
   mixer: AnimationMixer;
   thrash: AnimationAction | undefined;
-  /** How tall it is, belly to back. */
-  high: number;
   /** Its skin at rest, about its middle: three points a triangle. */
   skin: Vector3[];
   meshes: Mesh[];
@@ -157,11 +105,6 @@ export interface Tackle {
 }
 
 const UP = new Vector3(0, 1, 0);
-const ease = (t: number): number => {
-  const c = Math.max(0, Math.min(1, t));
-  return c * c * (3 - 2 * c);
-};
-
 export const makeTackle = (
   model: Group,
   root: Group,
@@ -245,30 +188,12 @@ export const makeTackle = (
       kind,
       group,
       long,
-      high: high.y - low.y,
       mixer: fishMixer,
       thrash: thrashClip ? fishMixer.clipAction(thrashClip) : undefined,
       skin,
       meshes,
     });
   }
-  /** How low the fish's underside is as it lies on its side (its left flank down), under its middle line, a way along it from its middle (toward its nose is more), for a fish drawn `size` times its own. */
-  const flankAt = (fish: Fish, along: number, size: number): number => {
-    const z = Math.max(-0.48, Math.min(0.48, along / (fish.long * size))) * fish.long;
-    const y = 0;
-    let lowest = Infinity;
-    for (let i = 0; i < fish.skin.length; i += 3) {
-      const [a, b, c] = [fish.skin[i], fish.skin[i + 1], fish.skin[i + 2]];
-      const area = (b.y - a.y) * (c.z - a.z) - (c.y - a.y) * (b.z - a.z);
-      if (Math.abs(area) < 1e-12) continue;
-      const u = ((y - a.y) * (c.z - a.z) - (c.y - a.y) * (z - a.z)) / area;
-      const v = ((b.y - a.y) * (z - a.z) - (y - a.y) * (b.z - a.z)) / area;
-      if (u < 0 || v < 0 || u + v > 1) continue;
-      lowest = Math.min(lowest, a.x + u * (b.x - a.x) + v * (c.x - a.x));
-    }
-    return (Number.isFinite(lowest) ? lowest : 0) * size;
-  };
-
   const placed: Placed = {
     what: undefined,
     rodHeld: false,
@@ -288,51 +213,15 @@ export const makeTackle = (
     fish: null,
   };
 
-  /** The middle of the rod from a point on it at his right palm: straight through his hands, then bent toward what pulls on it. */
-  const rodLine = (from: Vector3, along: Vector3, toward: Vector3 | null, pulled: number): Vector3[] => {
-    const points: Vector3[] = [];
-    for (let i = 0; i <= 8; i += 1) points.push(from.clone().addScaledVector(along, (-ROD.behind + ((ROD.straight + ROD.behind) * i) / 8) * unit));
-    const rest = ROD.long - ROD.behind - ROD.straight;
-    const end = from.clone().addScaledVector(along, (ROD.straight + rest) * unit);
-    const bend = new Vector3();
-    if (toward && pulled > 0) {
-      bend.copy(toward).sub(end);
-      bend.addScaledVector(along, -bend.dot(along)).normalize();
-    }
-    for (let i = 1; i <= 24; i += 1) {
-      const u = i / 24;
-      points.push(
-        from
-          .clone()
-          .addScaledVector(along, (ROD.straight + rest * u * (1 - 0.14 * pulled * u)) * unit)
-          .addScaledVector(bend, rest * 0.45 * pulled * u * u * unit),
-      );
-    }
-    return points;
-  };
+  const rodLine = (from: Vector3, along: Vector3, toward: Vector3 | null, pulled: number): Vector3[] => rodOf(from, along, toward, pulled, unit);
   const tube = (mesh: Mesh, points: Vector3[], radius: number): void => {
     mesh.geometry.dispose();
     mesh.geometry = new TubeGeometry(new CatmullRomCurve3(points), Math.max(8, points.length * 2), radius, 6);
     mesh.visible = true;
   };
-  /** A line between two places, hanging by `sag` in the middle. */
-  const lineBetween = (from: Vector3, to: Vector3, sag: number): Vector3[] => {
-    const points: Vector3[] = [];
-    const steps = Math.max(4, Math.ceil(from.distanceTo(to) / (0.05 * unit)));
-    for (let i = 0; i <= steps; i += 1) {
-      const u = i / steps;
-      const point = from.clone().lerp(to, u);
-      point.y -= sag * 4 * u * (1 - u);
-      points.push(point);
-    }
-    return points;
-  };
+  const lineBetween = (from: Vector3, to: Vector3, sag: number): Vector3[] => lineOf(from, to, sag, unit);
   const reelAt = (from: Vector3, along: Vector3, side: Vector3, turns: number): void => {
-    const axle = new Vector3().crossVectors(along, side).normalize();
-    const centre = from
-      .clone()
-      .addScaledVector(along, ROD.reelAt * unit)
-      .addScaledVector(side, (ROD.thick + ROD.reelRadius) * unit);
+    const { centre, axle } = reelOn({ from, along, side }, unit);
     const turn = new Quaternion().setFromUnitVectors(UP, axle);
     drum.position.copy(centre);
     hub.position.copy(centre);
@@ -374,27 +263,20 @@ export const makeTackle = (
   };
 
   /** Where the rod is in his right palm in the pose he is in now: a point on its middle, and which way it runs and its reel hangs. */
-  const inHand = (): { from: Vector3; along: Vector3; side: Vector3 } => {
-    const along = new Vector3().fromArray(grips.right.rod ?? grips.right.fingers).transformDirection(right.matrixWorld);
-    const side = new Vector3().fromArray(grips.right.reel ?? grips.right.palm).transformDirection(right.matrixWorld);
-    side.addScaledVector(along, -side.dot(along)).normalize();
-    return {
-      from: placed.gripRight.clone().addScaledVector(placed.palmRight, ROD.thick * unit),
-      along,
-      side,
-    };
-  };
+  let hands = handsOf(grips, right, left, unit);
+  const inHand = (): RodPose => ({ from: hands.from.clone(), along: hands.along.clone(), side: hands.side.clone() });
   const readHands = (): void => {
     root.updateMatrixWorld(true);
-    placed.gripRight.fromArray(grips.right.at).applyMatrix4(right.matrixWorld);
-    placed.gripLeft.fromArray(grips.left.at).applyMatrix4(left.matrixWorld);
-    placed.palmRight.fromArray(grips.right.palm).transformDirection(right.matrixWorld);
-    placed.palmLeft.fromArray(grips.left.palm).transformDirection(left.matrixWorld);
+    hands = handsOf(grips, right, left, unit);
+    placed.gripRight.copy(hands.gripRight);
+    placed.gripLeft.copy(hands.gripLeft);
+    placed.palmRight.copy(hands.palmRight);
+    placed.palmLeft.copy(hands.palmLeft);
   };
 
   // The rod as he lets go of it in "Landed": read from the clip once, so it falls from exactly where his hand left it.
-  let letGo: { from: Vector3; along: Vector3; side: Vector3 } | null = null;
-  const letGoPose = (): { from: Vector3; along: Vector3; side: Vector3 } => {
+  let letGo: RodPose | null = null;
+  const letGoPose = (): RodPose => {
     if (letGo) return letGo;
     const action = actions.get(landedClip);
     if (!action) return inHand();
@@ -477,49 +359,29 @@ export const makeTackle = (
         const entry = CATCHES[tackle.caught] ?? CATCHES[0];
         const fish = fishes.get(entry.kind) ?? null;
         placed.fish = fish;
-        // As long beside him as the catch is: so many times life size in the game.
-        // But never shorter than reaches across both his palms, however small the catch.
-        const size = fish ? (Math.max((entry.cm / 100) * HELD_TIMES_LIFE * (MODEL_TALL / GAME_TALL), HELD_AT_LEAST) * unit) / fish.long : 1;
-        // Where it lies across his upturned palms, on its side with its nose to his right: its flank on the grip point of each.
-        // A fish on its side is flat underneath, so nothing of it hangs down between his palms onto his wrists.
-        const across = placed.gripRight.clone().sub(placed.gripLeft);
-        const apart = across.length();
-        across.normalize();
-        const above = UP.clone().addScaledVector(across, -UP.dot(across)).normalize();
-        const lying = new Vector3();
-        const lyingTurn = new Quaternion();
-        if (fish) {
-          const front = flankAt(fish, apart / 2, size);
-          const back = flankAt(fish, -apart / 2, size);
-          const tilt = Math.atan2(front - back, apart);
-          const nose = across.clone().multiplyScalar(Math.cos(tilt)).addScaledVector(above, -Math.sin(tilt));
-          const top = above.clone().multiplyScalar(Math.cos(tilt)).addScaledVector(across, Math.sin(tilt));
-          lyingTurn.setFromRotationMatrix(new Matrix4().makeBasis(top, new Vector3().crossVectors(nose, top), nose));
-          lying.copy(placed.gripRight).add(placed.gripLeft).multiplyScalar(0.5).addScaledVector(top, -(front + back) / 2);
-        }
+        // As long beside him as the catch is, so many times life size, but never shorter than reaches across both his palms.
+        const size = fish ? heldSize(entry.cm, fish.long, unit) : 1;
+        const lying = fish ? lieAcross(fish.skin, fish.long, placed.gripRight, placed.gripLeft, size) : null;
         let mouth = NEAR.clone();
-        if (fish && share >= LANDED.burst) {
+        if (fish && lying && share >= LANDED.burst) {
           fish.group.visible = true;
           fish.group.scale.setScalar(size);
           const flight = (share - LANDED.burst) / (LANDED.caught - LANDED.burst);
           if (flight < 1) {
-            // Up out of the water on the end of the line, over in an arc and down onto his palms.
-            const settled = ease((flight - 0.55) / 0.45);
-            fish.group.position.copy(NEAR).lerp(lying, flight);
-            fish.group.position.y += Math.sin(Math.PI * flight) * 1.1 * unit;
-            const hanging = new Quaternion().setFromRotationMatrix(new Matrix4().makeBasis(new Vector3(-1, 0, 0), new Vector3(0, 0, 1), new Vector3(0, 1, 0)));
-            fish.group.quaternion.copy(hanging).slerp(lyingTurn, settled);
+            const flying = fishFlying(NEAR, lying, flight, unit);
+            fish.group.position.copy(flying.position);
+            fish.group.quaternion.copy(flying.turn);
             if (fish.thrash) {
               fish.thrash.play();
-              fish.thrash.setEffectiveWeight(1 - settled);
+              fish.thrash.setEffectiveWeight(1 - flying.settled);
               fish.thrash.time = ((share - LANDED.burst) * 2.8) % fish.thrash.getClip().duration;
             }
             mouth = fish.group.position.clone().add(new Vector3(0, 0, 1).applyQuaternion(fish.group.quaternion).multiplyScalar(fish.long * size * 0.5));
           } else {
             placed.fishHeld = true;
             fish.thrash?.stop();
-            fish.group.position.copy(lying);
-            fish.group.quaternion.copy(lyingTurn);
+            fish.group.position.copy(lying.position);
+            fish.group.quaternion.copy(lying.turn);
           }
           fish.mixer.update(0);
         }
@@ -529,17 +391,10 @@ export const makeTackle = (
           reelAt(held.from, held.along, held.side, share < LANDED.burst ? clock * 2.2 : 0);
         } else {
           // He lets go: it drops to the boards at his right.
-          const from = letGoPose();
-          const fall = Math.min(1, (share - LANDED.release) / (LANDED.down - LANDED.release));
-          const down = fall * fall;
-          const at = from.from.clone().lerp(LYING.from, down);
-          at.x += (LYING.from.x - from.from.x) * (ease(fall * 1.6) - down);
-          const along = from.along.clone().lerp(LYING.along, ease(fall)).normalize();
-          const side = from.side.clone().lerp(LYING.side, ease(fall));
-          side.addScaledVector(along, -side.dot(along)).normalize();
-          placed.along.copy(along);
-          placed.rod = rodLine(at, along, null, 0);
-          reelAt(at, along, side, 0);
+          const falling = rodFalling(letGoPose(), LYING, Math.min(1, (share - LANDED.release) / (LANDED.down - LANDED.release)));
+          placed.along.copy(falling.along);
+          placed.rod = rodLine(falling.from, falling.along, null, 0);
+          reelAt(falling.from, falling.along, falling.side, 0);
         }
         if (!placed.fishHeld) placed.line = lineBetween(placed.rod[placed.rod.length - 1], mouth, share < LANDED.release ? 0 : 0.25 * unit);
       }

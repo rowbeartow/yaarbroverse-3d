@@ -750,3 +750,19 @@ The owner's words on the third look: "Third try and still not right, so let's si
 - `tools/preview/fishing-measure.mjs` plays every frame of the three clips on the preview page (and "landed" once for each catch) and fails unless: the grip points are on the skin in the middle of his palms; the rod is at his right palm's grip point whenever he holds it and at his left's whenever both hands do; the fish lies on both; no point of the rod, reel, line or fish is inside his body or head (his hands are not counted, since they hold it); and the reel clip does what the owner described. All of it passes.
 - Supersedes the reel and "landed" of the two entries before this one (the crank, the rod across his body, the fish taken from the boards). A held fish is still drawn at twice its real length.
 - Still nothing about Yaarbro in the game changes until the owner says OK on the page.
+
+## 2026-11-20: Yaarbro's fishing clips are in the game, with tray hands on "landed"
+
+The owner's words on the fourth look: "good enough to ship, with one fix: on Landed his hands are turned backwards. Turn them so his palms face up under the fish with his fingers pointing outward, like holding up a tray, and keep the every-frame checks passing. Then put the three clips on Yaarbro in the game."
+
+- "Landed": his palms face up with the fingers pointing out to each hand's own side, as under a tray, his forearms coming up between them. He heaves, lets the rod drop, lifts his palms straight up over his head, and the fish comes up out of the water on the line and lands on them there.
+- With his wrists inside his hands, a fish lying belly down hung onto his wrists and cuffs between his palms. So a landed fish lies on its side across his palms, which is flat underneath and shows its whole flank to the game's camera above.
+- His palms are 56 cm apart on his model, so a landed fish is never drawn shorter than reaches across both: a catch under about 31 cm is drawn as if it were that long. Otherwise a held fish is still twice its real length.
+- A landed fish is held up for at least 1.6 seconds before a press moves on (`showFirst`; it was 0.7), so it is always seen on his palms.
+- The check (`tools/preview/fishing-measure.mjs`) also checks his fingers point outward, and tries each kind of fish at its smallest and its biggest. It passes.
+- In the game the rod, reel and landed fish are placed by the same code the page and the check use (`src/view/held-tackle.ts`). While a fish is on the line he turns to face it, because the rod points straight ahead of him.
+- Caputo has no fishing clips yet: he stands still and the rod is drawn in front of him, as before.
+
+## 2026-11-20: Before skiing and climbing, Yaarbro gets simple gripping hands
+
+The owner's word: "give Yaarbro simple gripping hands (one bone that curls his fingers and one for his thumb), since ski poles and climbing holds will need him to hold things." It goes on the roadmap before skiing. Until then everything he holds is held at the grip points in his palms.

@@ -46,7 +46,7 @@
       ]
     } },
     { "name": "fish_show", "file": "Meshy_AI_Animation_Idle_11_withSkin.glb", "made": {
-      "seconds": 2.8,
+      "seconds": 2.6,
       "apart": 0.34,
       "cradle": -20,
       "elbows": [0.3, 0.2, -1],

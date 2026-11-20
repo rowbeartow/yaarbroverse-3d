@@ -5,12 +5,18 @@
 // own model (assets/fish/, rigged by tools/rig-fish.py): swimming under the
 // surface, coming to the lure, thrashing on the line, and held up when landed.
 //
+// A hero with fishing clips (Yaarbro) holds the rod at the grip point in his
+// right palm, with a reel under it, and a landed fish lies across both his
+// upturned palms: where each goes is worked out by held-tackle.ts from his
+// hand bones. A hero without them has the rod drawn in front of it.
+//
 // The dock is the heaviest place on the lake, so the fish cast no shadow and
 // nothing here is moved or drawn while the hero is far from the spot.
 
 import {
   AnimationMixer,
   Box3,
+  CatmullRomCurve3,
   BufferAttribute,
   BufferGeometry,
   CircleGeometry,
@@ -25,9 +31,11 @@ import {
   MeshBasicMaterial,
   MeshLambertMaterial,
   MeshStandardMaterial,
+  Matrix4,
   Object3D,
   RingGeometry,
   SphereGeometry,
+  TubeGeometry,
   Vector3,
   type AnimationAction,
   type Material,
@@ -36,6 +44,9 @@ import type { GLTF } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { clone as cloneRigged } from 'three/examples/jsm/utils/SkeletonUtils.js';
 import { FISHING, SPECIES, fishingPoint, type Fish, type FishingEvent, type FishingSpot, type FishingState, type Species } from '../game/fishing';
 import type { HeroName } from '../game/hero';
+import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
+import { LANDED, ROD, ease, fishFlying, heldSize, lieAcross, readHands, reelOn, rodFalling, rodLine, type RodPose } from './held-tackle';
+import type { HeroView } from './heroes';
 import type { WaterView } from './water';
 
 /** The file each fish is drawn from. */
@@ -53,9 +64,13 @@ const GRIP: Record<HeroName, { ahead: number; up: number; tipAhead: number; tipU
   Caputo: { ahead: 0.75, up: 0.95, tipAhead: 2.3, tipUp: 2.2 },
 };
 const LINE_POINTS = 14;
+/** Metres in the game for a metre on Yaarbro's model as it comes: what the reel is sized by. */
+const GAME_REEL = 2.2 / 2.87;
 /** One round shape, stretched into each fish's shadow on the water. */
 const SHADE_SHAPE = new CircleGeometry(0.5, 20);
 type Clip = 'idle' | 'swim' | 'thrash' | 'flop';
+/** Each kind of fish's skin as it lies at rest, about its middle, three points a triangle: found once, for laying a landed one across a hero's palms. */
+const SKINS = new Map<Species, Vector3[]>();
 
 /** One fish in the water, drawn from its kind's model. */
 class FishView {
@@ -98,6 +113,18 @@ class FishView {
     this.length = Math.max(size.z, 0.001);
     model.position.set(-middle.x, -middle.y, -middle.z);
     this.root.add(model);
+    if (!SKINS.has(species)) {
+      const skin: Vector3[] = [];
+      this.root.updateMatrixWorld(true);
+      model.traverse((node) => {
+        const mesh = node as Mesh;
+        if (!mesh.isMesh) return;
+        const index = mesh.geometry.getIndex();
+        const count = index ? index.count : mesh.geometry.getAttribute('position').count;
+        for (let i = 0; i < count; i += 1) skin.push(mesh.getVertexPosition(index ? index.getX(i) : i, new Vector3()).applyMatrix4(mesh.matrixWorld));
+      });
+      SKINS.set(species, skin);
+    }
     this.mixer = new AnimationMixer(model);
     for (const name of ['idle', 'swim', 'thrash', 'flop'] as Clip[]) {
       const clip = source.animations.find((each) => each.name === name);
@@ -109,6 +136,18 @@ class FishView {
       this.actions[name] = action;
     }
     this.root.visible = false;
+  }
+
+  /** Its skin at rest and its own length, for laying it across a hero's palms. */
+  get shape(): { skin: Vector3[]; long: number } {
+    return { skin: SKINS.get(this.species) ?? [], long: this.length };
+  }
+
+  /** Still, or thrashing by a share: a landed fish on its way to a hero's palms, and lying on them. */
+  held(thrashing: number, dt: number): void {
+    this.showing = thrashing > 0.5 ? 'thrash' : 'idle';
+    for (const name of Object.keys(this.actions) as Clip[]) this.actions[name]!.setEffectiveWeight(name === 'thrash' ? thrashing : 0);
+    this.mixer.update(dt);
   }
 
   /** Draws the fish `size` centimetres long. */
@@ -149,6 +188,15 @@ export class FishingView {
   private readonly mark: Mesh;
   private readonly bobber: Group;
   private readonly rod: Mesh;
+  /** The rod in a hero's palm: bent by a fish, with its reel under it. */
+  private readonly heldRod: Mesh;
+  private readonly reel: Mesh;
+  /** How far round the reel has turned, in turns. */
+  private spun = 0;
+  /** The rod as he last held it, for it to fall from when he lets go to show off a fish. */
+  private letGo: RodPose | null = null;
+  /** Whether a landed fish lies on the hero's palms. */
+  private onPalms = false;
   private readonly line: Line;
   private readonly linePoints = new Float32Array(LINE_POINTS * 3);
   private readonly looks: Material[] = [];
@@ -206,7 +254,21 @@ export class FishingView {
     this.line = new Line(geometry, look(new LineBasicMaterial({ color: 0xfffbee, transparent: true, opacity: 0.9 })));
     this.line.frustumCulled = false;
     this.line.visible = false;
-    this.group.add(this.mark, this.ring, this.bobber, this.rod, this.line);
+    this.heldRod = new Mesh(new BufferGeometry(), this.rod.material);
+    this.heldRod.castShadow = !simple;
+    this.heldRod.frustumCulled = false;
+    this.heldRod.visible = false;
+    // The reel: a drum whose axle is its own y, with a knob on each face to show it turning. One shape, one draw.
+    const unit = GAME_REEL;
+    const drum = new CylinderGeometry(ROD.reelRadius * unit, ROD.reelRadius * unit, ROD.reelWide * unit, 16);
+    const knob = new SphereGeometry(0.028 * unit, 8, 6);
+    const near = knob.clone().translate(ROD.knobOut * unit, (ROD.reelWide / 2 + 0.02) * unit, 0);
+    const far = knob.clone().translate(-ROD.knobOut * unit, -(ROD.reelWide / 2 + 0.02) * unit, 0);
+    this.reel = new Mesh(mergeGeometries([drum, near, far]), look(simple ? new MeshLambertMaterial({ color: 0xd9a441 }) : new MeshStandardMaterial({ color: 0xd9a441, roughness: 0.45, metalness: 0.2 })));
+    for (const part of [drum, knob, near, far]) part.dispose();
+    this.reel.frustumCulled = false;
+    this.reel.visible = false;
+    this.group.add(this.mark, this.ring, this.bobber, this.rod, this.heldRod, this.reel, this.line);
   }
 
   /** What the rules reported this step: splashes and the bobber's twitch. */
@@ -226,7 +288,7 @@ export class FishingView {
   }
 
   /** Matches the picture to the rules. `hero` is where the hero's feet are. */
-  update(state: FishingState, hero: { x: number; y: number; z: number }, heroName: HeroName, dt: number): void {
+  update(state: FishingState, hero: { x: number; y: number; z: number }, heroName: HeroName, dt: number, holder: HeroView | null = null): void {
     const { spot } = this;
     const near = Math.hypot(hero.x - spot.x, hero.z - spot.z) < NEAR;
     this.group.visible = near;
@@ -246,14 +308,78 @@ export class FishingView {
       hand.set(spot.x + spot.ahead.x * (spot.radius + 0.25) - spot.ahead.z * 0.9, hero.y * 0 + this.mark.position.y, spot.z + spot.ahead.z * (spot.radius + 0.25) + spot.ahead.x * 0.9);
       tip.set(hand.x - spot.ahead.x * 0.5, hand.y + 2.2, hand.z - spot.ahead.z * 0.5);
     }
-    const along = tip.clone().sub(hand);
-    this.rod.position.copy(hand).addScaledVector(along, 0.5);
-    this.rod.scale.set(1, along.length(), 1);
-    this.rod.quaternion.setFromUnitVectors(new Vector3(0, 1, 0), along.clone().normalize());
+    // A hero with fishing clips holds the rod in his palm: its tip is wherever his hand has swung it.
+    const at = fishingPoint(spot, state.out, state.across);
+    const tackle = fishing ? (holder?.tackle() ?? null) : null;
+    const landedFish = state.phase === 'show' && state.shown ? (state.fish.find((fish) => fish.mood === 'landed' && fish.species === state.shown?.species && fish.size === state.shown?.size && this.viewFor(fish)) ?? null) : null;
+    const landedView = landedFish ? this.viewFor(landedFish) : null;
+    let flying: Vector3 | null = null;
+    this.onPalms = false;
+    this.heldRod.visible = this.reel.visible = tackle !== null;
+    this.rod.visible = tackle === null;
+    if (tackle && holder) {
+      holder.root.updateMatrixWorld(true);
+      const unit = tackle.unit;
+      const hands = readHands(tackle.grips, tackle.right, tackle.left, unit);
+      const share = state.phase === 'show' ? (tackle.show ?? Math.min(1, state.timer / FISHING.show)) : null;
+      // The landed fish: up out of the water on the line, over in an arc, and down onto his upturned palms.
+      if (share !== null && landedFish && landedView) {
+        const { skin, long } = landedView.shape;
+        const size = heldSize(landedFish.size, long, unit);
+        const lying = lieAcross(skin, long, hands.gripRight, hands.gripLeft, size);
+        const flight = (share - LANDED.burst) / (LANDED.caught - LANDED.burst);
+        landedView.root.scale.setScalar(size);
+        landedView.root.visible = flight >= 0;
+        if (flight < 1) {
+          const now = fishFlying(new Vector3(at.x, spot.surface, at.z), lying, Math.max(0, flight), unit);
+          landedView.root.position.copy(now.position);
+          landedView.root.quaternion.copy(now.turn);
+          landedView.held(1 - now.settled, dt);
+          // The line runs to its mouth.
+          flying = now.position.clone().add(new Vector3(0, 0, 1).applyQuaternion(now.turn).multiplyScalar(long * size * 0.5));
+        } else {
+          landedView.root.position.copy(lying.position);
+          landedView.root.quaternion.copy(lying.turn);
+          landedView.held(0, dt);
+          this.onPalms = true;
+        }
+      }
+      // The rod: in his right palm, or dropping to the boards at his right once he lets go of it to take the fish.
+      let pose: RodPose = hands;
+      if (share !== null && share >= LANDED.release) {
+        const right = { x: -spot.ahead.z, z: spot.ahead.x };
+        const lying: RodPose = {
+          from: new Vector3(hero.x + right.x * 0.73 + spot.ahead.x * 0.57, hero.y + 0.03, hero.z + right.z * 0.73 + spot.ahead.z * 0.57),
+          along: new Vector3(spot.ahead.x, 0, spot.ahead.z),
+          side: new Vector3(right.x, 0, right.z),
+        };
+        pose = rodFalling(this.letGo ?? hands, lying, Math.min(1, (share - LANDED.release) / (LANDED.down - LANDED.release)));
+      } else this.letGo = { from: hands.from.clone(), along: hands.along.clone(), side: hands.side.clone() };
+      // Bent toward a fish on the line, harder as it thrashes; and toward the landed fish as he heaves it out.
+      const held = share === null || share < LANDED.release;
+      const toward = state.phase === 'hooked' ? new Vector3(at.x, spot.surface, at.z) : share !== null && held ? (flying ?? new Vector3(at.x, spot.surface, at.z)) : null;
+      const pulled = state.phase === 'hooked' ? 0.45 + 0.55 * strain : share !== null && held ? 1 - 0.6 * ease(share / LANDED.release) : 0;
+      const points = rodLine(pose.from, pose.along, toward, pulled, unit);
+      this.heldRod.geometry.dispose();
+      this.heldRod.geometry = new TubeGeometry(new CatmullRomCurve3(points), 24, ROD.thick * unit * 1.4, 5);
+      tip.copy(points[points.length - 1]);
+      // The reel hangs under the rod with its face sideways, and turns while the button reels.
+      if (state.reeling) this.spun += dt * 2.2;
+      const reel = reelOn(pose, unit);
+      const angle = this.spun * Math.PI * 2;
+      const spoke = pose.along.clone().multiplyScalar(Math.cos(angle)).addScaledVector(pose.side, Math.sin(angle));
+      this.reel.position.copy(reel.centre);
+      this.reel.quaternion.setFromRotationMatrix(new Matrix4().makeBasis(spoke, reel.axle, new Vector3().crossVectors(spoke, reel.axle)));
+    } else {
+      this.letGo = null;
+      const along = tip.clone().sub(hand);
+      this.rod.position.copy(hand).addScaledVector(along, 0.5);
+      this.rod.scale.set(1, along.length(), 1);
+      this.rod.quaternion.setFromUnitVectors(new Vector3(0, 1, 0), along.clone().normalize());
+    }
     this.mark.visible = !fishing;
 
     // The ring while aiming.
-    const at = fishingPoint(spot, state.out, state.across);
     this.ring.visible = state.phase === 'aim';
     if (this.ring.visible) {
       this.ring.position.set(at.x, spot.surface + 0.06, at.z);
@@ -269,12 +395,13 @@ export class FishingView {
     } else if (state.phase === 'wait' || state.phase === 'bite') {
       lure = new Vector3(at.x, spot.surface + 0.05 - this.sunk + (this.twitch > 0 ? 0.07 * Math.sin(this.twitch * 60) : 0.02 * Math.sin(this.clock * 3)), at.z);
     } else if (state.phase === 'hooked') lure = new Vector3(at.x, spot.surface - 0.1, at.z);
+    else if (flying) lure = flying;
     this.bobber.visible = state.phase === 'cast' || state.phase === 'wait' || state.phase === 'bite';
     if (lure && this.bobber.visible) this.bobber.position.copy(lure);
     this.line.visible = lure !== null;
     if (lure) {
       // Slack hangs in a curve; a strained line is straight.
-      const sag = state.phase === 'hooked' ? 0.4 * (1 - strain) : 1.1;
+      const sag = state.phase === 'hooked' ? 0.4 * (1 - strain) : flying ? 0.15 : 1.1;
       for (let i = 0; i < LINE_POINTS; i += 1) {
         const t = i / (LINE_POINTS - 1);
         this.linePoints[i * 3] = tip.x + (lure.x - tip.x) * t;
@@ -305,6 +432,12 @@ export class FishingView {
         view.sized(fish.size);
       }
       const shown = state.shown && fish.mood === 'landed' && state.phase === 'show';
+      // A landed fish on its way to a hero's palms, or lying on them, was placed above.
+      if (shown && view === landedView && tackle) {
+        view.shadeAt(0, 0, 0, 0, false);
+        continue;
+      }
+      view.sized(fish.size);
       view.root.visible = fish.mood !== 'landed' || Boolean(shown);
       if (!view.root.visible || shown) view.shadeAt(0, 0, 0, 0, false);
       if (!view.root.visible) continue;
@@ -345,8 +478,10 @@ export class FishingView {
   }
 
   /** What is drawn, for the browser checks. */
-  info(): { fish: number; ring: boolean; bobber: boolean; line: boolean; mark: boolean; thrashing: boolean } {
+  info(): { fish: number; ring: boolean; bobber: boolean; line: boolean; mark: boolean; thrashing: boolean; rodInPalm: boolean; fishOnPalms: boolean } {
     return {
+      rodInPalm: this.heldRod.visible,
+      fishOnPalms: this.onPalms,
       fish: this.fish.filter((view) => view.root.visible).length,
       ring: this.ring.visible,
       bobber: this.bobber.visible,
@@ -362,6 +497,8 @@ export class FishingView {
     this.ring.geometry.dispose();
     this.mark.geometry.dispose();
     this.rod.geometry.dispose();
+    this.heldRod.geometry.dispose();
+    this.reel.geometry.dispose();
     this.line.geometry.dispose();
   }
 }

@@ -106,7 +106,7 @@ export const FISHING = {
   /** How fast the strain on the line eases when it is not being reeled through a thrash, in shares of the whole a second. */
   ease: 0.9,
   /** Seconds a landed fish is held up before the hero can do anything else, and at most. */
-  showFirst: 0.7,
+  showFirst: 1.6,
   show: 2.6,
   /** Seconds after a line snaps or a fish gets away before the next cast. */
   rue: 0.9,

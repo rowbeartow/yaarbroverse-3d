@@ -43,14 +43,14 @@ import { CrocStones } from './croc-stones';
 import { Hanger, RopesView } from './ropes';
 import { nearestRopeEnd } from '../game/rope';
 import type { GLTF } from 'three/examples/jsm/loaders/GLTFLoader.js';
-import { SPECIES, type FishingEvent, type Species } from '../game/fishing';
+import { SPECIES, fishingPoint, type FishingEvent, type FishingState, type Species } from '../game/fishing';
 import { FISH_MODELS, FishingView } from './fishing';
 import { PickupsView } from './pickups';
 import { WeedBeds } from './weed-beds';
 import { ROUTE_CAMERA, cameraFor, followsRoute, forwardOf, placesCamera, turnToward } from './route-camera';
 import { ENEMY_MODELS, EnemyView, modelFileFor, modelFilesOf } from './enemies';
 import { enemiesInSight } from './sight';
-import { HERO_MODEL_FILES, buildHero, type HeroView } from './heroes';
+import { HERO_MODEL_FILES, buildHero, type HeroView, type Pose } from './heroes';
 import { buildLake } from './lake';
 import { Materials, WIND, installMist } from './materials';
 import { seeded } from './noise';
@@ -65,6 +65,14 @@ import { MIST_BOTTOM, MIST_TOP, animateMushroom, blobShadow, buildSolids, placeM
 const CAMERA = { back: 12, up: 8, lookAhead: 4.5, lookUp: 1, fieldOfView: 50 };
 /** A hero in the air reaches out for a rope whose end is this near its grip (metres). */
 const ROPE_REACH_SHOWN = 2.8;
+
+/** What the hero's fishing clips need to know of the rules: which part of fishing this is, and how long it has lasted. */
+const fishingPose = (state: FishingState | null): Pose['fishing'] => {
+  if (!state || state.phase === 'off') return null;
+  // A bite is still waiting, as far as his arms go; so is the moment after a fish gets away.
+  const phase = state.phase === 'bite' || state.phase === 'lost' ? 'wait' : state.phase;
+  return { phase, timer: state.timer, reeling: state.reeling };
+};
 
 /** Which way the sunlight travels from: left, above and a little behind the camera. */
 const SUN_FROM = new Vector3(-0.52, 0.76, 0.4).normalize();
@@ -469,7 +477,11 @@ export class GroveView {
 
     // Hero.
     hero.root.position.set(x, y, z);
-    let turn = game.facing - hero.root.rotation.y;
+    // With a fish on the line he faces it: the rod points straight ahead of him, along the line.
+    let facing = game.facing;
+    const hooked = game.fishing?.phase === 'hooked' && level.fishing ? fishingPoint(level.fishing, game.fishing.out, game.fishing.across) : null;
+    if (hooked && Math.hypot(hooked.x - x, hooked.z - z) > 0.5) facing = Math.atan2(hooked.x - x, hooked.z - z);
+    let turn = facing - hero.root.rotation.y;
     turn = Math.atan2(Math.sin(turn), Math.cos(turn));
     hero.root.rotation.y += turn * (1 - Math.exp(-14 * dt));
     // On a rope the hero hangs in line with it, hands at its end; off it, upright again.
@@ -485,6 +497,7 @@ export class GroveView {
         water: game.swimming ? (game.under ? 'under' : 'surface') : null,
         climbing: game.climbing > 0 ? 1 - game.climbing / SWIM.climbTime : null,
         rope: game.swinging ? 'hang' : ropeNear ? 'reach' : null,
+        fishing: fishingPose(game.fishing),
       },
       dt,
     );
@@ -573,7 +586,7 @@ export class GroveView {
     levelView.pickups?.update(game.collected, game, this.clock, dt);
     if (levelView.fishing && game.fishing) {
       for (const event of this.fishingEvents) levelView.fishing.event(event, game.fishing);
-      levelView.fishing.update(game.fishing, { x, y, z }, game.hero, dt);
+      levelView.fishing.update(game.fishing, { x, y, z }, game.hero, dt, hero);
     }
     this.fishingEvents = [];
 

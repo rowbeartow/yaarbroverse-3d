@@ -32,15 +32,19 @@ import type { GLTF } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { clone as cloneRigged } from 'three/examples/jsm/utils/SkeletonUtils.js';
 import { MOVE, type HeroName } from '../game/hero';
 import { airPhase, approach, groundMix, landingWeight, movingShare, nextGait, strideBeat, strideRate, type Gait, type GaitBands } from './hero-motion';
-import type { HeroInfo, HeroView, Pose } from './heroes';
+import { CAST, GAME_UNIT, type Grips } from './held-tackle';
+import type { HeroInfo, HeroTackle, HeroView, Pose } from './heroes';
 
 /** How fast a roll clip turns at full rolling speed, against how it was made. */
 const ROLL_RATE = 1.6;
 
-export type ClipRole = 'idle' | 'walk' | 'trot' | 'run' | 'jump' | 'fall' | 'land' | 'roll' | 'tread' | 'swim' | 'under' | 'climb' | 'shake' | 'reach' | 'catch' | 'hang' | 'release';
+export type ClipRole = 'idle' | 'walk' | 'trot' | 'run' | 'jump' | 'fall' | 'land' | 'roll' | 'tread' | 'swim' | 'under' | 'climb' | 'shake' | 'reach' | 'catch' | 'hang' | 'release' | 'cast' | 'reel' | 'show';
 
 /** The rope clips, in the order they play: reaching out, catching hold, hanging on, letting go. */
 const ROPE_ROLES = ['reach', 'catch', 'hang', 'release'] as const;
+
+/** The fishing clips: casting, reeling a hooked fish in, and showing off a landed one. */
+const FISHING_ROLES = ['cast', 'reel', 'show'] as const;
 
 export interface HeroModelSpec {
   /** File name in assets/models/. */
@@ -114,6 +118,13 @@ export interface HeroModelSpec {
    * radians, for a four-legged hero who hangs from his teeth.
    */
   rope?: { grip: string[]; gripAhead?: number; tilt: number };
+  /**
+   * Fishing, for a hero with clips for it (`cast`, `reel` and `show`): the
+   * grip point in the middle of each palm that the rod and a landed fish are
+   * held at (see held-tackle.ts). The numbers are `grips` in the hero's guide
+   * file in tools/, and tests/held-tackle.test.ts holds the two together.
+   */
+  fishing?: { grips: Grips };
 }
 
 /** Each hero's model. */
@@ -145,6 +156,17 @@ export const HERO_MODELS: Record<HeroName, HeroModelSpec> = {
       catch: ['rope_catch'],
       hang: ['rope_hang'],
       release: ['rope_release'],
+      // Made on his own skeleton by tools/prepare-rigged.py, his palms put where the rod and the fish are held.
+      cast: ['fish_cast'],
+      reel: ['fish_reel'],
+      show: ['fish_show'],
+    },
+    // He has no finger bones: what he holds while fishing is held at a grip point in the middle of each palm.
+    fishing: {
+      grips: {
+        right: { bone: 'RightHand', at: [-5.89, 28.82, 2.74], palm: [-0.844, 0.161, -0.511], fingers: [0.444, 0.745, -0.498], rod: [0.3, -0.647, -0.7], reel: [-0.283, 0.641, -0.714] },
+        left: { bone: 'LeftHand', at: [7.49, 27.89, 2.62], palm: [0.87, 0.182, -0.458], fingers: [-0.403, 0.797, -0.45] },
+      },
     },
     // He holds a rope in both hands.
     rope: { grip: ['LeftHand', 'RightHand'], tilt: 0 },
@@ -311,6 +333,10 @@ export class ModelHero implements HeroView {
   private hanging = 0;
   private releasing = 0;
   private readonly gripBones: Object3D[] = [];
+  /** How much of each fishing clip shows, 0 to 1, how far through the cast he is in seconds, and his hand bones. */
+  private fishingMix = { cast: 0, reel: 0, show: 0 };
+  private castClock = 0;
+  private hands: { right: Object3D; left: Object3D } | null = null;
 
   /** Materials made for this hero alone (see `simple` and `ghost`), freed with it. */
   private readonly ownMaterials: Material[] = [];
@@ -365,7 +391,7 @@ export class ModelHero implements HeroView {
     this.root.add(this.body);
 
     this.mixer = new AnimationMixer(model);
-    for (const role of ['idle', 'walk', 'trot', 'run', 'jump', 'fall', 'land', 'roll', 'tread', 'swim', 'under', 'climb', 'shake', ...ROPE_ROLES] as const) {
+    for (const role of ['idle', 'walk', 'trot', 'run', 'jump', 'fall', 'land', 'roll', 'tread', 'swim', 'under', 'climb', 'shake', ...ROPE_ROLES, ...FISHING_ROLES] as const) {
       const clip = findClip(source.animations, spec.clips[role]);
       if (!clip) continue;
       const action = this.mixer.clipAction(clip);
@@ -410,6 +436,19 @@ export class ModelHero implements HeroView {
     for (const name of spec.rope?.grip ?? []) {
       const bone = model.getObjectByName(name);
       if (bone) this.gripBones.push(bone);
+    }
+    // Fishing: the cast and the landed fish are held as poses that follow the rules' clock; reeling loops.
+    for (const role of ['cast', 'show'] as const) {
+      const action = this.actions[role];
+      if (!action) continue;
+      action.play();
+      action.paused = true;
+    }
+    this.actions.reel?.setLoop(LoopRepeat, Infinity).play();
+    if (spec.fishing) {
+      const right = model.getObjectByName(spec.fishing.grips.right.bone);
+      const left = model.getObjectByName(spec.fishing.grips.left.bone);
+      if (right && left) this.hands = { right, left };
     }
     this.animate({ pace: 0, grounded: true, rise: 0 }, 0);
 
@@ -625,6 +664,7 @@ export class ModelHero implements HeroView {
     }
     // On a rope: reaching for it, catching it, hanging on, and letting go take over from everything else.
     const ropeTilt = this.ropeClips(pose, dt);
+    this.fishingClips(pose, dt);
     // Underwater the body tips along its way up or down.
     const wantTip = pose.water === 'under' ? Math.max(-0.3, Math.min(0.3, 0.5 * Math.atan2(pose.rise, Math.max(1.5, pose.pace * MOVE.walkSpeed)))) : 0;
     this.tip = approach(this.tip, wantTip, 6, dt);
@@ -683,6 +723,62 @@ export class ModelHero implements HeroView {
     // Nose up for as long as he hangs, and easing level again as he lets go.
     const letGo = release ? Math.min(1, release.time / Math.max(release.getClip().duration * 0.7, 0.001)) : 1;
     return tilt * Math.max(this.hanging, this.releasing * (1 - letGo));
+  }
+
+  /**
+   * Weighs the fishing clips against everything else for this frame. The cast
+   * winds back while a cast is aimed and holds there, whips forward as the
+   * lure flies, and holds its last pose while he waits for a bite; reeling
+   * loops while a fish is on; the landed fish is shown by the rules' clock.
+   */
+  private fishingClips(pose: Pose, dt: number): void {
+    const { cast, reel, show } = this.actions;
+    if (!cast || !reel || !show) return;
+    const now = pose.fishing ?? null;
+    const mix = this.fishingMix;
+    mix.cast = approach(mix.cast, now && (now.phase === 'aim' || now.phase === 'cast' || now.phase === 'wait') ? 1 : 0, 12, dt);
+    mix.reel = approach(mix.reel, now?.phase === 'hooked' ? 1 : 0, 10, dt);
+    mix.show = approach(mix.show, now?.phase === 'show' ? 1 : 0, 14, dt);
+    const long = cast.getClip().duration;
+    const back = long * CAST.back;
+    if (!now) this.castClock = 0;
+    else if (now.phase === 'aim') this.castClock = Math.min(back, this.castClock + dt);
+    // A quick cast catches up with its wind-back, then the whip forward plays through.
+    else if (now.phase === 'cast' || now.phase === 'wait') this.castClock = Math.min(long - 1e-3, this.castClock + dt * (this.castClock < back ? 4 : 1));
+    cast.time = this.castClock;
+    if (now?.phase === 'show') show.time = Math.min(show.getClip().duration - 1e-3, now.timer);
+    reel.setEffectiveTimeScale(now?.reeling ? 1 : 0.5);
+    const total = Math.min(1, mix.cast + mix.reel + mix.show);
+    if (total < 0.001) {
+      for (const role of FISHING_ROLES) this.actions[role]?.setEffectiveWeight(0);
+      return;
+    }
+    for (const role of Object.keys(this.actions) as ClipRole[]) {
+      if ((FISHING_ROLES as readonly string[]).includes(role)) continue;
+      const other = this.actions[role];
+      if (other) other.setEffectiveWeight(other.getEffectiveWeight() * (1 - total));
+    }
+    const sum = Math.max(mix.cast + mix.reel + mix.show, 1);
+    cast.setEffectiveWeight(mix.cast / sum);
+    reel.setEffectiveWeight(mix.reel / sum);
+    show.setEffectiveWeight(mix.show / sum);
+  }
+
+  /**
+   * His palms, for drawing what he holds while fishing (see held-tackle.ts),
+   * and how far through showing off a landed fish he is. Null for a hero with
+   * no fishing clips. Call after `animate`.
+   */
+  tackle(): HeroTackle | null {
+    const { show, cast, reel } = this.actions;
+    if (!this.spec.fishing || !this.hands || !show || !cast || !reel) return null;
+    return {
+      grips: this.spec.fishing.grips,
+      right: this.hands.right,
+      left: this.hands.left,
+      unit: GAME_UNIT * (this.spec.height / HERO_MODELS.Yaarbro.height),
+      show: this.fishingMix.show > 0.5 ? show.time / show.getClip().duration : null,
+    };
   }
 
   /**

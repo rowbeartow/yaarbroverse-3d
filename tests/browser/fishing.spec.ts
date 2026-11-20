@@ -13,6 +13,9 @@ interface Fishing {
   line: boolean;
   mark: boolean;
   thrashing: boolean;
+  /** The rod is drawn at the grip point in the hero's palm, and a landed fish lies across both palms (a hero with fishing clips). */
+  rodInPalm: boolean;
+  fishOnPalms: boolean;
   phase: string;
   catches: number;
 }
@@ -60,6 +63,8 @@ test.describe('on the keyboard', () => {
     await page.keyboard.down('KeyX');
     await expect.poll(async () => (await fishing(page)).phase).toBe('aim');
     expect((await fishing(page)).ring).toBe(true);
+    // Yaarbro has fishing clips: the rod is in his right palm from the moment he starts.
+    expect((await fishing(page)).rodInPalm).toBe(true);
     await page.keyboard.up('KeyX');
     await expect.poll(async () => (await fishing(page)).bobber, { timeout: 30_000 }).toBe(true);
     expect((await fishing(page)).line).toBe(true);
@@ -71,6 +76,8 @@ test.describe('on the keyboard', () => {
     await expect.poll(async () => (await fishing(page)).catches, { timeout: 120_000 }).toBe(1);
     await page.keyboard.up('KeyX');
     await expect(page.locator('#message')).toContainText(' cm.');
+    // The landed fish comes up out of the water and onto his upturned palms.
+    await expect.poll(async () => (await fishing(page)).fishOnPalms, { timeout: 60_000 }).toBe(true);
     await expect(page.locator('#line')).toBeHidden();
     expect(problems).toEqual([]);
   });
