@@ -9,3 +9,5 @@ Only `fish_cast` is used. The owner looked at all three on 2026-11-19: the cast 
     blender -b -P tools/prepare-rigged.py -- <folder> <out.glb> tools/yaarbro.guide.json
 
 A change to a hero waits for the owner's OK on the hero preview page.
+
+**None of these is on his model now (2026-11-20).** `fish_cast`, `fish_reel` and `fish_show` are made by `tools/prepare-rigged.py` itself, from the keys in `tools/yaarbro.guide.json`, so that what he holds sits at a grip point in each palm. Meshy's cast presses his right hand against his chest, and a rod held in it passes through his body. The files are kept in case a later character can use them.

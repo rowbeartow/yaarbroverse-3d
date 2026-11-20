@@ -31,7 +31,7 @@
 // it) so his link stays the same. What the page says under "What to look
 // for" and after is written by hand in enemies.html.
 
-import { copyFileSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { copyFileSync, existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { prune, resample } from '@gltf-transform/functions';
@@ -75,6 +75,8 @@ for (const pair of pairs) {
     model: `media/${name}.glb.txt`,
     color: `media/${name}_color.jpg`,
     clips: root.listAnimations().map((animation) => animation.getName()),
+    // Where a character holds things: the grip point in the middle of each palm, from its guide file.
+    grips: existsSync(join(here, `../${name}.guide.json`)) ? JSON.parse(readFileSync(join(here, `../${name}.guide.json`), 'utf8')).grips : undefined,
   });
   console.log(`${name}: ${enemies.at(-1).clips.join(', ')}`);
 }

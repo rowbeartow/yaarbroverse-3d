@@ -14,13 +14,6 @@ import {
   EquirectangularReflectionMapping,
   Group,
   HemisphereLight,
-  BufferGeometry,
-  CylinderGeometry,
-  Quaternion,
-  SphereGeometry,
-  Matrix4,
-  QuadraticBezierCurve3,
-  TubeGeometry,
   LinearFilter,
   LinearSRGBColorSpace,
   LoopOnce,
@@ -43,6 +36,7 @@ import {
 } from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { HDRLoader } from 'three/examples/jsm/loaders/HDRLoader.js';
+import { CATCHES, makeTackle, measureClip, type Grips, type Held, type Tackle } from './tackle';
 
 const params = new URLSearchParams(window.location.search);
 /** Flat light and no shadows, for a machine that draws in software. */
@@ -61,6 +55,8 @@ interface EnemyFile {
   clips: string[];
   /** Not shown on its own: something a character holds in one of its clips (a name that starts with `held-`). */
   held?: boolean;
+  /** Where a character holds things: a grip point in the middle of each palm (`grips` in its guide file). */
+  grips?: Grips;
 }
 
 interface ClipNote {
@@ -76,7 +72,7 @@ interface ClipNote {
  * clip, in metres of the model as it came from the rig, so the page shows
  * what a player sees above the surface. The game sets the real depth.
  */
-const ABOUT: Record<string, { title: string; hovers: boolean; clips: Record<string, ClipNote>; water?: Record<string, number>; holds?: Record<string, 'rod' | 'fish'>; reach?: number }> = {
+const ABOUT: Record<string, { title: string; hovers: boolean; clips: Record<string, ClipNote>; water?: Record<string, number>; holds?: Record<string, Held>; reach?: number }> = {
   marmot: {
     title: 'Marmot scout',
     hovers: false,
@@ -119,15 +115,15 @@ const ABOUT: Record<string, { title: string; hovers: boolean; clips: Record<stri
 
 /** A hero's fishing clips, for looking at before they go on the hero in the game. Its other clips are on the page too, with no notes. */
 ABOUT.yaarbro = {
-  holds: { fish_reel: 'rod', fish_show: 'fish' },
+  holds: { fish_cast: 'cast', fish_reel: 'reel', fish_show: 'landed' },
   // Stood further off, so a fish held over his head is in the picture.
   reach: 4.9,
   title: 'Yaarbro, fishing',
   hovers: false,
   clips: {
-    fish_cast: { label: 'Cast', note: 'The rod goes back over his shoulder and whips forward. Made by Meshy from a description: its library has no fishing.', once: true },
-    fish_reel: { label: 'Reel', note: 'Braced and leaning back against the fish, the rod bent over and the line tight, his left hand winding the reel round and round. It loops for as long as the button reels. Made in Blender on his own skeleton: Meshy has no fishing.', once: false },
-    fish_show: { label: 'Landed', note: 'The fish comes in: he bends to take it in both hands, heaves it up over his head and holds it there to show it off. Made in Blender on his own skeleton.', once: true },
+    fish_cast: { label: 'Cast', note: 'The rod is in his right hand from the first frame to the last: back over his right shoulder, then whipped forward, and the lure flies out. Made in Blender on his own skeleton, with the rod fixed at the grip point in his right palm.', once: true },
+    fish_reel: { label: 'Reel', note: 'Both hands hold the rod at his waist, and it points along the line. The reel hangs under the rod with its face sideways and turns by itself while the line comes in. The rod bends, and he leans back and sways as the fish pulls. It loops for as long as the button reels.', once: false },
+    fish_show: { label: 'Landed', note: 'He heaves, and the fish comes up out of the water on the line and over to him. He lets the rod drop to the boards, catches the fish on his upturned palms and lifts it over his head like a trophy.', once: true },
   },
 };
 
@@ -150,18 +146,6 @@ const bytesOf = async (address: string): Promise<ArrayBuffer> => {
   return bytes.buffer;
 };
 
-/** The catches he can be shown landing: a kind of fish and its length, as the fish book has it. */
-const CATCHES = [
-  { kind: 'bass', cm: 38, label: 'Bass, 38 cm' },
-  { kind: 'perch', cm: 20, label: 'Perch, 20 cm' },
-  { kind: 'trout', cm: 50, label: 'Trout, 50 cm' },
-  { kind: 'pike', cm: 80, label: 'Pike, 80 cm' },
-  { kind: 'pike', cm: 110, label: 'Pike, 110 cm' },
-];
-/** A landed fish is drawn this many times its real length, so an ordinary bass is about as long as his arm. */
-const HELD_TIMES_LIFE = 2;
-/** The moments of the "Landed" clip, as shares of it: the fish is in at his feet, he puts the rod down, he has it in both hands, it is lifted clear. */
-const LANDED = { fishIn: 0.14, rodDown: 0.2, taken: 0.38, lifted: 0.46 };
 /** `?high`: every picture is seen as the game's camera sees a hero, from behind and above. */
 const HIGH = params.has('high');
 
@@ -180,6 +164,9 @@ interface Slot {
   bones: SkeletonHelper;
   /** Puts what the character holds in the playing clip (a rod, a fish) in its hands. */
   hold: (() => void) | null;
+  tackle: Tackle | null;
+  /** Seconds the page has run, slowed with the clip: what the reel's turning and the line's shortening go by. */
+  clock: number;
   /** How far off the camera stands. */
   reach: number;
   /** Seen as the game's camera sees a hero: from behind and above. */
@@ -289,6 +276,7 @@ const start = async (): Promise<void> => {
         <button type="button" class="slow" aria-pressed="false">Slow motion</button>
         <button type="button" class="bones" aria-pressed="false">Show skeleton</button>
         <button type="button" class="high" aria-pressed="false">The game’s camera</button>
+        <button type="button" class="grips" aria-pressed="false" hidden>Mark the grip points</button>
       </div>`;
     (section.querySelector('h2') as HTMLElement).textContent = about.title;
     const canvas = section.querySelector('canvas') as HTMLCanvasElement;
@@ -340,6 +328,8 @@ const start = async (): Promise<void> => {
       rested: 0,
       bones,
       hold: null,
+      tackle: null,
+      clock: 0,
       reach: params.has('reach') ? REACH : (about.reach ?? REACH),
       high: HIGH,
       angle: 0.9,
@@ -350,167 +340,31 @@ const start = async (): Promise<void> => {
     };
     slots.set(enemy.name, slot);
 
-    // What he holds while fishing: a bent rod with a reel he winds, and the fish he lands.
-    if (about.holds) {
-      const right = model.scene.getObjectByName('RightHand');
-      const left = model.scene.getObjectByName('LeftHand');
-      const leftFore = model.scene.getObjectByName('LeftForeArm');
-      // A place given in metres on his model (x to his left, y behind him, z up), on this page.
-      const place = (x: number, y: number, z: number): Vector3 =>
-        new Vector3(x * scale + model.scene.position.x, z * scale + model.scene.position.y, -y * scale + model.scene.position.z);
-      const wood = new MeshStandardMaterial({ color: 0x6b4a2b, roughness: 0.8 });
-      const metal = new MeshStandardMaterial({ color: 0xd9a441, roughness: 0.45, metalness: 0.2 });
-      const dark = new MeshStandardMaterial({ color: 0x2b2f36, roughness: 0.5 });
-      const rod = new Mesh(new BufferGeometry(), wood);
-      rod.castShadow = true;
-      // The reel: a drum on the rod, a crank arm from its axle and a knob in his left hand.
-      const drum = new Mesh(new CylinderGeometry(0.1, 0.1, 0.05, 20), metal);
-      const arm = new Mesh(new CylinderGeometry(0.016, 0.016, 1, 6), dark);
-      const knob = new Mesh(new SphereGeometry(0.04, 12, 8), dark);
-      const line = new Mesh(new BufferGeometry(), new MeshStandardMaterial({ color: 0xf8f6ee, emissive: 0x777777 }));
-      root.add(rod, drum, arm, knob, line);
-
-      // The fish: one of each kind, drawn at the size of the catch that is picked.
-      const fishes = new Map<string, { group: Group; long: number; high: number; mixer: AnimationMixer; clips: Map<string, AnimationAction>; playing: string }>();
-      for (const [kind, loaded] of heldFish) {
-        const box = new Box3().setFromObject(loaded.scene);
-        const size = box.getSize(new Vector3());
-        const centre = box.getCenter(new Vector3());
-        loaded.scene.position.set(-centre.x, -centre.y, -centre.z);
-        const group = new Group();
-        group.add(loaded.scene);
-        group.visible = false;
-        root.add(group);
-        const mixer = new AnimationMixer(loaded.scene);
-        fishes.set(kind, { group, long: size.z, high: size.y, mixer, clips: new Map(loaded.animations.map((clip) => [clip.name, mixer.clipAction(clip)])), playing: '' });
-      }
-      let caught = CATCHES.find((entry) => fishes.has(entry.kind)) ?? CATCHES[0];
+    // What he holds while fishing. His model has no finger bones, so everything is held at a grip point in the middle of a palm (tackle.ts).
+    if (about.holds && enemy.grips) {
+      const tackle = makeTackle(model.scene, root, scale, enemy.grips, heldFish, mixer, actions);
+      slot.tackle = tackle;
       const sizes = document.createElement('div');
       sizes.className = 'row small';
       sizes.setAttribute('role', 'group');
       sizes.setAttribute('aria-label', 'The fish he lands');
-      for (const entry of CATCHES.filter((each) => fishes.has(each.kind))) {
+      CATCHES.forEach((entry, index) => {
+        if (!heldFish.has(entry.kind)) return;
         const button = document.createElement('button');
         button.type = 'button';
         button.textContent = entry.label;
-        button.setAttribute('aria-pressed', String(entry === caught));
+        button.setAttribute('aria-pressed', String(index === tackle.caught));
         button.addEventListener('click', () => {
-          caught = entry;
+          tackle.caught = index;
           for (const other of sizes.querySelectorAll('button')) other.setAttribute('aria-pressed', String(other === button));
         });
         sizes.append(button);
-      }
+      });
       section.querySelector('.now')?.after(sizes);
-
-      // The rod runs from his right hand at his hip up across his body to his left, so the reel's crank turns where the game's camera, behind him, can see it.
-      const ALONG = new Vector3(0.757, 0.551, 0.353).normalize();
-      const AXLE = new Vector3(0.423, 0, -0.906);
-      const WATER = place(0, -4.6, 0.02);
-      const BOARDS = place(0, -0.9, 0.12);
-      const a = new Vector3();
-      const b = new Vector3();
-      const c = new Vector3();
-      let last = 0;
-      const rodFrom = (butt: Vector3, pulled: number): Vector3 => {
-        const reach = 2.3 * scale;
-        const straight = butt.clone().addScaledVector(ALONG, reach * 0.8);
-        const tip = butt.clone().addScaledVector(ALONG, reach * (1 - 0.14 * pulled)).add(new Vector3(-0.1 * pulled, -0.3 * pulled, 0.34 * pulled));
-        rod.geometry.dispose();
-        rod.geometry = new TubeGeometry(new QuadraticBezierCurve3(butt, straight, tip), 24, 0.02, 6);
-        drum.position.copy(butt).addScaledVector(ALONG, 1.52 * scale).addScaledVector(AXLE, 0.03);
-        drum.quaternion.setFromUnitVectors(new Vector3(0, 1, 0), AXLE);
-        return tip;
-      };
-      const armTo = (to: Vector3): void => {
-        const from = drum.position.clone().addScaledVector(AXLE, 0.06);
-        const span = to.clone().sub(from);
-        arm.position.copy(from).addScaledVector(span, 0.5);
-        arm.scale.set(1, span.length(), 1);
-        arm.quaternion.setFromUnitVectors(new Vector3(0, 1, 0), span.clone().normalize());
-        knob.position.copy(to);
-      };
-      const lineTo = (from: Vector3, to: Vector3, sag: number): void => {
-        const middle = from.clone().lerp(to, 0.5);
-        middle.y -= sag;
-        line.geometry.dispose();
-        line.geometry = new TubeGeometry(new QuadraticBezierCurve3(from, middle, to), 8, 0.005, 5);
-      };
       slot.hold = (): void => {
         const playing = slot.playing;
         const what = playing ? about.holds?.[playing.getClip().name] : undefined;
-        for (const part of [rod, drum, arm, knob, line]) part.visible = Boolean(what);
-        for (const fish of fishes.values()) fish.group.visible = false;
-        if (!right || !left || !leftFore || !what || !playing) return;
-        const share = playing.time / playing.getClip().duration;
-        const dt = Math.min(Math.abs(playing.time - last), 0.1);
-        last = playing.time;
-        root.updateMatrixWorld(true);
-        right.getWorldPosition(a);
-        left.getWorldPosition(b);
-        leftFore.getWorldPosition(c);
-        // His palm is a little beyond his wrist.
-        const palm = b.clone().add(b.clone().sub(c).normalize().multiplyScalar(0.13 * scale));
-        const inHand = what === 'rod' || share < LANDED.rodDown;
-        if (inHand) {
-          const tip = rodFrom(a.clone().addScaledVector(ALONG, -0.16 * scale), 1);
-          armTo(what === 'rod' ? palm : drum.position.clone().addScaledVector(AXLE, 0.06).add(new Vector3(0, -0.18 * scale, 0)));
-          if (what === 'rod') lineTo(tip, WATER, 0);
-        } else {
-          // Laid down on the boards beside him.
-          rod.geometry.dispose();
-          const butt = place(-0.95, 0.5, 0.05);
-          const tip = place(-0.75, -1.9, 0.05);
-          rod.geometry = new TubeGeometry(new QuadraticBezierCurve3(butt, butt.clone().lerp(tip, 0.5), tip), 4, 0.014, 6);
-          drum.position.copy(butt.clone().lerp(tip, 0.3)).add(new Vector3(0, 0.03, 0));
-          drum.quaternion.identity();
-          arm.visible = knob.visible = false;
-        }
-        if (what !== 'fish') return;
-        const fish = fishes.get(caught.kind);
-        if (!fish) {
-          line.visible = false;
-          return;
-        }
-        // As long beside him as the catch is: twice life size in the game, where he stands 2.2 m tall.
-        const size = ((caught.cm / 100) * HELD_TIMES_LIFE * (2.87 / 2.2) * scale) / fish.long;
-        fish.group.scale.setScalar(size);
-        fish.group.visible = true;
-        const held = a.clone().add(b).multiplyScalar(0.5);
-        const across = b.clone().sub(a).normalize();
-        const side = new Vector3().crossVectors(new Vector3(0, 1, 0), across).normalize();
-        const upright = new Quaternion().setFromRotationMatrix(new Matrix4().makeBasis(side, new Vector3().crossVectors(across, side), across));
-        // Flat on its side on the boards, nose to his left.
-        const flat = new Quaternion().setFromRotationMatrix(new Matrix4().makeBasis(new Vector3(0, 0, -1), new Vector3(0, 1, 0), new Vector3(1, 0, 0)));
-        // The same, for the clip in which it swims upright.
-        const onSide = new Quaternion().setFromRotationMatrix(new Matrix4().makeBasis(new Vector3(0, -1, 0), new Vector3(0, 0, -1), new Vector3(1, 0, 0)));
-        const lying = BOARDS.clone();
-        lying.y = model.scene.position.y + 0.04 + (fish.high * size) * 0.12;
-        let clip = 'idle';
-        if (share < LANDED.fishIn) {
-          // Out of the water on the end of the line, swung in to his feet.
-          const t = share / LANDED.fishIn;
-          const eased = t * t * (3 - 2 * t);
-          fish.group.position.copy(WATER).lerp(lying, eased);
-          fish.group.position.y += Math.sin(Math.PI * eased) * 0.75;
-          fish.group.quaternion.copy(new Quaternion().setFromRotationMatrix(new Matrix4().makeBasis(new Vector3(1, 0, 0), new Vector3(0, 0, -1), new Vector3(0, 1, 0)))).slerp(flat, eased * eased);
-          const tip = rodFrom(a.clone().addScaledVector(ALONG, -0.16 * scale), 1 - 0.6 * eased);
-          const mouth = fish.group.position.clone().add(new Vector3(0, 0, 1).applyQuaternion(fish.group.quaternion).multiplyScalar(fish.long * size * 0.5));
-          lineTo(tip, mouth, 0.05);
-          clip = 'thrash';
-        } else {
-          line.visible = false;
-          const t = Math.max(0, Math.min(1, (share - LANDED.taken) / (LANDED.lifted - LANDED.taken)));
-          const eased = t * t * (3 - 2 * t);
-          fish.group.position.copy(lying).lerp(held, eased);
-          fish.group.quaternion.copy(t <= 0 ? flat : onSide).slerp(upright, eased);
-          clip = t <= 0 ? 'flop' : 'idle';
-        }
-        if (fish.playing !== clip) {
-          fish.clips.get(fish.playing)?.stop();
-          fish.clips.get(clip)?.reset().play();
-          fish.playing = clip;
-        }
-        fish.mixer.update(dt);
+        tackle.place(what, playing ? playing.time / playing.getClip().duration : 0, slot.clock);
       };
     }
     new IntersectionObserver(([entry]) => (slot.visible = entry.isIntersecting)).observe(canvas);
@@ -560,6 +414,10 @@ const start = async (): Promise<void> => {
     toggle('.slow', (on) => (slot.slow = on));
     toggle('.bones', (on) => (bones.visible = on));
     toggle('.high', (on) => (slot.high = on));
+    if (slot.tackle) (section.querySelector('.grips') as HTMLButtonElement).hidden = false;
+    toggle('.grips', (on) => {
+      if (slot.tackle) slot.tackle.marks = on;
+    });
     if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) (section.querySelector('.turn') as HTMLButtonElement).click();
 
     // Drag to turn it by hand.
@@ -617,12 +475,36 @@ const start = async (): Promise<void> => {
       action.time = action.getClip().duration * share;
       slot.playing = action;
       slot.mixer.update(0);
+      slot.clock = action.time;
       slot.angle = angle;
       slot.bones.visible = skeleton;
       draw(slot);
       return true;
     },
     clips: (name: string): string[] => [...(slots.get(name)?.actions.keys() ?? [])],
+    /** For tools/preview/fishing-measure.mjs: every frame of a fishing clip, measured against his palms and his body. */
+    measure(name: string, clip: string, caught = 0): unknown {
+      const slot = slots.get(name);
+      const action = slot?.actions.get(clip);
+      const what = ABOUT[name]?.holds?.[clip];
+      const grips = list.find((enemy) => enemy.name === name)?.grips;
+      if (!slot || !action || !slot.tackle || !what || !grips) return null;
+      slot.playing?.stop();
+      action.reset().play();
+      action.paused = true;
+      slot.playing = action;
+      slot.root.visible = true;
+      const found = measureClip(slot.root.children[0] as Group, slot.mixer, action, slot.tackle, what, grips, caught);
+      slot.root.visible = false;
+      return found;
+    },
+    /** A character's grip points, as the page is using them. */
+    grips: (name: string): unknown => list.find((enemy) => enemy.name === name)?.grips,
+    /** Which catch he lands and whether the grip points are marked, for the still frames; `slide` tries the catch somewhere else along his palms. */
+    tackle(name: string, caught: number, marks: boolean, slide: number | null = null): void {
+      const tackle = slots.get(name)?.tackle;
+      if (tackle) Object.assign(tackle, { caught, marks, slide });
+    },
   };
 
   status.hidden = true;
@@ -636,6 +518,7 @@ const start = async (): Promise<void> => {
     for (const slot of slots.values()) {
       if (slot.turning) slot.angle += dt * 0.3;
       slot.mixer.update(dt * (slot.slow ? 0.25 : 1));
+      slot.clock += dt * (slot.slow ? 0.25 : 1);
       // A clip that plays once rests on its last pose for a moment, then plays again.
       if (slot.once && slot.playing && !slot.playing.isRunning()) {
         slot.rested += dt;

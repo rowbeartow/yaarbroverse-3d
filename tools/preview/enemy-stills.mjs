@@ -10,6 +10,10 @@
 //             side, 3.14 behind. 1.1 unless given. Several angles, with
 //             commas between, give one row of frames for each.
 //   bones     the word bones draws the skeleton
+//   marks     the word marks draws a marker at each grip point of a hero's
+//             palms (blue for the right, pink for the left)
+//   catch     which fish a hero lands, counted from 0 down the page's list:
+//             catch=4 is the 110 cm pike
 //
 // Set PAGE to add to the page's address: PAGE='dry&reach=2.2' leaves out the
 // water and stands the camera closer.
@@ -24,6 +28,8 @@ const [out, enemy, ...rest] = process.argv.slice(2);
 const bones = rest.includes('bones');
 const angles = (rest.find((word) => word.startsWith('angle='))?.slice(6) ?? '1.1').split(',').map(Number);
 const clips = rest.filter((word) => word.includes(':'));
+const marks = rest.includes('marks');
+const caught = Number(rest.find((word) => word.startsWith('catch='))?.slice(6) ?? 0);
 if (!out || !enemy || clips.length === 0) {
   console.error('Usage: node tools/preview/enemy-stills.mjs <sheet.jpg> <enemy> <clip>:<shares> [...] [angle=<radians>] [bones]');
   process.exit(1);
@@ -37,6 +43,8 @@ await page.goto(`http://localhost:4176/?plain&still${process.env.PAGE ? `&${proc
 await page.waitForFunction(() => document.documentElement.dataset.ready === 'true', null, { timeout: 180000 });
 const canvas = page.locator(`#view-${enemy}`);
 await canvas.scrollIntoViewIfNeeded();
+
+await page.evaluate(([name, index, on]) => window.preview.tackle(name, index, on), [enemy, caught, marks]);
 
 const tile = { width: 420, height: 262 };
 const rows = [];
