@@ -36,6 +36,7 @@ import {
 } from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { HDRLoader } from 'three/examples/jsm/loaders/HDRLoader.js';
+import { CATCHES, makeTackle, measureClip, type Grips, type Held, type Tackle } from './tackle';
 
 const params = new URLSearchParams(window.location.search);
 /** Flat light and no shadows, for a machine that draws in software. */
@@ -52,6 +53,10 @@ interface EnemyFile {
   model: string;
   color: string;
   clips: string[];
+  /** Not shown on its own: something a character holds in one of its clips (a name that starts with `held-`). */
+  held?: boolean;
+  /** Where a character holds things: a grip point in the middle of each palm (`grips` in its guide file). */
+  grips?: Grips;
 }
 
 interface ClipNote {
@@ -67,7 +72,7 @@ interface ClipNote {
  * clip, in metres of the model as it came from the rig, so the page shows
  * what a player sees above the surface. The game sets the real depth.
  */
-const ABOUT: Record<string, { title: string; hovers: boolean; clips: Record<string, ClipNote>; water?: Record<string, number> }> = {
+const ABOUT: Record<string, { title: string; hovers: boolean; clips: Record<string, ClipNote>; water?: Record<string, number>; holds?: Record<string, Held>; reach?: number }> = {
   marmot: {
     title: 'Marmot scout',
     hovers: false,
@@ -110,12 +115,15 @@ const ABOUT: Record<string, { title: string; hovers: boolean; clips: Record<stri
 
 /** A hero's fishing clips, for looking at before they go on the hero in the game. Its other clips are on the page too, with no notes. */
 ABOUT.yaarbro = {
+  holds: { fish_cast: 'cast', fish_reel: 'reel', fish_show: 'landed' },
+  // Stood further off, so a fish held over his head is in the picture.
+  reach: 4.9,
   title: 'Yaarbro, fishing',
   hovers: false,
   clips: {
-    fish_cast: { label: 'Cast', note: 'The rod goes back over his shoulder and whips forward. Made by Meshy from a description: its library has no fishing.', once: true },
-    fish_reel: { label: 'Reel', note: 'One hand holds the rod out, the other winds. It loops for as long as the button reels.' },
-    fish_show: { label: 'Landed', note: 'One hand up: this is where he holds the fish. From Meshy’s library ("Cheer with One Hand Up").', once: true },
+    fish_cast: { label: 'Cast', note: 'The rod is in his right hand from the first frame to the last: back over his right shoulder, then whipped forward, and the lure flies out. Made in Blender on his own skeleton, with the rod fixed at the grip point in his right palm.', once: true },
+    fish_reel: { label: 'Reel', note: 'Both hands hold the rod at his waist, and it points along the line. The reel hangs under the rod with its face sideways and turns by itself while the line comes in. The rod bends, and he leans back and sways as the fish pulls. It loops for as long as the button reels.', once: false },
+    fish_show: { label: 'Landed', note: 'He heaves, and the fish comes up out of the water on the line and over to him. He lets the rod drop to the boards, catches the fish on his upturned palms and lifts it over his head like a trophy.', once: true },
   },
 };
 
@@ -138,6 +146,9 @@ const bytesOf = async (address: string): Promise<ArrayBuffer> => {
   return bytes.buffer;
 };
 
+/** `?high`: every picture is seen as the game's camera sees a hero, from behind and above. */
+const HIGH = params.has('high');
+
 /** One enemy on the page. */
 interface Slot {
   name: string;
@@ -151,6 +162,15 @@ interface Slot {
   /** Seconds a clip that plays once has been finished, before it starts again. */
   rested: number;
   bones: SkeletonHelper;
+  /** Puts what the character holds in the playing clip (a rod, a fish) in its hands. */
+  hold: (() => void) | null;
+  tackle: Tackle | null;
+  /** Seconds the page has run, slowed with the clip: what the reel's turning and the line's shortening go by. */
+  clock: number;
+  /** How far off the camera stands. */
+  reach: number;
+  /** Seen as the game's camera sees a hero: from behind and above. */
+  high: boolean;
   angle: number;
   turning: boolean;
   slow: boolean;
@@ -218,28 +238,7 @@ const start = async (): Promise<void> => {
 
   const slots = new Map<string, Slot>();
 
-  for (const enemy of list) {
-    const about = ABOUT[enemy.name] ?? { title: enemy.name, hovers: false, clips: {} };
-    const section = document.createElement('section');
-    section.className = 'enemy';
-    section.innerHTML = `
-      <h2></h2>
-      <div class="window"><canvas></canvas></div>
-      <div class="row clips" role="group"></div>
-      <div class="now" aria-live="polite"><div class="now-head"><h3></h3><span class="kind"></span></div><p class="clip-note"></p></div>
-      <div class="row small" role="group">
-        <button type="button" class="turn" aria-pressed="true">Turn slowly</button>
-        <button type="button" class="slow" aria-pressed="false">Slow motion</button>
-        <button type="button" class="bones" aria-pressed="false">Show skeleton</button>
-      </div>`;
-    (section.querySelector('h2') as HTMLElement).textContent = about.title;
-    const canvas = section.querySelector('canvas') as HTMLCanvasElement;
-    canvas.id = `view-${enemy.name}`;
-    canvas.setAttribute('aria-label', `The ${about.title.toLowerCase()} on a patch of turf, playing the chosen clip while the view turns slowly`);
-    (section.querySelector('.clips') as HTMLElement).setAttribute('aria-label', `${about.title} clip`);
-    (section.querySelector('.small') as HTMLElement).setAttribute('aria-label', `${about.title} view`);
-    groups.append(section);
-
+  const open = async (enemy: EnemyFile): Promise<Awaited<ReturnType<GLTFLoader['parseAsync']>>> => {
     const [bytes, color] = await Promise.all([bytesOf(enemy.model), pictures.loadAsync(enemy.color)]);
     const model = await new GLTFLoader().parseAsync(bytes, '');
     color.colorSpace = SRGBColorSpace;
@@ -256,6 +255,38 @@ const start = async (): Promise<void> => {
       material.roughness = 0.85;
       material.needsUpdate = true;
     });
+    return model;
+  };
+  // What a character holds: `held-bass=<the rigged bass>` (or perch, trout, pike) on the command line.
+  const heldFish = new Map<string, Awaited<ReturnType<typeof open>>>();
+  for (const enemy of list) if (enemy.held) heldFish.set(enemy.name.replace('held-', ''), await open(enemy));
+
+  for (const enemy of list) {
+    if (enemy.held) continue;
+    const about = ABOUT[enemy.name] ?? { title: enemy.name, hovers: false, clips: {} };
+    const section = document.createElement('section');
+    section.className = 'enemy';
+    section.innerHTML = `
+      <h2></h2>
+      <div class="window"><canvas></canvas></div>
+      <div class="row clips" role="group"></div>
+      <div class="now" aria-live="polite"><div class="now-head"><h3></h3><span class="kind"></span></div><p class="clip-note"></p></div>
+      <div class="row small" role="group">
+        <button type="button" class="turn" aria-pressed="true">Turn slowly</button>
+        <button type="button" class="slow" aria-pressed="false">Slow motion</button>
+        <button type="button" class="bones" aria-pressed="false">Show skeleton</button>
+        <button type="button" class="high" aria-pressed="false">The game’s camera</button>
+        <button type="button" class="grips" aria-pressed="false" hidden>Mark the grip points</button>
+      </div>`;
+    (section.querySelector('h2') as HTMLElement).textContent = about.title;
+    const canvas = section.querySelector('canvas') as HTMLCanvasElement;
+    canvas.id = `view-${enemy.name}`;
+    canvas.setAttribute('aria-label', `The ${about.title.toLowerCase()} on a patch of turf, playing the chosen clip while the view turns slowly`);
+    (section.querySelector('.clips') as HTMLElement).setAttribute('aria-label', `${about.title} clip`);
+    (section.querySelector('.small') as HTMLElement).setAttribute('aria-label', `${about.title} view`);
+    groups.append(section);
+
+    const model = await open(enemy);
 
     // Drawn so its longest side is 1.6 m, measured standing at rest.
     const box = new Box3().setFromObject(model.scene);
@@ -296,6 +327,11 @@ const start = async (): Promise<void> => {
       once: false,
       rested: 0,
       bones,
+      hold: null,
+      tackle: null,
+      clock: 0,
+      reach: params.has('reach') ? REACH : (about.reach ?? REACH),
+      high: HIGH,
       angle: 0.9,
       turning: !STILL,
       slow: false,
@@ -303,6 +339,34 @@ const start = async (): Promise<void> => {
       lookAt: (size.y * scale) / 2 + lift,
     };
     slots.set(enemy.name, slot);
+
+    // What he holds while fishing. His model has no finger bones, so everything is held at a grip point in the middle of a palm (tackle.ts).
+    if (about.holds && enemy.grips) {
+      const tackle = makeTackle(model.scene, root, scale, enemy.grips, heldFish, mixer, actions);
+      slot.tackle = tackle;
+      const sizes = document.createElement('div');
+      sizes.className = 'row small';
+      sizes.setAttribute('role', 'group');
+      sizes.setAttribute('aria-label', 'The fish he lands');
+      CATCHES.forEach((entry, index) => {
+        if (!heldFish.has(entry.kind)) return;
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.textContent = entry.label;
+        button.setAttribute('aria-pressed', String(index === tackle.caught));
+        button.addEventListener('click', () => {
+          tackle.caught = index;
+          for (const other of sizes.querySelectorAll('button')) other.setAttribute('aria-pressed', String(other === button));
+        });
+        sizes.append(button);
+      });
+      section.querySelector('.now')?.after(sizes);
+      slot.hold = (): void => {
+        const playing = slot.playing;
+        const what = playing ? about.holds?.[playing.getClip().name] : undefined;
+        tackle.place(what, playing ? playing.time / playing.getClip().duration : 0, slot.clock);
+      };
+    }
     new IntersectionObserver(([entry]) => (slot.visible = entry.isIntersecting)).observe(canvas);
 
     const heading = section.querySelector('h3') as HTMLElement;
@@ -349,6 +413,11 @@ const start = async (): Promise<void> => {
     toggle('.turn', (on) => (slot.turning = on));
     toggle('.slow', (on) => (slot.slow = on));
     toggle('.bones', (on) => (bones.visible = on));
+    toggle('.high', (on) => (slot.high = on));
+    if (slot.tackle) (section.querySelector('.grips') as HTMLButtonElement).hidden = false;
+    toggle('.grips', (on) => {
+      if (slot.tackle) slot.tackle.marks = on;
+    });
     if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) (section.querySelector('.turn') as HTMLButtonElement).click();
 
     // Drag to turn it by hand.
@@ -381,10 +450,13 @@ const start = async (): Promise<void> => {
     camera.aspect = w / h;
     camera.updateProjectionMatrix();
     // The camera goes round the enemy, so the sun and the shadow stay put.
-    const reach = REACH;
-    camera.position.set(Math.sin(slot.angle) * reach, slot.lookAt + 0.7, Math.cos(slot.angle) * reach);
+    const reach = slot.reach;
+    // The game's camera is 12 m behind a hero and 8 m above.
+    const angle = slot.high ? Math.PI : slot.angle;
+    camera.position.set(Math.sin(angle) * reach, slot.lookAt + (slot.high ? reach * 0.62 : 0.7), Math.cos(angle) * reach);
     camera.lookAt(0, slot.lookAt, 0);
     slot.root.visible = true;
+    slot.hold?.();
     renderer.render(scene, camera);
     slot.root.visible = false;
     slot.paper.clearRect(0, 0, w, h);
@@ -403,12 +475,36 @@ const start = async (): Promise<void> => {
       action.time = action.getClip().duration * share;
       slot.playing = action;
       slot.mixer.update(0);
+      slot.clock = action.time;
       slot.angle = angle;
       slot.bones.visible = skeleton;
       draw(slot);
       return true;
     },
     clips: (name: string): string[] => [...(slots.get(name)?.actions.keys() ?? [])],
+    /** For tools/preview/fishing-measure.mjs: every frame of a fishing clip, measured against his palms and his body. */
+    measure(name: string, clip: string, caught = 0): unknown {
+      const slot = slots.get(name);
+      const action = slot?.actions.get(clip);
+      const what = ABOUT[name]?.holds?.[clip];
+      const grips = list.find((enemy) => enemy.name === name)?.grips;
+      if (!slot || !action || !slot.tackle || !what || !grips) return null;
+      slot.playing?.stop();
+      action.reset().play();
+      action.paused = true;
+      slot.playing = action;
+      slot.root.visible = true;
+      const found = measureClip(slot.root.children[0] as Group, slot.mixer, action, slot.tackle, what, grips, caught);
+      slot.root.visible = false;
+      return found;
+    },
+    /** A character's grip points, as the page is using them. */
+    grips: (name: string): unknown => list.find((enemy) => enemy.name === name)?.grips,
+    /** Which catch he lands and whether the grip points are marked, for the still frames. */
+    tackle(name: string, caught: number, marks: boolean): void {
+      const tackle = slots.get(name)?.tackle;
+      if (tackle) Object.assign(tackle, { caught, marks });
+    },
   };
 
   status.hidden = true;
@@ -422,6 +518,7 @@ const start = async (): Promise<void> => {
     for (const slot of slots.values()) {
       if (slot.turning) slot.angle += dt * 0.3;
       slot.mixer.update(dt * (slot.slow ? 0.25 : 1));
+      slot.clock += dt * (slot.slow ? 0.25 : 1);
       // A clip that plays once rests on its last pose for a moment, then plays again.
       if (slot.once && slot.playing && !slot.playing.isRunning()) {
         slot.rested += dt;

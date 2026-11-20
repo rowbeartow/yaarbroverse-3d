@@ -719,3 +719,50 @@ Supersedes: "Fishing ... the golden leaf is where it was" in "Where the lake's f
 ## 2026-11-19 The fishing sounds are in
 Reason: The owner's picks on the sound board: choice A of each. `fish-cast.wav` (a swish), `fish-reel.wav` (a reel winding, looped while the button reels a hooked fish, louder through a thrash), `fish-bite.wav` (a bloop as the bobber goes under), `fish-splash.wav` (a hooked fish starting to thrash, and quietly when the lure lands) and `fish-landed.wav` (a little prize tune). Bite and splash play in the warnings group, because a player acts on them; the others with the jumps and landings. All are the lake's own sounds, fetched when the lake is picked: the lake's sounds come to 1.66 MB of the 2.5 MB a level may have. `CREDITS.md` has the sources.
 Supersedes: none
+
+## 2026-11-19: Yaarbro's reel and "landed" clips are made in Blender on his own skeleton
+
+The owner's words on the first three clips: the cast is OK; the reel "should read as cranking the reel, with the rod bent and the line pulling"; "landed" should be "clearly the moment a fish comes in, with Yaarbro lifting the fish up to show it off, the fish in his hands"; build them in Blender on his rig if Meshy's library has nothing that reads right; show both again before merging.
+
+- Meshy's library has no fishing, so both are made by `tools/prepare-rigged.py` from keys in `tools/yaarbro.guide.json` (`"made"`). No credits spent.
+- The reel: knees bent, leaning back, right hand holding the rod at his belt, left hand winding twice a second, one heave a loop.
+- "Landed": he takes the fish in both hands and lifts it over his head, so it shows from behind, where the game's camera usually is.
+- The bent rod, the tight line and the fish in his hands are drawn by the preview page for now. They go into the game with the clips, after his OK.
+- Nothing about Yaarbro in the game changes until he says OK on the page.
+
+## 2026-11-20: Yaarbro's reel and "landed", the owner's third round of notes
+
+The owner's words on the second look: in the reel "his hands overlap in front of his chest, and it doesn't look like cranking. Keep his hands apart: right hand on the rod's handle at his hip, left hand turning the crank of a reel you can see on the rod, in a clear circle big enough to read from behind him, where the game's camera usually sits. The rod stays bent with the line tight." In "landed" the fish "should start in the water or at his feet, on the end of the line. He bends, takes it with a hand at each end, and lifts it overhead, with the fish held at his hands so it never passes through his body." And: "Size each fish to its species and to the catch's size in the fish book, so an ordinary bass is about the length of his arm."
+
+- The reel: his right hand holds the rod's handle at his right hip, and the rod runs up across his body to his left. A reel's crank turns in line with its rod, so with the rod pointing straight ahead the circle is edge-on from behind; across his body, the circle faces the camera. The reel sits beside his head, above his shoulder, and his left hand winds it twice a loop.
+- "Landed": the fish swings in on the line to the boards at his feet, he lays the rod down, bends, takes it with a hand at each end and lifts it over his head. From the moment he takes it the fish is drawn at the middle of his hands.
+- A held fish is drawn at twice its real length (it was three times): a 38 cm bass is about as long as his arm, a 110 cm pike as long as he is tall. The swimming fish keep their size until the owner says otherwise.
+- His hands are the same distance apart for every fish.
+- Still nothing about Yaarbro in the game changes until the owner says OK on the page.
+
+## 2026-11-20: Yaarbro's fishing clips, the owner's fourth round: simplify, and hold things at his palms
+
+The owner's words on the third look: "Third try and still not right, so let's simplify instead of fighting his hands, since his model has no finger bones." Anchor props at a grip point in the middle of each palm, not at his wrists. The rod stays in his right hand for the whole cast (he could not judge the cast, because the rod was not in his hand). In the reel, drop the hand on the crank: he holds the rod with both hands at his waist, pointing along the line; the reel sits under the rod, facing sideways, and spins by itself while the line shortens; the rod bends, and he leans back and sways as the fish pulls. In "landed" the fish comes up out of the water, and he shows it off overhead, lying across his upturned palms like a trophy; nothing passes through his body. And: add checks that can be measured across every frame of the clips: props stay at the palm grip points, and no prop passes through his body or head.
+
+- Each hand has one grip point, on the skin in the middle of the palm (`grips` in `tools/yaarbro.guide.json`, measured on his model). Everything he holds is placed there. The rod is fixed in his right palm and runs through that hand the same way in every clip; with both hands on it, his left palm is under it; a landed fish lies across both palms.
+- The cast is made here now, like the other two, not Meshy's. In Meshy's cast his right hand presses against his chest, and a rod fixed in it passed through his body in 20 or more of its 90 frames whichever of 45 directions it ran through his hand. The new cast is one-handed: back over his right shoulder, then forward.
+- "Landed": he heaves, the fish comes out of the water on the line and over to him, he lets the rod drop to the boards at his right, catches the fish on his upturned palms and lifts it over his head.
+- `tools/preview/fishing-measure.mjs` plays every frame of the three clips on the preview page (and "landed" once for each catch) and fails unless: the grip points are on the skin in the middle of his palms; the rod is at his right palm's grip point whenever he holds it and at his left's whenever both hands do; the fish lies on both; no point of the rod, reel, line or fish is inside his body or head (his hands are not counted, since they hold it); and the reel clip does what the owner described. All of it passes.
+- Supersedes the reel and "landed" of the two entries before this one (the crank, the rod across his body, the fish taken from the boards). A held fish is still drawn at twice its real length.
+- Still nothing about Yaarbro in the game changes until the owner says OK on the page.
+
+## 2026-11-20: Yaarbro's fishing clips are in the game, with tray hands on "landed"
+
+The owner's words on the fourth look: "good enough to ship, with one fix: on Landed his hands are turned backwards. Turn them so his palms face up under the fish with his fingers pointing outward, like holding up a tray, and keep the every-frame checks passing. Then put the three clips on Yaarbro in the game."
+
+- "Landed": his palms face up with the fingers pointing out to each hand's own side, as under a tray, his forearms coming up between them. He heaves, lets the rod drop, lifts his palms straight up over his head, and the fish comes up out of the water on the line and lands on them there.
+- With his wrists inside his hands, a fish lying belly down hung onto his wrists and cuffs between his palms. So a landed fish lies on its side across his palms, which is flat underneath and shows its whole flank to the game's camera above.
+- His palms are 56 cm apart on his model, so a landed fish is never drawn shorter than reaches across both: a catch under about 31 cm is drawn as if it were that long. Otherwise a held fish is still twice its real length.
+- A landed fish is held up for at least 1.6 seconds before a press moves on (`showFirst`; it was 0.7), so it is always seen on his palms.
+- The check (`tools/preview/fishing-measure.mjs`) also checks his fingers point outward, and tries each kind of fish at its smallest and its biggest. It passes.
+- In the game the rod, reel and landed fish are placed by the same code the page and the check use (`src/view/held-tackle.ts`). While a fish is on the line he turns to face it, because the rod points straight ahead of him.
+- Caputo has no fishing clips yet: he stands still and the rod is drawn in front of him, as before.
+
+## 2026-11-20: Before skiing and climbing, Yaarbro gets simple gripping hands
+
+The owner's word: "give Yaarbro simple gripping hands (one bone that curls his fingers and one for his thumb), since ski poles and climbing holds will need him to hold things." It goes on the roadmap before skiing. Until then everything he holds is held at the grip points in his palms.

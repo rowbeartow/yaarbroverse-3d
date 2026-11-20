@@ -158,8 +158,8 @@ test.describe('hero models', () => {
     await play(page, 'Yaarbro');
     const start = await hero(page);
     expect(start?.model).toBe('yaarbro.glb');
-    // One clip from each of his Meshy files, his four swimming clips and his four rope clips (tools/yaarbro.guide.json).
-    expect(start?.clips.slice().sort()).toEqual(['climb', 'idle', 'jump', 'landing', 'roll', 'rope_catch', 'rope_hang', 'rope_reach', 'rope_release', 'run', 'swim', 'tread', 'underwater', 'walk']);
+    // One clip from each of his Meshy files, his four swimming clips, his four rope clips and his three fishing clips (tools/yaarbro.guide.json).
+    expect(start?.clips.slice().sort()).toEqual(['climb', 'fish_cast', 'fish_reel', 'fish_show', 'idle', 'jump', 'landing', 'roll', 'rope_catch', 'rope_hang', 'rope_reach', 'rope_release', 'run', 'swim', 'tread', 'underwater', 'walk']);
 
     await expect.poll(async () => (await hero(page))?.clock ?? 0).toBeGreaterThan((start?.clock ?? 0) + 0.3);
     const before = await snapshot(page);

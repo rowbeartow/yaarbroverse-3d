@@ -43,7 +43,7 @@ describe('the hero model files', () => {
   }
 
   it('Yaarbro: holds one clip from each of his Meshy files, his four swimming clips and his four rope clips', () => {
-    expect(clipNames('yaarbro.glb').sort()).toEqual(['climb', 'idle', 'jump', 'landing', 'roll', 'rope_catch', 'rope_hang', 'rope_reach', 'rope_release', 'run', 'swim', 'tread', 'underwater', 'walk']);
+    expect(clipNames('yaarbro.glb').sort()).toEqual(['climb', 'fish_cast', 'fish_reel', 'fish_show', 'idle', 'jump', 'landing', 'roll', 'rope_catch', 'rope_hang', 'rope_reach', 'rope_release', 'run', 'swim', 'tread', 'underwater', 'walk']);
   });
 
   it('Yaarbro: every clip happens on the spot, because the rules own where he is', () => {

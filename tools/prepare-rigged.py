@@ -25,6 +25,11 @@
 #     body in the air is brought down to stand on the ground, and a body
 #     pushed into the ground is lifted out of it.
 #   - Lifts a hand that a clip pushes below the ground back onto it.
+#   - Makes a clip itself where Meshy has nothing that reads right (`"made"`
+#     in the guide: Yaarbro reeling, and holding up a landed fish): a few
+#     moments say where the rod is and where his palms are, and how the body
+#     leans. The arms are bent to carry the middle of each palm (`"grips"`
+#     in the guide) there, and the feet stay where they stood.
 #   - Carries over a clip made on a later Meshy rig of the same character
 #     (`"retarget": true` in the guide): same bones, different rest pose.
 #
@@ -534,7 +539,212 @@ def make_clip(body, spec, source, home):
             poses[len(poses) - reach + i] = blend_poses(poses[len(poses) - reach + i], poses[0], share * share * (3 - 2 * share))
 
     armature.animation_data.action = None
-    action = bpy.data.actions.new(spec['name'])
+    say(f"clip {spec['name']}: {(len(poses) - 1) / FPS:.2f} s from {spec['file']}")
+    return write_clip(body, spec['name'], poses)
+
+
+# ---------- clips made here, pose by pose ----------
+#
+# A clip Meshy has nothing for (Yaarbro reeling in, and holding up his fish) is
+# made on his own skeleton. The guide gives a few moments ("keys"), each saying
+# where the rod is (the place of his right palm on it, and which way it
+# points), where his palms are once they let go of it, how far the hips have
+# moved and how the back leans; the poses between are eased from one to the
+# next. Everything is in metres on the model as it stands at rest: x to his
+# left, y behind him, z up.
+#
+# His model has no finger bones, so nothing is ever put "in his fingers". What
+# he holds is held at a grip point in the middle of each palm (`"grips"` in the
+# guide, measured on his skin). The rod is fixed in his right palm; his left
+# palm is turned up under it. A free palm is turned up with its fingers pointing out to its own side, as under a tray, to carry a fish.
+
+def world_head(body, name):
+    return body.armature.matrix_world @ body.armature.pose.bones[name].head
+
+
+def spin(body, name, turn, about=None):
+    """Turns a bone, and all that hangs from it, about a point (its own head unless told), by a rotation in the model's space."""
+    armature = body.armature
+    bone = armature.pose.bones[name]
+    about = about if about is not None else world_head(body, name)
+    world = armature.matrix_world
+    bone.matrix = world.inverted() @ Matrix.Translation(about) @ turn.to_matrix().to_4x4() @ Matrix.Translation(-about) @ world @ bone.matrix
+    bpy.context.view_layer.update()
+
+
+def lean(body, name, axis, degrees):
+    spin(body, name, Quaternion(Vector(axis), math.radians(degrees)))
+
+
+def aim(body, name, child, at):
+    """Turns a bone about its head until the joint at its far end is on the line to `at`."""
+    start = world_head(body, name)
+    now = world_head(body, child) - start
+    want = at - start
+    if now.length > 1e-6 and want.length > 1e-6:
+        spin(body, name, now.rotation_difference(want))
+
+
+def reach(body, upper, lower, end, target, pole):
+    """Bends a limb of two bones (arm and forearm, or thigh and shin) so its end is at `target`, the middle joint pushed toward `pole`."""
+    start = world_head(body, upper)
+    first = (world_head(body, lower) - start).length
+    second = (world_head(body, end) - world_head(body, lower)).length
+    line = target - start
+    far = min(max(line.length, abs(first - second) + 1e-4), first + second - 1e-4)
+    along = line.normalized()
+    side = pole - along * pole.dot(along)
+    side = side.normalized() if side.length > 1e-6 else Vector((0, 0, -1))
+    near = (first * first - second * second + far * far) / (2 * far)
+    off = math.sqrt(max(0.0, first * first - near * near))
+    aim(body, upper, lower, start + along * near + side * off)
+    aim(body, lower, end, start + along * far)
+
+
+MADE_FIELDS = {'hips': 3, 'left': 3, 'right': 3, 'butt': 3, 'heading': 1, 'pitch': 1, 'free': 1, 'left_off': 1, 'left_palm': 3, 'lean': 1, 'side': 1, 'twist': 1, 'nod': 1, 'turn': 1, 'shrug': 1}
+
+
+def made_at(keys, share):
+    """What the guide's keys say at a share of the clip (0 to 1): each number eased from the key before to the key after. A number a key leaves out stays as the key before had it."""
+    filled = []
+    for key in sorted(keys, key=lambda k: k['at']):
+        last = filled[-1] if filled else {}
+        filled.append({field: key.get(field, last.get(field, [0.0] * size if size > 1 else 0.0)) for field, size in MADE_FIELDS.items()} | {'at': key['at']})
+    before = max((k for k in filled if k['at'] <= share), key=lambda k: k['at'], default=filled[0])
+    after = min((k for k in filled if k['at'] > share), key=lambda k: k['at'], default=before)
+    span = after['at'] - before['at']
+    t = (share - before['at']) / span if span > 0 else 0.0
+    t = t * t * (3 - 2 * t)
+    out = {}
+    for field, size in MADE_FIELDS.items():
+        a, b = before[field], after[field]
+        out[field] = Vector(a).lerp(Vector(b), t) if size > 1 else a + (b - a) * t
+    return out
+
+
+def facing(palm_local, fingers_local, palm, fingers):
+    """The turn that points a hand's palm one way and, as nearly as that allows, its fingers another."""
+    def frame(n, f):
+        n = n.normalized()
+        f = f - n * f.dot(n)
+        f = f.normalized() if f.length > 1e-6 else n.orthogonal().normalized()
+        return Matrix((f, n.cross(f), n)).transposed()
+    return (frame(palm, fingers) @ frame(palm_local, fingers_local).transposed()).to_quaternion()
+
+
+def rod_in_hand(grip, along, forearm):
+    """The turn that lays the rod, fixed in this hand, along `along`, rolled about the rod so the fingers run on from the forearm."""
+    rod = Vector(grip['rod']).normalized()
+    turn = rod.rotation_difference(along)
+    fingers = turn @ Vector(grip['fingers'])
+    flat_f = fingers - along * fingers.dot(along)
+    flat_a = forearm - along * forearm.dot(along)
+    if flat_f.length < 1e-6 or flat_a.length < 1e-6:
+        return turn
+    roll = math.atan2(flat_f.cross(flat_a).dot(along), flat_f.dot(flat_a))
+    return Quaternion(along, roll) @ turn
+
+
+def place_hand(body, bones, grip, at, turn_for):
+    """
+    Puts the grip point in the middle of a palm at a place, the hand turned as
+    `turn_for` says for the way the forearm then runs. The arm is bent to
+    carry the wrist to wherever that leaves it.
+    """
+    armature = body.armature
+    arm, fore, hand = bones['arm']
+    world = armature.matrix_world
+    size = world.to_scale().x
+    pole = Vector((bones['pole'][0] * bones['out'], bones['pole'][1], bones['pole'][2]))
+    turn = None
+    for _ in range(4):
+        forearm = (world_head(body, hand) - world_head(body, fore)).normalized()
+        turn = turn_for(forearm)
+        reach(body, arm, fore, hand, at - turn @ (Vector(grip['at']) * size), pole)
+    pose = armature.pose.bones[hand]
+    pose.matrix = Matrix.Translation(pose.matrix.to_translation()) @ (world.to_quaternion().inverted() @ turn).to_matrix().to_4x4()
+    bpy.context.view_layer.update()
+
+
+def made_clip(body, spec, source, grips):
+    """Makes a clip from the guide's keys, starting from one pose of a clip he already has."""
+    made = spec['made']
+    armature = body.armature
+    bones = made['bones']
+    start, _ = source.frame_range
+    base = round(start + made.get('from', 0.0) * FPS)
+    armature.animation_data.action = source
+    bpy.context.scene.frame_set(base)
+    bpy.context.view_layer.update()
+    # Where his feet stand, and how they sit, in the pose he starts from: they stay there.
+    feet = {side: (world_head(body, bones[side]['leg'][2]), armature.pose.bones[bones[side]['leg'][2]].matrix.to_quaternion()) for side in ('left', 'right')}
+    frames = max(1, round(made['seconds'] * FPS))
+    up = Vector((0, 0, 1))
+    poses = []
+    for frame in range(frames + 1):
+        share = frame / frames
+        now = made_at(made['keys'], share)
+        # Things that come and go on top: a pull (there and back) or a swing (one way, then the other), so many times a clip.
+        for wave in made.get('waves', []):
+            angle = 2 * math.pi * (share * wave['turns'] + wave.get('phase', 0.0))
+            size = math.sin(angle) if wave.get('shape') == 'swing' else 0.5 - 0.5 * math.cos(angle)
+            for field, by in wave['adds'].items():
+                now[field] = now[field] + size * (Vector(by) if MADE_FIELDS[field] > 1 else by)
+        bpy.context.scene.frame_set(base)
+        body.shift(body.hips, now['hips'])
+        lean(body, body.hips.name, (0, 0, 1), now['twist'])
+        lean(body, bones['back'], (1, 0, 0), now['lean'])
+        lean(body, bones['back'], (0, 1, 0), now['side'])
+        # The rod: fixed in his right palm, running forward and up from there; his left palm is under it, further along.
+        heading, pitch = math.radians(now['heading']), math.radians(now['pitch'])
+        along = Vector((math.sin(heading) * math.cos(pitch), -math.cos(heading) * math.cos(pitch), math.sin(pitch)))
+        # The side of the rod his left palm is on: under it while it points ahead, and still the same side of it when it is swung back over his shoulder.
+        under = Vector((-math.sin(heading) * math.sin(pitch), math.cos(heading) * math.sin(pitch), math.cos(pitch)))
+        on_rod = {'right': now['butt']}
+        thick = made.get('rod_radius', 0.02)
+        # How far each hand has let go of the rod: both (free), or his left alone (left_off).
+        off = {'right': now['free'], 'left': max(now['free'], now['left_off'])}
+        tip = math.radians(made.get('cradle', 0))
+        cradled = {'right': Vector((-math.sin(tip), 0, math.cos(tip))), 'left': Vector((math.sin(tip), 0, math.cos(tip)))}
+        faces = {'right': cradled['right'], 'left': now['left_palm'].normalized() if now['left_palm'].length > 0.1 else cradled['left']}
+        for side, out in (('right', -1), ('left', 1)):
+            thigh, shin, foot = bones[side]['leg']
+            reach(body, thigh, shin, foot, feet[side][0], Vector((0.2 * out, -1, 0)))
+            pose = armature.pose.bones[foot]
+            pose.matrix = Matrix.Translation(pose.matrix.to_translation()) @ feet[side][1].to_matrix().to_4x4()
+            bpy.context.view_layer.update()
+            lean(body, bones[side]['shoulder'], (0, 1, 0), -out * now['shrug'])
+            grip = grips[side]
+            palm, fingers = Vector(grip['palm']), Vector(grip['fingers'])
+
+            def turn_for(forearm, side=side, grip=grip, palm=palm, fingers=fingers, out=out):
+                # His left palm is under the rod with its fingers across it, whichever way across runs on from his forearm.
+                over = under.cross(along)
+                held = rod_in_hand(grip, along, forearm) if side == 'right' else facing(palm, fingers, under, over if over.dot(forearm) > 0 else -over)
+                # A free hand is a palm turned up, to carry something, unless the key says which way it faces.
+                # A palm turned up is under a tray: its fingers point out to its own side, and the forearm comes up from inside.
+                tray = faces[side].z > 0.5
+                point = made.get('fingers', [1, 0, 0])
+                return held.slerp(facing(palm, fingers, faces[side], Vector((out * point[0], point[1], point[2])) if tray else forearm), off[side])
+
+            place_hand(body, bones[side] | {'out': out, 'pole': made.get('elbows', [0.8, 0.5, -0.7])}, grip, on_rod[side].lerp(now[side], off[side]), turn_for)
+            if side == 'right':
+                # The rod lies on his right palm, so its middle is its own thickness off the skin; his left palm comes up under it.
+                hand = armature.matrix_world @ armature.pose.bones[bones[side]['arm'][2]].matrix
+                middle = hand @ Vector(grip['at']) + (hand.to_quaternion() @ palm) * thick
+                on_rod['left'] = middle + along * made.get('apart', 0.4) - under * thick
+        lean(body, bones['head'], (1, 0, 0), now['nod'])
+        lean(body, bones['head'], (0, 0, 1), now['turn'])
+        poses.append(read_pose(armature))
+    armature.animation_data.action = None
+    say(f"clip {spec['name']}: {frames / FPS:.2f} s, made here from {len(made['keys'])} keys")
+    return write_clip(body, spec['name'], poses)
+
+
+def write_clip(body, name, poses):
+    """Writes a list of poses, one a frame, as a clip."""
+    armature = body.armature
+    action = bpy.data.actions.new(name)
     armature.animation_data.action = action
     moved = {body.hips.name}
     for frame, pose in enumerate(poses):
@@ -551,7 +761,6 @@ def make_clip(body, spec, source, home):
         for point in curve.keyframe_points:
             point.interpolation = 'LINEAR'
     armature.animation_data.action = None
-    say(f"clip {spec['name']}: {(len(poses) - 1) / FPS:.2f} s from {spec['file']}")
     return action
 
 
@@ -604,7 +813,7 @@ def main():
         spots.append(armature.matrix_world @ body.hips.matrix.to_translation())
     home = sum(spots, Vector()) / len(spots)
 
-    made = [make_clip(body, spec, sources[spec['file']], home) for spec in guide['clips']]
+    made = [made_clip(body, spec, sources[spec['file']], guide['grips']) if 'made' in spec else make_clip(body, spec, sources[spec['file']], home) for spec in guide['clips']]
     # Only the clips made here are saved, each on its own track so it is its own animation.
     for action in list(bpy.data.actions):
         if action not in made:

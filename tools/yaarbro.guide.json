@@ -4,7 +4,7 @@
   "body": "Meshy_AI_Animation_Idle_11_withSkin.glb",
   "hips": "Hips",
 
-  "clips_about": "stay: the hips are held over one spot. airborne: a body in the air is brought down to stand on the ground. lift: a body pushed into the ground is lifted out. hands_on_ground: these arms are raised until their hands are not below the ground. parts: two pieces of the clip joined together.",
+  "clips_about": "stay: the hips are held over one spot. airborne: a body in the air is brought down to stand on the ground. lift: a body pushed into the ground is lifted out. hands_on_ground: these arms are raised until their hands are not below the ground. parts: two pieces of the clip joined together. made: the clip is made by tools/prepare-rigged.py itself (Meshy has no fishing): keys are moments in the clip (at: a share of it, 0 to 1). butt is where his right palm holds the rod, heading and pitch are which way the rod points (degrees to his left of straight ahead, and up), and apart is how far along the rod his left palm is. free is how far both hands have let go of the rod (0 to 1) and left_off how far his left alone has; left and right are where his free palms are, turned up with the fingers pointing out to each hand's own side, as under a tray, unless left_palm says which way his left faces. hips is how far the hips have moved; lean is degrees the back leans forward (less than nothing for back), side to one side, twist the hips' turn, nod the head tipping down, turn the head turning, shrug the shoulders rising. A key that leaves a number out keeps the one before. elbows is the way the elbows are pushed (out to the side, behind, up), out, back and down unless it says. cradle tips his upturned palms toward each other by so many degrees (less than nothing tips them apart, which drops his wrists when his fingers point outward). waves come and go on top, so many turns a clip: a pull goes there and back, a swing one way then the other.",
   "clips": [
     { "name": "idle", "file": "Meshy_AI_Animation_Idle_11_withSkin.glb", "loop": true },
     { "name": "walk", "file": "Meshy_AI_Animation_Walking_withSkin.glb", "loop": true },
@@ -20,10 +20,58 @@
     { "name": "rope_catch", "file": "Meshy_API_Rope_catch.glb", "retarget": true, "from": 0.6, "to": 1.1, "stay": true },
     { "name": "rope_hang", "file": "Meshy_API_Rope_hang.glb", "retarget": true, "loop": true, "stay": true },
     { "name": "rope_release", "file": "Meshy_API_Rope_release.glb", "retarget": true, "from": 1.45, "to": 2.05, "stay": true, "airborne": true },
-    { "name": "fish_cast", "file": "Meshy_API_Fish_cast.glb", "retarget": true, "stay": true },
-    { "name": "fish_reel", "file": "Meshy_API_Fish_reel.glb", "retarget": true, "loop": true, "stay": true },
-    { "name": "fish_show", "file": "Meshy_API_Fish_show.glb", "retarget": true, "stay": true }
+    { "name": "fish_cast", "file": "Meshy_AI_Animation_Idle_11_withSkin.glb", "made": {
+      "seconds": 1.8,
+      "bones": { "back": "Spine02", "head": "Head",
+        "left": { "shoulder": "LeftShoulder", "arm": ["LeftArm", "LeftForeArm", "LeftHand"], "leg": ["LeftUpLeg", "LeftLeg", "LeftFoot"] },
+        "right": { "shoulder": "RightShoulder", "arm": ["RightArm", "RightForeArm", "RightHand"], "leg": ["RightUpLeg", "RightLeg", "RightFoot"] } },
+      "keys": [
+        { "at": 0, "hips": [0, 0, -0.05], "butt": [-0.35, -0.6, 1.7], "pitch": 45, "left_off": 1, "left": [0.5, -0.35, 1.6], "left_palm": [0, 0, -1] },
+        { "at": 0.35, "hips": [0, 0.04, -0.04], "twist": -15, "lean": -5, "nod": -4, "butt": [-0.62, -0.1, 2.55], "pitch": 120, "left": [0.45, -0.6, 1.9] },
+        { "at": 0.6, "hips": [0, -0.05, -0.08], "twist": 8, "lean": 10, "nod": 0, "butt": [-0.4, -0.85, 2.2], "pitch": 50, "left": [0.55, -0.2, 1.5] },
+        { "at": 0.75, "lean": 12, "butt": [-0.35, -0.8, 1.75], "pitch": 22 },
+        { "at": 1, "hips": [0, 0, -0.05], "twist": 0, "lean": 3, "butt": [-0.3, -0.65, 1.65], "pitch": 32, "left": [0.5, -0.35, 1.6] }
+      ]
+    } },
+    { "name": "fish_reel", "file": "Meshy_AI_Animation_Idle_11_withSkin.glb", "loop": true, "made": {
+      "seconds": 2.4,
+      "apart": 0.34,
+      "bones": { "back": "Spine02", "head": "Head",
+        "left": { "shoulder": "LeftShoulder", "arm": ["LeftArm", "LeftForeArm", "LeftHand"], "leg": ["LeftUpLeg", "LeftLeg", "LeftFoot"] },
+        "right": { "shoulder": "RightShoulder", "arm": ["RightArm", "RightForeArm", "RightHand"], "leg": ["RightUpLeg", "RightLeg", "RightFoot"] } },
+      "keys": [{ "at": 0, "hips": [0, 0.08, -0.12], "twist": -22, "lean": -4, "nod": 4, "butt": [0.08, -0.58, 1.5], "heading": 0, "pitch": 22 }],
+      "waves": [
+        { "turns": 2, "adds": { "lean": -6, "hips": [0, 0.05, -0.03], "pitch": 7, "butt": [0, 0.04, 0.03] } },
+        { "turns": 1, "shape": "swing", "adds": { "heading": 9, "side": 4, "hips": [0.04, 0, 0], "butt": [0.03, 0, 0] } }
+      ]
+    } },
+    { "name": "fish_show", "file": "Meshy_AI_Animation_Idle_11_withSkin.glb", "made": {
+      "seconds": 2.6,
+      "apart": 0.34,
+      "cradle": -20,
+      "elbows": [0.3, 0.2, -1],
+      "bones": { "back": "Spine02", "head": "Head",
+        "left": { "shoulder": "LeftShoulder", "arm": ["LeftArm", "LeftForeArm", "LeftHand"], "leg": ["LeftUpLeg", "LeftLeg", "LeftFoot"] },
+        "right": { "shoulder": "RightShoulder", "arm": ["RightArm", "RightForeArm", "RightHand"], "leg": ["RightUpLeg", "RightLeg", "RightFoot"] } },
+      "keys": [
+        { "at": 0, "hips": [0, 0.08, -0.12], "twist": -22, "lean": -4, "nod": 4, "butt": [0.08, -0.58, 1.5], "heading": 0, "pitch": 22 },
+        { "at": 0.14, "hips": [0, 0.12, -0.14], "lean": -12, "nod": -6, "butt": [0.08, -0.55, 1.68], "pitch": 60 },
+        { "at": 0.2, "left": [0.28, -0.47, 3.08], "right": [-0.28, -0.47, 3.08] },
+        { "at": 0.36, "free": 1, "hips": [0, 0.02, 0], "twist": 0, "lean": -2, "nod": -10, "shrug": 14 },
+        { "at": 0.46, "hips": [0, 0.04, -0.16], "lean": 3, "nod": -6, "shrug": 8, "left": [0.28, -0.49, 2.94], "right": [-0.28, -0.49, 2.94] },
+        { "at": 0.6, "hips": [0, 0, 0.02], "lean": -2, "nod": -8, "shrug": 16, "left": [0.28, -0.47, 3.08], "right": [-0.28, -0.47, 3.08] },
+        { "at": 0.74, "hips": [0, 0.02, -0.05], "lean": 0, "nod": -6, "shrug": 12, "left": [0.28, -0.49, 2.98], "right": [-0.28, -0.49, 2.98] },
+        { "at": 0.88, "hips": [0, 0, 0.02], "lean": -2, "nod": -8, "shrug": 16, "left": [0.28, -0.47, 3.08], "right": [-0.28, -0.47, 3.08] },
+        { "at": 1, "hips": [0, 0, 0], "lean": -2, "nod": -8, "left": [0.28, -0.47, 3.06], "right": [-0.28, -0.47, 3.06] }
+      ]
+    } }
   ],
+
+  "grips_about": "His model has no finger bones, so anything he holds is held at a grip point in the middle of a palm, never at a wrist. For each hand: at is the grip point on the skin of the palm, palm is the way the palm faces and fingers the way the fingers run, all in the hand bone's own space as the model comes. rod is the way the rod runs through his right hand, and reel the side of the rod its reel hangs on. The preview page draws what he holds from these, and tools/preview/fishing-measure.mjs checks every frame of the fishing clips against them.",
+  "grips": {
+    "right": { "bone": "RightHand", "at": [-5.89, 28.82, 2.74], "palm": [-0.844, 0.161, -0.511], "fingers": [0.444, 0.745, -0.498], "rod": [0.3, -0.647, -0.7], "reel": [-0.283, 0.641, -0.714] },
+    "left": { "bone": "LeftHand", "at": [7.49, 27.89, 2.62], "palm": [0.87, 0.182, -0.458], "fingers": [-0.403, 0.797, -0.45] }
+  },
 
   "cleanup_about": "Each part fixes something seen to be wrong in a pose test. belt: the belt and buckle stay with the hips. beard: the lower beard stays on the chest, and the cloth in front of the chest stays off the head. shading: smooth, with edges kept sharp on the buckle and the boot soles, and at any fold sharper than smooth_up_to degrees.",
   "cleanup": {

@@ -3,9 +3,10 @@
 // Yaarbro in his blue tunic with the orange beard, Caputo grey-brown with dark
 // stripes, long fangs and green eyes.
 
-import type { Group, Vector3 } from 'three';
+import type { Group, Object3D, Vector3 } from 'three';
 import type { HeroName } from '../game/hero';
 import type { Assets } from './assets';
+import type { Grips } from './held-tackle';
 import { HERO_MODELS, ModelHero, STAND_IN, wantsStandIn } from './hero-model';
 
 /** What the hero is doing this frame, for the animation. */
@@ -25,6 +26,24 @@ export interface Pose {
   climbing?: number | null;
   /** On a rope: reaching out for one coming near, or hanging from one. Left out otherwise. */
   rope?: 'reach' | 'hang' | null;
+  /**
+   * Fishing: aiming a cast, the lure in the air, waiting for a bite, a fish
+   * on the line, or showing off a landed fish; with the seconds the rules have
+   * spent in that phase, and whether the button is reeling. Left out otherwise.
+   */
+  fishing?: { phase: 'aim' | 'cast' | 'wait' | 'hooked' | 'show'; timer: number; reeling: boolean } | null;
+}
+
+/** A hero's palms, for drawing what it holds while fishing (see held-tackle.ts). */
+export interface HeroTackle {
+  grips: Grips;
+  /** Its hand bones. */
+  right: Object3D;
+  left: Object3D;
+  /** Metres in the game for a metre on the model as it comes. */
+  unit: number;
+  /** How far through showing off a landed fish it is, 0 to 1, or null when it is not. */
+  show: number | null;
 }
 
 /** What the browser checks can ask about the hero on screen. */
@@ -50,6 +69,8 @@ export interface HeroView {
   grip(into: Vector3): boolean;
   /** How much the hero is held by a rope right now, 0 to 1. */
   readonly held: number;
+  /** Its palms, for what it holds while fishing, or null for a hero with no fishing clips. Call after `animate`. */
+  tackle(): HeroTackle | null;
   info(): HeroInfo;
   /** For a ghost: how much of it shows, from 0 (gone) to 1. */
   fade(share: number): void;
