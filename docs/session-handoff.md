@@ -1,6 +1,6 @@
 # Session handoff
 
-Last updated: 2026-11-19 (milestone eleven, part one, is merged: headroom on the lake, the fish rig, fishing from the jetty and the fish book. Two things of part one wait on the owner: his picks of the fishing sounds, and his OK on Yaarbro's fishing clips. Then part two: Walblum's kick, Caputo's Claw Slash, the monster pike fight and the rescue.)
+Last updated: 2026-11-19 (milestone eleven, part one, is merged: headroom on the lake, the fish rig, fishing from the jetty and the fish book. The fishing sounds are in and the two bugs from the owner's play are fixed, pull requests 88 and 89, both merged. One thing of part one waits on the owner: his OK on Yaarbro's reel and "landed" clips, built again in Blender. That work is on the branch `claude/backup-yaarbro-fish-clips` until he says OK. Then part two: Walblum's kick, Caputo's Claw Slash, the monster pike fight and the rescue.)
 
 ## Start here
 
