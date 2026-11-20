@@ -7,9 +7,10 @@
 //   folder       where to put the page. Anything already there is replaced.
 //   name         marmot, mosquito, crocodile, or a fish (bass, perch, trout, pike) (what the page says about each enemy and
 //                its clips is in enemies.ts)
-//                `held-fish=<a rigged fish>` gives a character a fish to hold in
-//                the clips that say so (`holds` in enemies.ts); it gets no part
-//                of the page of its own
+//                `held-bass=<the rigged bass>` (or held-perch, held-trout,
+//                held-pike) gives a character that fish to hold in the clips
+//                that say so (`holds` in enemies.ts); it gets no part of the
+//                page of its own
 //   rigged.glb   the model from tools/rig-quadruped.py or tools/rig-insect.py,
 //                before it is compressed
 //
@@ -69,7 +70,7 @@ for (const pair of pairs) {
   files.push(`media/${name}.glb.txt`, `media/${name}_color.jpg`);
   enemies.push({
     name,
-    // Something a character holds (`held-fish=<a rigged fish>`): drawn in its hands, with no part of the page of its own.
+    // Something a character holds (`held-bass=<the rigged bass>`): drawn in its hands, with no part of the page of its own.
     held: name.startsWith('held-'),
     model: `media/${name}.glb.txt`,
     color: `media/${name}_color.jpg`,

@@ -593,7 +593,7 @@ def reach(body, upper, lower, end, target, pole):
     aim(body, lower, end, start + along * far)
 
 
-MADE_FIELDS = {'hips': 3, 'left': 3, 'right': 3, 'lean': 1, 'twist': 1, 'nod': 1, 'shrug': 1, 'wrists': 1}
+MADE_FIELDS = {'hips': 3, 'left': 3, 'right': 3, 'lean': 1, 'side': 1, 'twist': 1, 'nod': 1, 'turn': 1, 'shrug': 1, 'wrists': 1}
 
 
 def made_at(keys, share):
@@ -636,15 +636,19 @@ def made_clip(body, spec, source):
             now['hips'] += pull * Vector(made['strain'].get('hips', [0, 0, 0]))
             now['right'] += pull * Vector(made['strain'].get('right', [0, 0, 0]))
             now['left'] += pull * Vector(made['strain'].get('left', [0, 0, 0]))
-        # One hand winding: round a small circle that stands upright and points ahead.
+        # One hand winding: round a circle about the reel's axle ("about", which way the axle points).
         if 'crank' in made:
             crank = made['crank']
             angle = 2 * math.pi * share * crank['turns']
-            now[crank['hand']] += crank['radius'] * Vector((0, -math.cos(angle), math.sin(angle)))
+            axle = Vector(crank.get('about', [1, 0, 0])).normalized()
+            up = Vector((0, 0, 1)) - axle * axle.z
+            up.normalize()
+            now[crank['hand']] += crank['radius'] * (math.cos(angle) * up + math.sin(angle) * axle.cross(up))
         bpy.context.scene.frame_set(base)
         body.shift(body.hips, now['hips'])
         lean(body, body.hips.name, (0, 0, 1), now['twist'])
         lean(body, bones['back'], (1, 0, 0), now['lean'])
+        lean(body, bones['back'], (0, 1, 0), now['side'])
         for side, out in (('left', 1), ('right', -1)):
             thigh, shin, foot = bones[side]['leg']
             reach(body, thigh, shin, foot, feet[side][0], Vector((0.2 * out, -1, 0)))
@@ -656,6 +660,7 @@ def made_clip(body, spec, source):
             reach(body, arm, fore, hand, now[side], Vector((0.8 * out, 0.5, -0.7)))
             lean(body, hand, (1, 0, 0), now['wrists'])
         lean(body, bones['head'], (1, 0, 0), now['nod'])
+        lean(body, bones['head'], (0, 0, 1), now['turn'])
         poses.append(read_pose(armature))
     armature.animation_data.action = None
     say(f"clip {spec['name']}: {frames / FPS:.2f} s, made here from {len(made['keys'])} keys")

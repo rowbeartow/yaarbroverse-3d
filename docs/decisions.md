@@ -730,3 +730,13 @@ The owner's words on the first three clips: the cast is OK; the reel "should rea
 - The bent rod, the tight line and the fish in his hands are drawn by the preview page for now. They go into the game with the clips, after his OK.
 - Nothing about Yaarbro in the game changes until he says OK on the page.
 
+## 2026-11-20: Yaarbro's reel and "landed", the owner's third round of notes
+
+The owner's words on the second look: in the reel "his hands overlap in front of his chest, and it doesn't look like cranking. Keep his hands apart: right hand on the rod's handle at his hip, left hand turning the crank of a reel you can see on the rod, in a clear circle big enough to read from behind him, where the game's camera usually sits. The rod stays bent with the line tight." In "landed" the fish "should start in the water or at his feet, on the end of the line. He bends, takes it with a hand at each end, and lifts it overhead, with the fish held at his hands so it never passes through his body." And: "Size each fish to its species and to the catch's size in the fish book, so an ordinary bass is about the length of his arm."
+
+- The reel: his right hand holds the rod's handle at his right hip, and the rod runs up across his body to his left. A reel's crank turns in line with its rod, so with the rod pointing straight ahead the circle is edge-on from behind; across his body, the circle faces the camera. The reel sits beside his head, above his shoulder, and his left hand winds it twice a loop.
+- "Landed": the fish swings in on the line to the boards at his feet, he lays the rod down, bends, takes it with a hand at each end and lifts it over his head. From the moment he takes it the fish is drawn at the middle of his hands.
+- A held fish is drawn at twice its real length (it was three times): a 38 cm bass is about as long as his arm, a 110 cm pike as long as he is tall. The swimming fish keep their size until the owner says otherwise.
+- His hands are the same distance apart for every fish.
+- Still nothing about Yaarbro in the game changes until the owner says OK on the page.
+
