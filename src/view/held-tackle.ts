@@ -103,6 +103,26 @@ export const readHands = (grips: Grips, right: Object3D, left: Object3D, unit: n
   return { gripRight, gripLeft, palmRight, palmLeft, from: gripRight.clone().addScaledVector(palmRight, ROD.thick * unit), along, side };
 };
 
+/**
+ * Where a hero who fishes with his mouth (Caputo) holds the rod: a point on
+ * the line of his closed mouth, in his head bone's own space. The rod runs
+ * along that line, out between his front teeth, and its reel hangs under it.
+ */
+export interface JawGrip {
+  bone: string;
+  at: number[];
+  rod: number[];
+  reel: number[];
+}
+
+/** Reads the rod from his head bone: it passes through the grip point itself, between his teeth. Its world matrix must be up to date. */
+export const readJaws = (grip: JawGrip, head: Object3D): RodPose => {
+  const along = new Vector3().fromArray(grip.rod).transformDirection(head.matrixWorld);
+  const side = new Vector3().fromArray(grip.reel).transformDirection(head.matrixWorld);
+  side.addScaledVector(along, -side.dot(along)).normalize();
+  return { from: new Vector3().fromArray(grip.at).applyMatrix4(head.matrixWorld), along, side };
+};
+
 /** The middle of the rod, butt to tip, from a point on it at his right palm: straight through his hands, then bent toward what pulls on it. */
 export const rodLine = (from: Vector3, along: Vector3, toward: Vector3 | null, pulled: number, unit: number): Vector3[] => {
   const points: Vector3[] = [];
@@ -162,6 +182,17 @@ export const rodFalling = (letGo: RodPose, lying: RodPose, fall: number): RodPos
 };
 
 /**
+ * A rod let go of by a hero who holds it in his jaws: it slides out ahead,
+ * along its own length, clear of his teeth, for the first part of its drop,
+ * and falls from there.
+ */
+export const rodSpatOut = (letGo: RodPose, lying: RodPose, fall: number, unit: number): RodPose => {
+  const out = Math.min(1, fall / 0.3);
+  const clear = { from: letGo.from.clone().addScaledVector(letGo.along, 0.4 * unit * out), along: letGo.along, side: letGo.side };
+  return fall <= 0.3 ? clear : rodFalling(clear, lying, (fall - 0.3) / 0.7);
+};
+
+/**
  * How low a fish's underside is as it lies on its side (its left flank down),
  * under its middle line, a way along it from its middle (toward its nose is
  * more), for a fish drawn `size` times its own. `skin` is its skin at rest,
@@ -208,6 +239,21 @@ export const lieAcross = (skin: Vector3[], long: number, gripRight: Vector3, gri
       .add(gripLeft)
       .multiplyScalar(0.5)
       .addScaledVector(top, -(front + back) / 2),
+  };
+};
+
+/**
+ * Where a landed fish lies on the boards, for a hero who flings it there: on
+ * its side at `at`, its nose pointing along `nose` (level), its lowest point
+ * resting on the boards.
+ */
+export const lieOnBoards = (skin: Vector3[], at: Vector3, nose: Vector3, size: number): { position: Vector3; turn: Quaternion } => {
+  let lowest = Infinity;
+  for (const point of skin) lowest = Math.min(lowest, point.x);
+  const along = nose.clone().setY(0).normalize();
+  return {
+    turn: new Quaternion().setFromRotationMatrix(new Matrix4().makeBasis(UP, new Vector3().crossVectors(along, UP), along)),
+    position: at.clone().addScaledVector(UP, -(Number.isFinite(lowest) ? lowest : 0) * size),
   };
 };
 
