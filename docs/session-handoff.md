@@ -25,7 +25,7 @@ Last updated: 2026-11-25. Milestone eleven, part one (fishing at Cocolalla) is f
 **The owner measured the jetty on 2026-11-25: 75 frames a second at the lowest, on Hard, as Yaarbro, in Safari on his Mac.** His words: "Record it in the handoff as the dock's number for part two to stay above."
 
 - The dock is the lake's heaviest place, and it is where the pike and Walblum go.
-- The standing rule is that the lake stays at 60 or more on the Mac (`docs/decisions.md`, 2026-11-15 and after). Claude asked him on 2026-11-25 whether he means 75 itself as the floor for part two, or 60 with 75 as where the dock starts from; he had not answered when this was written. **Until he does, plan part two to keep the jetty at 75, and tell him before building anything that would take it lower.**
+- **The floor is still 60 frames a second on the Mac** (`docs/decisions.md`). 75 is the jetty's measured headroom, not a new floor: part two can spend it. **Tell the owner before building anything that would take the dock below 65 on Hard**, so there is margin left for later levels (his answer, 2026-11-25).
 - A cloud session counts triangles, not frames. With fishing, the dock draws 825,006 triangles in 321 draw calls (`node tools/draw-measure.mjs cocolalla hard`, the test browser, high tier, Yaarbro). That is what 75 frames a second looks like in that tool. Count again after each piece of part two and give him the before and after; he measures the frames.
 - If the jetty drops: draw fewer fish first (`count` in `FISH`, the lake's `difficulty.ts`).
 
