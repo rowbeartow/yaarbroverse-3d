@@ -32,7 +32,7 @@ import type { GLTF } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { clone as cloneRigged } from 'three/examples/jsm/utils/SkeletonUtils.js';
 import { MOVE, type HeroName } from '../game/hero';
 import { airPhase, approach, groundMix, landingWeight, movingShare, nextGait, strideBeat, strideRate, type Gait, type GaitBands } from './hero-motion';
-import { CAST, GAME_UNIT, type Grips } from './held-tackle';
+import { CAST, GAME_UNIT, type Grips, type JawGrip } from './held-tackle';
 import type { HeroInfo, HeroTackle, HeroView, Pose } from './heroes';
 
 /** How fast a roll clip turns at full rolling speed, against how it was made. */
@@ -121,10 +121,12 @@ export interface HeroModelSpec {
   /**
    * Fishing, for a hero with clips for it (`cast`, `reel` and `show`): the
    * grip point in the middle of each palm that the rod and a landed fish are
-   * held at (see held-tackle.ts). The numbers are `grips` in the hero's guide
-   * file in tools/, and tests/held-tackle.test.ts holds the two together.
+   * held at, or for a hero who holds the rod in his jaws, the grip point
+   * between his teeth (see held-tackle.ts). The numbers are `grips` in the
+   * hero's guide file in tools/, and tests/held-tackle.test.ts holds the two
+   * together.
    */
-  fishing?: { grips: Grips };
+  fishing?: { grips: Grips } | { jaws: JawGrip };
 }
 
 /** Each hero's model. */
@@ -181,7 +183,8 @@ export const HERO_MODELS: Record<HeroName, HeroModelSpec> = {
   },
   // Made by the owner in Meshy. Meshy could not give him a four-legged
   // skeleton, so tools/rig-quadruped.py rigs him and writes his clips: idle,
-  // walk, trot, run, jump, falling and landing. The script prints the speed
+  // walk, trot, run, jump, falling and landing, and the rest (swimming, the
+  // rope, fishing). The script prints the speed
   // each of the walk, the trot and the run covers ground at, which is where
   // the three speeds below come from (times his height here over his height
   // in the file). He walks up to about a third of top speed, trots to two
@@ -208,7 +211,13 @@ export const HERO_MODELS: Record<HeroName, HeroModelSpec> = {
       catch: ['rope_catch'],
       hang: ['rope_hang'],
       release: ['rope_release'],
+      // Written by tools/rig-quadruped.py: the rod is in his jaws, so he fishes with his head and his whole body.
+      cast: ['fish_cast'],
+      reel: ['fish_reel'],
+      show: ['fish_show'],
     },
+    // He holds the rod in his jaws: one grip point between his teeth, in his head bone's own space ("grips" in tools/caputo.rig.json).
+    fishing: { jaws: { bone: 'head', at: [-0.017, 0.3058, -0.1201], rod: [-0.054, 0.998, 0.027], reel: [0.0, -0.081, -0.997] } },
     // He catches a rope in his teeth and hangs nose up (ROPE_TILT in tools/rig-quadruped.py: 70 degrees).
     rope: { grip: ['jaw'], gripAhead: 0.12, tilt: (70 * Math.PI) / 180 },
     // Measured in Blender: paddling, his back is at the water and his head out of it.
@@ -333,10 +342,11 @@ export class ModelHero implements HeroView {
   private hanging = 0;
   private releasing = 0;
   private readonly gripBones: Object3D[] = [];
-  /** How much of each fishing clip shows, 0 to 1, how far through the cast he is in seconds, and his hand bones. */
+  /** How much of each fishing clip shows, 0 to 1, how far through the cast he is in seconds, and what he holds with: his hand bones, or his head bone. */
   private fishingMix = { cast: 0, reel: 0, show: 0 };
   private castClock = 0;
   private hands: { right: Object3D; left: Object3D } | null = null;
+  private head: Object3D | null = null;
 
   /** Materials made for this hero alone (see `simple` and `ghost`), freed with it. */
   private readonly ownMaterials: Material[] = [];
@@ -445,7 +455,8 @@ export class ModelHero implements HeroView {
       action.paused = true;
     }
     this.actions.reel?.setLoop(LoopRepeat, Infinity).play();
-    if (spec.fishing) {
+    if (spec.fishing && 'jaws' in spec.fishing) this.head = model.getObjectByName(spec.fishing.jaws.bone) ?? null;
+    else if (spec.fishing) {
       const right = model.getObjectByName(spec.fishing.grips.right.bone);
       const left = model.getObjectByName(spec.fishing.grips.left.bone);
       if (right && left) this.hands = { right, left };
@@ -765,20 +776,17 @@ export class ModelHero implements HeroView {
   }
 
   /**
-   * His palms, for drawing what he holds while fishing (see held-tackle.ts),
-   * and how far through showing off a landed fish he is. Null for a hero with
-   * no fishing clips. Call after `animate`.
+   * His palms or his jaws, for drawing what he holds while fishing (see
+   * held-tackle.ts), and how far through showing off a landed fish he is.
+   * Null for a hero with no fishing clips. Call after `animate`.
    */
   tackle(): HeroTackle | null {
     const { show, cast, reel } = this.actions;
-    if (!this.spec.fishing || !this.hands || !show || !cast || !reel) return null;
-    return {
-      grips: this.spec.fishing.grips,
-      right: this.hands.right,
-      left: this.hands.left,
-      unit: GAME_UNIT * (this.spec.height / HERO_MODELS.Yaarbro.height),
-      show: this.fishingMix.show > 0.5 ? show.time / show.getClip().duration : null,
-    };
+    const fishing = this.spec.fishing;
+    if (!fishing || !show || !cast || !reel) return null;
+    const shared = { unit: GAME_UNIT, show: this.fishingMix.show > 0.5 ? show.time / show.getClip().duration : null };
+    if ('jaws' in fishing) return this.head ? { ...shared, jaws: fishing.jaws, head: this.head } : null;
+    return this.hands ? { ...shared, grips: fishing.grips, right: this.hands.right, left: this.hands.left } : null;
   }
 
   /**

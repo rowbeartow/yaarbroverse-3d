@@ -13,6 +13,12 @@
 //     fingers pointing outward, as under a tray.
 // The clips put his palms in the right places (tools/prepare-rigged.py).
 //
+// Caputo has no hands to hold with: he holds the rod in his jaws (`grips.jaws`
+// in tools/caputo.rig.json, and on his entry in HERO_MODELS). The rod runs
+// through one grip point between his teeth, along the line of his closed
+// mouth. He flings a landed fish onto the boards and stands over it; where
+// the fish and the dropped rod lie in the game is `landOnBoards`.
+//
 // Lengths here are metres on his model as it comes (he is 2.87 m tall there),
 // turned into the caller's own units by `unit`: for the game, `GAME_UNIT`.
 
@@ -103,6 +109,26 @@ export const readHands = (grips: Grips, right: Object3D, left: Object3D, unit: n
   return { gripRight, gripLeft, palmRight, palmLeft, from: gripRight.clone().addScaledVector(palmRight, ROD.thick * unit), along, side };
 };
 
+/**
+ * Where a hero who fishes with his mouth (Caputo) holds the rod: a point on
+ * the line of his closed mouth, in his head bone's own space. The rod runs
+ * along that line, out between his front teeth, and its reel hangs under it.
+ */
+export interface JawGrip {
+  bone: string;
+  at: number[];
+  rod: number[];
+  reel: number[];
+}
+
+/** Reads the rod from his head bone: it passes through the grip point itself, between his teeth. Its world matrix must be up to date. */
+export const readJaws = (grip: JawGrip, head: Object3D): RodPose => {
+  const along = new Vector3().fromArray(grip.rod).transformDirection(head.matrixWorld);
+  const side = new Vector3().fromArray(grip.reel).transformDirection(head.matrixWorld);
+  side.addScaledVector(along, -side.dot(along)).normalize();
+  return { from: new Vector3().fromArray(grip.at).applyMatrix4(head.matrixWorld), along, side };
+};
+
 /** The middle of the rod, butt to tip, from a point on it at his right palm: straight through his hands, then bent toward what pulls on it. */
 export const rodLine = (from: Vector3, along: Vector3, toward: Vector3 | null, pulled: number, unit: number): Vector3[] => {
   const points: Vector3[] = [];
@@ -162,6 +188,17 @@ export const rodFalling = (letGo: RodPose, lying: RodPose, fall: number): RodPos
 };
 
 /**
+ * A rod let go of by a hero who holds it in his jaws: it slides out ahead,
+ * along its own length, clear of his teeth, for the first part of its drop,
+ * and falls from there.
+ */
+export const rodSpatOut = (letGo: RodPose, lying: RodPose, fall: number, unit: number): RodPose => {
+  const out = Math.min(1, fall / 0.3);
+  const clear = { from: letGo.from.clone().addScaledVector(letGo.along, 0.4 * unit * out), along: letGo.along, side: letGo.side };
+  return fall <= 0.3 ? clear : rodFalling(clear, lying, (fall - 0.3) / 0.7);
+};
+
+/**
  * How low a fish's underside is as it lies on its side (its left flank down),
  * under its middle line, a way along it from its middle (toward its nose is
  * more), for a fish drawn `size` times its own. `skin` is its skin at rest,
@@ -211,6 +248,74 @@ export const lieAcross = (skin: Vector3[], long: number, gripRight: Vector3, gri
   };
 };
 
+/**
+ * Where a landed fish lies on the boards, for a hero who flings it there: on
+ * its side at `at`, its nose pointing along `nose` (level), its lowest point
+ * resting on the boards.
+ */
+export const lieOnBoards = (skin: Vector3[], at: Vector3, nose: Vector3, size: number): { position: Vector3; turn: Quaternion } => {
+  let lowest = Infinity;
+  for (const point of skin) lowest = Math.min(lowest, point.x);
+  const along = nose.clone().setY(0).normalize();
+  return {
+    turn: new Quaternion().setFromRotationMatrix(new Matrix4().makeBasis(UP, new Vector3().crossVectors(along, UP), along)),
+    position: at.clone().addScaledVector(UP, -(Number.isFinite(lowest) ? lowest : 0) * size),
+  };
+};
+
+/** A flat piece of ground seen from above (a solid's top): its middle, half its size each way, and its height. */
+export interface Boards {
+  x: number;
+  z: number;
+  halfX: number;
+  halfZ: number;
+  top: number;
+}
+
+/**
+ * Where a hero who fishes with his jaws lands his catch in the game. The
+ * water is in front of him and he may be standing at the very edge of it, so
+ * there are no boards ahead to fling a fish onto: he flings it over himself
+ * onto the boards behind, and turns round to stand over it. `ahead` is the
+ * way the water lies from the fishing spot (a step of length 1), and `boards`
+ * what the spot is on.
+ *   - `facing` is the way he ends up facing: straight away from the water.
+ *   - The fish lies in front of him as he then stands, a little to his left,
+ *     nose to his right, as on his preview page; on the other side where the
+ *     boards are too narrow there.
+ *   - The rod lies where it fell from his mouth: beside where he stood,
+ *     pointing at the water, with no more than its tip past the boards' end.
+ * The ground must run back from the spot at the same height for about four
+ * metres (docs/adding-a-level.md, "Fishing").
+ */
+export const landOnBoards = (hero: { x: number; z: number }, ahead: { x: number; z: number }, boards: Boards, unit: number): { facing: number; fishAt: Vector3; nose: Vector3; rod: RodPose } => {
+  const right = { x: -ahead.z, z: ahead.x };
+  // How far the boards reach toward the water and to each side, measured along `ahead` and to its right.
+  let [end, low, high] = [-Infinity, Infinity, -Infinity];
+  for (const [sx, sz] of [[-1, -1], [-1, 1], [1, -1], [1, 1]]) {
+    const [cx, cz] = [boards.x + sx * boards.halfX, boards.z + sz * boards.halfZ];
+    end = Math.max(end, cx * ahead.x + cz * ahead.z);
+    low = Math.min(low, cx * right.x + cz * right.z);
+    high = Math.max(high, cx * right.x + cz * right.z);
+  }
+  const out = hero.x * ahead.x + hero.z * ahead.z;
+  const across = hero.x * right.x + hero.z * right.z;
+  const at = (forward: number, side: number, up: number): Vector3 => new Vector3(hero.x + ahead.x * forward + right.x * side, boards.top + up, hero.z + ahead.z * forward + right.z * side);
+  // Facing away from the water, his left is the water's right.
+  const fishSide = across + 0.8 * unit > high - 0.3 && across - 0.8 * unit >= low + 0.3 ? -1 : 1;
+  const rodSide = across + 1.7 * unit > high - 0.2 && across - 1.7 * unit >= low + 0.2 ? -1 : 1;
+  return {
+    facing: Math.atan2(-ahead.x, -ahead.z),
+    fishAt: at(-2.2 * unit, 0.8 * unit * fishSide, 0),
+    nose: new Vector3(-right.x * fishSide, 0, -right.z * fishSide),
+    rod: {
+      from: at(Math.min(0.9 * unit, end - out - 1.3 * unit), 1.7 * unit * rodSide, 0.03 * unit),
+      along: new Vector3(ahead.x, 0, ahead.z),
+      side: new Vector3(right.x * rodSide, 0, right.z * rodSide),
+    },
+  };
+};
+
 /** A fish on the end of the line, hanging nose up. */
 const HANGING = new Quaternion().setFromRotationMatrix(new Matrix4().makeBasis(new Vector3(-1, 0, 0), new Vector3(0, 0, 1), new Vector3(0, 1, 0)));
 
@@ -224,5 +329,22 @@ export const fishFlying = (water: Vector3, lying: { position: Vector3; turn: Qua
   const settled = ease((flight - 0.55) / 0.45);
   const position = water.clone().lerp(lying.position, flight);
   position.y += Math.sin(Math.PI * flight) * 1.1 * unit;
+  return { position, turn: HANGING.clone().slerp(lying.turn, settled), settled };
+};
+
+/**
+ * A landed fish flung from the water onto the boards, a share of the way (0
+ * to 1): straight up out of the water for the first tenth of the way, on up
+ * as high as `over` and across, and straight down onto where it lies for the
+ * last fifth. It is high before it is
+ * far across, so it clears the edge of the boards and the hero it is flung
+ * over, and it comes down in front of him, not through him.
+ */
+export const fishFlung = (water: Vector3, lying: { position: Vector3; turn: Quaternion }, flight: number, over: number): { position: Vector3; turn: Quaternion; settled: number } => {
+  const f = Math.max(0, Math.min(1, flight));
+  const settled = ease((f - 0.55) / 0.45);
+  const position = water.clone().lerp(lying.position, ease((f - 0.1) / 0.7));
+  const from = f < 0.5 ? water.y : lying.position.y;
+  position.y = from + (Math.max(over, water.y, lying.position.y) - from) * Math.sin(Math.PI * f);
   return { position, turn: HANGING.clone().slerp(lying.turn, settled), settled };
 };

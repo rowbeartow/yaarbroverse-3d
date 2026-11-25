@@ -13,9 +13,10 @@ interface Fishing {
   line: boolean;
   mark: boolean;
   thrashing: boolean;
-  /** The rod is drawn at the grip point in the hero's palm, and a landed fish lies across both palms (a hero with fishing clips). */
+  /** The rod is drawn where the hero holds it (Yaarbro's palm, Caputo's jaws), and a landed fish lies across Yaarbro's palms, or on the boards where Caputo flung it. */
   rodInPalm: boolean;
   fishOnPalms: boolean;
+  fishOnBoards: boolean;
   phase: string;
   catches: number;
 }
@@ -79,6 +80,26 @@ test.describe('on the keyboard', () => {
     // The landed fish comes up out of the water and onto his upturned palms.
     await expect.poll(async () => (await fishing(page)).fishOnPalms, { timeout: 60_000 }).toBe(true);
     await expect(page.locator('#line')).toBeHidden();
+    expect(problems).toEqual([]);
+  });
+
+  test('Caputo fishes with the rod in his jaws, and flings his catch onto the boards', async ({ page }) => {
+    const problems = await open(page, 'level=cocolalla');
+    await play(page, 'Caputo', 'easy');
+    await onJetty(page);
+    await page.keyboard.down('KeyX');
+    await expect.poll(async () => (await fishing(page)).phase).toBe('aim');
+    // He has fishing clips too: the rod is drawn from his jaws, not in front of him.
+    expect((await fishing(page)).rodInPalm).toBe(true);
+    await page.keyboard.up('KeyX');
+    await expect.poll(async () => (await fishing(page)).phase, { timeout: 60_000 }).toBe('bite');
+    await page.keyboard.down('KeyX');
+    await expect.poll(async () => (await fishing(page)).catches, { timeout: 120_000 }).toBe(1);
+    await page.keyboard.up('KeyX');
+    // The landed fish is flung up out of the water and comes down on the boards, never onto palms he does not have.
+    await expect.poll(async () => (await fishing(page)).fishOnBoards, { timeout: 60_000 }).toBe(true);
+    expect((await fishing(page)).fishOnPalms).toBe(false);
+    await expect.poll(async () => (await fishing(page)).phase, { timeout: 30_000 }).toBe('off');
     expect(problems).toEqual([]);
   });
 

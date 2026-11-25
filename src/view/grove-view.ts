@@ -358,7 +358,7 @@ export class GroveView {
         if (loaded) models.set(species, loaded);
       }
       const deck = level.solids.find((s) => s.id === level.fishing!.solid);
-      fishing = new FishingView(level.fishing, models, this.tier.simple, water, deck?.top ?? level.fishing.surface);
+      fishing = new FishingView(level.fishing, models, this.tier.simple, water, deck?.top ?? level.fishing.surface, deck ?? null);
       root.add(fishing.group);
     }
     this.fishingEvents = [];
@@ -481,6 +481,8 @@ export class GroveView {
     let facing = game.facing;
     const hooked = game.fishing?.phase === 'hooked' && level.fishing ? fishingPoint(level.fishing, game.fishing.out, game.fishing.across) : null;
     if (hooked && Math.hypot(hooked.x - x, hooked.z - z) > 0.5) facing = Math.atan2(hooked.x - x, hooked.z - z);
+    // A hero who fishes with his jaws turns to the boards he flings his catch onto (it is settled a frame behind, which the easing hides).
+    facing = (game.fishing ? levelView.fishing?.showFacing(game.fishing, hero) : null) ?? facing;
     let turn = facing - hero.root.rotation.y;
     turn = Math.atan2(Math.sin(turn), Math.cos(turn));
     hero.root.rotation.y += turn * (1 - Math.exp(-14 * dt));
