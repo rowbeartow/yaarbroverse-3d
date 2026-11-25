@@ -6,7 +6,7 @@
 // same rules a player does. `LAKE_TIMES=1 npx vitest run tests/lake.test.ts
 // --silent=false` prints when a perfect run reaches the end of each section.
 
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import { DIFFICULTIES, type Difficulty } from '../src/game/difficulty';
 import { Game, IDLE } from '../src/game/game';
 import { HEROES, STEP, type HeroName } from '../src/game/hero';
@@ -18,8 +18,7 @@ import { LAKE_CAMERA, LAKE_SHAPE, buildLake } from '../src/levels/cocolalla/layo
 import { cameraFor } from '../src/view/route-camera';
 import { Bot } from './helpers/bot';
 
-// The bot plays the whole lake in many of these: a couple of seconds each on a fast machine, and well over the usual 5 on a busy one (two have timed out there).
-vi.setConfig({ testTimeout: 60_000 });
+// The bot plays the whole lake in many of these, so this file is a bot run: its tests have the long time limit in tests/bot-runs.ts.
 
 const byId = (level: Level, id: string): Solid => {
   const found = level.solids.find((s) => s.id === id);
@@ -202,8 +201,7 @@ describe.each(DIFFICULTIES)('the lake on %s', (difficulty) => {
     expect(climbedOnto).toMatch(/^(log-|step-)/);
     expect(game.complete).toBe(true);
     expect(game.falls).toBe(0);
-    // The bot plays most of the lake twice here: about 2 seconds on a fast machine, and more than the usual 5 on a busy one (it timed out on the publish run of 2026-11-19).
-  }, 60_000);
+  });
 });
 
 describe('the rope swings', () => {
@@ -440,7 +438,7 @@ describe('the crocodiles', () => {
       }
     }
     // Four whole runs, each looking ahead around every crocodile.
-  }, 120_000);
+  });
 
   it('get faster, reach further and give a shorter tell from Easy to Hard, and only Easy shows where one will lunge', () => {
     const [e, n, h] = DIFFICULTIES.map((d) => LAKE_DIFFICULTY[d]);

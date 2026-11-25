@@ -766,3 +766,13 @@ The owner's words on the fourth look: "good enough to ship, with one fix: on Lan
 ## 2026-11-20: Before skiing and climbing, Yaarbro gets simple gripping hands
 
 The owner's word: "give Yaarbro simple gripping hands (one bone that curls his fingers and one for his thumb), since ski poles and climbing holds will need him to hold things." It goes on the roadmap before skiing. Until then everything he holds is held at the grip points in his palms.
+
+## 2026-11-25: The bot's whole-level runs have their own job on GitHub, with a generous time limit
+
+The owner's word: "Move the tests that play whole levels with the bot into their own CI job with a generous time limit, so a slow GitHub machine can't fail a run."
+
+- A test file is a bot run if it uses a helper that plays the game (the bot, the keyboard player, the fishing bot, the hero dropped in the water) or a helper built on one. `tests/bot-runs.ts` works that out from the files, so nobody keeps a list: 18 files and 790 tests today, and every test that takes over 0.4 seconds here is among them.
+- On GitHub they run in a job of their own, "Whole-level bot runs", with an hour to finish in. Each test in it may take five minutes (`BOT_RUN_LIMIT`); the slowest takes about 7 seconds here and the whole job about a minute. The quick rule tests (530) stay in the build job with the usual 5 seconds each.
+- The time limits that had been written into single tests (30, 60, 120 and 240 seconds) are gone: one number covers them all, and `tests/bot-runs.test.ts` fails if a bot run sets its own.
+- The required check "Tests, build and browser checks" now waits for the new job too, so a pull request cannot merge without it.
+- `npm test` still runs everything, with the same limits, and so does the publish run after a merge.
