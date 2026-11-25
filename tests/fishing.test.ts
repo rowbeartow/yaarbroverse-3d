@@ -544,12 +544,12 @@ describe('fishing in the game', () => {
     }
   }
 
-  it('fishing takes nothing from the run: the leaf is still there to reach', () => {
+  it('fishing takes nothing from the run, and never ends it: the leaf cannot be taken until the monster pike is beaten', () => {
     const level = buildLake('easy');
     const game = new Game(level, 'easy', 'Yaarbro');
     game.startOn('jetty');
     expect(catchOne(game, 'perch')).not.toBeNull();
-    // Let the hero put the fish back, then walk to the leaf on the dock.
+    // Let the hero put the fish back, then walk to where the leaf will be, on the dock.
     for (let i = 0; i < 4 / STEP; i += 1) game.step(IDLE);
     for (let i = 0; i < 20 / STEP && !game.complete; i += 1) {
       const dx = level.leaf.x - game.x;
@@ -557,7 +557,9 @@ describe('fishing in the game', () => {
       const far = Math.hypot(dx, dz) || 1;
       game.step({ moveX: dx / far, moveZ: dz / far, jump: Math.hypot(dx, dz) < 1.2 });
     }
-    expect(game.complete).toBe(true);
+    expect(Math.hypot(level.leaf.x - game.x, level.leaf.z - game.z)).toBeLessThan(1.5);
+    expect(game.goalOpen).toBe(false);
+    expect(game.complete).toBe(false);
     expect(game.summary().fish).toEqual([{ species: 'perch', size: expect.any(Number) }]);
   });
 });

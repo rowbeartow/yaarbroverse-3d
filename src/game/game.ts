@@ -2,15 +2,17 @@
 // last safe bank, lose a heart to whatever hurts, reach the golden leaf. No browser or drawing code, so the
 // tests (and later a server, for two-device play) can run it as is.
 
+import { ABILITY_STRIKE, newAbility, stepAbility, type AbilityEvent, type AbilityState, type AbilityTarget } from './ability';
 import { steerJump } from './assist';
-import { BOSS, bossFighting, newBoss, resetBoss, stepBoss, type Boss, type BossAttack, type BossPhase } from './boss';
+import { BOSS, bossFighting, newBoss, resetBoss, stepBoss, strikeBoss, type Boss, type BossAttack, type BossPhase } from './boss';
 import { pickupCounts, touchesPickup, type PickupKind } from './collect';
 import type { Difficulty } from './difficulty';
-import { ENEMY, callSidekick, dismissSidekick, newEnemy, sendHome, stepEnemy, type Enemy, type EnemyPhase, type EnemyTuning } from './enemy';
-import { dropLine, newFishing, onSpot, stepFishing, type Catch, type FishingEvent, type FishingState } from './fishing';
+import { ENEMY, callSidekick, canBeStruck, dismissSidekick, enemyBody, newEnemy, sendHome, stepEnemy, strikeEnemy, type Enemy, type EnemyPhase, type EnemyTuning } from './enemy';
+import { MONSTER_ID, dropLine, fishingPoint, monsterOf, newFishing, onSpot, setMonster, stepFishing, type Catch, type FishingEvent, type FishingState, type MonsterNumbers } from './fishing';
 import { MOVE, STEP, knockSpeed, type HeroName } from './hero';
 import { pushOutside, surfaceBelow, topAt, touchesFromAbove, type Level, type Solid } from './level';
 import { ownPieces, resetPieces, stepPieces, type PieceEvent } from './moving';
+import { PIKE, dragPike, hookPike, linePips, newPike, pikeFighting, pikeUp, resetPike, stepPike, strikePike, type Pike, type PikePhase, type PikeSees } from './pike';
 import { HANG, ROPE, grab, handOf, handSpeed, letGo, newRope, ropeInReach, stepHeld, stepLoose, type RopeState } from './rope';
 import { SWIM, climbOut, inWater, inWeeds, waterAt, type Water } from './swim';
 
@@ -24,7 +26,12 @@ export interface Input {
   jump: boolean;
   /** True while the move button is held: Yaarbro's roll, Caputo's pounce. */
   move?: boolean;
+  /** True while the new button is held: Walblum's kick, Claw Slash (see ability.ts). It does nothing for a hero who has not won it. */
+  attack?: boolean;
 }
+
+/** How a strike was made: the hero's own move, a landing on top, or the new button. */
+export type Strike = 'roll' | 'pounce' | 'stomp' | 'kick' | 'slash';
 
 export const IDLE: Input = { moveX: 0, moveZ: 0, jump: false };
 
@@ -39,7 +46,7 @@ export type GameEvent =
   /** An enemy began something: woke, warned, attacked, dodged, rested, or was beaten. */
   | { type: 'enemy'; id: string; kind: Enemy['kind']; phase: EnemyPhase }
   /** The hero's move, or a landing, struck an enemy. `left` is how many more strikes it takes. */
-  | { type: 'strike'; id: string; kind: Enemy['kind']; how: 'roll' | 'pounce' | 'stomp'; left: number }
+  | { type: 'strike'; id: string; kind: Enemy['kind']; how: Strike; left: number }
   /** The hero was sent back to a safe bank, and an enemy it had damaged is at full health again. */
   | { type: 'healed'; id: string; kind: Enemy['kind'] }
   /**
@@ -50,9 +57,20 @@ export type GameEvent =
    */
   | { type: 'boss'; id: string; what: 'begin' | 'blocked' | 'call' | 'beaten' }
   | { type: 'boss'; id: string; what: 'phase'; phase: BossPhase; attack: BossAttack | null }
-  | { type: 'boss'; id: string; what: 'hit'; how: 'roll' | 'pounce' | 'stomp'; left: number }
+  | { type: 'boss'; id: string; what: 'hit'; how: Strike; left: number }
   | { type: 'boss'; id: string; what: 'stage'; stage: number }
   | { type: 'boss'; id: string; what: 'reset'; healed: boolean }
+  /**
+   * The monster pike (see pike.ts): it took the lure (`hooked`), got off the line (`away`), dragged the hero
+   * in (`dragged`), began something (`phase`), lost a pip (`hit`: on the line, or to a strike), shrugged a landing off (`blocked`), was beaten
+   * (`beaten`), or the hero was sent back and the fight starts over (`reset`; `healed` when it had been damaged).
+   */
+  | { type: 'pike'; id: string; what: 'hooked' | 'away' | 'dragged' | 'blocked' | 'beaten' }
+  | { type: 'pike'; id: string; what: 'phase'; phase: PikePhase }
+  | { type: 'pike'; id: string; what: 'hit'; how: Strike | 'line'; left: number }
+  | { type: 'pike'; id: string; what: 'reset'; healed: boolean }
+  /** The new button (see ability.ts): sent, reached its target, missed, or came back. */
+  | ({ type: 'ability' } & AbilityEvent)
   /** Lost a heart. `left` is how many remain. */
   | { type: 'hurt'; left: number }
   /** Went back to the last safe bank with every heart again, after losing the last one. */
@@ -141,6 +159,10 @@ export class Game {
   beaten = 0;
   /** The level's boss, as it is now, or null when the level has none. */
   readonly boss: Boss | null;
+  /** The level's monster pike, as it is now (see pike.ts), or null when the level has none. */
+  readonly pike: Pike | null;
+  /** The new button, for a hero who has won it (see ability.ts), or null. */
+  readonly ability: AbilityState | null;
   /** Hearts left, and hearts lost over the whole run. */
   hearts: number;
   heartsLost = 0;
@@ -199,7 +221,8 @@ export class Game {
   private jumpWasHeld = false;
   private canCutJump = false;
 
-  constructor(level: Level, difficulty: Difficulty, hero: HeroName) {
+  /** `options.ability`: the player has won the new button (Walblum's kick, Claw Slash), so this hero has it from the start. */
+  constructor(level: Level, difficulty: Difficulty, hero: HeroName, options: { ability?: boolean } = {}) {
     // Pieces that move are this game's own, so two games of one level never share them.
     this.level = level.solids.some((s) => s.motion) ? { ...level, solids: ownPieces(level.solids) } : level;
     level = this.level;
@@ -215,6 +238,8 @@ export class Game {
     this.boss = level.boss ? newBoss(level.boss) : null;
     this.ropes = (level.ropes ?? []).map(newRope);
     this.fishing = level.fishing ? newFishing(level.fishing) : null;
+    this.pike = level.pike ? newPike(level.pike) : null;
+    this.ability = options.ability ? newAbility() : null;
     const under = surfaceBelow(level, this.x, this.z, this.y, MOVE.footRadius);
     this.groundId = under ? under.id : null;
     this.safeSpot = { ...level.spawn, id: under?.safe ? under.id : null };
@@ -263,7 +288,15 @@ export class Game {
 
   /** True when the goal can be taken: always, but for a level whose boss is not yet beaten. */
   get goalOpen(): boolean {
+    if (this.pike && this.pike.phase !== 'beaten') return false;
     return !this.boss || this.boss.phase === 'defeated';
+  }
+
+  /** The monster's numbers on the line, from the pike's own. */
+  private get monsterNumbers(): MonsterNumbers | null {
+    if (!this.pike) return null;
+    const n = this.pike.spot.numbers;
+    return { pips: linePips(n), pull: n.pull, calm: n.calm, thrash: n.thrash, run: n.run, heavy: n.heavy };
   }
 
   /** Where a fall would return the hero right now. */
@@ -378,6 +411,12 @@ export class Game {
       const healed = resetBoss(this.boss);
       this.events.push({ type: 'boss', id: this.boss.spot.id, what: 'reset', healed });
     }
+    // And for the monster pike: back circling its log at full health, to be fished for again.
+    if (this.pike && pikeFighting(this.pike)) {
+      const healed = resetPike(this.pike);
+      this.events.push({ type: 'pike', id: this.pike.spot.id, what: 'reset', healed });
+    }
+    if (this.ability) Object.assign(this.ability, newAbility(), { used: this.ability.used });
     // No hearts left: start again from here with all of them, protected for a moment.
     if (this.hearts <= 0 || this.breathOut) {
       this.breathOut = false;
@@ -424,10 +463,12 @@ export class Game {
       const standing = !frozen && this.grounded && !this.swimming && this.climbing <= 0 && onSpot(spot, this.groundId, this.x, this.z);
       const busy = this.fishing.phase !== 'off';
       const across = -spot.ahead.z * input.moveX + spot.ahead.x * input.moveZ;
+      this.monsterBefore();
       for (const event of stepFishing(this.fishing, spot, { button: standing && Boolean(input.move), jump: standing && input.jump, across }, standing, dt)) {
         if (event.what === 'landed') this.catches.push({ species: event.species, size: event.size });
         this.events.push({ type: 'fishing', ...event });
       }
+      this.monsterAfter();
       if (busy || this.fishing.phase !== 'off') {
         input = IDLE;
         this.facing = Math.atan2(spot.ahead.x, spot.ahead.z);
@@ -662,6 +703,8 @@ export class Game {
 
     if (this.complete) return;
 
+    this.useAbility(frozen, Boolean(input.attack), dt);
+
     // The enemies move, and anything they touch is settled.
     for (const enemy of this.enemies) {
       // A crocodile is the one enemy that reaches a swimmer whose head is under.
@@ -755,6 +798,8 @@ export class Game {
       if (outcome.stage !== undefined) this.events.push({ type: 'boss', id, what: 'stage', stage: outcome.stage });
     }
 
+    this.pikeStep(previousY, dt);
+
     // The goal: touch the golden leaf. A level with a boss keeps it out of reach until the boss is beaten.
     const { leaf } = level;
     const middleY = this.y + this.bodyHeight / 2;
@@ -787,6 +832,205 @@ export class Game {
     if (this.fainting > 0) {
       this.fainting = Math.max(0, this.fainting - dt);
       if (this.fainting === 0) this.toSafeSpot();
+    }
+  }
+
+  /**
+   * Before the fishing steps: the monster pike is among the fish while it circles its log, where the
+   * pike is, so a cast at its shadow can hook it. Once a lure has its eye, the fishing moves it.
+   */
+  private monsterBefore(): void {
+    const { pike, fishing } = this;
+    const spot = this.level.fishing;
+    if (!pike || !fishing || !spot) return;
+    const there = monsterOf(fishing);
+    const wanted = (pike.phase === 'lurking' && pike.sulk <= 0) || pike.phase === 'hooked';
+    if (!wanted) {
+      if (there) setMonster(fishing, null);
+      return;
+    }
+    const out = (pike.x - spot.x) * spot.ahead.x + (pike.z - spot.z) * spot.ahead.z;
+    const side = (pike.x - spot.x) * -spot.ahead.z + (pike.z - spot.z) * spot.ahead.x;
+    if (!there) setMonster(fishing, this.monsterNumbers, out, side);
+    else if (there.mood === 'idle') {
+      there.out = out;
+      there.across = side;
+    }
+  }
+
+  /** After the fishing has stepped: what it did with the monster on the line is the pike's doing too. */
+  private monsterAfter(): void {
+    const { pike, fishing } = this;
+    const spot = this.level.fishing;
+    if (!pike || !fishing || !spot) return;
+    const id = pike.spot.id;
+    const fish = monsterOf(fishing);
+    const onLine = fishing.phase === 'hooked' && fishing.taker === MONSTER_ID;
+    for (const event of this.events) {
+      if (event.type !== 'fishing') continue;
+      if (event.what === 'hooked' && onLine && pike.phase === 'lurking') {
+        hookPike(pike);
+        // Whoever it scares runs off for good: nothing else stacks on the fight, or on the way back from it.
+        for (const enemy of this.enemies) if (pike.spot.scares?.includes(enemy.spot.id) && enemy.phase !== 'defeated') dismissSidekick(enemy);
+        this.events.push({ type: 'pike', id, what: 'hooked' });
+      } else if (event.what === 'pip' && pike.phase === 'hooked') {
+        pike.health = Math.max(1, pike.health - 1);
+        this.events.push({ type: 'pike', id, what: 'hit', how: 'line', left: pike.health });
+      } else if (event.what === 'dragged' && pike.phase === 'hooked') {
+        // Off the jetty and out over the water, whatever the stick says.
+        dragPike(pike);
+        this.vx = pike.spot.ahead.x * PIKE.dragOut;
+        this.vz = pike.spot.ahead.z * PIKE.dragOut;
+        this.vy = PIKE.dragUp;
+        this.grounded = false;
+        this.groundId = null;
+        this.coyote = 0;
+        this.buffer = 0;
+        this.canCutJump = false;
+        this.rolling = false;
+        this.knocked = true;
+        this.thrown = true;
+        this.events.push({ type: 'pike', id, what: 'dragged' });
+      }
+    }
+    // Off the line any other way (it snapped, it ran out, the hero was hurt or left the spot): it is away, at full health.
+    if (pike.phase === 'hooked' && !onLine) {
+      const healed = resetPike(pike);
+      this.events.push({ type: 'pike', id, what: 'away' }, { type: 'pike', id, what: 'reset', healed });
+    }
+    // The fishing moves it while a lure has its eye or it is on the line.
+    pike.led = Boolean(fish && fish.mood !== 'idle' && fish.mood !== 'fighting');
+    if (pike.led && fish) {
+      const at = fishingPoint(spot, fish.out, fish.across);
+      pike.x = at.x;
+      pike.z = at.z;
+      const alongX = spot.ahead.x * Math.cos(fish.heading) - spot.ahead.z * Math.sin(fish.heading);
+      const alongZ = spot.ahead.z * Math.cos(fish.heading) + spot.ahead.x * Math.sin(fish.heading);
+      pike.facing = Math.atan2(alongX, alongZ);
+      if (pike.phase === 'hooked') pike.y = Math.min(pike.spot.surface - PIKE.chargeDepth, pike.y + PIKE.rise * STEP);
+    }
+  }
+
+  /** The monster pike moves, and anything it touches is settled. */
+  private pikeStep(previousY: number, dt: number): void {
+    const { pike } = this;
+    if (!pike) return;
+    const id = pike.spot.id;
+    // A level with no fishing step has nothing to hook it with; one hurt on the spot drops the line (see `hurt`).
+    if (pike.phase === 'hooked' && !(this.fishing?.phase === 'hooked' && this.fishing.taker === MONSTER_ID)) {
+      const healed = resetPike(pike);
+      this.events.push({ type: 'pike', id, what: 'away' }, { type: 'pike', id, what: 'reset', healed });
+    }
+    const log = this.level.solids.find((s) => s.id === pike.spot.log) ?? null;
+    const sees: PikeSees = this.swimming && this.waterId === pike.spot.water ? 'water' : this.grounded && this.groundId === pike.spot.log ? 'log' : 'away';
+    const canBeHurt = this.protectedFor <= 0 && this.hearts > 0;
+    const outcome = stepPike(pike, this, sees, log, MOVE.bodyRadius, previousY, canBeHurt, dt);
+    for (const phase of outcome.entered) if (phase !== 'beaten') this.events.push({ type: 'pike', id, what: 'phase', phase });
+    if (outcome.struck || outcome.blocked) {
+      if (outcome.struck) this.events.push({ type: 'pike', id, what: 'hit', how: outcome.struck, left: pike.health });
+      else this.events.push({ type: 'pike', id, what: 'blocked' });
+      // A pounce or a landing bounces the hero up off it, ready to pounce again.
+      if (outcome.struck !== 'roll') {
+        if (this.pouncing > 0) {
+          const speed = Math.hypot(this.vx, this.vz);
+          if (speed > MOVE.pounceExitSpeed) {
+            this.vx *= MOVE.pounceExitSpeed / speed;
+            this.vz *= MOVE.pounceExitSpeed / speed;
+          }
+        }
+        this.vy = PIKE.rebound;
+        if (outcome.blocked) {
+          const awayX = this.x - pike.x;
+          const awayZ = this.z - pike.z;
+          const away = Math.hypot(awayX, awayZ);
+          const out = away > 0.05 ? { x: awayX / away, z: awayZ / away } : { x: Math.sin(this.facing + Math.PI), z: Math.cos(this.facing + Math.PI) };
+          this.vx = out.x * PIKE.bounceOff;
+          this.vz = out.z * PIKE.bounceOff;
+          this.knocked = true;
+        }
+        this.pouncing = 0;
+        this.pounceReady = true;
+        this.pounceRest = 0.12;
+        this.grounded = false;
+        this.groundId = null;
+        this.swimming = false;
+        this.waterId = null;
+        this.under = false;
+        this.coyote = 0;
+        this.canCutJump = false;
+      }
+      this.protectedFor = Math.max(this.protectedFor, PIKE.strikeProtection);
+      if (pike.phase === 'beaten') this.pikeBeaten();
+    } else if (outcome.hurt && this.hurt(outcome.hurt.x, outcome.hurt.z)) {
+      this.events.push(...this.pending);
+      this.pending = [];
+    }
+  }
+
+  private pikeBeaten(): void {
+    if (!this.pike) return;
+    this.beaten += 1;
+    this.protectedFor = Math.max(this.protectedFor, PIKE.victoryProtection);
+    this.events.push({ type: 'pike', id: this.pike.spot.id, what: 'beaten' });
+  }
+
+  /** Everything the new button could be sent at right now: enemies in plain view, a boss in its fight, the pike while it is up. */
+  private abilityTargets(): AbilityTarget[] {
+    const targets: AbilityTarget[] = [];
+    for (const enemy of this.enemies) {
+      if (!canBeStruck(enemy)) continue;
+      const body = enemyBody(enemy);
+      targets.push({ key: `enemy:${enemy.spot.id}`, x: enemy.x, y: (body.bottom + body.top) / 2, z: enemy.z, radius: body.radius });
+    }
+    const { boss, pike } = this;
+    if (boss && bossFighting(boss)) targets.push({ key: 'boss', x: boss.x, y: boss.y + boss.spot.height / 2, z: boss.z, radius: boss.spot.radius });
+    if (pike && pikeUp(pike)) targets.push({ key: 'pike', x: pike.x, y: pike.y, z: pike.z, radius: PIKE.radius });
+    return targets;
+  }
+
+  /** The new button: Walblum's kick, Claw Slash (see ability.ts). What it reaches is struck as a landing on top would strike it. */
+  private useAbility(frozen: boolean, held: boolean, dt: number): void {
+    const state = this.ability;
+    if (!state) return;
+    const free = !frozen && !this.swimming && this.climbing <= 0 && !this.swinging && (!this.fishing || this.fishing.phase === 'off');
+    const pressed = held && !state.held && free;
+    state.held = held;
+    const how = ABILITY_STRIKE[this.hero];
+    for (const event of stepAbility(state, this, pressed, this.abilityTargets(), dt)) {
+      this.events.push({ type: 'ability', ...event });
+      if (event.what !== 'reach') continue;
+      const { x: alongX, z: alongZ } = state.heading;
+      const { boss, pike } = this;
+      if (event.target === 'boss' && boss) {
+        const id = boss.spot.id;
+        if (strikeBoss(boss, alongX, alongZ) === 'blocked') {
+          this.events.push({ type: 'boss', id, what: 'blocked' });
+          continue;
+        }
+        this.events.push({ type: 'boss', id, what: 'hit', how, left: boss.health });
+        if (boss.phase === 'defeated') {
+          this.beaten += 1;
+          this.protectedFor = Math.max(this.protectedFor, BOSS.victoryProtection);
+          for (const sidekick of this.enemies) if (sidekick.spot.sidekickOf === id) dismissSidekick(sidekick);
+          this.events.push({ type: 'boss', id, what: 'beaten' });
+        } else this.events.push({ type: 'boss', id, what: 'phase', phase: boss.phase, attack: boss.attack });
+      } else if (event.target === 'pike' && pike) {
+        const id = pike.spot.id;
+        const phase = strikePike(pike, alongX, alongZ);
+        if (!phase) {
+          this.events.push({ type: 'pike', id, what: 'blocked' });
+          continue;
+        }
+        this.events.push({ type: 'pike', id, what: 'hit', how, left: pike.health });
+        if (phase === 'beaten') this.pikeBeaten();
+        else this.events.push({ type: 'pike', id, what: 'phase', phase });
+      } else {
+        const enemy = this.enemies.find((each) => `enemy:${each.spot.id}` === event.target);
+        const phase = enemy ? strikeEnemy(enemy, alongX, alongZ) : null;
+        if (!enemy || !phase) continue;
+        if (phase === 'defeated') this.beaten += 1;
+        this.events.push({ type: 'enemy', id: enemy.spot.id, kind: enemy.kind, phase }, { type: 'strike', id: enemy.spot.id, kind: enemy.kind, how, left: enemy.hits });
+      }
     }
   }
 

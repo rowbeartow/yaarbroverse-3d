@@ -12,6 +12,7 @@
 import type { JumpAssist } from '../../game/assist';
 import type { Difficulty } from '../../game/difficulty';
 import type { FishingNumbers, Species, SpeciesNumbers } from '../../game/fishing';
+import type { PikeNumbers } from '../../game/pike';
 
 export interface LakeNumbers {
   /**
@@ -172,6 +173,25 @@ export interface LakeNumbers {
    * Easy needs no timing: the cast lands beside the nearest fish, a fish hooks itself, and the line cannot snap.
    */
   fishing: FishingNumbers;
+  /**
+   * THE MONSTER PIKE, hooked from the jetty and then fought in the water (see src/game/pike.ts for what each number does).
+   *   health        its pips. Half go on the line (rounded up), the rest in the water.
+   *   pull          metres of line to win for each pip on the line.
+   *   calm, thrash  seconds it tires for (reel), and seconds it thrashes for (let the line run). How long a line holds
+   *                 through a thrash, and how long the warning before one is, are the fishing's own `snap` and `tell`.
+   *   run           how fast it takes line while it thrashes.
+   *   heavy         how much of the usual reeling speed its weight leaves.
+   *   wait          seconds it circles between attacks in the water.
+   *   chargeTell, chargeSpeed   its charge at a swimmer: the warning, and how fast it comes (a swimmer makes 3.6).
+   *   snapTell, snapReach       beside the floating log: seconds its jaws stand open, and how far from where the hero
+   *                 stood the snap reaches (the log is 8 m long, so there is always room to step clear).
+   *   rest          seconds it lies spent after a snap: the opening to land on it.
+   *   guarded       true: only a hit while it lies spent counts. False: from the moment its jaws open.
+   *   aimLine       a line shows where it will charge and a ring where it will snap.
+   * Easy needs no timing: the line cannot snap, the jaws stand open for two seconds, a hit counts from the moment they
+   * open, and it lies spent for five.
+   */
+  pike: PikeNumbers;
   pointScout: boolean;
   dockScouts: number;
   barMosquito: boolean;
@@ -235,6 +255,7 @@ const FISH: Record<Species, SpeciesNumbers> = {
 
 export const LAKE_DIFFICULTY: Record<Difficulty, LakeNumbers> = {
   easy: {
+    pike: { health: 4, pull: 5, calm: 2.6, thrash: 1.2, run: 0, heavy: 0.45, wait: 4.5, chargeTell: 1.8, chargeSpeed: 4.5, snapTell: 2, snapReach: 1, rest: 5, guarded: false, aimLine: true },
     fishing: { castHelp: true, sweep: 5, notice: 3, spook: 0, biteWindow: Infinity, moreNibbles: 0, nibbleScares: false, snap: Infinity, tell: 1, drift: 0, reel: 3.2, species: FISH },
     boulderCount: 5, boulderRadius: 1.6, boulderGap: 0.9,
     crossing: 34,
@@ -251,6 +272,7 @@ export const LAKE_DIFFICULTY: Record<Difficulty, LakeNumbers> = {
     jumpAssist: { reach: 1.6, angle: 35 },
   },
   normal: {
+    pike: { health: 6, pull: 4, calm: 2.4, thrash: 1.9, run: 1, heavy: 0.45, wait: 3.6, chargeTell: 1, chargeSpeed: 7.5, snapTell: 1, snapReach: 1.4, rest: 3, guarded: false, aimLine: false },
     fishing: { castHelp: false, sweep: 7, notice: 2.5, spook: 0, biteWindow: 1.5, moreNibbles: 0, nibbleScares: false, snap: 1.5, tell: 0.7, drift: 0.3, reel: 3, species: FISH },
     boulderCount: 6, boulderRadius: 1.2, boulderGap: 1.8,
     crossing: 48,
@@ -268,6 +290,7 @@ export const LAKE_DIFFICULTY: Record<Difficulty, LakeNumbers> = {
     jumpAssist: { reach: 1, angle: 25 },
   },
   hard: {
+    pike: { health: 8, pull: 3.5, calm: 2.4, thrash: 1.4, run: 1.2, heavy: 0.45, wait: 3, chargeTell: 0.65, chargeSpeed: 10, snapTell: 0.6, snapReach: 1.8, rest: 1.9, guarded: true, aimLine: false },
     fishing: { castHelp: false, sweep: 10, notice: 1.2, spook: 0.5, biteWindow: 0.7, moreNibbles: 1, nibbleScares: true, snap: 0.8, tell: 0.4, drift: 0.8, reel: 2.8, species: FISH },
     boulderCount: 7, boulderRadius: 0.85, boulderGap: 2.6,
     crossing: 54,

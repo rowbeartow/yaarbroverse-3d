@@ -328,6 +328,27 @@ export const enemyBody = (enemy: Enemy): { bottom: number; top: number; radius: 
       ? { bottom: enemy.y - CROC.halfHeight, top: enemy.y + CROC.halfHeight, radius: CROC.radius }
       : { bottom: enemy.y - ENEMY.mosquitoHalfHeight, top: enemy.y + ENEMY.mosquitoHalfHeight, radius: ENEMY.mosquitoRadius };
 
+/** True while the new button (Walblum's kick, Claw Slash: see ability.ts) could be sent at this enemy: it is out in plain view and not beaten. */
+export const canBeStruck = (enemy: Enemy): boolean => !enemy.dormant && enemy.phase !== 'defeated' && enemy.phase !== 'concealed' && enemy.flash <= 0;
+
+/**
+ * A strike from a distance (Walblum's kick, Claw Slash), flying along
+ * (alongX, alongZ): it counts exactly as a landing on top does. Returns the
+ * phase the enemy entered, or null when it could not be struck just now.
+ */
+export const strikeEnemy = (enemy: Enemy, alongX: number, alongZ: number): EnemyPhase | null => {
+  if (!canBeStruck(enemy)) return null;
+  enemy.hits -= 1;
+  enemy.flash = ENEMY.flash;
+  enemy.acorn = null;
+  const along = Math.hypot(alongX, alongZ);
+  enemy.shove = along > 1e-6 ? { x: (alongX / along) * ENEMY.knock, z: (alongZ / along) * ENEMY.knock, left: ENEMY.knockTime } : { x: 0, z: 0, left: 0 };
+  if (enemy.kind === 'marmot') enemy.y = enemy.spot.y;
+  enemy.phase = enemy.hits <= 0 ? 'defeated' : 'rest';
+  enemy.timer = 0;
+  return enemy.phase;
+};
+
 /** True while touching this enemy would hurt. A crocodile hurts only with its lunge. */
 export const isDangerous = (enemy: Enemy): boolean =>
   enemy.kind === 'crocodile' ? enemy.phase === 'attack' : enemy.phase === 'idle' || enemy.phase === 'patrol' || enemy.phase === 'attack';
