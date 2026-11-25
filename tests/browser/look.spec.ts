@@ -179,8 +179,8 @@ test.describe('hero models', () => {
     await play(page, 'Caputo');
     const start = await hero(page);
     expect(start?.model).toBe('caputo.glb');
-    // The clips the rig script writes (tools/rig-quadruped.py), swimming, the shake-off and the rope included.
-    expect(start?.clips.slice().sort()).toEqual(['falling', 'idle', 'jump', 'landing', 'paddle', 'pounce', 'rope_catch', 'rope_hang', 'rope_reach', 'rope_release', 'run', 'shake', 'trot', 'underwater', 'walk']);
+    // The clips the rig script writes (tools/rig-quadruped.py), swimming, the shake-off, the rope and fishing included.
+    expect(start?.clips.slice().sort()).toEqual(['falling', 'fish_cast', 'fish_reel', 'fish_show', 'idle', 'jump', 'landing', 'paddle', 'pounce', 'rope_catch', 'rope_hang', 'rope_reach', 'rope_release', 'run', 'shake', 'trot', 'underwater', 'walk']);
 
     await expect.poll(async () => (await hero(page))?.clock ?? 0).toBeGreaterThan((start?.clock ?? 0) + 0.3);
     const before = await snapshot(page);

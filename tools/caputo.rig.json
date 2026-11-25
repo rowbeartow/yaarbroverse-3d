@@ -17,6 +17,8 @@
     "jaw": [[-0.01, 0.95, 0.76], [-0.01, 0.895, 0.93]],
     "mouth": [[-0.01, 0.948, 0.83], [-0.01, 0.962, 0.96]]
   },
+  "grips_about": "He holds a fishing rod in his jaws. at is a point on the line of his closed mouth, rod the way that line runs (the rod runs along it, out between his front teeth) and reel straight down (the side the rod's reel hangs on), all in his head bone's own space. tools/rig-quadruped.py prints them from \"mouth\" above. The preview page draws the rod from them, and tools/preview/fishing-measure.mjs checks every frame of his fishing clips against them.",
+  "grips": { "jaws": { "bone": "head", "at": [-0.017, 0.3058, -0.1201], "rod": [-0.054, 0.998, 0.027], "reel": [0.0, -0.081, -0.997] } },
   "jaw_keeps_weights": true,
   "clips": {"walk": {"front_middle": 0.44}, "run": {"front_middle": 0.48, "hind_middle": -0.24}}
 }

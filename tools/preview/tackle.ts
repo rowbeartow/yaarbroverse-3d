@@ -29,9 +29,14 @@ import {
   type Object3D,
 } from 'three';
 import { AnimationMixer as Mixer } from 'three';
-import { CAST, GAME_TALL, LANDED, MODEL_TALL, ROD, ease, fishFlying, heldSize, lieAcross, lineBetween as lineOf, readHands as handsOf, reelOn, rodFalling, rodLine as rodOf, type Grip, type Grips, type RodPose } from '../../src/view/held-tackle';
+import { CAST, GAME_TALL, LANDED, MODEL_TALL, ROD, ease, fishFlying, heldSize, lieAcross, lieOnBoards, lineBetween as lineOf, readHands as handsOf, readJaws, reelOn, rodFalling, rodSpatOut, rodLine as rodOf, type Grip, type Grips, type JawGrip, type RodPose } from '../../src/view/held-tackle';
 
 export type { Grip, Grips };
+/** A hero who holds the rod in his jaws (Caputo) has one grip, in his mouth. */
+export interface JawGrips {
+  jaws: JawGrip;
+}
+const jawsOf = (grips: Grips | JawGrips): JawGrip | null => ('jaws' in grips ? grips.jaws : null);
 
 /** Which fishing clip is playing: what he holds differs in each. */
 export type Held = 'cast' | 'reel' | 'landed';
@@ -73,6 +78,8 @@ export interface Placed {
   twoHands: boolean;
   /** The fish lies on his palms. */
   fishHeld: boolean;
+  /** The fish lies on the boards in front of him (a hero who fishes with his jaws). */
+  fishDown: boolean;
   gripRight: Vector3;
   gripLeft: Vector3;
   palmRight: Vector3;
@@ -109,14 +116,15 @@ export const makeTackle = (
   model: Group,
   root: Group,
   unit: number,
-  grips: Grips,
+  grips: Grips | JawGrips,
   heldFish: Map<string, Loaded>,
   mixer: AnimationMixer,
   actions: Map<string, AnimationAction>,
   landedClip = 'fish_show',
 ): Tackle => {
-  const right = model.getObjectByName(grips.right.bone) as Object3D;
-  const left = model.getObjectByName(grips.left.bone) as Object3D;
+  const jaws = jawsOf(grips);
+  const right = model.getObjectByName(jaws ? jaws.bone : (grips as Grips).right.bone) as Object3D;
+  const left = model.getObjectByName(jaws ? jaws.bone : (grips as Grips).left.bone) as Object3D;
   // A place given in metres on his model (x to his left, y behind him, z up), on this page.
   const place = (x: number, y: number, z: number): Vector3 => new Vector3(x * unit + model.position.x, z * unit + model.position.y, -y * unit + model.position.z);
 
@@ -199,6 +207,7 @@ export const makeTackle = (
     rodHeld: false,
     twoHands: false,
     fishHeld: false,
+    fishDown: false,
     gripRight: new Vector3(),
     gripLeft: new Vector3(),
     palmRight: new Vector3(),
@@ -263,11 +272,17 @@ export const makeTackle = (
   };
 
   /** Where the rod is in his right palm in the pose he is in now: a point on its middle, and which way it runs and its reel hangs. */
-  let hands = handsOf(grips, right, left, unit);
+  const read = (): ReturnType<typeof handsOf> => {
+    if (!jaws) return handsOf(grips as Grips, right, left, unit);
+    // In his jaws: one grip point, between his teeth, and no palms.
+    const held = readJaws(jaws, right);
+    return { ...held, gripRight: held.from.clone(), gripLeft: held.from.clone(), palmRight: held.side.clone().negate(), palmLeft: held.side.clone().negate() };
+  };
+  let hands = read();
   const inHand = (): RodPose => ({ from: hands.from.clone(), along: hands.along.clone(), side: hands.side.clone() });
   const readHands = (): void => {
     root.updateMatrixWorld(true);
-    hands = handsOf(grips, right, left, unit);
+    hands = read();
     placed.gripRight.copy(hands.gripRight);
     placed.gripLeft.copy(hands.gripLeft);
     placed.palmRight.copy(hands.palmRight);
@@ -292,7 +307,8 @@ export const makeTackle = (
   };
   // Lying on the boards at his right, pointing the way he faces.
   const LYING = {
-    from: place(-0.95, -0.75, 0.03),
+    // A hero who fishes with his jaws has the fish on the boards in front of him: the rod falls further out to the side.
+    from: jaws ? place(-1.7, -0.9, 0.03) : place(-0.95, -0.75, 0.03),
     along: new Vector3(0, 0, 1),
     side: new Vector3(-1, 0, 0),
   };
@@ -319,6 +335,7 @@ export const makeTackle = (
         rodHeld: false,
         twoHands: false,
         fishHeld: false,
+        fishDown: false,
         rod: [],
         reel: [],
         line: [],
@@ -344,7 +361,8 @@ export const makeTackle = (
         bobber.position.copy(end);
         bobber.visible = true;
       } else if (what === 'reel') {
-        placed.rodHeld = placed.twoHands = true;
+        placed.rodHeld = true;
+        placed.twoHands = !jaws;
         // The fish pulls twice a loop, and the line comes in a little at a time.
         const pull = 0.5 - 0.5 * Math.cos(2 * Math.PI * share * 2);
         const heading = new Vector3(held.along.x, 0, held.along.z).normalize();
@@ -361,7 +379,8 @@ export const makeTackle = (
         placed.fish = fish;
         // As long beside him as the catch is, so many times life size, but never shorter than reaches across both his palms.
         const size = fish ? heldSize(entry.cm, fish.long, unit) : 1;
-        const lying = fish ? lieAcross(fish.skin, fish.long, placed.gripRight, placed.gripLeft, size) : null;
+        // A hero who fishes with his jaws flings it onto the boards in front of him, where it lies on its side.
+        const lying = fish ? (jaws ? lieOnBoards(fish.skin, place(0.8, -2.2, 0.0), new Vector3(-1, 0, 0), size) : lieAcross(fish.skin, fish.long, placed.gripRight, placed.gripLeft, size)) : null;
         let mouth = NEAR.clone();
         if (fish && lying && share >= LANDED.burst) {
           fish.group.visible = true;
@@ -378,7 +397,8 @@ export const makeTackle = (
             }
             mouth = fish.group.position.clone().add(new Vector3(0, 0, 1).applyQuaternion(fish.group.quaternion).multiplyScalar(fish.long * size * 0.5));
           } else {
-            placed.fishHeld = true;
+            placed.fishHeld = !jaws;
+            placed.fishDown = Boolean(jaws);
             fish.thrash?.stop();
             fish.group.position.copy(lying.position);
             fish.group.quaternion.copy(lying.turn);
@@ -386,17 +406,19 @@ export const makeTackle = (
           fish.mixer.update(0);
         }
         if (share < LANDED.release) {
-          placed.rodHeld = placed.twoHands = true;
+          placed.rodHeld = true;
+          placed.twoHands = !jaws;
           placed.rod = rodLine(held.from, held.along, mouth, 1 - 0.6 * ease(share / LANDED.release));
           reelAt(held.from, held.along, held.side, share < LANDED.burst ? clock * 2.2 : 0);
         } else {
           // He lets go: it drops to the boards at his right.
-          const falling = rodFalling(letGoPose(), LYING, Math.min(1, (share - LANDED.release) / (LANDED.down - LANDED.release)));
+          const fall = Math.min(1, (share - LANDED.release) / (LANDED.down - LANDED.release));
+          const falling = jaws ? rodSpatOut(letGoPose(), LYING, fall, unit) : rodFalling(letGoPose(), LYING, fall);
           placed.along.copy(falling.along);
           placed.rod = rodLine(falling.from, falling.along, null, 0);
           reelAt(falling.from, falling.along, falling.side, 0);
         }
-        if (!placed.fishHeld) placed.line = lineBetween(placed.rod[placed.rod.length - 1], mouth, share < LANDED.release ? 0 : 0.25 * unit);
+        if (!placed.fishHeld && !placed.fishDown) placed.line = lineBetween(placed.rod[placed.rod.length - 1], mouth, share < LANDED.release ? 0 : 0.25 * unit);
       }
       tube(rod, placed.rod, ROD.thick * unit);
       if (placed.line.length > 1) tube(line, placed.line, 0.006);
@@ -441,17 +463,23 @@ export interface Measured {
     bend: [number, number];
     leanSwing: number;
     sideSwing: number;
+    /** How far his head goes up and down. */
+    upSwing: number;
     hangs: number[];
   };
   /** In "Landed": how far the fish's lowest point is above the top of his head once it is up, and where the fish starts. */
-  landed?: { aboveHead: number; startsUnderWater: boolean; fishKind: string };
+  landed?: { aboveHead: number; startsUnderWater: boolean; fishKind: string; onBoards?: { frames: number; offBoards: number; ahead: number } };
 }
 
 /**
  * Plays one clip a frame at a time (30 a second) and measures what he holds
  * against his palms and his body. `action` must be the clip, playing and paused.
  */
-export const measureClip = (model: Group, mixer: AnimationMixer, action: AnimationAction, tackle: Tackle, what: Held, grips: Grips, catchIndex: number): Measured => {
+export const measureClip = (model: Group, mixer: AnimationMixer, action: AnimationAction, tackle: Tackle, what: Held, held: Grips | JawGrips, catchIndex: number): Measured => {
+  const jaws = jawsOf(held);
+  // A hero who holds the rod in his jaws is measured as if both his grips were that one.
+  const mouth: Grip | null = jaws ? { ...jaws, palm: jaws.reel.map((value) => -value), fingers: jaws.rod } : null;
+  const grips: Grips = mouth ? { right: mouth, left: mouth } : (held as Grips);
   const clip = action.getClip();
   const frames = Math.round(clip.duration * 30);
   const cm = (GAME_TALL / MODEL_TALL / tackle.unit) * 100;
@@ -462,7 +490,10 @@ export const measureClip = (model: Group, mixer: AnimationMixer, action: Animati
   model.traverse((node) => {
     if ((node as SkinnedMesh).isSkinnedMesh) skins.push(node as SkinnedMesh);
   });
-  const hands = new Set([grips.right.bone, grips.left.bone]);
+  // What holds things is left out of what they must not pass through: his hands, or his lower jaw.
+  const hands = new Set(jaws ? ['jaw'] : [grips.right.bone, grips.left.bone]);
+  /** Inside his mouth the rod is between his teeth: that much of it, either side of the grip point, is not counted. */
+  const inMouth = 0.16 * tackle.unit;
   const parts = skins.map((skin) => {
     const count = skin.geometry.getAttribute('position').count;
     const index = skin.geometry.getIndex();
@@ -597,7 +628,8 @@ export const measureClip = (model: Group, mixer: AnimationMixer, action: Animati
     through: {},
   };
   const worse = (now: number | null, value: number): number => Math.max(now ?? 0, value);
-  const hips = model.getObjectByName('Hips');
+  // The bones are named in capitals on one hero and not on the other.
+  const hips = model.getObjectByName('Hips') ?? model.getObjectByName('hips');
   const reel = {
     headingOff: 0,
     reelOffUnder: 0,
@@ -611,6 +643,8 @@ export const measureClip = (model: Group, mixer: AnimationMixer, action: Animati
     bendHigh: 0,
   };
   let aboveHead = Infinity;
+  // For a hero who flings the fish onto the boards: how many frames it lies there, how far its underside is from them, and how far it is in front of him.
+  let [fishDownFrames, offBoards, aheadOfHim] = [0, 0, Infinity];
   let startsUnderWater = false;
   const placed = tackle.placed;
 
@@ -625,8 +659,8 @@ export const measureClip = (model: Group, mixer: AnimationMixer, action: Animati
         .transformDirection(hand.matrixWorld.clone().invert())
         .toArray()
         .map((value) => Math.round(value * 1000) / 1000);
-      // The grip points themselves: on the skin of the palm, in the middle of the hand.
-      for (const [grip, at] of [
+      // The grip points themselves: on the skin of the palm, in the middle of the hand. (A grip in the jaws is between his teeth, on no skin.)
+      for (const [grip, at] of jaws ? [] : [
         [grips.right, placed.gripRight],
         [grips.left, placed.gripLeft],
       ] as [Grip, Vector3][]) {
@@ -657,7 +691,8 @@ export const measureClip = (model: Group, mixer: AnimationMixer, action: Animati
         });
       }
     }
-    if (placed.rodHeld) out.rodFromRight = worse(out.rodFromRight, Math.abs(toLine(placed.gripRight, placed.rod) - ROD.thick * tackle.unit) * cm);
+    // In a palm the rod's skin touches the grip point; in his jaws its middle runs through it.
+    if (placed.rodHeld) out.rodFromRight = worse(out.rodFromRight, Math.abs(toLine(placed.gripRight, placed.rod) - (jaws ? 0 : ROD.thick * tackle.unit)) * cm);
     if (placed.twoHands) out.rodFromLeft = worse(out.rodFromLeft, Math.abs(toLine(placed.gripLeft, placed.rod) - ROD.thick * tackle.unit) * cm);
     const fish = fishPoints();
     if (placed.fishHeld) {
@@ -694,8 +729,17 @@ export const measureClip = (model: Group, mixer: AnimationMixer, action: Animati
             .addScaledVector(other, b * ROD.thick * tackle.unit),
         );
     }
+    if (placed.fishDown) {
+      fishDownFrames += 1;
+      const lowest = Math.min(...fish.points.map((point) => point.y));
+      offBoards = Math.max(offBoards, Math.abs(lowest - model.position.y) * cm);
+      let nose = -Infinity;
+      for (const part of parts) for (const point of part.points) nose = Math.max(nose, point.z);
+      aheadOfHim = Math.min(aheadOfHim, (Math.min(...fish.points.map((point) => point.z)) - nose) * cm);
+    }
     const things: Record<string, Vector3[]> = {
-      rod: rodPoints,
+      // The grip is still where his mouth is as he lets the rod fall out of it.
+      rod: jaws ? rodPoints.filter((point) => point.distanceTo(placed.gripRight) > inMouth) : rodPoints,
       reel: placed.reel,
       line: placed.line,
       fish: fish.points,
@@ -740,8 +784,8 @@ export const measureClip = (model: Group, mixer: AnimationMixer, action: Animati
   }
   if (what === 'reel') {
     // How much he leans back and sways: the swing of his head over his hips.
-    let [backLow, backHigh, sideLow, sideHigh] = [Infinity, -Infinity, Infinity, -Infinity];
-    const head = model.getObjectByName('Head');
+    let [backLow, backHigh, sideLow, sideHigh, upLow, upHigh] = [Infinity, -Infinity, Infinity, -Infinity, Infinity, -Infinity];
+    const head = model.getObjectByName('Head') ?? model.getObjectByName('head');
     for (let frame = 0; frame <= frames; frame += 1) {
       pose(frame);
       if (!head || !hips) break;
@@ -750,6 +794,8 @@ export const measureClip = (model: Group, mixer: AnimationMixer, action: Animati
       backHigh = Math.max(backHigh, lean.z * cm);
       sideLow = Math.min(sideLow, lean.x * cm);
       sideHigh = Math.max(sideHigh, lean.x * cm);
+      upLow = Math.min(upLow, lean.y * cm);
+      upHigh = Math.max(upHigh, lean.y * cm);
     }
     out.reel = {
       headingOff: reel.headingOff,
@@ -761,6 +807,7 @@ export const measureClip = (model: Group, mixer: AnimationMixer, action: Animati
       bend: [reel.bendLow, reel.bendHigh],
       leanSwing: backHigh - backLow,
       sideSwing: sideHigh - sideLow,
+      upSwing: upHigh - upLow,
       hangs,
     };
   }
@@ -769,6 +816,7 @@ export const measureClip = (model: Group, mixer: AnimationMixer, action: Animati
       aboveHead,
       startsUnderWater,
       fishKind: CATCHES[catchIndex]?.label ?? '',
+      onBoards: jaws ? { frames: fishDownFrames, offBoards, ahead: aheadOfHim } : undefined,
     };
   return out;
 };

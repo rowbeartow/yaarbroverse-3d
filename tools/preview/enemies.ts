@@ -36,7 +36,8 @@ import {
 } from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { HDRLoader } from 'three/examples/jsm/loaders/HDRLoader.js';
-import { CATCHES, makeTackle, measureClip, type Grips, type Held, type Tackle } from './tackle';
+import { GAME_TALL, GAME_UNIT } from '../../src/view/held-tackle';
+import { CATCHES, makeTackle, measureClip, type Grips, type Held, type JawGrips, type Tackle } from './tackle';
 
 const params = new URLSearchParams(window.location.search);
 /** Flat light and no shadows, for a machine that draws in software. */
@@ -56,7 +57,7 @@ interface EnemyFile {
   /** Not shown on its own: something a character holds in one of its clips (a name that starts with `held-`). */
   held?: boolean;
   /** Where a character holds things: a grip point in the middle of each palm (`grips` in its guide file). */
-  grips?: Grips;
+  grips?: Grips | JawGrips;
 }
 
 interface ClipNote {
@@ -72,7 +73,7 @@ interface ClipNote {
  * clip, in metres of the model as it came from the rig, so the page shows
  * what a player sees above the surface. The game sets the real depth.
  */
-const ABOUT: Record<string, { title: string; hovers: boolean; clips: Record<string, ClipNote>; water?: Record<string, number>; holds?: Record<string, Held>; reach?: number }> = {
+const ABOUT: Record<string, { title: string; hovers: boolean; clips: Record<string, ClipNote>; water?: Record<string, number>; holds?: Record<string, Held>; tall?: number; reach?: number }> = {
   marmot: {
     title: 'Marmot scout',
     hovers: false,
@@ -124,6 +125,20 @@ ABOUT.yaarbro = {
     fish_cast: { label: 'Cast', note: 'The rod is in his right hand from the first frame to the last: back over his right shoulder, then whipped forward, and the lure flies out. Made in Blender on his own skeleton, with the rod fixed at the grip point in his right palm.', once: true },
     fish_reel: { label: 'Reel', note: 'Both hands hold the rod at his waist, and it points along the line. The reel hangs under the rod with its face sideways and turns by itself while the line comes in. The rod bends, and he leans back and sways as the fish pulls. It loops for as long as the button reels.', once: false },
     fish_show: { label: 'Landed', note: 'He heaves, and the fish comes up out of the water on the line and over to him. He lets the rod drop to the boards, catches the fish on his upturned palms and lifts it over his head like a trophy.', once: true },
+  },
+};
+
+/** Caputo holds the rod in his jaws, so he fishes with his head and his whole body. */
+ABOUT.caputo = {
+  holds: { fish_cast: 'cast', fish_reel: 'reel', fish_show: 'landed' },
+  tall: 1.55,
+  reach: 5.6,
+  title: 'Caputo, fishing',
+  hovers: false,
+  clips: {
+    fish_cast: { label: 'Cast', note: 'The rod is clamped in his jaws from the first frame to the last. He draws his head up and back over his right shoulder, sinking onto his haunches, then whips it forward and down, and the lure flies out.', once: true },
+    fish_reel: { label: 'Reel', note: 'A tug of war. He is braced low with the rod in his jaws, pointing along the line. The fish hauls his head down and from side to side, he heaves it back up, and his tail lashes. The reel under the rod turns by itself while the line comes in. It loops for as long as the button reels.', once: false },
+    fish_show: { label: 'Landed', note: 'One great heave of his head flings the fish out of the water and onto the boards in front of him. He lets the rod fall, watches the fish land, then stands over it as tall as he can and roars.', once: true },
   },
 };
 
@@ -342,7 +357,8 @@ const start = async (): Promise<void> => {
 
     // What he holds while fishing. His model has no finger bones, so everything is held at a grip point in the middle of a palm (tackle.ts).
     if (about.holds && enemy.grips) {
-      const tackle = makeTackle(model.scene, root, scale, enemy.grips, heldFish, mixer, actions);
+      // The rod is the same size in the game whoever holds it: sized by how tall this hero stands there.
+      const tackle = makeTackle(model.scene, root, ((scale * size.y) / (about.tall ?? GAME_TALL)) * GAME_UNIT, enemy.grips, heldFish, mixer, actions);
       slot.tackle = tackle;
       const sizes = document.createElement('div');
       sizes.className = 'row small';
