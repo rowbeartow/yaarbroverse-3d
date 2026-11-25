@@ -126,7 +126,7 @@ describe('the fish book', () => {
       expect(book[species].biggest, species).toBe(outcome.biggest[species]);
     }
     expect(game.summary().fishing).toBe(true);
-  }, 60_000);
+  });
 });
 
 describe('what the game says about fishing', () => {

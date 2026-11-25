@@ -9,6 +9,8 @@
     "build": "tsc --noEmit && node scripts/build-assets.mjs && vite build && node scripts/check-size.mjs",
     "preview": "vite preview",
     "test": "vitest run",
+    "test:rules": "vitest run --project rules",
+    "test:bot": "vitest run --project bot",
     "test:browser": "playwright test",
     "check": "npm test && npm run build"
   },
