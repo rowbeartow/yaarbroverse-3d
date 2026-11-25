@@ -10,6 +10,7 @@ import { MOVE, STEP } from '../../src/game/hero';
 import { surfaceBelow, topAt, touchesFromAbove, type Level, type Solid } from '../../src/game/level';
 import { SWIM, type Water } from '../../src/game/swim';
 import { steadyFor } from '../../src/game/moving';
+import { PikePlan, wayBack } from './pike-plan';
 
 /** The spot on a solid the bot heads for: its middle if round, else the nearest point well inside. */
 const aimPoint = (s: Solid, x: number, z: number): { x: number; z: number } => {
@@ -40,19 +41,37 @@ export class Bot {
   /** The enemy the bot is in the air over, on its way to landing on it. */
   private stomping: Enemy | null = null;
 
+  /** How the bot deals with a monster pike (see pike-plan.ts), and once it is beaten, the way back to the end of the route. */
+  private pike = new PikePlan();
+  private detour: string[] | null = null;
+
   /** The level is read from the game on every step, so moving pieces are where they are now. */
   constructor(_level?: Level) {}
+
+  /** The pieces the bot follows in order: the level's route, or after a monster pike is beaten away from the route, the way back to its end. */
+  private routeOf(game: Game): string[] {
+    if (game.pike?.phase === 'defeated' && !this.detour && !game.level.route.includes(game.groundId ?? '') && (game.swimming || game.groundId === game.level.pike?.log || !game.grounded)) {
+      this.detour = wayBack(game.level);
+    }
+    return this.detour ?? game.level.route;
+  }
 
   /** Decides this step's input from what the game looks like right now. */
   input(game: Game): Input {
     // The game's own copy of the level: its moving pieces are where the rules have them now.
     const level = game.level;
+    const route = this.routeOf(game);
     for (const event of game.events) {
-      if (event.type === 'bounce') this.index = level.route.indexOf(event.solidId);
+      if (event.type === 'bounce') this.index = route.indexOf(event.solidId);
     }
-    if (game.grounded && game.groundId) this.index = level.route.indexOf(game.groundId);
+    if (game.grounded && game.groundId) this.index = route.indexOf(game.groundId);
+    // A monster pike on the line or in the water: the fight is the bot's whole business until it is won.
+    if (game.pike && game.pike.phase !== 'lurking' && game.pike.phase !== 'defeated') {
+      const fight = this.pike.input(game);
+      if (fight) return fight;
+    }
     if (game.swimming && game.waterId) {
-      const swum = level.route.indexOf(game.waterId);
+      const swum = route.indexOf(game.waterId);
       if (swum >= 0) this.index = swum;
       else {
         // Water that is not part of the way on: a missed jump. Swim for the next piece if it can be
@@ -63,7 +82,7 @@ export class Bot {
           // A crocodile's back cannot be climbed onto from the water.
           return solid !== undefined && solid.motion?.kind !== 'float' && solid.top - pool.surface <= SWIM.climbHeight;
         };
-        while (this.index >= 0 && !reachable(level.route[this.index + 1])) this.index -= 1;
+        while (this.index >= 0 && !reachable(route[this.index + 1])) this.index -= 1;
       }
       return this.swimSafely(game);
     }
@@ -72,7 +91,7 @@ export class Bot {
     // once letting go would land on what the rope leads to. Never hang on for ever.
     if (game.swinging) {
       const swing = game.swinging;
-      this.index = level.route.indexOf(swing.rope.id);
+      this.index = route.indexOf(swing.rope.id);
       this.swingingFor = this.holdingJump ? 0 : this.swingingFor + STEP;
       const outward = swing.speed > 0 && swing.angle > swing.swing * 0.35;
       this.holdingJump = (outward || this.swingingFor > 5) && this.wouldLand(game);
@@ -105,6 +124,12 @@ export class Bot {
       return { moveX: distance > 1e-6 ? (dx / distance) * push : 0, moveZ: distance > 1e-6 ? (dz / distance) * push : 0, jump: this.holdingJump };
     }
 
+    // A monster pike still to be hooked: at the end of the route, go and fish for it.
+    if (game.pike && game.pike.phase === 'lurking') {
+      const fish = this.pike.input(game);
+      if (fish) return fish;
+    }
+
     // A boss in the way: fight it. The goal cannot be taken until it is beaten.
     const boss = game.boss;
     if (boss && boss.phase !== 'defeated') {
@@ -115,7 +140,7 @@ export class Bot {
 
     // A pool next on the route: head for what comes after it, and the edge ahead takes the bot in.
     const isWater = (id: string | undefined): boolean => (level.water ?? []).some((w) => w.id === id);
-    const nextId = isWater(level.route[this.index + 1]) ? level.route[this.index + 2] : level.route[this.index + 1];
+    const nextId = isWater(route[this.index + 1]) ? route[this.index + 2] : route[this.index + 1];
     const next = level.solids.find((s) => s.id === nextId);
     // A rope next on the route: run and jump for where it hangs, and the hero takes hold in the air.
     const rope = (level.ropes ?? []).find((each) => each.id === nextId);
@@ -231,7 +256,7 @@ export class Bot {
   private swim(game: Game): Input {
     const level = game.level;
     const water = game.water as Water;
-    const next = level.solids.find((s) => s.id === level.route[this.index + 1]);
+    const next = level.solids.find((s) => s.id === this.routeOf(game)[this.index + 1]);
     const aim = next ? aimPoint(next, game.x, game.z) : { x: level.leaf.x, z: level.leaf.z };
     const dx = aim.x - game.x;
     const dz = aim.z - game.z;
@@ -321,7 +346,7 @@ export class Bot {
   /** The swimming plan alone, for playing forward: swim when swimming, and the whole bot otherwise. */
   private swimOnly(game: Game): Input {
     if (game.swimming && game.waterId) {
-      this.index = game.level.route.indexOf(game.waterId);
+      this.index = this.routeOf(game).indexOf(game.waterId);
       return this.swim(game);
     }
     return this.input(game);
@@ -541,7 +566,7 @@ const roomIn = (arena: BossSpot['arena'], knockback: number): BossSpot['arena'] 
 const copyGame = (game: Game): Game => Object.assign(Object.create(Game.prototype) as Game, structuredClone({ ...game }));
 
 /** A copy of the bot, for playing its plan forward. */
-const copyBot = (bot: Bot): Bot => Object.assign(Object.create(Bot.prototype) as Bot, { ...bot, stomping: null, escape: null, dodge_: null });
+const copyBot = (bot: Bot): Bot => Object.assign(Object.create(Bot.prototype) as Bot, { ...bot, stomping: null, escape: null, dodge_: null, pike: new PikePlan() });
 
 /**
  * Plays a copy of a game (see `copyGame`) forward for up to `seconds` with `choose` deciding

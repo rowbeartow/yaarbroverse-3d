@@ -7,9 +7,10 @@ import { BOSS, bossFighting, newBoss, resetBoss, stepBoss, type Boss, type BossA
 import { pickupCounts, touchesPickup, type PickupKind } from './collect';
 import type { Difficulty } from './difficulty';
 import { ENEMY, callSidekick, dismissSidekick, newEnemy, sendHome, stepEnemy, type Enemy, type EnemyPhase, type EnemyTuning } from './enemy';
-import { dropLine, newFishing, onSpot, stepFishing, type Catch, type FishingEvent, type FishingState } from './fishing';
+import { dropLine, fishingPoint, monsterOf, newFishing, onSpot, stepFishing, stockMonster, type Catch, type FishingEvent, type FishingState } from './fishing';
 import { MOVE, STEP, knockSpeed, type HeroName } from './hero';
 import { pushOutside, surfaceBelow, topAt, touchesFromAbove, type Level, type Solid } from './level';
+import { PIKE, newPike, pikeFighting, resetPike, stepPike, type Pike, type PikePhase } from './pike';
 import { ownPieces, resetPieces, stepPieces, type PieceEvent } from './moving';
 import { HANG, ROPE, grab, handOf, handSpeed, letGo, newRope, ropeInReach, stepHeld, stepLoose, type RopeState } from './rope';
 import { SWIM, climbOut, inWater, inWeeds, waterAt, type Water } from './swim';
@@ -50,9 +51,15 @@ export type GameEvent =
    */
   | { type: 'boss'; id: string; what: 'begin' | 'blocked' | 'call' | 'beaten' }
   | { type: 'boss'; id: string; what: 'phase'; phase: BossPhase; attack: BossAttack | null }
-  | { type: 'boss'; id: string; what: 'hit'; how: 'roll' | 'pounce' | 'stomp'; left: number }
+  | { type: 'boss'; id: string; what: 'hit'; how: 'roll' | 'pounce' | 'stomp' | 'reel'; left: number }
   | { type: 'boss'; id: string; what: 'stage'; stage: number }
   | { type: 'boss'; id: string; what: 'reset'; healed: boolean }
+  /**
+   * The monster pike (see pike.ts) began something in its fight: a phase, or it dragged the hero off the fishing spot.
+   * Its fight beginning (it is hooked), its hits (`how` is `reel` for a pip the tug of war took), being beaten and
+   * starting over are reported as a boss's are, under its own id.
+   */
+  | { type: 'pike'; id: string; what: PikePhase | 'dragged' }
   /** Lost a heart. `left` is how many remain. */
   | { type: 'hurt'; left: number }
   /** Went back to the last safe bank with every heart again, after losing the last one. */
@@ -141,6 +148,8 @@ export class Game {
   beaten = 0;
   /** The level's boss, as it is now, or null when the level has none. */
   readonly boss: Boss | null;
+  /** The level's monster pike, as it is now (see pike.ts), or null when the level has none. */
+  readonly pike: Pike | null;
   /** Hearts left, and hearts lost over the whole run. */
   hearts: number;
   heartsLost = 0;
@@ -180,6 +189,8 @@ export class Game {
   lastRope: string | null = null;
   /** Thrown from a rope with help, and still in the air: the stick cannot spoil the throw. */
   private thrown = false;
+  /** Dragged off the fishing spot by the monster pike, and still in the air. */
+  dragging = false;
   /** How far the hero was from the rope's end when it took hold: it slides to the end over a moment, never jumps there. */
   private ropeSlip = { x: 0, y: 0, z: 0 };
   /** In the air after a jump or a rope, where the jump assist can help (see assist.ts); and what it is steering onto, a solid's or a rope's id. */
@@ -213,6 +224,7 @@ export class Game {
     this.tuning = level.enemyTuning ?? { warning: 1, speed: 1, rest: 1 };
     this.enemies = (level.enemies ?? []).map((spot) => newEnemy(spot, this.tuning));
     this.boss = level.boss ? newBoss(level.boss) : null;
+    this.pike = level.pike ? newPike(level.pike) : null;
     this.ropes = (level.ropes ?? []).map(newRope);
     this.fishing = level.fishing ? newFishing(level.fishing) : null;
     const under = surfaceBelow(level, this.x, this.z, this.y, MOVE.footRadius);
@@ -261,9 +273,9 @@ export class Game {
     return this.rolling && Math.hypot(this.vx, this.vz) > MOVE.walkSpeed * 1.02;
   }
 
-  /** True when the goal can be taken: always, but for a level whose boss is not yet beaten. */
+  /** True when the goal can be taken: always, but for a level whose boss or monster pike is not yet beaten. */
   get goalOpen(): boolean {
-    return !this.boss || this.boss.phase === 'defeated';
+    return (!this.boss || this.boss.phase === 'defeated') && (!this.pike || this.pike.phase === 'defeated');
   }
 
   /** Where a fall would return the hero right now. */
@@ -300,7 +312,7 @@ export class Game {
   hurt(fromX: number, fromZ: number): boolean {
     if (this.complete || this.protectedFor > 0 || this.hearts <= 0) return false;
     // Hurt while fishing: the line is dropped, and a hooked fish gets away.
-    if (this.fishing) for (const event of dropLine(this.fishing)) this.pending.push({ type: 'fishing', ...event });
+    if (this.fishing) this.fished(dropLine(this.fishing), this.pending);
     this.hearts -= 1;
     this.heartsLost += 1;
     let awayX = this.x - fromX;
@@ -378,6 +390,15 @@ export class Game {
       const healed = resetBoss(this.boss);
       this.events.push({ type: 'boss', id: this.boss.spot.id, what: 'reset', healed });
     }
+    // And for the monster pike: back in the fishing water with every pip, to be hooked again.
+    if (this.pike && pikeFighting(this.pike)) {
+      const healed = resetPike(this.pike);
+      if (this.fishing && this.level.fishing) {
+        for (const event of dropLine(this.fishing)) if (event.what !== 'escaped') this.events.push({ type: 'fishing', ...event });
+        stockMonster(this.fishing, this.level.fishing);
+      }
+      this.events.push({ type: 'boss', id: this.pike.spot.id, what: 'reset', healed });
+    }
     // No hearts left: start again from here with all of them, protected for a moment.
     if (this.hearts <= 0 || this.breathOut) {
       this.breathOut = false;
@@ -424,10 +445,7 @@ export class Game {
       const standing = !frozen && this.grounded && !this.swimming && this.climbing <= 0 && onSpot(spot, this.groundId, this.x, this.z);
       const busy = this.fishing.phase !== 'off';
       const across = -spot.ahead.z * input.moveX + spot.ahead.x * input.moveZ;
-      for (const event of stepFishing(this.fishing, spot, { button: standing && Boolean(input.move), jump: standing && input.jump, across }, standing, dt)) {
-        if (event.what === 'landed') this.catches.push({ species: event.species, size: event.size });
-        this.events.push({ type: 'fishing', ...event });
-      }
+      this.fished(stepFishing(this.fishing, spot, { button: standing && Boolean(input.move), jump: standing && input.jump, across }, standing, dt), this.events);
       if (busy || this.fishing.phase !== 'off') {
         input = IDLE;
         this.facing = Math.atan2(spot.ahead.x, spot.ahead.z);
@@ -457,6 +475,7 @@ export class Game {
     if (this.grounded || this.swimming) {
       this.lastRope = null;
       this.thrown = false;
+      this.dragging = false;
     }
     if (this.grounded || this.swimming || this.swinging || frozen) {
       this.assisting = false;
@@ -661,6 +680,7 @@ export class Game {
     }
 
     if (this.complete) return;
+    this.fightPike(previousY, dt);
 
     // The enemies move, and anything they touch is settled.
     for (const enemy of this.enemies) {
@@ -787,6 +807,118 @@ export class Game {
     if (this.fainting > 0) {
       this.fainting = Math.max(0, this.fainting - dt);
       if (this.fainting === 0) this.toSafeSpot();
+    }
+  }
+
+  /**
+   * Takes in what the fishing rules report: a landed fish counts for the run, and the monster's news moves
+   * the pike's fight on (see pike.ts). `into` is where the events go: this step's, or the next one's.
+   */
+  private fished(events: FishingEvent[], into: GameEvent[]): void {
+    const { pike } = this;
+    for (const event of events) {
+      if (event.what === 'landed') this.catches.push({ species: event.species, size: event.size });
+      into.push({ type: 'fishing', ...event });
+      if (!pike || pike.phase === 'defeated') continue;
+      const id = pike.spot.id;
+      if (event.what === 'hooked' && event.monster) {
+        // Hooked: the fight is on.
+        pike.phase = 'hooked';
+        pike.timer = 0;
+        pike.fights += 1;
+        into.push({ type: 'boss', id, what: 'begin' }, { type: 'pike', id, what: 'hooked' });
+      } else if (event.what === 'pip') {
+        pike.health = Math.max(1, pike.health - 1);
+        into.push({ type: 'boss', id, what: 'hit', how: 'reel', left: pike.health });
+      } else if (event.what === 'escaped' && pike.phase === 'hooked') {
+        // Off the hook: every pip is back, and it has to be hooked again.
+        const healed = resetPike(pike);
+        into.push({ type: 'boss', id, what: 'reset', healed });
+      } else if (event.what === 'dragged') {
+        pike.phase = 'dragging';
+        pike.timer = 0;
+        this.dragged(pike);
+        into.push({ type: 'pike', id, what: 'dragged' });
+      }
+    }
+  }
+
+  /** The pike drags the hero off the fishing spot: thrown through the air to come down in its water. */
+  private dragged(pike: Pike): void {
+    const { landAt, surface } = pike.spot;
+    const fall = Math.max(0, this.y - surface);
+    const seconds = (PIKE.dragUp + Math.sqrt(PIKE.dragUp * PIKE.dragUp + 2 * MOVE.gravity * fall)) / MOVE.gravity;
+    this.vx = (landAt.x - this.x) / seconds;
+    this.vz = (landAt.z - this.z) / seconds;
+    this.vy = PIKE.dragUp;
+    this.grounded = false;
+    this.groundId = null;
+    this.coyote = 0;
+    this.buffer = 0;
+    this.canCutJump = false;
+    this.rolling = false;
+    this.pouncing = 0;
+    // The stick cannot spoil the throw, and nothing hurts on the way.
+    this.thrown = true;
+    this.knocked = true;
+    this.dragging = true;
+    this.protectedFor = Math.max(this.protectedFor, PIKE.dragTime);
+  }
+
+  /** The monster pike: where it is while it lurks or is on the line, and its fight in the water (see pike.ts). */
+  private fightPike(previousY: number, dt: number): void {
+    const { pike, level } = this;
+    if (!pike || !level.pike) return;
+    const id = pike.spot.id;
+    if (pike.phase === 'lurking' || pike.phase === 'hooked') {
+      // It is the monster in the fishing water: its shadow is where the fishing rules have it.
+      const monster = this.fishing && level.fishing ? monsterOf(this.fishing) : null;
+      if (monster && level.fishing) {
+        const { ahead } = level.fishing;
+        const at = fishingPoint(level.fishing, monster.out, monster.across);
+        pike.x = at.x;
+        pike.z = at.z;
+        pike.y = level.fishing.surface - PIKE.depth;
+        pike.facing = Math.atan2(ahead.x * Math.cos(monster.heading) - ahead.z * Math.sin(monster.heading), ahead.z * Math.cos(monster.heading) + ahead.x * Math.sin(monster.heading));
+      }
+      pike.timer += dt;
+      pike.grace = Math.max(0, pike.grace - dt);
+      return;
+    }
+    const log = level.solids.find((s) => s.id === pike.spot.log);
+    if (!log) return;
+    const canBeHurt = this.protectedFor <= 0 && this.hearts > 0;
+    const outcome = stepPike(pike, this, log, MOVE.bodyRadius, previousY, canBeHurt, dt);
+    for (const phase of outcome.entered) this.events.push({ type: 'pike', id, what: phase });
+    if (outcome.struck) {
+      this.events.push({ type: 'boss', id, what: 'hit', how: outcome.struck, left: pike.health });
+      // A pounce or a landing bounces the hero up off it, ready to pounce again.
+      if (outcome.struck !== 'roll') {
+        if (this.pouncing > 0) {
+          const speed = Math.hypot(this.vx, this.vz);
+          if (speed > MOVE.pounceExitSpeed) {
+            this.vx *= MOVE.pounceExitSpeed / speed;
+            this.vz *= MOVE.pounceExitSpeed / speed;
+          }
+        }
+        this.vy = PIKE.rebound;
+        this.pouncing = 0;
+        this.pounceReady = true;
+        this.pounceRest = 0.12;
+        this.grounded = false;
+        this.groundId = null;
+        this.coyote = 0;
+        this.canCutJump = false;
+      }
+      this.protectedFor = Math.max(this.protectedFor, PIKE.strikeProtection);
+      if (pike.phase === 'defeated') {
+        this.beaten += 1;
+        this.protectedFor = Math.max(this.protectedFor, PIKE.victoryProtection);
+        this.events.push({ type: 'boss', id, what: 'beaten' });
+      }
+    } else if (outcome.hurt && this.hurt(outcome.hurt.x, outcome.hurt.z)) {
+      this.events.push(...this.pending);
+      this.pending = [];
     }
   }
 

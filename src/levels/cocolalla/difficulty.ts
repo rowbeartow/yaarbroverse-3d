@@ -11,7 +11,8 @@
 
 import type { JumpAssist } from '../../game/assist';
 import type { Difficulty } from '../../game/difficulty';
-import type { FishingNumbers, Species, SpeciesNumbers } from '../../game/fishing';
+import type { FishingNumbers, MonsterNumbers, Species, SpeciesNumbers } from '../../game/fishing';
+import type { PikeNumbers } from '../../game/pike';
 
 export interface LakeNumbers {
   /**
@@ -172,6 +173,29 @@ export interface LakeNumbers {
    * Easy needs no timing: the cast lands beside the nearest fish, a fish hooks itself, and the line cannot snap.
    */
   fishing: FishingNumbers;
+  /**
+   * THE MONSTER PIKE (see src/game/pike.ts), hooked from the jetty and then fought in the water.
+   * `monster` is the tug of war on the line (where its circle is comes from the lake's layout):
+   *   cruise   how fast its shadow swims its circle. A lure has to land near it.
+   *   pips     how many of its pips the tug of war takes: one for each stretch of line reeled in.
+   *   dragAt   metres of line still out when the last of those goes and it drags the hero into the lake.
+   *   calm     seconds it tires for between thrashes: reel now.
+   *   thrash   seconds a thrash lasts (it lasts 1.4 times this): let the line run, or it snaps (`snap` in `fishing`).
+   *   run      how fast it takes line back while it thrashes.
+   *   pull     with cast help (Easy), how strongly the cast is drawn to it: a ring anywhere about it hooks it.
+   * `pike` is the water half:
+   *   health         pips in all: the tug of war's, and the rest to be struck off from the floating log.
+   *   swimSpeed      how fast it circles.
+   *   pause          seconds it circles between attacks.
+   *   chargeWarning  seconds of tell before it rushes a swimmer. Swim out of its line.
+   *   chargeSpeed    how fast the rush is (a swimmer makes 3.6), and `chargeReach` how far it goes.
+   *   snapWarning    seconds it shows its open jaws off the end of the log before it throws itself up it. Run down the log.
+   *   rest           seconds it then lies spent with its head on the log: the opening.
+   *   aimLine        true: lines show where a rush and a snap will go (Easy only, the owner's rule).
+   * Easy needs no timing: the line cannot snap, the tells are long, and it lies spent for a long time.
+   */
+  monster: Omit<MonsterNumbers, 'home' | 'circle' | 'size'>;
+  pike: PikeNumbers;
   pointScout: boolean;
   dockScouts: number;
   barMosquito: boolean;
@@ -236,6 +260,8 @@ const FISH: Record<Species, SpeciesNumbers> = {
 export const LAKE_DIFFICULTY: Record<Difficulty, LakeNumbers> = {
   easy: {
     fishing: { castHelp: true, sweep: 5, notice: 3, spook: 0, biteWindow: Infinity, moreNibbles: 0, nibbleScares: false, snap: Infinity, tell: 1, drift: 0, reel: 3.2, species: FISH },
+    monster: { cruise: 1.6, pips: 2, dragAt: 4, calm: 2.5, thrash: 0.9, run: 0, pull: 3 },
+    pike: { health: 4, swimSpeed: 2.2, pause: 3, chargeWarning: 2.2, chargeSpeed: 6, chargeReach: 8, snapWarning: 2.4, rest: 5, aimLine: true },
     boulderCount: 5, boulderRadius: 1.6, boulderGap: 0.9,
     crossing: 34,
     stoneGap: 1.3, stoneStagger: 0.3, stoneUp: 4, stoneTell: 0, stoneWait: false,
@@ -252,6 +278,8 @@ export const LAKE_DIFFICULTY: Record<Difficulty, LakeNumbers> = {
   },
   normal: {
     fishing: { castHelp: false, sweep: 7, notice: 2.5, spook: 0, biteWindow: 1.5, moreNibbles: 0, nibbleScares: false, snap: 1.5, tell: 0.7, drift: 0.3, reel: 3, species: FISH },
+    monster: { cruise: 2.2, pips: 3, dragAt: 4, calm: 2, thrash: 1, run: 2, pull: 1 },
+    pike: { health: 6, swimSpeed: 3, pause: 2.2, chargeWarning: 1.1, chargeSpeed: 10, chargeReach: 10, snapWarning: 1.2, rest: 2.8, aimLine: false },
     boulderCount: 6, boulderRadius: 1.2, boulderGap: 1.8,
     crossing: 48,
     stoneGap: 1.9, stoneStagger: 1.4, stoneUp: 4, stonePeriod: 8, stoneTell: 0.8, stoneWait: true,
@@ -269,6 +297,8 @@ export const LAKE_DIFFICULTY: Record<Difficulty, LakeNumbers> = {
   },
   hard: {
     fishing: { castHelp: false, sweep: 10, notice: 1.2, spook: 0.5, biteWindow: 0.7, moreNibbles: 1, nibbleScares: true, snap: 0.8, tell: 0.4, drift: 0.8, reel: 2.8, species: FISH },
+    monster: { cruise: 3, pips: 4, dragAt: 4, calm: 1.5, thrash: 1, run: 2.2, pull: 1 },
+    pike: { health: 8, swimSpeed: 3.6, pause: 1.5, chargeWarning: 0.7, chargeSpeed: 13, chargeReach: 12, snapWarning: 0.75, rest: 1.8, aimLine: false },
     boulderCount: 7, boulderRadius: 0.85, boulderGap: 2.6,
     crossing: 54,
     stoneGap: 2.2, stoneStagger: 0.95, stoneUp: 2.1, stonePeriod: 5, stoneTell: 0.5, stoneSnap: 0.8, stoneWait: false,

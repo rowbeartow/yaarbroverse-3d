@@ -28,7 +28,9 @@
 //      landing. The posts sink too (on Easy they only sag). Right.
 //   8. The Old Pier: the boardwalk east out over the lake to the fishing
 //      dock and the golden leaf. The camera turns north again. Right.
-//      (The monster pike fight goes on the dock in a later milestone.)
+//      The monster pike is hooked from the dock's jetty and fought in the
+//      water off it, from a floating log west of the fishing water. The
+//      golden leaf is out of reach until it is beaten.
 //
 // The water is seven pools, each a box. The sides of a pool hold a swimmer
 // in, and a solid stands across every place where the route passes from one
@@ -47,6 +49,7 @@ import type { EnemySpot } from '../../game/enemy';
 import type { FishingSpot } from '../../game/fishing';
 import type { Level, Section, Solid } from '../../game/level';
 import type { Motion } from '../../game/moving';
+import type { PikeSpot } from '../../game/pike';
 import { ROPE, type Rope } from '../../game/rope';
 import type { Water } from '../../game/swim';
 import { LAKE_DIFFICULTY, type LakeNumbers } from './difficulty';
@@ -65,6 +68,8 @@ export const LAKE_HINTS: Record<string, string> = {
   'reed-bar': 'Swim to the rocks and dive through the gap.',
   'cove-beach': 'Up the posts to the old pier!',
   landing: 'Along the boardwalk to the fishing dock!',
+  dock: 'Something huge is circling off the jetty. Cast at the big shadow!',
+  'pike-log': 'When its jaws come up, run down the log. When it lies spent, jump on its head!',
 };
 
 export const LAKE_GOAL_LINE = 'A golden leaf, at the end of the dock!';
@@ -253,6 +258,28 @@ export const LAKE_SHAPE = {
   fishingNear: 3,
   fishingFar: 24,
   fishingHalfWidth: 7,
+  /**
+   * The monster pike (see src/game/pike.ts). Measured from the fishing spot: how far out and how far to the side the
+   * middle of its circle is, and how wide the circle; how long it is, nose to tail.
+   */
+  pikeOut: 13.5,
+  pikeAcross: -2.5,
+  pikeCircle: 4,
+  pikeLength: 6,
+  /**
+   * The floating log a hero fights it from, west of the fishing water so no cast lands on it: how far to the side its
+   * middle is, from how far out to how far out it lies, its width, and how high its top floats (low enough to climb onto).
+   */
+  pikeLogAcross: -9.2,
+  pikeLogNear: 8,
+  pikeLogFar: 15,
+  pikeLogWidth: 1.6,
+  pikeLogTop: 0.5,
+  /** Where the pike's drag puts the hero in the water: this far out and to the side, a short swim from the log. */
+  pikeDragOut: 6.5,
+  pikeDragAcross: -5,
+  /** How far in from the dock's west end a hero sent back by the pike stands again. */
+  dockSafeIn: 1.5,
   fallY: -6,
   depth: -40,
 } as const;
@@ -507,7 +534,8 @@ export function buildLake(difficulty: Difficulty, numbers: LakeNumbers = LAKE_DI
   x = coveX + shape.landingHalf;
   box('boardwalk', 'deck', x, x + shape.boardwalkLength, pierZ - shape.boardwalkHalfWidth, pierZ + shape.boardwalkHalfWidth, deck, deck - 0.4);
   x += shape.boardwalkLength;
-  box('dock', 'deck', x, x + shape.dockLength, pierZ - shape.dockHalfWidth, pierZ + shape.dockHalfWidth, deck, deck - 0.4);
+  // The dock is the doorstep of the pike's fight, so it is a checkpoint on every difficulty: losing to the pike costs the fight, not the pier.
+  box('dock', 'deck', x, x + shape.dockLength, pierZ - shape.dockHalfWidth, pierZ + shape.dockHalfWidth, deck, deck - 0.4, { safe: true, safeAt: { x: x + shape.dockSafeIn, z: pierZ } });
   x += shape.dockLength;
   // The fishing jetty: a short walk out from the dock's north side, off the scouts' ground, with the lake open in front of it.
   // The jetty leaves the dock's west end and the golden leaf is at its far east end, so going fishing never ends the level by accident.
@@ -535,7 +563,25 @@ export function buildLake(difficulty: Difficulty, numbers: LakeNumbers = LAKE_DI
     near: shape.fishingNear,
     far: shape.fishingFar,
     halfWidth: shape.fishingHalfWidth,
-    numbers: n.fishing,
+    numbers: { ...n.fishing, monster: { ...n.monster, home: { out: shape.pikeOut, across: shape.pikeAcross }, circle: shape.pikeCircle, size: shape.pikeLength * 100 } },
+  };
+  // The monster pike's water half: a floating log west of the fishing water, and the circle it swims beside it.
+  // In this water, east is to the right of the way the jetty faces, and north is out.
+  const logX = fishing.x + shape.pikeLogAcross;
+  box('pike-log', 'log', logX - shape.pikeLogWidth / 2, logX + shape.pikeLogWidth / 2, fishing.z - shape.pikeLogFar, fishing.z - shape.pikeLogNear, shape.pikeLogTop, shape.pikeLogTop - shape.logThickness, {}, false);
+  sections[sections.length - 1].solids.push('pike-log');
+  const pike: PikeSpot = {
+    id: 'monster-pike',
+    name: 'The Monster Pike',
+    length: shape.pikeLength,
+    water: 'pier-water',
+    surface: shape.surface,
+    floor: shape.floor,
+    home: { x: fishing.x + shape.pikeAcross, z: fishing.z - shape.pikeOut },
+    circle: shape.pikeCircle,
+    log: 'pike-log',
+    landAt: { x: fishing.x + shape.pikeDragAcross, z: fishing.z - shape.pikeDragOut },
+    numbers: n.pike,
   };
 
   // The water. Each pool's edge that is not shore or rock is where a log boom floats.
@@ -759,6 +805,7 @@ export function buildLake(difficulty: Difficulty, numbers: LakeNumbers = LAKE_DI
     ropes,
     ropeHelp: n.ropeHelp,
     fishing,
+    pike,
     lightEnemies: true,
     enemySight: shape.enemySight,
     jumpAssist: n.jumpAssist,

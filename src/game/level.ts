@@ -7,6 +7,7 @@
 import type { FishingSpot } from './fishing';
 import type { JumpAssist } from './assist';
 import type { BossSpot } from './boss';
+import type { PikeSpot } from './pike';
 import type { Pickup } from './collect';
 import type { EnemySpot, EnemyTuning } from './enemy';
 import type { Motion, Piece } from './moving';
@@ -134,6 +135,8 @@ export interface Level {
   pickups?: Pickup[];
   /** The boss the level ends with, if it has one. The goal cannot be taken until it is beaten. */
   boss?: BossSpot;
+  /** The monster pike the level ends with, if it has one: hooked from the fishing spot and then fought in the water (see pike.ts). The goal cannot be taken until it is beaten. */
+  pike?: PikeSpot;
   /** Ids of the solids in the order a run crosses them, start to goal. A pool's id stands for swimming across it, and a rope's for swinging on it. */
   route: string[];
   /** The level's sections in order, each with the ids of its solids in route order. */
