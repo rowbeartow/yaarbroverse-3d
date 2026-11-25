@@ -1,0 +1,20 @@
+{
+  "title": "New: the monster pike, the new moves and the rescue",
+  "note": "Two choices of each, none in the game yet. Reply with a letter for each of the seven: hooked, line snaps, surfacing, jaws, kick, Claw Slash, rescue.",
+  "sounds": [
+    { "label": "Pike hooked A", "what": "A dull wooden thump, then a low plucked string: the line goes taut.", "file": "pike-hooked-a.wav", "credit": "Recorded: \"75 CC0 breaking / falling / hit sfx\" by rubberduck, with a pluck from \"Interface Sounds\" by Kenney, both from OpenGameArt. CC0.", "loop": false, "level": 0, "mix": "cue" },
+    { "label": "Pike hooked B", "what": "A deeper stomp with a shorter, tighter pluck.", "file": "pike-hooked-b.wav", "credit": "Recorded: \"80 CC0 creture SFX #2\" by rubberduck, with a pluck from \"Interface Sounds\" by Kenney, both from OpenGameArt. CC0.", "loop": false, "level": 0, "mix": "cue" },
+    { "label": "Line snaps A", "what": "A dry crack, like a stick breaking.", "file": "line-snap-a.wav", "credit": "Recorded: \"75 CC0 breaking / falling / hit sfx\" by rubberduck, from OpenGameArt. CC0.", "loop": false, "level": 0, "mix": "cue" },
+    { "label": "Line snaps B", "what": "A whip of air and a twang.", "file": "line-snap-b.wav", "credit": "Recorded: \"Swishes Sound Pack\" by artisticdude, with a pluck from \"Interface Sounds\" by Kenney, both from OpenGameArt. CC0.", "loop": false, "level": 0, "mix": "cue" },
+    { "label": "Pike surfacing A", "what": "A heavy, low splash: something big comes up.", "file": "pike-surface-a.wav", "credit": "Recorded: \"40 CC0 water / splash / slime SFX\" by rubberduck, from OpenGameArt. CC0.", "loop": false, "level": 0, "mix": "cue" },
+    { "label": "Pike surfacing B", "what": "A longer, brighter splash with more spray.", "file": "pike-surface-b.wav", "credit": "Recorded: \"40 CC0 water / splash / slime SFX\" by rubberduck, from OpenGameArt. CC0.", "loop": false, "level": 0, "mix": "cue" },
+    { "label": "Pike's jaws snap A", "what": "The crocodile's bite played lower and longer, with a wet slap.", "file": "pike-snap-a.wav", "credit": "Recorded: \"Crunchy bite\" by fvcalderan, with a splash from \"40 CC0 water / splash / slime SFX\" by rubberduck, both from OpenGameArt. CC0.", "loop": false, "level": 0, "mix": "cue" },
+    { "label": "Pike's jaws snap B", "what": "A hard, bright clack with a dull wet slap under it.", "file": "pike-snap-b.wav", "credit": "Recorded: \"Thwack Sounds\" by AntumDeluge, with a splash from \"40 CC0 water / splash / slime SFX\" by rubberduck, both from OpenGameArt. CC0.", "loop": false, "level": 0, "mix": "cue" },
+    { "label": "Walblum's kick A", "what": "A punch landing.", "file": "kick-a.wav", "credit": "Recorded: \"Punch\" by qubodup, from OpenGameArt. CC0.", "loop": false, "level": 0, "mix": "action" },
+    { "label": "Walblum's kick B", "what": "A short, snappy thwack.", "file": "kick-b.wav", "credit": "Recorded: \"Thwack Sounds\" by AntumDeluge, from OpenGameArt. CC0.", "loop": false, "level": 0, "mix": "action" },
+    { "label": "Claw Slash A", "what": "Three quick swishes, each a little higher.", "file": "claw-slash-a.wav", "credit": "Recorded: \"Swishes Sound Pack\" by artisticdude, from OpenGameArt. CC0.", "loop": false, "level": 0, "mix": "action" },
+    { "label": "Claw Slash B", "what": "Three scratches over one swish: more edge, less air.", "file": "claw-slash-b.wav", "credit": "Recorded: \"Interface Sounds\" by Kenney, with a swish from \"Swishes Sound Pack\" by artisticdude, both from OpenGameArt. CC0.", "loop": false, "level": 0, "mix": "action" },
+    { "label": "The rescue A", "what": "A rising chime, about a second and a half.", "file": "rescue-a.wav", "credit": "Recorded: \"Chimey UI Sounds\" by MouseBYTE, from OpenGameArt. CC0.", "loop": false, "level": 0, "mix": "cue" },
+    { "label": "The rescue B", "what": "A second, gentler chime.", "file": "rescue-b.wav", "credit": "Recorded: \"Chimey UI Sounds\" by MouseBYTE, from OpenGameArt. CC0.", "loop": false, "level": 0, "mix": "cue" }
+  ]
+}
