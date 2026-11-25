@@ -127,6 +127,20 @@ ABOUT.yaarbro = {
   },
 };
 
+/** Walblum the muskrat (tools/rig-walblum.py): Yaarbro's second move, and his rescue on Cocolalla Lake. */
+ABOUT.walblum = {
+  title: 'Walblum',
+  hovers: false,
+  clips: {
+    idle: { label: 'Standing', note: 'Safe and waiting: breathing, a look about, arms down.' },
+    kick: { label: 'Karate kick', note: 'Shot from under Yaarbro\'s arm at the nearest enemy: lying back with one leg straight out in front, one fist forward. The game moves him; the clip holds the pose with a small shake.' },
+    tumble: { label: 'Tumble home', note: 'The way back to Yaarbro: heels over head, once a clip, arms and legs flung out.' },
+    scared: { label: 'Scared on his log', note: 'On a drifting log with pike about: crouched low, hugging himself, trembling, his head darting from side to side.' },
+    paddle: { label: 'Paddling', note: 'Once the monster pike is beaten: flat on his belly along the log, paddling it to the dock with his arms in turn.' },
+    cheer: { label: 'Cheer', note: 'Safe on the boards: two hops with both arms thrown up.' },
+  },
+};
+
 /** The fish of Cocolalla Lake share one skeleton and one set of clips (tools/rig-fish.py). */
 const FISH_CLIPS: Record<string, ClipNote> = {
   idle: { label: 'Holding still', note: 'Waiting in the water, or looking at a lure. A slow wave down the tail.' },

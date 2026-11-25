@@ -1,0 +1,13 @@
+{
+  "about": "How tools/rig-walblum.py rigs Walblum the muskrat (walblum-b.glb on the hero-models release: the kids' pick, never made again). He came from Meshy standing upright with his arms out, 1.9 m tall as the file has him; the game draws him muskrat-sized. Points are (across to his left, up from the ground, forward toward his nose) in metres on the model as it comes. 'whiskers' lays his hanging whiskers out level (the owner's word): every point further out than 'from' to either side, in front of 'forward_of' and between the two heights is lifted, by more the further out it is, as if the whisker turned up by 'lift_degrees' about its root.",
+  "triangles": 5000,
+  "joints": {
+    "spine": [[0, 0.5, -0.05], [0, 0.95, -0.03], [0, 1.3, 0.0], [0, 1.88, 0.05]],
+    "arm_left": [[0.24, 1.1, 0.03], [0.5, 1.0, 0.06], [0.72, 0.95, 0.08], [0.93, 0.93, 0.1]],
+    "leg_left": [[0.2, 0.42, -0.02], [0.22, 0.1, 0.0], [0.27, 0.03, 0.33]],
+    "tail": [[0, 0.5, -0.3], [0.1, 0.3, -0.42], [0.3, 0.12, -0.5], [0.65, 0.05, -0.55]]
+  },
+  "whiskers": { "from": 0.3, "forward_of": 0.38, "between": [1.2, 1.5], "lift_degrees": 24 },
+  "clips_about": "Seconds each clip lasts. kick and tumble are his flight out and back when Yaarbro sends him (the game moves him; the clips happen on the spot, about his middle). scared, paddle and cheer are for his rescue on Cocolalla Lake: on a drifting log, paddling it to the dock, and safe on the boards.",
+  "clips": { "idle": 2.0, "kick": 0.5, "tumble": 0.45, "scared": 1.6, "paddle": 0.9, "cheer": 1.2 }
+}
