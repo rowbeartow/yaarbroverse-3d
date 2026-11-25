@@ -776,3 +776,15 @@ The owner's word: "Move the tests that play whole levels with the bot into their
 - The time limits that had been written into single tests (30, 60, 120 and 240 seconds) are gone: one number covers them all, and `tests/bot-runs.test.ts` fails if a bot run sets its own.
 - The required check "Tests, build and browser checks" now waits for the new job too, so a pull request cannot merge without it.
 - `npm test` still runs everything, with the same limits, and so does the publish run after a merge.
+
+## 2026-11-25: Caputo's fishing clips are in the game, the rod in his jaws
+
+The owner's word, after seeing Caputo's fishing page: "Caputo looks way better: OK. Put his clips in the game." And: "There's no iPad to test on (it's in the handoff), so skip iPad checks."
+
+- His three clips (`fish_cast`, `fish_reel`, `fish_show`) are written by `tools/rig-quadruped.py`, as on his page. The rod is held at one grip point between his teeth (`"grips"` in `tools/caputo.rig.json`, and on his entry in `HERO_MODELS`; `tests/held-tackle.test.ts` holds the two together). His model was rigged again from his original on the `hero-models` release; `node tools/preview/fishing-measure.mjs caputo` passes on it.
+- In the game the cast and the reel are as on the page. Landing a fish differs in one way, and it is Claude's call, not the owner's: the page stood him on flat ground with boards in front of him, but on the lake's jetty the water is in front of him and his nose may be over the end of it. So he heaves the fish up out of the water, flings it over himself onto the boards behind, and turns round to stand over it and roar. The camera looks north from the jetty, so he ends up facing the camera with the fish in front of him. The fish goes up before it goes across (4 m over the boards at its highest), so it clears the end of the jetty and his head, and it breaks the water at least 2.2 m out from him, past his nose.
+- The rod falls from his opening jaws to the boards beside where he stood, pointing at the water. It and the fish go to whichever side has room on the jetty.
+- The rod is the same size whoever holds it.
+- Checked in still frames of the game itself, from the middle of the jetty and from its end off to one side. Nobody has watched it move in the game.
+- No iPad checks are asked of the owner while he has none. The checks on GitHub in WebKit at iPad size still run on every pull request.
+

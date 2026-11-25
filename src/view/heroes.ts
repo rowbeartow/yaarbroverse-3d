@@ -6,7 +6,7 @@
 import type { Group, Object3D, Vector3 } from 'three';
 import type { HeroName } from '../game/hero';
 import type { Assets } from './assets';
-import type { Grips } from './held-tackle';
+import type { Grips, JawGrip } from './held-tackle';
 import { HERO_MODELS, ModelHero, STAND_IN, wantsStandIn } from './hero-model';
 
 /** What the hero is doing this frame, for the animation. */
@@ -34,17 +34,17 @@ export interface Pose {
   fishing?: { phase: 'aim' | 'cast' | 'wait' | 'hooked' | 'show'; timer: number; reeling: boolean } | null;
 }
 
-/** A hero's palms, for drawing what it holds while fishing (see held-tackle.ts). */
-export interface HeroTackle {
-  grips: Grips;
-  /** Its hand bones. */
-  right: Object3D;
-  left: Object3D;
-  /** Metres in the game for a metre on the model as it comes. */
+/**
+ * What a hero holds things with while fishing, for drawing them (see
+ * held-tackle.ts): the grip points in its palms and its hand bones, or the
+ * grip in its jaws and its head bone.
+ */
+export type HeroTackle = {
+  /** Metres in the game for a metre of rod as held-tackle.ts gives it: the rod is the same size whoever holds it. */
   unit: number;
   /** How far through showing off a landed fish it is, 0 to 1, or null when it is not. */
   show: number | null;
-}
+} & ({ grips: Grips; right: Object3D; left: Object3D } | { jaws: JawGrip; head: Object3D });
 
 /** What the browser checks can ask about the hero on screen. */
 export interface HeroInfo {
@@ -69,7 +69,7 @@ export interface HeroView {
   grip(into: Vector3): boolean;
   /** How much the hero is held by a rope right now, 0 to 1. */
   readonly held: number;
-  /** Its palms, for what it holds while fishing, or null for a hero with no fishing clips. Call after `animate`. */
+  /** Its palms or its jaws, for what it holds while fishing, or null for a hero with no fishing clips. Call after `animate`. */
   tackle(): HeroTackle | null;
   info(): HeroInfo;
   /** For a ghost: how much of it shows, from 0 (gone) to 1. */
