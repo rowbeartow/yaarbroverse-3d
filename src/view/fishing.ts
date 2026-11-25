@@ -8,7 +8,10 @@
 // A hero with fishing clips (Yaarbro) holds the rod at the grip point in his
 // right palm, with a reel under it, and a landed fish lies across both his
 // upturned palms: where each goes is worked out by held-tackle.ts from his
-// hand bones. A hero without them has the rod drawn in front of it.
+// hand bones. Caputo holds the rod in his jaws: it runs out between his
+// teeth, he flings a landed fish over himself onto the boards behind him, and
+// turns to stand over it (`landOnBoards` in held-tackle.ts). A hero with no
+// fishing clips (the stand-in) has the rod drawn in front of it.
 //
 // The dock is the heaviest place on the lake, so the fish cast no shadow and
 // nothing here is moved or drawn while the hero is far from the spot.
@@ -45,7 +48,7 @@ import { clone as cloneRigged } from 'three/examples/jsm/utils/SkeletonUtils.js'
 import { FISHING, SPECIES, fishingPoint, type Fish, type FishingEvent, type FishingSpot, type FishingState, type Species } from '../game/fishing';
 import type { HeroName } from '../game/hero';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
-import { LANDED, ROD, ease, fishFlying, heldSize, lieAcross, readHands, reelOn, rodFalling, rodLine, type RodPose } from './held-tackle';
+import { LANDED, ROD, ease, fishFlung, fishFlying, heldSize, landOnBoards, lieAcross, lieOnBoards, readHands, readJaws, reelOn, rodFalling, rodLine, rodSpatOut, type Boards, type RodPose } from './held-tackle';
 import type { HeroView } from './heroes';
 import type { WaterView } from './water';
 
@@ -57,12 +60,15 @@ export const fishModelFiles = (): string[] => SPECIES.map((species) => FISH_MODE
 const SHOWN = 3;
 /** Fishing is neither moved nor drawn when the hero is further than this from the spot. */
 const NEAR = 32;
-/** Where a hero holds the rod, and where its tip is, from the hero's feet: metres ahead and up. */
+/** For a hero with no fishing clips (the stand-in plays both): where the rod is drawn, and where its tip is, from the hero's feet: metres ahead and up. */
 const GRIP: Record<HeroName, { ahead: number; up: number; tipAhead: number; tipUp: number }> = {
   Yaarbro: { ahead: 0.35, up: 1.05, tipAhead: 1.9, tipUp: 2.5 },
-  // Caputo holds it in his jaws.
   Caputo: { ahead: 0.75, up: 0.95, tipAhead: 2.3, tipUp: 2.2 },
 };
+/** How high over the boards a fish flung onto them goes, in metres: over the head of the hero who flings it. */
+const FLUNG_OVER = 4;
+/** A fish about to be flung breaks the water at least this far out from the hero, in metres: past his nose. */
+const FLUNG_CLEAR = 2.2;
 const LINE_POINTS = 14;
 /** Metres in the game for a metre on Yaarbro's model as it comes: what the reel is sized by. */
 const GAME_REEL = 2.2 / 2.87;
@@ -195,8 +201,13 @@ export class FishingView {
   private spun = 0;
   /** The rod as he last held it, for it to fall from when he lets go to show off a fish. */
   private letGo: RodPose | null = null;
-  /** Whether a landed fish lies on the hero's palms. */
+  /** Whether a landed fish lies on the hero's palms, or on the boards where a hero who fishes with his jaws flung it. */
   private onPalms = false;
+  private onBoards = false;
+  /** For a hero who fishes with his jaws: where his catch and his dropped rod lie, settled as he lands it, and the way he turns to stand over it. */
+  private landing: ReturnType<typeof landOnBoards> | null = null;
+  /** What the spot is on, seen from above. */
+  private readonly boards: Boards;
   private readonly line: Line;
   private readonly linePoints = new Float32Array(LINE_POINTS * 3);
   private readonly looks: Material[] = [];
@@ -208,7 +219,9 @@ export class FishingView {
   private twitch = 0;
   private sunk = 0;
 
-  constructor(private readonly spot: FishingSpot, models: Map<Species, GLTF>, simple: boolean, private readonly water: WaterView | null, deckTop: number) {
+  constructor(private readonly spot: FishingSpot, models: Map<Species, GLTF>, simple: boolean, private readonly water: WaterView | null, deckTop: number, boards: Boards | null = null) {
+    // With nothing known of what the spot is on, the boards are taken to run a few metres round it.
+    this.boards = boards ?? { x: spot.x, z: spot.z, halfX: spot.radius + 3, halfZ: spot.radius + 3, top: deckTop };
     // As many fish of each kind as the water ever holds at once.
     for (const species of SPECIES) {
       const source = models.get(species);
@@ -314,24 +327,34 @@ export class FishingView {
     const landedFish = state.phase === 'show' && state.shown ? (state.fish.find((fish) => fish.mood === 'landed' && fish.species === state.shown?.species && fish.size === state.shown?.size && this.viewFor(fish)) ?? null) : null;
     const landedView = landedFish ? this.viewFor(landedFish) : null;
     let flying: Vector3 | null = null;
-    this.onPalms = false;
+    this.onPalms = this.onBoards = false;
     this.heldRod.visible = this.reel.visible = tackle !== null;
     this.rod.visible = tackle === null;
+    if (state.phase !== 'show') this.landing = null;
     if (tackle && holder) {
       holder.root.updateMatrixWorld(true);
       const unit = tackle.unit;
-      const hands = readHands(tackle.grips, tackle.right, tackle.left, unit);
+      const jaws = 'jaws' in tackle;
+      // The rod as he holds it now: on his right palm, or between his teeth.
+      const hands = 'jaws' in tackle ? null : readHands(tackle.grips, tackle.right, tackle.left, unit);
+      const holding: RodPose = 'jaws' in tackle ? readJaws(tackle.jaws, tackle.head) : hands!;
       const share = state.phase === 'show' ? (tackle.show ?? Math.min(1, state.timer / FISHING.show)) : null;
-      // The landed fish: up out of the water on the line, over in an arc, and down onto his upturned palms.
+      // A hero who fishes with his jaws flings his catch onto the boards behind him: where it and the rod lie is settled once, as he lands it.
+      if (jaws && share !== null && !this.landing) this.landing = landOnBoards(hero, spot.ahead, this.boards, unit);
+      // The landed fish: up out of the water on the line, over in an arc, and down onto his upturned palms, or onto the boards.
       if (share !== null && landedFish && landedView) {
         const { skin, long } = landedView.shape;
         const size = heldSize(landedFish.size, long, unit);
-        const lying = lieAcross(skin, long, hands.gripRight, hands.gripLeft, size);
+        const lying = hands ? lieAcross(skin, long, hands.gripRight, hands.gripLeft, size) : lieOnBoards(skin, this.landing!.fishAt, this.landing!.nose, size);
         const flight = (share - LANDED.burst) / (LANDED.caught - LANDED.burst);
         landedView.root.scale.setScalar(size);
         landedView.root.visible = flight >= 0;
         if (flight < 1) {
-          const now = fishFlying(new Vector3(at.x, spot.surface, at.z), lying, Math.max(0, flight), unit);
+          const from = new Vector3(at.x, spot.surface, at.z);
+          // Flung, it breaks the water clear of his head, which may be out over the end of the boards.
+          const short = hands ? 0 : FLUNG_CLEAR - ((at.x - hero.x) * spot.ahead.x + (at.z - hero.z) * spot.ahead.z);
+          if (short > 0) from.set(at.x + spot.ahead.x * short, spot.surface, at.z + spot.ahead.z * short);
+          const now = hands ? fishFlying(from, lying, Math.max(0, flight), unit) : fishFlung(from, lying, Math.max(0, flight), this.boards.top + FLUNG_OVER);
           landedView.root.position.copy(now.position);
           landedView.root.quaternion.copy(now.turn);
           landedView.held(1 - now.settled, dt);
@@ -341,20 +364,25 @@ export class FishingView {
           landedView.root.position.copy(lying.position);
           landedView.root.quaternion.copy(lying.turn);
           landedView.held(0, dt);
-          this.onPalms = true;
+          this.onPalms = !jaws;
+          this.onBoards = jaws;
         }
       }
-      // The rod: in his right palm, or dropping to the boards at his right once he lets go of it to take the fish.
-      let pose: RodPose = hands;
+      // The rod: held, or dropping to the boards once he lets go of it: at his right to take the fish, or out of his opening jaws.
+      let pose: RodPose = holding;
       if (share !== null && share >= LANDED.release) {
-        const right = { x: -spot.ahead.z, z: spot.ahead.x };
-        const lying: RodPose = {
-          from: new Vector3(hero.x + right.x * 0.73 + spot.ahead.x * 0.57, hero.y + 0.03, hero.z + right.z * 0.73 + spot.ahead.z * 0.57),
-          along: new Vector3(spot.ahead.x, 0, spot.ahead.z),
-          side: new Vector3(right.x, 0, right.z),
-        };
-        pose = rodFalling(this.letGo ?? hands, lying, Math.min(1, (share - LANDED.release) / (LANDED.down - LANDED.release)));
-      } else this.letGo = { from: hands.from.clone(), along: hands.along.clone(), side: hands.side.clone() };
+        const fall = Math.min(1, (share - LANDED.release) / (LANDED.down - LANDED.release));
+        if (this.landing) pose = rodSpatOut(this.letGo ?? holding, this.landing.rod, fall, unit);
+        else {
+          const right = { x: -spot.ahead.z, z: spot.ahead.x };
+          const lying: RodPose = {
+            from: new Vector3(hero.x + right.x * 0.73 + spot.ahead.x * 0.57, hero.y + 0.03, hero.z + right.z * 0.73 + spot.ahead.z * 0.57),
+            along: new Vector3(spot.ahead.x, 0, spot.ahead.z),
+            side: new Vector3(right.x, 0, right.z),
+          };
+          pose = rodFalling(this.letGo ?? holding, lying, fall);
+        }
+      } else this.letGo = { from: holding.from.clone(), along: holding.along.clone(), side: holding.side.clone() };
       // Bent toward a fish on the line, harder as it thrashes; and toward the landed fish as he heaves it out.
       const held = share === null || share < LANDED.release;
       const toward = state.phase === 'hooked' ? new Vector3(at.x, spot.surface, at.z) : share !== null && held ? (flying ?? new Vector3(at.x, spot.surface, at.z)) : null;
@@ -432,7 +460,7 @@ export class FishingView {
         view.sized(fish.size);
       }
       const shown = state.shown && fish.mood === 'landed' && state.phase === 'show';
-      // A landed fish on its way to a hero's palms, or lying on them, was placed above.
+      // A landed fish on its way to a hero's palms or to the boards, or lying there, was placed above.
       if (shown && view === landedView && tackle) {
         view.shadeAt(0, 0, 0, 0, false);
         continue;
@@ -477,11 +505,24 @@ export class FishingView {
     this.shades.instanceMatrix.needsUpdate = true;
   }
 
-  /** What is drawn, for the browser checks. */
-  info(): { fish: number; ring: boolean; bobber: boolean; line: boolean; mark: boolean; thrashing: boolean; rodInPalm: boolean; fishOnPalms: boolean } {
+  /**
+   * For a hero who fishes with his jaws, the way he faces while he shows off
+   * a catch: he keeps facing the water until the rod has left his mouth, then
+   * turns to the boards he flung the fish onto. Null at any other time, and
+   * for any other hero.
+   */
+  showFacing(state: FishingState, holder: HeroView | null): number | null {
+    if (state.phase !== 'show' || !this.landing) return null;
+    const share = holder?.tackle()?.show ?? Math.min(1, state.timer / FISHING.show);
+    return share >= LANDED.release ? this.landing.facing : Math.atan2(this.spot.ahead.x, this.spot.ahead.z);
+  }
+
+  /** What is drawn, for the browser checks. `rodInPalm` is the rod held by a hero with fishing clips: in a palm, or in the jaws. */
+  info(): { fish: number; ring: boolean; bobber: boolean; line: boolean; mark: boolean; thrashing: boolean; rodInPalm: boolean; fishOnPalms: boolean; fishOnBoards: boolean } {
     return {
       rodInPalm: this.heldRod.visible,
       fishOnPalms: this.onPalms,
+      fishOnBoards: this.onBoards,
       fish: this.fish.filter((view) => view.root.visible).length,
       ring: this.ring.visible,
       bobber: this.bobber.visible,

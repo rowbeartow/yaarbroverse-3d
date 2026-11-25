@@ -540,7 +540,7 @@ describe('fishing in the game', () => {
         expect(game.hearts).toBe(hearts);
         expect(game.summary().fish.map((each) => each.species)).toEqual(expect.arrayContaining([...SPECIES]));
         expect(game.falls).toBe(0);
-      }, 60_000);
+      });
     }
   }
 

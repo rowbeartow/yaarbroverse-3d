@@ -4,15 +4,14 @@
 // every difficulty, as each hero. `tests/helpers/water-exit.ts` has the
 // swimmer; `docs/adding-a-level.md` has the rule.
 
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import { DIFFICULTIES } from '../src/game/difficulty';
 import { HEROES } from '../src/game/hero';
 import { LEVELS } from '../src/levels';
 import { waterAt } from '../src/game/swim';
 import { EXIT_WITHIN, dropPoints, escapeFrom, exitsOf } from './helpers/water-exit';
 
-// Hundreds of short swims a level.
-vi.setConfig({ testTimeout: 240_000 });
+// Hundreds of short swims a level, so this file is a bot run: its tests have the long time limit in tests/bot-runs.ts.
 
 describe('every stretch of water has a way out', () => {
   for (const entry of LEVELS) {

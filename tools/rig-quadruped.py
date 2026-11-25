@@ -1426,6 +1426,82 @@ class Quadruped:
                 self.paw(leg, forward=-0.48 * k, lift=0.12 * k, toes=-66 * k, out=0.03)
         self.tail_curve(t, sway=lambda at: 0.0, lift=lambda at: -105 - 10 * smoothstep(max(0.0, at) / self.RELEASE_SECONDS), lag=0.05)
 
+    # ----- Fishing (milestone eleven) -----
+    #
+    # He holds the rod in his jaws: its butt is clamped in his mouth and it
+    # points out ahead of him and up (the game and the preview page draw it
+    # from his jaw, `grips` in the guide). So he fishes with his head and his
+    # whole body: a toss of the head to cast, a braced tug of war to reel, and
+    # a fling that lands the fish on the boards in front of him.
+
+    def fishing_pose(self, s, time, lash=0.0, lash_rate=1.0):
+        """Poses the whole cat from a few numbers, for the fishing clips. His paws stay where they stand; `lash` swings his tail."""
+        self.trunk(rise=s['rise'], forward=s['forward'], lean=s['lean'], arch=s['arch'], chest_yaw=s.get('chest', 0.0), hips_yaw=-0.4 * s.get('chest', 0.0))
+        self.blade('l', rise=s.get('blades', 0.0))
+        self.blade('r', rise=s.get('blades', 0.0))
+        self.head(follow=s.get('follow', 0.85), turn=yaw(s.get('turn', 0.0)) @ pitch(s['look']), neck_turn=yaw(0.4 * s.get('turn', 0.0)))
+        self.jaw(s['jaw'])
+        self.ear('l', flick=s.get('ears', 0.0))
+        self.ear('r', flick=s.get('ears', 0.0))
+        for leg in self.legs:
+            self.paw(leg, forward=s['front'] if leg.startswith('front') else s['hind'], out=s.get('out', 0.0))
+        self.tail_curve(time, sway=lambda at: lash * math.sin(TAU * at * lash_rate), lift=lambda at: s['tail'], lag=0.07)
+
+    # The jaws are held this far open on the rod.
+    ROD_BITE = 9.0
+
+    # The cast: he draws his head up and back over his right shoulder, sinking
+    # onto his haunches, then whips it forward and down, and settles with the
+    # rod pointing out over the water.
+    FISH_CAST_SECONDS = 1.4
+    FISH_CAST = [
+        (0.0, dict(rise=0.0, forward=0.0, lean=0, arch=0, look=6, turn=0, chest=0, jaw=ROD_BITE, tail=10, front=0.0, hind=0.0, ears=0)),
+        (0.36, dict(rise=-0.1, forward=-0.03, lean=5, arch=6, look=40, turn=-26, chest=-8, jaw=ROD_BITE, tail=-10, front=0.0, hind=0.0, ears=14)),
+        (0.44, dict(rise=-0.1, forward=-0.03, lean=5, arch=6, look=42, turn=-26, chest=-8, jaw=ROD_BITE, tail=-10, front=0.0, hind=0.0, ears=14)),
+        (0.6, dict(rise=-0.1, forward=0.06, lean=-5, arch=-2, look=-18, turn=4, chest=3, jaw=ROD_BITE, tail=40, front=0.0, hind=0.0, ears=24)),
+        (0.78, dict(rise=-0.05, forward=0.03, lean=-3, arch=0, look=-4, turn=0, chest=0, jaw=ROD_BITE, tail=25, front=0.0, hind=0.0, ears=6)),
+        (1.0, dict(rise=0.0, forward=0.0, lean=0, arch=0, look=8, turn=0, chest=0, jaw=ROD_BITE, tail=12, front=0.0, hind=0.0, ears=0)),
+    ]
+
+    def fish_cast(self, phase):
+        self.fishing_pose(keyed(self.FISH_CAST, phase), phase * self.FISH_CAST_SECONDS)
+
+    # Reeling: a tug of war. He is braced low, and the fish hauls his head down and to each side while he heaves
+    # it back up, twice a loop. His tail lashes the whole time.
+    FISH_REEL_SECONDS = 2.4
+
+    def fish_reel(self, phase):
+        pull = 0.5 - 0.5 * math.cos(TAU * phase * 2)      # the fish hauls, twice a loop
+        swing = math.sin(TAU * phase)                    # and drags to one side, then the other
+        self.fishing_pose(
+            dict(
+                rise=-0.16 - 0.03 * pull, forward=-0.05 + 0.05 * pull, lean=3 - 5 * pull, arch=8 - 5 * pull,
+                look=14 - 20 * pull, turn=13 * swing, chest=6 * swing, jaw=self.ROD_BITE, tail=-25, blades=0.03 * pull,
+                front=0.0, hind=0.0, out=0.03, ears=18 + 8 * pull,
+            ),
+            phase * self.FISH_REEL_SECONDS, lash=38, lash_rate=2 / self.FISH_REEL_SECONDS,
+        )
+
+    # Landed: one great heave of his head flings the fish out of the water and
+    # onto the boards in front of him. He lets the rod fall, watches the fish
+    # land, then stands over it as tall as he can and roars.
+    FISH_SHOW_SECONDS = 2.6
+    FISH_SHOW = [
+        (0.0, dict(rise=-0.16, forward=-0.05, lean=3, arch=8, look=14, turn=0, jaw=ROD_BITE, tail=-25, front=0.0, hind=0.0, out=0.03, ears=18)),
+        (0.14, dict(rise=-0.13, forward=-0.05, lean=6, arch=-2, look=50, turn=0, jaw=ROD_BITE, tail=30, front=0.0, hind=0.0, out=0.03, ears=26)),
+        # His jaws are wide open by the time the rod leaves them.
+        (0.2, dict(rise=-0.13, forward=-0.05, lean=6, arch=-2, look=50, turn=0, jaw=34, tail=30, front=0.0, hind=0.0, out=0.03, ears=26)),
+        (0.3, dict(rise=-0.06, forward=-0.03, lean=4, arch=0, look=20, turn=-8, jaw=30, tail=40, front=0.0, hind=0.0, out=0.02, ears=10)),
+        (0.46, dict(rise=-0.08, forward=0.03, lean=-4, arch=3, look=-26, turn=0, jaw=4, tail=20, front=0.0, hind=0.0, out=0.0, ears=0)),
+        (0.62, dict(rise=-0.03, forward=0.02, lean=1, arch=-5, look=14, turn=0, jaw=0, tail=60, front=0.0, hind=0.0, out=0.0, ears=0)),
+        (0.76, dict(rise=-0.03, forward=0.02, lean=1, arch=-7, look=34, turn=0, jaw=34, tail=75, front=0.0, hind=0.0, out=0.0, ears=22)),
+        (0.9, dict(rise=-0.03, forward=0.02, lean=1, arch=-7, look=32, turn=0, jaw=30, tail=75, front=0.0, hind=0.0, out=0.0, ears=22)),
+        (1.0, dict(rise=-0.02, forward=0.01, lean=1, arch=-4, look=14, turn=0, jaw=0, tail=65, front=0.0, hind=0.0, out=0.0, ears=4)),
+    ]
+
+    def fish_show(self, phase):
+        self.fishing_pose(keyed(self.FISH_SHOW, phase), phase * self.FISH_SHOW_SECONDS, lash=14 * smoothstep((phase - 0.5) / 0.2), lash_rate=1.2)
+
     # Clips in which a paw on the ground may be asked for more than its leg's length.
     # In the water no paw is on the ground.
     stretched = ('jump', 'falling', 'pounce', 'paddle', 'underwater', 'rope_reach', 'rope_catch', 'rope_hang', 'rope_release')
@@ -1448,6 +1524,9 @@ class Quadruped:
             ('rope_catch', self.rope_catch, self.CATCH_SECONDS),
             ('rope_hang', self.rope_hang, self.HANG_SECONDS),
             ('rope_release', self.rope_release, self.RELEASE_SECONDS),
+            ('fish_cast', self.fish_cast, self.FISH_CAST_SECONDS),
+            ('fish_reel', self.fish_reel, self.FISH_REEL_SECONDS),
+            ('fish_show', self.fish_show, self.FISH_SHOW_SECONDS),
         ]
 
     def report(self, lasts):
@@ -1793,6 +1872,25 @@ class Crocodile(Quadruped):
 
 # ---------- 6: save ----------
 
+def say_mouth_grip(armature, guide):
+    """
+    Prints where a rod is held in the jaws, for a character whose guide gives
+    its mouth: the middle of the line of the closed mouth, the way that line
+    runs (the rod runs along it, out between the front teeth) and straight
+    down (the side its reel hangs on), all in the head bone's own space. It is
+    what goes in the guide as "grips", for the game and the preview page.
+    """
+    if 'mouth' not in guide['joints'] or 'head' not in armature.data.bones:
+        return
+    back, front = (to_blender(point) for point in guide['joints']['mouth'])
+    head = armature.matrix_world @ armature.data.bones['head'].matrix_local
+    turn = head.to_3x3().normalized().inverted()
+    at = head.inverted() @ ((back + front) / 2)
+    rod = turn @ (front - back).normalized()
+    reel = turn @ Vector((0, 0, -1))
+    say('grips: "jaws": ' + json.dumps({'bone': 'head', 'at': [round(v, 4) for v in at], 'rod': [round(v, 3) for v in rod], 'reel': [round(v, 3) for v in reel]}))
+
+
 def save(path):
     bpy.ops.object.select_all(action='SELECT')
     bpy.ops.export_scene.gltf(
@@ -1837,6 +1935,7 @@ def main():
     if guide.get('straighten_tail'):
         straighten_tail(mesh, armature, guide['straighten_tail'])
     CHARACTERS[guide.get('character', 'cat')](armature, guide).write()
+    say_mouth_grip(armature, guide)
     save(out)
     say(f"saved {out}")
 

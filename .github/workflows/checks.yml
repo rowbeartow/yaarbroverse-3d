@@ -4,12 +4,18 @@
 #      commit message.
 #   2. The game rule tests and a full build (which also checks the download
 #      size). The built game is handed to the browser jobs, so it is built once.
-#   3. The browser checks, split into parallel shards so a pull request's checks
+#      The rule tests here are the quick ones: every test but the bot's runs.
+#   3. The bot's runs: the rule tests in which a bot plays the game, whole
+#      levels among them (tests/bot-runs.ts says which they are). They have a
+#      job of their own with an hour to finish in, and each test in it may
+#      take five minutes, so a slow machine cannot fail a run by being slow.
+#      Here they take about a minute altogether.
+#   4. The browser checks, split into parallel shards so a pull request's checks
 #      finish in about ten minutes: Chromium (Mac-sized with a keyboard,
 #      iPad-sized with touch) in six, WebKit (iPad-sized with touch, the engine
 #      behind every iPad browser) in four. Every check runs; each shard runs
 #      its share one at a time, as the machines have no graphics card.
-#   4. Two summary jobs, named as the required checks always were ("Tests, build
+#   5. Two summary jobs, named as the required checks always were ("Tests, build
 #      and browser checks" and "Browser checks in WebKit (iPad)"), pass only if
 #      every job before them passed.
 name: Checks
@@ -78,8 +84,8 @@ jobs:
       - run: npm ci
       - name: The container holds the browsers for this version of Playwright
         run: node scripts/check-playwright-image.mjs
-      - name: Game rule tests
-        run: npm test
+      - name: Game rule tests (all but the bot's runs)
+        run: npm run test:rules
       - name: Build and check the download size
         run: npm run build
       - name: Hand the built game to the browser jobs
@@ -88,6 +94,22 @@ jobs:
           name: game
           path: dist
           retention-days: 1
+
+  bot-runs:
+    name: Whole-level bot runs
+    runs-on: ubuntu-latest
+    # About a minute on an ordinary machine. The hour, and the five minutes each
+    # test may take (BOT_RUN_LIMIT in tests/bot-runs.ts), are for a slow one.
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      - name: The rule tests in which a bot plays the game
+        run: npm run test:bot
 
   chromium:
     name: Browser checks in Chromium (${{ matrix.shard }}/6)
@@ -151,13 +173,13 @@ jobs:
   # every job it stands for passed (a skipped or cancelled one fails it).
   checks:
     name: Tests, build and browser checks
-    needs: [build, chromium]
+    needs: [build, bot-runs, chromium]
     if: always()
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
-      - name: The rule tests, the build and every Chromium shard passed
-        run: test "${{ needs.build.result }}" = success && test "${{ needs.chromium.result }}" = success
+      - name: The rule tests, the bot's runs, the build and every Chromium shard passed
+        run: test "${{ needs.build.result }}" = success && test "${{ needs.bot-runs.result }}" = success && test "${{ needs.chromium.result }}" = success
 
   webkit:
     name: Browser checks in WebKit (iPad)

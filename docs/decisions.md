@@ -766,3 +766,39 @@ The owner's words on the fourth look: "good enough to ship, with one fix: on Lan
 ## 2026-11-20: Before skiing and climbing, Yaarbro gets simple gripping hands
 
 The owner's word: "give Yaarbro simple gripping hands (one bone that curls his fingers and one for his thumb), since ski poles and climbing holds will need him to hold things." It goes on the roadmap before skiing. Until then everything he holds is held at the grip points in his palms.
+
+## 2026-11-25: The bot's whole-level runs have their own job on GitHub, with a generous time limit
+
+The owner's word: "Move the tests that play whole levels with the bot into their own CI job with a generous time limit, so a slow GitHub machine can't fail a run."
+
+- A test file is a bot run if it uses a helper that plays the game (the bot, the keyboard player, the fishing bot, the hero dropped in the water) or a helper built on one. `tests/bot-runs.ts` works that out from the files, so nobody keeps a list: 18 files and 790 tests today, and every test that takes over 0.4 seconds here is among them.
+- On GitHub they run in a job of their own, "Whole-level bot runs", with an hour to finish in. Each test in it may take five minutes (`BOT_RUN_LIMIT`); the slowest takes about 7 seconds here and the whole job about a minute. The quick rule tests (530) stay in the build job with the usual 5 seconds each.
+- The time limits that had been written into single tests (30, 60, 120 and 240 seconds) are gone: one number covers them all, and `tests/bot-runs.test.ts` fails if a bot run sets its own.
+- The required check "Tests, build and browser checks" now waits for the new job too, so a pull request cannot merge without it.
+- `npm test` still runs everything, with the same limits, and so does the publish run after a merge.
+
+## 2026-11-25: Caputo's fishing clips are in the game, the rod in his jaws
+
+The owner's word, after seeing Caputo's fishing page: "Caputo looks way better: OK. Put his clips in the game." And: "There's no iPad to test on (it's in the handoff), so skip iPad checks."
+
+- His three clips (`fish_cast`, `fish_reel`, `fish_show`) are written by `tools/rig-quadruped.py`, as on his page. The rod is held at one grip point between his teeth (`"grips"` in `tools/caputo.rig.json`, and on his entry in `HERO_MODELS`; `tests/held-tackle.test.ts` holds the two together). His model was rigged again from his original on the `hero-models` release; `node tools/preview/fishing-measure.mjs caputo` passes on it.
+- In the game the cast and the reel are as on the page. Landing a fish differs in one way, and it is Claude's call, not the owner's: the page stood him on flat ground with boards in front of him, but on the lake's jetty the water is in front of him and his nose may be over the end of it. So he heaves the fish up out of the water, flings it over himself onto the boards behind, and turns round to stand over it and roar. The camera looks north from the jetty, so he ends up facing the camera with the fish in front of him. The fish goes up before it goes across (4 m over the boards at its highest), so it clears the end of the jetty and his head, and it breaks the water at least 2.2 m out from him, past his nose.
+- The rod falls from his opening jaws to the boards beside where he stood, pointing at the water. It and the fish go to whichever side has room on the jetty.
+- The rod is the same size whoever holds it.
+- Checked in still frames of the game itself, from the middle of the jetty and from its end off to one side. Nobody has watched it move in the game.
+- No iPad checks are asked of the owner while he has none. The checks on GitHub in WebKit at iPad size still run on every pull request.
+
+## 2026-11-25: The dock's frame rate with fishing: 75 at the lowest
+
+The owner's word: "Jetty frame rate on Hard as Yaarbro, Mac, Safari: 75 fps lowest. Record it in the handoff as the dock's number for part two to stay above."
+
+- It is recorded at the top of `docs/session-handoff.md` and in `CLAUDE.md`.
+- The dock is the lake's heaviest place, and the monster pike and Walblum go there. In the test browser the same place draws 825,006 triangles in 321 draw calls (`node tools/draw-measure.mjs cocolalla hard`).
+- The rule until now has been 60 or more on the Mac. Claude asked whether 75 itself is the floor for part two; until he answers, part two is planned to keep the jetty at 75, and he is told before anything is built that would take it lower.
+
+## 2026-11-25: The floor is still 60; 75 is the jetty's headroom, and the owner is told before the dock goes below 65
+
+The owner's answer to Claude's question: "The floor is still 60 fps, as decisions.md says. 75 is the jetty's measured headroom, not a new floor. Part two can spend it, but tell me before building anything that takes the dock below 65 on Hard, so there's margin left for later levels."
+
+This settles the question left open in the entry above: part two is not held to 75.
+
