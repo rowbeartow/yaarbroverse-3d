@@ -1,8 +1,94 @@
 # Session handoff
 
-Last updated: 2026-11-20 (milestone eleven, part one, is merged: headroom on the lake, the fish rig, fishing from the jetty and the fish book. The fishing sounds are in and the two bugs from the owner's play are fixed, pull requests 88 and 89, both merged. Yaarbro's three fishing clips are in the game, held at grip points in his palms (2026-11-20). Caputo's fishing is next, on a page of its own. Then part two: Walblum's kick, Caputo's Claw Slash, the monster pike fight and the rescue.)
+Last updated: 2026-11-25. Milestone eleven, part one (fishing at Cocolalla) is finished and live: both heroes fish with clips of their own. Caputo's are in the game, the rod in his jaws (pull request 92). The bot's whole-level runs have their own job on GitHub (pull request 91). **Next: milestone eleven, part two.** This page was rewritten on 2026-11-25; everything under "The record" is as earlier sessions wrote it.
 
 ## Start here
+
+**Next: milestone eleven, part two. Walblum's kick, Caputo's Claw Slash, the monster pike fight and the rescue.** Start with a plan for the owner, as every milestone has. Nothing of part two is built.
+
+### What part two is
+
+- **The design is settled**: https://claude.ai/artifact/WM17aRk4LTHHDwveCCkfrs , with the owner's answers at its foot (`docs/decisions.md`, "The owner's answers on the fishing and pike design"). The fight starts as fishing: casting at the monster's shadow hooks it. A tug of war from the jetty takes half its pips; it then drags the hero into the lake; in the water it circles and charges, the hero climbs onto a floating log and strikes it when it surfaces to snap; beaten, it sinks, and **Walblum's rescue is the last thing in the level**: reaching him and the golden leaf at the dock is one moment. The new button (Walblum's kick for Yaarbro, Claw Slash for Caputo) is the reward, saved for the player and there from the start in every level from then on.
+- **Walblum's kick and Claw Slash** (`docs/decisions.md`, "Walblum and Caputo's new ability" and "The kids' picks"): Claw Slash is a swipe that sends three glowing claw marks to the nearest enemy in front of Caputo and hits it. It must stay as useful as Walblum's kick against every enemy and boss, the pike included.
+- **The monster pike** is the picked pike (`assets/fish/pike.glb`, 5,000 triangles), much bigger and darker, unless the kids ask for its own model. It needs jaws that snap: cut its lower jaw free in `tools/rig-fish.py` the way `weigh_jaw` in `tools/rig-quadruped.py` did for the crocodile.
+- **Walblum** is `walblum-b.glb` on the `hero-models` release (3,550,484 bytes, SHA-256 starts `b8c2d3a956888065`): https://github.com/rowbeartow/yaarbroverse-3d/releases/download/hero-models/walblum-b.glb . Never make him again. He was made standing with his arms out, so Meshy's rigging (`tools/meshy-rig-animate.mjs`) may take him. His whiskers hang down in the model and are to be straightened when he is rigged.
+
+### What part two can build on
+
+- The tug of war is fishing's own (`src/game/fishing.ts`: `hooked`, `fight`, `strain`), so the first half of the fight is a bigger fish with pips.
+- Bosses are `src/game/boss.ts`. The pike is the first in water; the crocodile (`src/game/crocodile.ts`) is the model for circling, a tell and a charge. The golden leaf is already kept back until a boss is beaten.
+- **The way out of the water at the dock is built**: steps up the dock's south side (`dock-step-*` in the lake's `layout.ts`), away from the fishing. `tests/water-exits.test.ts` holds every stretch of water to having a way out.
+- Both heroes hold a rod and land a fish with clips of their own, placed by one piece of code (`src/view/held-tackle.ts`). A fight on the line can use the reel clips as they are.
+
+### The frame budget: the dock's number
+
+**The owner measured the jetty on 2026-11-25: 75 frames a second at the lowest, on Hard, as Yaarbro, in Safari on his Mac.** His words: "Record it in the handoff as the dock's number for part two to stay above."
+
+- The dock is the lake's heaviest place, and it is where the pike and Walblum go.
+- The standing rule is that the lake stays at 60 or more on the Mac (`docs/decisions.md`, 2026-11-15 and after). Claude asked him on 2026-11-25 whether he means 75 itself as the floor for part two, or 60 with 75 as where the dock starts from; he had not answered when this was written. **Until he does, plan part two to keep the jetty at 75, and tell him before building anything that would take it lower.**
+- A cloud session counts triangles, not frames. With fishing, the dock draws 825,006 triangles in 321 draw calls (`node tools/draw-measure.mjs cocolalla hard`, the test browser, high tier, Yaarbro). That is what 75 frames a second looks like in that tool. Count again after each piece of part two and give him the before and after; he measures the frames.
+- If the jetty drops: draw fewer fish first (`count` in `FISH`, the lake's `difficulty.ts`).
+
+### Money and limits
+
+- **Meshy credits spent in milestone eleven: 233** (196 on the fish, 37 on Yaarbro's clips). The owner allowed 200 and then 40. Ask before spending more.
+- **No iPad.** The owner has none to test on (his note, 2026-11-11, and again 2026-11-25: "skip iPad checks"). Ask him for nothing on an iPad. The checks on GitHub in WebKit at iPad size still run on every pull request and must pass.
+
+### What exists now from part one
+
+- **Fishing** from a jetty off the lake's fishing dock: bass, perch, trout and pike. Rules `src/game/fishing.ts`; every number is `fishing` and `FISH` in the lake's `difficulty.ts`; drawn by `src/view/fishing.ts`; words `src/ui/fishing-words.ts`; recipe `docs/adding-a-level.md`, "Fishing". `tests/fishing.test.ts` covers it and the fishing bot (`tests/helpers/fisher.ts`) catches every kind on every difficulty as each hero.
+- **The fish book**: each player's catch (how many of each kind, and the biggest), on the end card and the lake's card. `fish` on the player in `src/save/players.ts`; `tests/fish-book.test.ts`.
+- **The fishing sounds** are in (the owner's picks, choice A of each).
+- **Yaarbro's fishing clips** (the owner's OK, 2026-11-20): made by `tools/prepare-rigged.py` from keys in `tools/yaarbro.guide.json`. He has no finger bones, so the rod, its reel and a landed fish are held at a grip point in the middle of each palm.
+- **Caputo's fishing clips** (the owner's OK, 2026-11-25; `docs/decisions.md`, "Caputo's fishing clips are in the game"): written by `tools/rig-quadruped.py`. The rod is held at one grip point between his teeth (`"grips"` in `tools/caputo.rig.json`, the same numbers on his entry in `HERO_MODELS`). The cast and the reel are as on his page. **Landing a fish differs from his page, and that was Claude's call:** the jetty has water in front of him, so he flings the fish over himself onto the boards behind, and turns to stand over it and roar, facing the camera (`landOnBoards` and `fishFlung` in `src/view/held-tackle.ts`). If the owner does not like it in the game, that is the place to change it.
+- **The check for both heroes' clips**: `node tools/preview/fishing-measure.mjs [yaarbro or caputo]`, on the enemies preview page built with the hero and the four fish. It measures every frame: what he holds stays at his grips, and nothing passes through his body or head. It passes for both. Run it before any change to their fishing clips, their grips or `held-tackle.ts`.
+- **The fish**: bass A, perch A, trout B and pike A, the kids' picks. Never make them again. **Their four originals are on the `hero-models` release now** (downloaded and checked on 2026-11-25: sizes and checksums match the table below). `tools/rig-fish.py` with `tools/fish.rig.json` rigs any of them; the compressed files are `assets/fish/<name>.glb`.
+
+| File | Bytes | SHA-256 starts | Meshy Image to 3D task |
+| --- | --- | --- | --- |
+| `bass-a.glb` | 4,292,620 | `0b293250cfce4502` | `01a1f52c-0dc4-71b5-8564-171a244bf294` |
+| `perch-a.glb` | 4,474,100 | `50255cf9bbb4a47b` | `01a1f52c-0f9b-776d-947a-499465247a27` |
+| `trout-b.glb` | 3,414,568 | `db1f7bdbe91e7ad0` | `01a1f52c-0f1b-71a9-927d-88f30c7f301c` |
+| `pike-a.glb` | 4,750,672 | `10c7f2442efa488b` | `01a1f52c-0f3f-7013-8552-5704d31a7c92` |
+
+- **Headroom on the lake** (pull requests 82 and 83): the lake's mosquitoes are drawn from a 5 thousand triangle copy of the model, and only the six nearest enemies within 45 m are drawn (`lightEnemies` and `enemySight` on the level).
+
+### The checks, as they run now
+
+- `npm test`: 1,327 rule tests pass. They come in two kinds (`tests/bot-runs.ts`): 790 in which a bot plays the game (any test file that uses a helper that plays it), and 537 quick ones. `npm run test:rules` and `npm run test:bot` run one kind each.
+- **On GitHub the bot's runs have a job of their own**, "Whole-level bot runs", with an hour to finish in, and each test in it may take five minutes (the owner's word, 2026-11-25: a slow machine must not fail a run). No bot-run test may set a time limit of its own; `tests/bot-runs.test.ts` fails if one does. The required check "Tests, build and browser checks" waits for the new job.
+- The browser checks pass in Chromium and in WebKit on every pull request. New: a whole catch as Caputo (`tests/browser/fishing.spec.ts`).
+- The whole download is 15.28 MB (budget 20 MB).
+
+### Not checked, and the owner is the one who can (on the Mac)
+
+1. **Caputo's fishing in the game, moving.** A cloud session saw still frames: the rod in his jaws through the cast and the reel, the heave, the turn, the fish on the boards and the rod beside him, from the middle of the jetty and from its end. Whether the turn and the fling read well at full speed is his to say.
+2. **Yaarbro's fishing in the game.** He said OK on the page; he has not said he has seen it in the game.
+3. **How fishing feels**: whether the dark shapes read as fish, whether Easy needs no timing for the younger player and Hard is work enough for the older.
+4. **The lighter mosquito** in the game's light, and whether an enemy can be seen to appear as the hero comes within 45 m.
+
+### Things a new session trips on
+
+- **Blender is not always on the machine.** Run `apt-get update && apt-get install -y blender python3-numpy` once.
+- **The owner's preview pages could not be opened from the session of 2026-11-25** (claude.ai said "not found" for every address in this file, though the owner can open them). That session changed no page. If a page has to change and cannot be read, ask the owner for its link or publish a new one and give him the new address.
+- **To see the game itself in still frames**, serve the built game (`npm run build`, then `npx vite preview --port 4173`) and drive it with Playwright through `window.__grove` (`tests/browser/helpers.ts` shows how to pick a player, a hero and stand on a solid). The test browser draws in real time on the low tier; to step through a quick moment, hold `requestAnimationFrame` from an init script and run the held frame by hand, one frame a step.
+- **Backup branches that can be deleted** (their work is merged): every `claude/backup-*` branch on GitHub, `claude/backup-caputo-fishing`, `claude/backup-caputo-clips` and `claude/backup-handoff` among them.
+
+### The roadmap, in the owner's order
+
+1. **Milestone eleven, part two: next.** Walblum's kick, Claw Slash, the monster pike fight and the rescue.
+2. **The Bouncing Grove reshaped by the route rule.** Today 92% of it runs away from the camera with no camera turns; it is on the route test's waiting list until then. Plan it the way the lake was planned: a map from above with the camera's facing in each part, for the owner's OK before anything is built.
+3. **Simple gripping hands for Yaarbro** (the owner's word, 2026-11-20), before skiing and climbing: one bone that curls his fingers and one for his thumb, on each hand.
+4. Skiing in the Selkirks, with Caputo on a snowboard.
+5. Mountain climbing on rock, ice and trees.
+
+---
+
+# The record
+
+Everything below is the record of earlier work, kept as it was written at the time. Where it disagrees with "Start here", "Start here" is right.
+
+## Milestone eleven, part one, as written on 2026-11-20
 
 **Milestone eleven, part one, fishing at Cocolalla: built and merged (2026-11-19).** What the owner asked for is in `docs/decisions.md` (2026-11-19). Pull requests: 82 and 83 (headroom on the lake), 84 (the fish rig), 85 (fishing from the jetty), 86 (the fish book). The last pull request of the session carried this handoff: if you are reading this on `main`, it has merged.
 
@@ -95,8 +181,6 @@ The heaviest frame is 13% lighter (921 to 798 thousand triangles). **The dock is
 **Not checked, and the owner is the one who can:** the frame rate with the fixes, in Safari with `?fps` on Hard (a cloud session counts triangles, not frames a second); the lighter mosquito in the game's light (compared here only as outlines of the two models from the side and from above: legs, wings, antennae and beak are all there, the head and body are plainer); and whether an enemy can be seen to appear as the hero comes within 45 m of it or as the nearest six change.
 
 ---
-
-The rest of this page is the record of earlier milestones, kept as it was written.
 
 ## Milestones nine and ten, as written on 2026-11-17
 
