@@ -3,14 +3,15 @@
 // tests (and later a server, for two-device play) can run it as is.
 
 import { steerJump } from './assist';
-import { BOSS, bossFighting, newBoss, resetBoss, stepBoss, type Boss, type BossAttack, type BossPhase } from './boss';
+import { BOSS, bossFighting, newBoss, resetBoss, stepBoss, strikeBoss, type Boss, type BossAttack, type BossPhase } from './boss';
 import { pickupCounts, touchesPickup, type PickupKind } from './collect';
 import type { Difficulty } from './difficulty';
-import { ENEMY, callSidekick, dismissSidekick, newEnemy, sendHome, stepEnemy, type Enemy, type EnemyPhase, type EnemyTuning } from './enemy';
+import { ENEMY, callSidekick, dismissSidekick, enemyBody, newEnemy, sendHome, stepEnemy, strikeEnemy, type Enemy, type EnemyPhase, type EnemyTuning } from './enemy';
 import { dropLine, newFishing, onSpot, stepFishing, type Catch, type FishingEvent, type FishingState } from './fishing';
 import { MOVE, STEP, knockSpeed, type HeroName } from './hero';
 import { pushOutside, surfaceBelow, topAt, touchesFromAbove, type Level, type Solid } from './level';
 import { ownPieces, resetPieces, stepPieces, type PieceEvent } from './moving';
+import { newSidekick, stepSidekick, type AllyEvent, type AllyTarget, type Sidekick } from './sidekick';
 import { HANG, ROPE, grab, handOf, handSpeed, letGo, newRope, ropeInReach, stepHeld, stepLoose, type RopeState } from './rope';
 import { SWIM, climbOut, inWater, inWeeds, waterAt, type Water } from './swim';
 
@@ -24,6 +25,14 @@ export interface Input {
   jump: boolean;
   /** True while the move button is held: Yaarbro's roll, Caputo's pounce. */
   move?: boolean;
+  /** True while the second move's button is held: Walblum's kick, the Claw Slash (see sidekick.ts). */
+  ally?: boolean;
+}
+
+/** What a game is made with, beyond its level, difficulty and hero. */
+export interface GameOptions {
+  /** The heroes' second move (sidekick.ts): the reward for rescuing Walblum. Left out, the game has no such move. */
+  ally?: boolean;
 }
 
 export const IDLE: Input = { moveX: 0, moveZ: 0, jump: false };
@@ -39,7 +48,7 @@ export type GameEvent =
   /** An enemy began something: woke, warned, attacked, dodged, rested, or was beaten. */
   | { type: 'enemy'; id: string; kind: Enemy['kind']; phase: EnemyPhase }
   /** The hero's move, or a landing, struck an enemy. `left` is how many more strikes it takes. */
-  | { type: 'strike'; id: string; kind: Enemy['kind']; how: 'roll' | 'pounce' | 'stomp'; left: number }
+  | { type: 'strike'; id: string; kind: Enemy['kind']; how: 'roll' | 'pounce' | 'stomp' | 'ally'; left: number }
   /** The hero was sent back to a safe bank, and an enemy it had damaged is at full health again. */
   | { type: 'healed'; id: string; kind: Enemy['kind'] }
   /**
@@ -50,7 +59,7 @@ export type GameEvent =
    */
   | { type: 'boss'; id: string; what: 'begin' | 'blocked' | 'call' | 'beaten' }
   | { type: 'boss'; id: string; what: 'phase'; phase: BossPhase; attack: BossAttack | null }
-  | { type: 'boss'; id: string; what: 'hit'; how: 'roll' | 'pounce' | 'stomp'; left: number }
+  | { type: 'boss'; id: string; what: 'hit'; how: 'roll' | 'pounce' | 'stomp' | 'ally'; left: number }
   | { type: 'boss'; id: string; what: 'stage'; stage: number }
   | { type: 'boss'; id: string; what: 'reset'; healed: boolean }
   /** Lost a heart. `left` is how many remain. */
@@ -75,6 +84,8 @@ export type GameEvent =
   | { type: 'pickup'; id: string; kind: PickupKind; found: number }
   /** Something happened at the fishing spot (see fishing.ts). */
   | ({ type: 'fishing' } & FishingEvent)
+  /** The second move: sent, struck something, bounced off or missed, and came back (see sidekick.ts). */
+  | ({ type: 'ally' } & AllyEvent)
   | { type: 'goal' };
 
 /** The record of a run, shown on the end card. */
@@ -152,6 +163,9 @@ export class Game {
   fainting = 0;
   /** The level's fishing spot as it is now (see fishing.ts), or null when the level has none. */
   readonly fishing: FishingState | null;
+  /** The second move, on its own button (see sidekick.ts), or null in a game made without it. */
+  readonly sidekick: Sidekick | null;
+  private allyTargets: AllyTarget[] | null = null;
   /** The fish landed this run. A fall takes none away. */
   readonly catches: Catch[] = [];
   /** The ids of what has been collected this run (see collect.ts). A fall takes nothing away. */
@@ -199,7 +213,7 @@ export class Game {
   private jumpWasHeld = false;
   private canCutJump = false;
 
-  constructor(level: Level, difficulty: Difficulty, hero: HeroName) {
+  constructor(level: Level, difficulty: Difficulty, hero: HeroName, options: GameOptions = {}) {
     // Pieces that move are this game's own, so two games of one level never share them.
     this.level = level.solids.some((s) => s.motion) ? { ...level, solids: ownPieces(level.solids) } : level;
     level = this.level;
@@ -215,6 +229,7 @@ export class Game {
     this.boss = level.boss ? newBoss(level.boss) : null;
     this.ropes = (level.ropes ?? []).map(newRope);
     this.fishing = level.fishing ? newFishing(level.fishing) : null;
+    this.sidekick = options.ally ? newSidekick() : null;
     const under = surfaceBelow(level, this.x, this.z, this.y, MOVE.footRadius);
     this.groundId = under ? under.id : null;
     this.safeSpot = { ...level.spawn, id: under?.safe ? under.id : null };
@@ -662,6 +677,12 @@ export class Game {
 
     if (this.complete) return;
 
+    // The second move (sidekick.ts): sent at the nearest thing in front that can be struck.
+    if (this.sidekick) {
+      const free = !frozen && !this.swimming && this.climbing <= 0 && !this.swinging;
+      for (const event of stepSidekick(this.sidekick, this, free && Boolean(input.ally), free, this.strikeable(), dt)) this.events.push({ type: 'ally', ...event });
+    }
+
     // The enemies move, and anything they touch is settled.
     for (const enemy of this.enemies) {
       // A crocodile is the one enemy that reaches a swimmer whose head is under.
@@ -742,12 +763,7 @@ export class Game {
           this.canCutJump = false;
         }
         this.protectedFor = Math.max(this.protectedFor, BOSS.strikeProtection);
-        if (boss.phase === 'defeated') {
-          this.beaten += 1;
-          this.protectedFor = Math.max(this.protectedFor, BOSS.victoryProtection);
-          for (const sidekick of sidekicks) dismissSidekick(sidekick);
-          this.events.push({ type: 'boss', id, what: 'beaten' });
-        }
+        if (boss.phase === 'defeated') this.bossBeaten(boss);
       } else if (outcome.hurt && this.hurt(outcome.hurt.x, outcome.hurt.z)) {
         this.events.push(...this.pending);
         this.pending = [];
@@ -788,6 +804,63 @@ export class Game {
       this.fainting = Math.max(0, this.fainting - dt);
       if (this.fainting === 0) this.toSafeSpot();
     }
+  }
+
+  /** The boss has just been beaten: its sidekicks give up, and the moment is the player's. */
+  private bossBeaten(boss: Boss): void {
+    this.beaten += 1;
+    this.protectedFor = Math.max(this.protectedFor, BOSS.victoryProtection);
+    for (const enemy of this.enemies) if (enemy.spot.sidekickOf === boss.spot.id) dismissSidekick(enemy);
+    this.events.push({ type: 'boss', id: boss.spot.id, what: 'beaten' });
+  }
+
+  /**
+   * Everything the second move can be sent at (sidekick.ts): each enemy, and
+   * the boss. A strike is settled here, with the same events as a hero's own.
+   * PIKE HOOK: the monster pike joins this list with a target whose `there`
+   * is `pikeOpen(pike)` and whose `strike` calls `hitPike(...)`.
+   */
+  private strikeable(): AllyTarget[] {
+    if (this.allyTargets) return this.allyTargets;
+    const targets: AllyTarget[] = this.enemies.map((enemy) => ({
+      id: enemy.spot.id,
+      radius: enemyBody(enemy).radius,
+      at: () => {
+        const body = enemyBody(enemy);
+        return { x: enemy.x, y: (body.bottom + body.top) / 2, z: enemy.z };
+      },
+      there: () => !enemy.dormant && enemy.phase !== 'defeated',
+      strike: (alongX, alongZ) => {
+        if (!strikeEnemy(enemy, alongX, alongZ)) return 'none';
+        if (enemy.phase === 'defeated') this.beaten += 1;
+        this.events.push({ type: 'enemy', id: enemy.spot.id, kind: enemy.kind, phase: enemy.phase });
+        this.events.push({ type: 'strike', id: enemy.spot.id, kind: enemy.kind, how: 'ally', left: enemy.hits });
+        return 'hit';
+      },
+    }));
+    const { boss } = this;
+    if (boss) {
+      const id = boss.spot.id;
+      targets.push({
+        id,
+        radius: boss.spot.radius,
+        at: () => ({ x: boss.x, y: boss.y + boss.spot.height / 2, z: boss.z }),
+        there: () => bossFighting(boss),
+        strike: (alongX, alongZ) => {
+          if (!strikeBoss(boss, alongX, alongZ)) {
+            this.events.push({ type: 'boss', id, what: 'blocked' });
+            return 'blocked';
+          }
+          this.events.push({ type: 'boss', id, what: 'phase', phase: boss.phase, attack: boss.attack });
+          this.events.push({ type: 'boss', id, what: 'hit', how: 'ally', left: boss.health });
+          this.protectedFor = Math.max(this.protectedFor, BOSS.strikeProtection);
+          if (boss.phase === 'defeated') this.bossBeaten(boss);
+          return 'hit';
+        },
+      });
+    }
+    this.allyTargets = targets;
+    return targets;
   }
 
   /** Standing on a safe solid makes it the place a fall returns the hero to. */

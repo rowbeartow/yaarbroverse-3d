@@ -454,6 +454,42 @@ body {
   -webkit-user-select: none;
 }
 
+/* The second move (Walblum's kick, the Claw Slash): a round button beside the
+   first, shown once a player has it. It dims while Walblum is out. */
+#ally-button {
+  position: absolute;
+  right: calc(max(28px, env(safe-area-inset-right)) + clamp(120px, 20vmin, 168px) * 0.62 + clamp(76px, 12.5vmin, 104px) + 12px);
+  bottom: calc(max(28px, env(safe-area-inset-bottom)) + clamp(120px, 20vmin, 168px) * 0.55);
+  width: clamp(76px, 12.5vmin, 104px);
+  aspect-ratio: 1;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  border: 3px solid rgba(255, 246, 221, 0.55);
+  background: rgba(150, 92, 38, 0.66);
+  color: #fff6dd;
+  font-size: clamp(13px, 2.1vmin, 18px);
+  font-weight: 800;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.6);
+  pointer-events: auto;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+#ally-button[hidden] {
+  display: none;
+}
+
+#ally-button[data-ready='false'] {
+  opacity: 0.45;
+}
+
+#ally-button.down {
+  background: rgba(150, 92, 38, 0.95);
+  transform: scale(0.94);
+}
+
 /* In the water the round button dives: a dive mark over the word. */
 #move-button[data-dive='true'] {
   align-content: center;

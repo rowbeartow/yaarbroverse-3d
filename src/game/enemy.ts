@@ -333,6 +333,24 @@ export const isDangerous = (enemy: Enemy): boolean =>
   enemy.kind === 'crocodile' ? enemy.phase === 'attack' : enemy.phase === 'idle' || enemy.phase === 'patrol' || enemy.phase === 'attack';
 
 /**
+ * One strike lands on an enemy, shoving it along (awayX, awayZ): a hero's
+ * move, a landing on top, or the heroes' second move (sidekick.ts). Returns
+ * false, and does nothing, when it cannot be struck now: lying low, beaten,
+ * or still flashing from the last strike.
+ */
+export const strikeEnemy = (enemy: Enemy, awayX: number, awayZ: number): boolean => {
+  if (enemy.dormant || enemy.phase === 'defeated' || enemy.flash > 0) return false;
+  enemy.hits -= 1;
+  enemy.flash = ENEMY.flash;
+  enemy.acorn = null;
+  enemy.shove = { x: awayX * ENEMY.knock, z: awayZ * ENEMY.knock, left: ENEMY.knockTime };
+  if (enemy.kind === 'marmot') enemy.y = enemy.spot.y;
+  enemy.phase = enemy.hits <= 0 ? 'defeated' : 'rest';
+  enemy.timer = 0;
+  return true;
+};
+
+/**
  * Advances one enemy by `dt` seconds and works out what it does to the hero.
  * `heroRadius` is how far out the hero's body reaches, and `previousY` is
  * where the hero's feet were before this step, for telling a landing on top.
@@ -551,16 +569,12 @@ export const stepEnemy = (
   // The step that ends an attack still counts as part of it.
   const dangerous = isDangerous(enemy) || outcome.entered.includes('rest');
   if (enemy.flash <= 0 && (touching || stomp) && (hero.striking || stomp)) {
-    enemy.hits -= 1;
-    enemy.flash = ENEMY.flash;
-    enemy.acorn = null;
     // Shoved along the hero's way, or straight away from a hero who came down on it.
     const speed = Math.hypot(hero.vx, hero.vz);
     const awayX = speed > 0.1 ? hero.vx / speed : apart > 1e-6 ? (enemy.x - hero.x) / apart : 0;
     const awayZ = speed > 0.1 ? hero.vz / speed : apart > 1e-6 ? (enemy.z - hero.z) / apart : 0;
-    enemy.shove = { x: awayX * ENEMY.knock, z: awayZ * ENEMY.knock, left: ENEMY.knockTime };
-    if (marmot) enemy.y = enemy.spot.y;
-    enter(enemy.hits <= 0 ? 'defeated' : 'rest');
+    strikeEnemy(enemy, awayX, awayZ);
+    outcome.entered.push(enemy.phase);
     outcome.struck = hero.pouncing > 0 ? 'pounce' : stomp ? 'stomp' : 'roll';
     return outcome;
   }

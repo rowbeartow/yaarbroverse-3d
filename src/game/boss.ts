@@ -238,6 +238,25 @@ export const bossOpen = (boss: Boss): boolean => {
   return boss.phase === 'idle' || boss.phase === 'warning' || boss.phase === 'attack';
 };
 
+/** False in the moments of show (the intro, a stagger, a roar), when nothing lands. */
+export const bossSettled = (boss: Boss): boolean => boss.phase !== 'intro' && boss.phase !== 'stagger' && boss.phase !== 'roar';
+
+/**
+ * One hit lands on a boss, shoving it along (awayX, awayZ): a hero's move, a
+ * landing on top, or the heroes' second move (sidekick.ts). Returns false,
+ * and does nothing, when a hit would not count now (see `bossOpen`), in a
+ * moment of show, or before the fight has begun.
+ */
+export const strikeBoss = (boss: Boss, awayX: number, awayZ: number): boolean => {
+  if (!bossFighting(boss) || !bossSettled(boss) || !bossOpen(boss)) return false;
+  boss.health = Math.max(0, boss.health - 1);
+  boss.acorns = [];
+  boss.shove = { x: awayX * BOSS.knock, z: awayZ * BOSS.knock, left: BOSS.knockTime };
+  boss.phase = boss.health <= 0 ? 'defeated' : 'stagger';
+  boss.timer = 0;
+  return true;
+};
+
 /** True while touching it would hurt. */
 export const bossDangerous = (boss: Boss): boolean => boss.phase === 'idle' || (boss.phase === 'attack' && boss.attack === 'charge');
 
@@ -424,17 +443,14 @@ export const stepBoss = (
   // Feet a little under its top still count as landing on it, as much as the level helps with ledges.
   const stomp = overlapping && hero.vy < -BOSS.stompSpeed && previousY >= top - Math.max(0.1, stompHelp) && hero.y <= top;
   const open = bossOpen(boss);
-  const settled = boss.phase !== 'intro' && boss.phase !== 'stagger' && boss.phase !== 'roar';
+  const settled = bossSettled(boss);
   if (settled && open && (stomp || (touching && hero.striking))) {
-    boss.health -= 1;
-    boss.acorns = [];
     const speed = Math.hypot(hero.vx, hero.vz);
     const awayX = speed > 0.1 ? hero.vx / speed : apart > 1e-6 ? (boss.x - hero.x) / apart : 0;
     const awayZ = speed > 0.1 ? hero.vz / speed : apart > 1e-6 ? (boss.z - hero.z) / apart : 0;
-    boss.shove = { x: awayX * BOSS.knock, z: awayZ * BOSS.knock, left: BOSS.knockTime };
+    strikeBoss(boss, awayX, awayZ);
+    outcome.entered.push(boss.phase);
     outcome.struck = hero.pouncing > 0 ? 'pounce' : stomp ? 'stomp' : 'roll';
-    enter(boss.health <= 0 ? 'defeated' : 'stagger');
-    if (boss.health <= 0) boss.health = 0;
     return outcome;
   }
   if (stomp) {

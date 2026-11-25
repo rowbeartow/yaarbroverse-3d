@@ -348,9 +348,28 @@ export class Screens {
     bar.dataset.fight = line.fight;
   }
 
-  /** The controls on the pause screen, for this device and hero. */
-  setControls(hero: HeroName): void {
-    showControls(el('#paused-controls'), isTouchDevice(), hero);
+  private allyShown = '';
+
+  /**
+   * The second move's round button (touch only): its name, or null where the
+   * game has no such move, and whether it can be sent now. The page only
+   * changes when this does.
+   */
+  setAlly(name: string | null, ready: boolean): void {
+    const key = `${name}/${ready}`;
+    if (key === this.allyShown) return;
+    this.allyShown = key;
+    const button = el('#ally-button');
+    button.hidden = name === null;
+    if (name === null) return;
+    button.textContent = name;
+    button.setAttribute('aria-label', name);
+    button.dataset.ready = String(ready);
+  }
+
+  /** The controls on the pause screen, for this device and hero, with the second move when the game has it. */
+  setControls(hero: HeroName, ally = false): void {
+    showControls(el('#paused-controls'), isTouchDevice(), hero, ally);
   }
 
   /** Makes the round button pulse for a few seconds, to show where diving is. */

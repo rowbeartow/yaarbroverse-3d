@@ -19,6 +19,7 @@
 // block it before that. The Sound button and the M key mute it, and the
 // choice is remembered.
 
+import { ALLY_NAME } from './game/sidekick';
 import './style.css';
 import { GameSounds } from './audio/game-sounds';
 import { Sound } from './audio/mix';
@@ -66,7 +67,15 @@ interface PreviewHook {
   again?: (game: Game) => boolean;
   /** True while the page holds the game still, for a still picture of one moment. */
   hold?: () => boolean;
+  /** True to give the hero the second move (Walblum's kick, the Claw Slash). */
+  ally?: boolean;
 }
+
+/**
+ * ALLY HOOK: whether a new run has the second move (src/game/sidekick.ts).
+ * Until the rescue saves it for a player, only a preview page or `?ally` on the address turns it on.
+ */
+const allyOn = (): boolean => Boolean(preview?.ally) || new URLSearchParams(window.location.search).has('ally');
 const preview = (window as unknown as { __grovePreview?: PreviewHook }).__grovePreview ?? null;
 
 const canvas = document.querySelector<HTMLCanvasElement>('#view')!;
@@ -77,7 +86,7 @@ const boot = (): void => {
   let choice: Choice = loadChoice();
   if (preview) choice = { hero: preview.hero ?? choice.hero, difficulty: preview.difficulty ?? choice.difficulty };
   let level: Level = entry.build(choice.difficulty);
-  let game = new Game(level, choice.difficulty, choice.hero);
+  let game = new Game(level, choice.difficulty, choice.hero, { ally: allyOn() });
   /** How many huckleberries and hidden leaves the level that is up has. */
   let toFind = pickupCounts(level.pickups);
   let mode: Mode = 'start';
@@ -155,6 +164,7 @@ const boot = (): void => {
     document.querySelector<HTMLElement>('#stick-knob')!,
     document.querySelector<HTMLElement>('#jump-zone')!,
     document.querySelector<HTMLElement>('#move-button')!,
+    document.querySelector<HTMLElement>('#ally-button'),
   );
 
   /** What saving this run's huckleberries and hidden leaves said, for the end card. */
@@ -183,7 +193,7 @@ const boot = (): void => {
     endFinds = null;
     endFish = null;
     level = entry.build(choice.difficulty);
-    game = new Game(level, choice.difficulty, choice.hero);
+    game = new Game(level, choice.difficulty, choice.hero, { ally: allyOn() });
     toFind = pickupCounts(level.pickups);
     if (preview?.at) game.startOn(preview.at);
     before = { x: game.x, y: game.y, z: game.z };
@@ -259,7 +269,7 @@ const boot = (): void => {
   const showGhostSwitch = (): void => {
     // The controls on the picked card follow the hero picked now (and the pause screen's with them).
     picker.showControls(isTouchDevice(), choice.hero);
-    screens.setControls(choice.hero);
+    screens.setControls(choice.hero, allyOn());
     const slot = ghostSlot();
     if (who && slot) picker.showGhost(ghostOn(who, choice.difficulty), loadGhost(ghosts, slot) !== null);
   };
@@ -514,6 +524,7 @@ const boot = (): void => {
       // A preview page starts its place over when it says so.
       if (preview?.again?.(game)) play();
       screens.setHearts(game.hearts, level.hearts);
+      screens.setAlly(game.sidekick ? ALLY_NAME[game.hero] : null, game.sidekick?.phase === 'ready');
       // At the fishing spot the round button fishes, and says so.
       const atSpot = Boolean(level.fishing && game.fishing && game.grounded && onSpot(level.fishing, game.groundId, game.x, game.z));
       const fishLabel = game.fishing ? fishingButton(atSpot, game.fishing.phase) : null;

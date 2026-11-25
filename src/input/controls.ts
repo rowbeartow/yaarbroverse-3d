@@ -3,11 +3,13 @@
 // the hero's own move (Yaarbro's roll, Caputo's pounce) is held.
 //
 // Keyboard: arrows or WASD move, Space jumps, X or Shift is the move (the same
-// keys as Caputo Mountain).
+// keys as Caputo Mountain). C or Z is the second move (Walblum's kick, the
+// Claw Slash), once a player has it.
 // Touch: drag anywhere on the left half to move (a stick appears under the
 // thumb), press anywhere on the right half to jump. The move has its own
 // round button above the Jump button, smaller than it: everywhere else on the
-// right half is still Jump.
+// right half is still Jump. The second move has a round button of its own
+// beside it, shown only once a player has the move.
 
 import type { Input } from '../game/game';
 
@@ -43,6 +45,7 @@ const KEY_UP = new Set(['ArrowUp', 'KeyW']);
 const KEY_DOWN = new Set(['ArrowDown', 'KeyS']);
 const KEY_JUMP = new Set(['Space']);
 const KEY_MOVE = new Set(['KeyX', 'ShiftLeft', 'ShiftRight']);
+const KEY_ALLY = new Set(['KeyC', 'KeyZ']);
 
 export class Controls {
   private readonly held = new Set<string>();
@@ -56,6 +59,7 @@ export class Controls {
   private stickOrigin = { x: 0, y: 0 };
   private readonly jumpPointers = new Set<number>();
   private readonly movePointers = new Set<number>();
+  private readonly allyPointers = new Set<number>();
 
   constructor(
     stickZone: HTMLElement,
@@ -63,6 +67,7 @@ export class Controls {
     private readonly stickKnob: HTMLElement,
     private readonly jumpZone: HTMLElement,
     private readonly moveButton: HTMLElement,
+    private readonly allyButton: HTMLElement | null = null,
   ) {
     window.addEventListener('keydown', (event) => {
       if (event.metaKey || event.ctrlKey || event.altKey) return;
@@ -131,8 +136,27 @@ export class Controls {
     moveButton.addEventListener('pointerup', endMove);
     moveButton.addEventListener('pointercancel', endMove);
 
+    // The second move's button works the same way.
+    if (allyButton) {
+      allyButton.addEventListener('pointerdown', (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        capture(allyButton, event.pointerId);
+        this.allyPointers.add(event.pointerId);
+        this.tapped.add('ally');
+        allyButton.classList.add('down');
+      });
+      const endAlly = (event: PointerEvent): void => {
+        event.stopPropagation();
+        this.allyPointers.delete(event.pointerId);
+        if (this.allyPointers.size === 0) allyButton.classList.remove('down');
+      };
+      allyButton.addEventListener('pointerup', endAlly);
+      allyButton.addEventListener('pointercancel', endAlly);
+    }
+
     // Stop the page from scrolling, zooming or opening menus under the thumbs.
-    for (const zone of [stickZone, jumpZone, moveButton]) {
+    for (const zone of [stickZone, jumpZone, moveButton, ...(allyButton ? [allyButton] : [])]) {
       zone.addEventListener('contextmenu', (event) => event.preventDefault());
       zone.addEventListener('touchstart', (event) => event.preventDefault(), { passive: false });
     }
@@ -143,7 +167,7 @@ export class Controls {
   enabled = false;
 
   private isGameKey(code: string): boolean {
-    return KEY_LEFT.has(code) || KEY_RIGHT.has(code) || KEY_UP.has(code) || KEY_DOWN.has(code) || KEY_JUMP.has(code) || KEY_MOVE.has(code);
+    return KEY_LEFT.has(code) || KEY_RIGHT.has(code) || KEY_UP.has(code) || KEY_DOWN.has(code) || KEY_JUMP.has(code) || KEY_MOVE.has(code) || KEY_ALLY.has(code);
   }
 
   private any(keys: Set<string>): boolean {
@@ -178,6 +202,8 @@ export class Controls {
     this.jumpZone.classList.remove('down');
     this.movePointers.clear();
     this.moveButton.classList.remove('down');
+    this.allyPointers.clear();
+    this.allyButton?.classList.remove('down');
     this.releaseStick();
   }
 
@@ -190,6 +216,7 @@ export class Controls {
       moveZ: useStick ? this.stick.moveZ : keys.moveZ,
       jump: this.any(KEY_JUMP) || this.jumpPointers.size > 0 || this.tapped.has('jump'),
       move: this.any(KEY_MOVE) || this.movePointers.size > 0 || this.tapped.has('move'),
+      ally: this.any(KEY_ALLY) || this.allyPointers.size > 0 || this.tapped.has('ally'),
     };
     this.tapped.clear();
     return input;
