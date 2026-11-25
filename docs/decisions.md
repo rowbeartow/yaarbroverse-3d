@@ -788,3 +788,11 @@ The owner's word, after seeing Caputo's fishing page: "Caputo looks way better: 
 - Checked in still frames of the game itself, from the middle of the jetty and from its end off to one side. Nobody has watched it move in the game.
 - No iPad checks are asked of the owner while he has none. The checks on GitHub in WebKit at iPad size still run on every pull request.
 
+## 2026-11-25: The dock's frame rate with fishing: 75 at the lowest
+
+The owner's word: "Jetty frame rate on Hard as Yaarbro, Mac, Safari: 75 fps lowest. Record it in the handoff as the dock's number for part two to stay above."
+
+- It is recorded at the top of `docs/session-handoff.md` and in `CLAUDE.md`.
+- The dock is the lake's heaviest place, and the monster pike and Walblum go there. In the test browser the same place draws 825,006 triangles in 321 draw calls (`node tools/draw-measure.mjs cocolalla hard`).
+- The rule until now has been 60 or more on the Mac. Claude asked whether 75 itself is the floor for part two; until he answers, part two is planned to keep the jetty at 75, and he is told before anything is built that would take it lower.
+
