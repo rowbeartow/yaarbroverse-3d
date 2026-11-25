@@ -22,6 +22,19 @@ describe('the controls shown before a run and on the pause screen', () => {
     expect(rows.find((row) => row.does === 'Pause')?.how).toBe('Esc');
   });
 
+  it('add the second move for a player who has it, and say nothing of it otherwise', () => {
+    for (const touch of [false, true]) {
+      for (const hero of ['Yaarbro', 'Caputo'] as const) {
+        const without = controlsFor(touch, hero);
+        const withIt = controlsFor(touch, hero, true);
+        expect(withIt.length).toBe(without.length + 1);
+        const row = withIt.find((each) => !without.some((other) => other.does === each.does))!;
+        expect(row.does).toBe(hero === 'Yaarbro' ? 'Send Walblum to kick' : 'Claw Slash');
+        expect(row.how).toBe(touch ? `The ${hero === 'Yaarbro' ? 'Walblum' : 'Claws'} button` : 'C or Z');
+      }
+    }
+  });
+
   it('name where to touch on touch: the round button for the move and the dive, and no keys', () => {
     const rows = controlsFor(true, 'Yaarbro');
     expect(rows.find((row) => row.does === 'Roll')?.how).toBe('Round button');

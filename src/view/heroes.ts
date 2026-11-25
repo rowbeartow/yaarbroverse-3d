@@ -63,8 +63,8 @@ export interface HeroView {
   /** Where a portrait camera should look, and from how far. */
   portrait: { height: number; distance: number };
   animate(pose: Pose, dt: number): void;
-  /** Something just happened: a jump, a landing, a bounce off a mushroom, the end of climbing out of the water, taking hold of a rope or letting go. */
-  react(event: 'jump' | 'land' | 'bounce' | 'out' | 'catch' | 'letgo'): void;
+  /** Something just happened: a jump, a landing, a bounce off a mushroom, the end of climbing out of the water, taking hold of a rope or letting go, sending the second move or taking it back. */
+  react(event: 'jump' | 'land' | 'bounce' | 'out' | 'catch' | 'letgo' | 'send' | 'take'): void;
   /** Where the hero holds a rope, in the world, as drawn now (see hero-model.ts). False for a hero with no grip. */
   grip(into: Vector3): boolean;
   /** How much the hero is held by a rope right now, 0 to 1. */

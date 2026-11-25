@@ -51,6 +51,7 @@ import { ROUTE_CAMERA, cameraFor, followsRoute, forwardOf, placesCamera, turnTow
 import { ENEMY_MODELS, EnemyView, modelFileFor, modelFilesOf } from './enemies';
 import { enemiesInSight } from './sight';
 import { HERO_MODEL_FILES, buildHero, type HeroView, type Pose } from './heroes';
+import { SidekickView, WALBLUM_FILE } from './sidekick';
 import { buildLake } from './lake';
 import { Materials, WIND, installMist } from './materials';
 import { seeded } from './noise';
@@ -162,6 +163,8 @@ export class GroveView {
   private tier: Tier;
   private levelView: LevelView | null = null;
   private hero: HeroView | null = null;
+  /** The second move, drawn (sidekick.ts): made the first time a game has it. */
+  private sidekick: SidekickView | null = null;
   /** The see-through copy of the hero that replays the player's best run, when there is one to race. */
   private ghost: HeroView | null = null;
   private ghostShown = false;
@@ -288,6 +291,11 @@ export class GroveView {
     if (this.hero) {
       this.scene.remove(this.hero.root);
       this.hero.dispose();
+    }
+    if (this.sidekick) {
+      this.scene.remove(this.sidekick.group);
+      this.sidekick.dispose();
+      this.sidekick = null;
     }
     for (const enemy of this.enemies) {
       this.scene.remove(enemy.root, ...enemy.extras);
@@ -424,6 +432,12 @@ export class GroveView {
         this.climbingOut = false;
       } else if (event.type === 'climb') this.climbingOut = true;
       else if (event.type === 'fishing') this.fishingEvents.push(event);
+      else if (event.type === 'ally') {
+        // The second move: the hero's own clip, and a burst where it lands.
+        if (event.what === 'sent') this.hero?.react('send');
+        else if (event.what === 'back') this.hero?.react('take');
+        this.sidekick?.event(event);
+      }
       else if (event.type === 'piece' && event.what === 'snap') this.levelView?.stones?.snap(event.id);
       else if (event.type === 'piece') this.levelView?.stones?.event(event.id, event.what);
       else if (event.type === 'rope' && event.what === 'grab') {
@@ -503,6 +517,15 @@ export class GroveView {
       },
       dt,
     );
+    // The second move: Walblum, or the claw marks, where the rules have them.
+    if (game.sidekick) {
+      if (!this.sidekick) {
+        this.sidekick = new SidekickView(game.hero, () => this.assets.models.get(WALBLUM_FILE), this.tier.simple);
+        this.scene.add(this.sidekick.group);
+        if (game.hero === 'Yaarbro') void this.assets.loadModels([WALBLUM_FILE], () => {});
+      }
+      this.sidekick.update(game.sidekick, this.camera.rotation.y, dt);
+    }
     // On a rope the hero hangs by the hands (or teeth) from its end, the body swinging with it; the rope's end follows.
     const holding = this.hanger.update(hero.root, hero, game.swinging, dt);
     levelView.ropes?.update(dt, game.ropes, holding);
@@ -805,6 +828,11 @@ export class GroveView {
   /** What each enemy on screen is showing, for the browser checks. */
   enemyInfo(): Array<{ clip: string; visible: boolean; aimLine: boolean; flashing: boolean }> {
     return this.enemies.map((enemy) => enemy.info());
+  }
+
+  /** What is drawn of the second move, for the browser checks, or null in a game without it. */
+  sidekickInfo(): ReturnType<SidekickView['info']> | null {
+    return this.sidekick ? this.sidekick.info() : null;
   }
 
   /** What the hero on screen is made of and doing, for the browser checks. */

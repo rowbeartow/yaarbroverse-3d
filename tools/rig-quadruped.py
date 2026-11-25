@@ -1502,9 +1502,40 @@ class Quadruped:
     def fish_show(self, phase):
         self.fishing_pose(keyed(self.FISH_SHOW, phase), phase * self.FISH_SHOW_SECONDS, lash=14 * smoothstep((phase - 0.5) / 0.2), lash_rate=1.2)
 
+    # The Claw Slash, his second move: he rears a little onto his haunches with
+    # his right front paw drawn up and back, claws out, then rakes it down and
+    # across in front of him and drops back onto all fours. The glowing claw
+    # marks leave the paw as the rake begins (CLAW_SLASH_STRIKE of the way in);
+    # the game draws them.
+    CLAW_SLASH_SECONDS = 0.6
+    CLAW_SLASH_STRIKE = 0.3
+    CLAW_SLASH = [
+        (0.0, dict(rise=0.0, forward=0.0, lean=0, arch=0, chest=0, look=4, turn=0, jaw=0, tail=10, ears=0, paw=(0.0, 0.0, 0.0, 0), left=0.0)),
+        (0.2, dict(rise=0.03, forward=-0.05, lean=13, arch=4, chest=-14, look=14, turn=-10, jaw=22, tail=-20, ears=20, paw=(-0.02, 0.5, 0.2, 35), left=0.02)),
+        (0.3, dict(rise=0.04, forward=-0.04, lean=14, arch=2, chest=-16, look=10, turn=-8, jaw=30, tail=-25, ears=24, paw=(0.05, 0.58, 0.22, 40), left=0.02)),
+        (0.46, dict(rise=-0.04, forward=0.06, lean=-3, arch=-3, chest=16, look=-10, turn=10, jaw=30, tail=45, ears=24, paw=(0.42, 0.22, -0.26, -30), left=0.02)),
+        (0.6, dict(rise=-0.06, forward=0.05, lean=-5, arch=0, chest=12, look=-6, turn=6, jaw=14, tail=35, ears=12, paw=(0.3, 0.05, -0.2, -10), left=0.0)),
+        (1.0, dict(rise=0.0, forward=0.0, lean=0, arch=0, chest=0, look=4, turn=0, jaw=0, tail=10, ears=0, paw=(0.0, 0.0, 0.0, 0), left=0.0)),
+    ]
+
+    def claw_slash(self, phase):
+        s = keyed(self.CLAW_SLASH, phase)
+        self.trunk(rise=s['rise'], forward=s['forward'], lean=s['lean'], arch=s['arch'], chest_yaw=s['chest'], hips_yaw=-0.3 * s['chest'])
+        self.head(follow=0.85, turn=yaw(s['turn']) @ pitch(s['look']), neck_turn=yaw(0.4 * s['turn']))
+        self.jaw(s['jaw'])
+        self.ear('l', flick=s['ears'])
+        self.ear('r', flick=s['ears'])
+        forward, lift, out, toes = s['paw']
+        self.paw('front_r', forward=forward, lift=lift, out=out, toes=toes)
+        # The left front paw takes his weight, a little wider than it stands.
+        self.paw('front_l', out=s['left'])
+        self.paw('hind_l')
+        self.paw('hind_r')
+        self.tail_curve(phase * self.CLAW_SLASH_SECONDS, sway=lambda at: 0.0, lift=lambda at: s['tail'], lag=0.05)
+
     # Clips in which a paw on the ground may be asked for more than its leg's length.
     # In the water no paw is on the ground.
-    stretched = ('jump', 'falling', 'pounce', 'paddle', 'underwater', 'rope_reach', 'rope_catch', 'rope_hang', 'rope_release')
+    stretched = ('jump', 'falling', 'pounce', 'paddle', 'underwater', 'rope_reach', 'rope_catch', 'rope_hang', 'rope_release', 'claw_slash')
 
     def clips(self):
         """Every clip: its name, the function that poses it, and how long it lasts in seconds."""
@@ -1527,6 +1558,7 @@ class Quadruped:
             ('fish_cast', self.fish_cast, self.FISH_CAST_SECONDS),
             ('fish_reel', self.fish_reel, self.FISH_REEL_SECONDS),
             ('fish_show', self.fish_show, self.FISH_SHOW_SECONDS),
+            ('claw_slash', self.claw_slash, self.CLAW_SLASH_SECONDS),
         ]
 
     def report(self, lasts):

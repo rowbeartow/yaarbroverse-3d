@@ -38,10 +38,13 @@ import type { HeroInfo, HeroTackle, HeroView, Pose } from './heroes';
 /** How fast a roll clip turns at full rolling speed, against how it was made. */
 const ROLL_RATE = 1.6;
 
-export type ClipRole = 'idle' | 'walk' | 'trot' | 'run' | 'jump' | 'fall' | 'land' | 'roll' | 'tread' | 'swim' | 'under' | 'climb' | 'shake' | 'reach' | 'catch' | 'hang' | 'release' | 'cast' | 'reel' | 'show';
+export type ClipRole = 'idle' | 'walk' | 'trot' | 'run' | 'jump' | 'fall' | 'land' | 'roll' | 'tread' | 'swim' | 'under' | 'climb' | 'shake' | 'reach' | 'catch' | 'hang' | 'release' | 'cast' | 'reel' | 'show' | 'send' | 'take';
 
 /** The rope clips, in the order they play: reaching out, catching hold, hanging on, letting go. */
 const ROPE_ROLES = ['reach', 'catch', 'hang', 'release'] as const;
+
+/** The second move's clips (src/game/sidekick.ts): sending it, and for a hero who gets something back, taking it. Each plays once over whatever else he is doing. */
+const ALLY_ROLES = ['send', 'take'] as const;
 
 /** The fishing clips: casting, reeling a hooked fish in, and showing off a landed one. */
 const FISHING_ROLES = ['cast', 'reel', 'show'] as const;
@@ -162,6 +165,8 @@ export const HERO_MODELS: Record<HeroName, HeroModelSpec> = {
       cast: ['fish_cast'],
       reel: ['fish_reel'],
       show: ['fish_show'],
+      send: ['ally_send'],
+      take: ['ally_catch'],
     },
     // He has no finger bones: what he holds while fishing is held at a grip point in the middle of each palm.
     fishing: {
@@ -215,6 +220,8 @@ export const HERO_MODELS: Record<HeroName, HeroModelSpec> = {
       cast: ['fish_cast'],
       reel: ['fish_reel'],
       show: ['fish_show'],
+      // His second move, the Claw Slash: nothing comes back to him, so there is no clip for taking it.
+      send: ['claw_slash'],
     },
     // He holds the rod in his jaws: one grip point between his teeth, in his head bone's own space ("grips" in tools/caputo.rig.json).
     fishing: { jaws: { bone: 'head', at: [-0.017, 0.3058, -0.1201], rod: [-0.054, 0.998, 0.027], reel: [0.0, -0.081, -0.997] } },
@@ -342,6 +349,8 @@ export class ModelHero implements HeroView {
   private hanging = 0;
   private releasing = 0;
   private readonly gripBones: Object3D[] = [];
+  /** The second move's clip that is playing, if one is. */
+  private allyRole: 'send' | 'take' | null = null;
   /** How much of each fishing clip shows, 0 to 1, how far through the cast he is in seconds, and what he holds with: his hand bones, or his head bone. */
   private fishingMix = { cast: 0, reel: 0, show: 0 };
   private castClock = 0;
@@ -401,7 +410,7 @@ export class ModelHero implements HeroView {
     this.root.add(this.body);
 
     this.mixer = new AnimationMixer(model);
-    for (const role of ['idle', 'walk', 'trot', 'run', 'jump', 'fall', 'land', 'roll', 'tread', 'swim', 'under', 'climb', 'shake', ...ROPE_ROLES, ...FISHING_ROLES] as const) {
+    for (const role of ['idle', 'walk', 'trot', 'run', 'jump', 'fall', 'land', 'roll', 'tread', 'swim', 'under', 'climb', 'shake', ...ROPE_ROLES, ...FISHING_ROLES, ...ALLY_ROLES] as const) {
       const clip = findClip(source.animations, spec.clips[role]);
       if (!clip) continue;
       const action = this.mixer.clipAction(clip);
@@ -431,6 +440,13 @@ export class ModelHero implements HeroView {
     if (this.actions.shake) {
       this.actions.shake.setLoop(LoopOnce, 1);
       this.actions.shake.clampWhenFinished = true;
+    }
+    // The second move's clips play once each time it is sent or comes back.
+    for (const role of ALLY_ROLES) {
+      const action = this.actions[role];
+      if (!action) continue;
+      action.setLoop(LoopOnce, 1);
+      action.clampWhenFinished = true;
     }
     // The hero's own move: a roll loops for as long as it is held, and a
     // pounce is held as a pose that follows how far through the burst he is.
@@ -474,7 +490,16 @@ export class ModelHero implements HeroView {
     this.body.rotation.y = spec.turn;
   }
 
-  react(event: 'jump' | 'land' | 'bounce' | 'out' | 'catch' | 'letgo'): void {
+  react(event: 'jump' | 'land' | 'bounce' | 'out' | 'catch' | 'letgo' | 'send' | 'take'): void {
+    if (event === 'send' || event === 'take') {
+      // The second move: its clip plays once, over whatever else he is doing.
+      const action = this.actions[event];
+      if (!action) return;
+      for (const role of ALLY_ROLES) this.actions[role]?.stop();
+      action.reset().play();
+      this.allyRole = event;
+      return;
+    }
     if (event === 'catch') {
       // Taking hold: the catch plays once into the hang.
       this.actions.catch?.reset().play();
@@ -676,6 +701,7 @@ export class ModelHero implements HeroView {
     // On a rope: reaching for it, catching it, hanging on, and letting go take over from everything else.
     const ropeTilt = this.ropeClips(pose, dt);
     this.fishingClips(pose, dt);
+    this.allyClips(pose);
     // Underwater the body tips along its way up or down.
     const wantTip = pose.water === 'under' ? Math.max(-0.3, Math.min(0.3, 0.5 * Math.atan2(pose.rise, Math.max(1.5, pose.pace * MOVE.walkSpeed)))) : 0;
     this.tip = approach(this.tip, wantTip, 6, dt);
@@ -734,6 +760,31 @@ export class ModelHero implements HeroView {
     // Nose up for as long as he hangs, and easing level again as he lets go.
     const letGo = release ? Math.min(1, release.time / Math.max(release.getClip().duration * 0.7, 0.001)) : 1;
     return tilt * Math.max(this.hanging, this.releasing * (1 - letGo));
+  }
+
+  /**
+   * Weighs the second move's clip against everything else for this frame:
+   * all of him while he stands, most of him while he moves, eased in and out
+   * at the clip's ends. In the water and on a rope it does not show.
+   */
+  private allyClips(pose: Pose): void {
+    const action = this.allyRole ? this.actions[this.allyRole] : undefined;
+    if (!action) return;
+    const long = action.getClip().duration;
+    const at = action.time;
+    if (!action.isRunning() || at >= long - 1e-3 || pose.water || pose.rope) {
+      action.stop();
+      action.setEffectiveWeight(0);
+      this.allyRole = null;
+      return;
+    }
+    const ease = Math.min(1, at / 0.07, (long - at) / 0.12);
+    const share = ease * (pose.grounded ? 1 - 0.35 * Math.min(1, pose.pace) : 0.75);
+    for (const role of Object.keys(this.actions) as ClipRole[]) {
+      const other = this.actions[role];
+      if (other && other !== action) other.setEffectiveWeight(other.getEffectiveWeight() * (1 - share));
+    }
+    action.setEffectiveWeight(share);
   }
 
   /**

@@ -604,6 +604,10 @@ const boot = (): void => {
       get hero() {
         return view ? view.heroInfo() : null;
       },
+      /** The second move as drawn: whether the flier and a burst are showing, and whether Walblum's model is here. */
+      get sidekick() {
+        return view ? view.sidekickInfo() : null;
+      },
       /** The ghost on screen, if one is being raced: whether it is drawn, where, and how long its run took. */
       get ghost() {
         const info = view?.ghostInfo() ?? null;

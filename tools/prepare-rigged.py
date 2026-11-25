@@ -30,6 +30,8 @@
 #     moments say where the rod is and where his palms are, and how the body
 #     leans. The arms are bent to carry the middle of each palm (`"grips"`
 #     in the guide) there, and the feet stay where they stood.
+#   - Makes a clip with nothing in his hands from a few keys (`"posed"` in
+#     the guide): the launch and the catch of his second move, Walblum.
 #   - Carries over a clip made on a later Meshy rig of the same character
 #     (`"retarget": true` in the guide): same bones, different rest pose.
 #
@@ -741,6 +743,69 @@ def made_clip(body, spec, source, grips):
     return write_clip(body, spec['name'], poses)
 
 
+POSED_FIELDS = {'hips': 3, 'left': 3, 'right': 3, 'left_on': 1, 'right_on': 1, 'lean': 1, 'side': 1, 'twist': 1, 'nod': 1, 'turn': 1, 'shrug_left': 1, 'shrug_right': 1}
+
+
+def posed_at(keys, share):
+    """What a posed clip's keys say at a share of the clip, each number eased from the key before to the key after."""
+    filled = []
+    for key in sorted(keys, key=lambda k: k['at']):
+        last = filled[-1] if filled else {}
+        filled.append({field: key.get(field, last.get(field, [0.0] * size if size > 1 else 0.0)) for field, size in POSED_FIELDS.items()} | {'at': key['at']})
+    before = max((k for k in filled if k['at'] <= share), key=lambda k: k['at'], default=filled[0])
+    after = min((k for k in filled if k['at'] > share), key=lambda k: k['at'], default=before)
+    span = after['at'] - before['at']
+    t = (share - before['at']) / span if span > 0 else 0.0
+    t = t * t * (3 - 2 * t)
+    return {field: (Vector(before[field]).lerp(Vector(after[field]), t) if size > 1 else before[field] + (after[field] - before[field]) * t) for field, size in POSED_FIELDS.items()}
+
+
+def posed_clip(body, spec, source):
+    """
+    Makes a clip with nothing in his hands (`"posed"` in the guide), from one
+    pose of a clip he already has: his feet stay where they stand, his hips,
+    back and head move as the keys say, and each wrist goes to where its key
+    puts it, by as much as `left_on` or `right_on` says (0 leaves the arm as
+    the starting pose has it).
+    """
+    posed = spec['posed']
+    armature = body.armature
+    bones = posed['bones']
+    start, _ = source.frame_range
+    base = round(start + posed.get('from', 0.0) * FPS)
+    armature.animation_data.action = source
+    bpy.context.scene.frame_set(base)
+    bpy.context.view_layer.update()
+    feet = {side: (world_head(body, bones[side]['leg'][2]), armature.pose.bones[bones[side]['leg'][2]].matrix.to_quaternion()) for side in ('left', 'right')}
+    frames = max(1, round(posed['seconds'] * FPS))
+    poses = []
+    for frame in range(frames + 1):
+        now = posed_at(posed['keys'], frame / frames)
+        bpy.context.scene.frame_set(base)
+        body.shift(body.hips, now['hips'])
+        lean(body, body.hips.name, (0, 0, 1), now['twist'])
+        lean(body, bones['back'], (1, 0, 0), now['lean'])
+        lean(body, bones['back'], (0, 1, 0), now['side'])
+        for side, out in (('right', -1), ('left', 1)):
+            thigh, shin, foot = bones[side]['leg']
+            reach(body, thigh, shin, foot, feet[side][0], Vector((0.2 * out, -1, 0)))
+            pose = armature.pose.bones[foot]
+            pose.matrix = Matrix.Translation(pose.matrix.to_translation()) @ feet[side][1].to_matrix().to_4x4()
+            bpy.context.view_layer.update()
+            lean(body, bones[side]['shoulder'], (0, 1, 0), -out * now[f'shrug_{side}'])
+            on = now[f'{side}_on']
+            if on > 1e-4:
+                upper, fore, hand = bones[side]['arm']
+                pole = posed.get('elbows', [1, 0.3, 0.2])
+                reach(body, upper, fore, hand, world_head(body, hand).lerp(now[side], on), Vector((out * pole[0], pole[1], pole[2])))
+        lean(body, bones['head'], (1, 0, 0), now['nod'])
+        lean(body, bones['head'], (0, 0, 1), now['turn'])
+        poses.append(read_pose(armature))
+    armature.animation_data.action = None
+    say(f"clip {spec['name']}: {frames / FPS:.2f} s, posed here from {len(posed['keys'])} keys")
+    return write_clip(body, spec['name'], poses)
+
+
 def write_clip(body, name, poses):
     """Writes a list of poses, one a frame, as a clip."""
     armature = body.armature
@@ -813,7 +878,10 @@ def main():
         spots.append(armature.matrix_world @ body.hips.matrix.to_translation())
     home = sum(spots, Vector()) / len(spots)
 
-    made = [made_clip(body, spec, sources[spec['file']], guide['grips']) if 'made' in spec else make_clip(body, spec, sources[spec['file']], home) for spec in guide['clips']]
+    made = [
+        made_clip(body, spec, sources[spec['file']], guide['grips']) if 'made' in spec else posed_clip(body, spec, sources[spec['file']]) if 'posed' in spec else make_clip(body, spec, sources[spec['file']], home)
+        for spec in guide['clips']
+    ]
     # Only the clips made here are saved, each on its own track so it is its own animation.
     for action in list(bpy.data.actions):
         if action not in made:

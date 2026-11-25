@@ -152,9 +152,9 @@ class Walblum:
         # A flying karate kick: he lies back, the right leg straight out ahead, the left tucked under,
         # one fist forward and one drawn back to the hip. A small shake keeps it alive.
         shake = wave(phase * 2)
-        self.body(lean=58 + 3 * shake, twist=-14, tip=6, rise=0.25, chest=22, chest_twist=10, nod=30, look=8)
-        self.leg('r', forward=24 + 2 * shake, toes=-28)
-        self.leg('l', forward=112, out=14, toes=30)
+        self.body(lean=70 + 3 * shake, twist=-16, tip=8, rise=0.25, chest=26, chest_twist=12, nod=38, look=10)
+        self.leg('r', forward=22 + 2 * shake, toes=-32)
+        self.leg('l', forward=122, out=16, toes=30)
         self.arm('r', up=-18, forward=74, bend=18, hand=30)
         self.arm('l', up=-46, forward=-8, bend=96, hand=40)
         self.tail(lift=-26 + 6 * shake, sway=10 * wave(phase))
