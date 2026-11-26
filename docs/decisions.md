@@ -848,3 +848,7 @@ Claude's calls, building the owner's rule that the rescue is the last thing in t
 
 Claude's call, fixing a flaw found after the fight merged. Dragged into the lake, a player was told "Swim to the floating log", and the first-time dive hint ("Press X to dive") took its place a moment later, because the drag is often the first time in the water in a run. The hint no longer shows over news the player has to read first; it shows the next time the hero goes into the water. The drag's line stays up for five seconds.
 
+## 2026-11-26: The publish run waits until GitHub lists the uploaded files
+
+Claude's call. The publish runs for pull requests 97 and 98 failed three times in a row at the deploy step ("No artifacts named github-pages were found"), though the build and tests passed and the files had been uploaded a third of a second before. The run for pull request 96, an hour earlier, had gone through. The publish workflow now waits, for up to a minute, until GitHub lists the uploaded files for the run, and only then deploys. Nothing else in the workflow changed.
+
