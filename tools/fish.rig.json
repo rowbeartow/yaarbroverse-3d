@@ -1,10 +1,14 @@
 {
-  "about": "How tools/rig-fish.py rigs the fish of Cocolalla Lake. Every fish gets the same skeleton: a body, a head in front of it and a tail in four parts. \"bends\" says where the joints are, as shares of the fish's length from its nose (0) to the end of its tail fin (1): the body runs between the two \"body\" shares, the head is everything in front of it, and each \"tail\" share starts the next part of the tail. A fish may give its own \"body\" or \"tail\" in place of these. \"triangles\" is how many triangles each fish is thinned to: Meshy makes about 31,000, and several fish are on screen at once at the lake's heaviest place. The pike keeps more because the monster pike is drawn from it, much bigger.",
+  "about": "How tools/rig-fish.py rigs the fish of Cocolalla Lake. Every fish gets the same skeleton: a body, a head in front of it and a tail in four parts. \"bends\" says where the joints are, as shares of the fish's length from its nose (0) to the end of its tail fin (1): the body runs between the two \"body\" shares, the head is everything in front of it, and each \"tail\" share starts the next part of the tail. A fish may give its own \"body\" or \"tail\" in place of these. \"triangles\" is how many triangles each fish is thinned to: Meshy makes about 31,000, and several fish are on screen at once at the lake's heaviest place. The pike keeps more because the monster pike is drawn from it, much bigger. A fish with a \"jaw\" gets a mouth that opens (the pike, for the monster pike's tell and bite) and three more clips, gape, snap and beaten: \"mouth\" is the line of its closed lips, first the corner of the mouth, where the jaw hinges, then the front of the lips, each as [share of the fish's length from its nose, metres up from the ground as the model came]; \"chin\" is how far under the front of the lips the jaw bone ends; \"lets_go\" is how many metres behind the corner the jaw's hold on the skin fades out over; \"depth\" is how deep the inside of each jaw is sunk; \"lip_step\" is how far apart the points along the cut lips are left, in metres; \"throat\" and \"inside\" are the colours the inside is painted, dark at the throat and lighter toward the lips (red, green, blue, 0 to 1); and \"triangles\" is how many of the fish's triangles are kept back for the cut and the inside of the mouth.",
   "bends": { "body": [0.28, 0.48], "tail": [0.62, 0.76, 0.88] },
   "fish": {
     "bass": { "triangles": 3000 },
     "perch": { "triangles": 3000 },
     "trout": { "triangles": 3000 },
-    "pike": { "triangles": 5000, "body": [0.3, 0.5] }
+    "pike": {
+      "triangles": 5000,
+      "body": [0.3, 0.5],
+      "jaw": { "mouth": [[0.2, 0.245], [0.012, 0.268]], "chin": 0.03, "lets_go": 0.07, "depth": 0.018, "lip_step": 0.012, "throat": [0.1, 0.02, 0.03], "inside": [0.5, 0.2, 0.2], "triangles": 280 }
+    }
   }
 }

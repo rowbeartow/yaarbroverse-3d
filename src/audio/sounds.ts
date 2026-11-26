@@ -77,6 +77,8 @@ export interface SoundDef {
 
 /** Sounds only the Bouncing Grove plays (and the Sandbox, which borrows its enemies, boss and music). */
 const GROVE = ['bouncing-grove', 'sandbox'] as const;
+/** The chime of a boss beaten: the grove's marmot chief, the Sandbox's practice boss, and the lake's monster pike. */
+const BOSSES = ['bouncing-grove', 'sandbox', 'cocolalla'] as const;
 /** Sounds only Cocolalla Lake plays. */
 const LAKE = ['cocolalla'] as const;
 /** The marmot scout's sounds, for the levels that have one. */
@@ -335,7 +337,7 @@ export const SOUNDS = {
     source: { files: ['button.wav'] },
   },
   bossBeaten: {
-    home: GROVE,
+    home: BOSSES,
     group: 'Enemies', label: 'Boss beaten', mix: 'cue', level: 2,
     what: 'Rising chime notes that ring out over two and a half seconds, the moment a boss is beaten.',
     source: { files: ['boss-beaten.wav'] },

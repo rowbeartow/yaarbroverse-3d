@@ -29,7 +29,8 @@ interface Place {
 }
 
 const PLACES: Place[] = [
-  // First, so the page opens on it: the newest thing to look at. It starts on the jetty, well away from the golden leaf.
+  // First, so the page opens on it: the newest thing to look at. It starts on the pier's landing, the fight's checkpoint.
+  { id: 'pike', label: 'The monster pike', at: 'landing', until: 'none' },
   { id: 'fishing', label: 'Fishing from the jetty', at: 'jetty', until: 'none' },
   { id: 'logs', label: 'Sinking logs', at: 'headland', until: 'gravel-bar' },
   { id: 'open', label: 'The Open Water', at: 'gravel-bar', until: 'reed-bar' },
@@ -98,7 +99,8 @@ const page = window as unknown as { __previewHold?: boolean };
           fisher = null;
           caught = 0;
         }
-        if (place.id === 'fishing') return fish(game);
+        // The fishing bot goes after the ordinary fish; if the monster takes its lure, the test bot sees the fight through.
+        if (place.id === 'fishing' && (!game.pike || game.pike.phase === 'lurking')) return fish(game);
         return bot.input(game);
       }
     : undefined,
