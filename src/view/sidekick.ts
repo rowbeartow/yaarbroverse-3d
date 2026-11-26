@@ -36,7 +36,7 @@ export const WALBLUM_FILE = 'walblum.glb';
 
 export const SIDEKICK_LOOK = {
   /** How tall Walblum is in the game, and how tall he stands in his file. A muskrat, but big enough to read from the game's camera. */
-  walblumHeight: 0.62,
+  walblumHeight: 0.85,
   walblumFileHeight: 1.9,
   /** The claw marks: how long each is, how far apart they fly, and their colour. */
   clawLength: 1.15,
@@ -157,7 +157,8 @@ export class SidekickView {
       const mesh = part as Mesh;
       if (!mesh.isMesh) return;
       mesh.frustumCulled = false;
-      mesh.castShadow = !this.simple;
+      // He is small and gone in half a second: no shadow, so he costs one draw.
+      mesh.castShadow = false;
       if (this.simple) {
         const full = mesh.material as MeshLambertMaterial;
         const plain = new MeshLambertMaterial({ map: full.map ?? null });
@@ -174,6 +175,19 @@ export class SidekickView {
     this.tumble = clip('tumble');
     this.walblum = model;
     this.flier.add(model);
+    // A pale streak behind him, so the eye follows him out and back.
+    const streak = bladeShape(1.5, 0.22, 0);
+    this.shapes.push(streak);
+    const pale = glow(0xfff1c9);
+    pale.opacity = 0.5;
+    this.materials.push(pale);
+    for (const turn of [0, Math.PI / 2]) {
+      const blade = new Mesh(streak, pale);
+      blade.rotation.set(Math.PI / 2, turn, 0);
+      blade.position.z = -1;
+      blade.frustumCulled = false;
+      this.flier.add(blade);
+    }
   }
 
   /** Something happened in the rules: a hit or a block shows as a burst. */

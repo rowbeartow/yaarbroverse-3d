@@ -68,10 +68,13 @@ const pilot = (game: Game): Input => {
     beatenAt = null;
     sincePress = 0;
   }
-  // The page shows the move, not dodging: nothing hurts the hero here.
-  game.protectedFor = 1;
   const enemy = place.target === 'boss' ? null : game.enemies.find((each) => each.spot.id === place.target);
   const boss = place.target === 'boss' ? game.boss : null;
+  // The page shows the move, not dodging. The target is kept on watch, so it never gets as far as an attack;
+  // a boss on its guard (Normal and Hard) has to attack to give an opening, so there the hero is simply not hurt.
+  if (enemy && enemy.phase === 'idle') enemy.timer = 0;
+  if (boss && boss.phase === 'idle' && !boss.spot.numbers.guarded) boss.timer = 0;
+  if (boss?.spot.numbers.guarded) game.protectedFor = 1;
   const at = enemy ?? boss;
   const ground = game.level.solids.find((each) => each.id === place.at);
   if (!at || !ground) return IDLE;
@@ -129,7 +132,7 @@ panel.innerHTML = `<style>
 #preview-panel button { font: inherit; padding: 6px 10px; border-radius: 999px; border: 0; cursor: pointer;
   background: rgba(255,255,255,0.78); color: #1d2a1f; box-shadow: 0 1px 3px rgba(0,0,0,0.25); }
 #preview-panel button[aria-pressed="true"] { background: #2f6e4c; color: #fff; }
-#preview-panel .note { background: rgba(255,255,255,0.78); padding: 6px 10px; border-radius: 10px; max-width: 36em; font-weight: 500; }
+#preview-panel .note { background: rgba(255,255,255,0.78); padding: 6px 10px; border-radius: 10px; max-width: 22em; font-weight: 500; }
 </style>`;
 const row = (options: [string, string][], key: string, current: string): void => {
   const holder = document.createElement('div');
@@ -169,7 +172,7 @@ panel.append(again);
 const note = document.createElement('div');
 note.className = 'note';
 note.textContent = watching
-  ? 'The move is sent over and over until the target is beaten, then the place starts again. Nothing hurts the hero on this page.'
+  ? 'Sent over and over until the target is beaten, then it starts again. The target only watches here.'
   : 'Arrow keys or WASD to move, Space to jump, X or Shift for the first move, and C or Z for the new one. On touch, the new round button.';
 panel.append(note);
 const show = (): void => {

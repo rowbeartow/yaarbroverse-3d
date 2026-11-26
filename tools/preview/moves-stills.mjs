@@ -66,7 +66,7 @@ for (const moment of moments.split(',')) {
     const ally = game.sidekick;
     return `${game.seconds.toFixed(2)} s: ${ally.phase} for ${ally.timer.toFixed(2)} s, drawn ${JSON.stringify(sidekick)}`;
   });
-  await page.screenshot({ path: join(out, `${name}-${moment}.png`) });
+  await page.screenshot({ path: join(out, `${name}-${moment}.png`), timeout: 300_000 });
   console.log(`${moment}: ${doing}`);
 }
 if (problems.length) console.log(problems.slice(0, 10).join('\n'));

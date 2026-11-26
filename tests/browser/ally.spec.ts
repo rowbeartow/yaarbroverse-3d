@@ -62,7 +62,7 @@ test.describe('on the keyboard', () => {
 
   for (const hero of ['Yaarbro', 'Caputo']) {
     test(`pressing C sends ${hero}'s second move at the scout in front of him, and it comes back`, async ({ page }) => {
-      const problems = await open(page, '?ally');
+      const problems = await open(page, 'ally');
       await play(page, hero, 'easy');
       expect((await state(page)).has).toBe(true);
       await faceScout(page);
@@ -89,7 +89,7 @@ test.describe('on the keyboard', () => {
   });
 
   test('the pause screen names the key once a player has the move', async ({ page }) => {
-    await open(page, '?ally');
+    await open(page, 'ally');
     await play(page, 'Caputo', 'easy');
     await page.keyboard.press('Escape');
     await expect(page.locator('#paused-controls')).toContainText('C or Z');
@@ -101,7 +101,7 @@ test.describe('by touch', () => {
   test.skip(({ hasTouch }) => !hasTouch, 'Touch checks run on the iPad-sized screen');
 
   test('the second move has a round button of its own, clear of Jump and the first move', async ({ page }) => {
-    await open(page, '?ally');
+    await open(page, 'ally');
     await play(page, 'Yaarbro', 'easy');
     await expect(page.locator('#ally-button')).toBeVisible();
     await expect(page.locator('#ally-button')).toHaveText('Walblum');
@@ -115,7 +115,7 @@ test.describe('by touch', () => {
   });
 
   test('a thumb on it sends the move, and neither jumps nor rolls', async ({ page }) => {
-    await open(page, '?ally');
+    await open(page, 'ally');
     await play(page, 'Caputo', 'easy');
     await expect(page.locator('#ally-button')).toHaveText('Claws');
     await faceScout(page);
