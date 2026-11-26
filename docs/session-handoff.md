@@ -1,6 +1,6 @@
 # Session handoff
 
-Last updated: 2026-11-26. Milestone eleven, part two is under way. **The monster pike fight and Walblum's rescue are built** (rules, drawing, bot, tests): the fight merged as pull request 96, and the rescue arrived on `main` in the pull request that carried this version of the page. **Walblum's kick, Caputo's Claw Slash and the new sounds are not in the game**: each waits for the owner's OK on its preview page. Everything under "The record" is as earlier sessions wrote it.
+Last updated: 2026-11-26. Milestone eleven, part two is under way. **The monster pike fight and Walblum's rescue are built** (rules, drawing, bot, tests): the fight merged as pull request 96 and the rescue as pull request 97, and both are live. **Walblum's kick, Caputo's Claw Slash and the new sounds are not in the game**: each waits for the owner's OK on its preview page. Everything under "The record" is as earlier sessions wrote it.
 
 ## Start here
 
@@ -93,6 +93,7 @@ Nobody has heard them: they were chosen by name, length and loudness. "Squeaky R
 
 ### Not checked, and the owner is the one who can (on the Mac)
 
+0. **Part two, all of it.** Nobody has watched the pike fight, the rescue or the moves move, or heard anything: a cloud session saw still frames of each. His to say: whether the pike reads as a monster and its jaws as a warning; whether Easy needs no timing for the younger player and Hard is work enough for the older; whether the tug of war is the right length (about 6, 16 and 27 seconds for the bot); whether Walblum on his log can be made out from the dock; **the frame rate at the jetty and through the fight on Hard in Safari** (the floor is 60, and he asked to be told before 65: triangles are up 1.4%); and the moves and the sounds on their pages.
 1. **Caputo's fishing in the game, moving.** A cloud session saw still frames: the rod in his jaws through the cast and the reel, the heave, the turn, the fish on the boards and the rod beside him, from the middle of the jetty and from its end. Whether the turn and the fling read well at full speed is his to say.
 2. **Yaarbro's fishing in the game.** He said OK on the page; he has not said he has seen it in the game.
 3. **How fishing feels**: whether the dark shapes read as fish, whether Easy needs no timing for the younger player and Hard is work enough for the older.
@@ -103,7 +104,7 @@ Nobody has heard them: they were chosen by name, length and loudness. "Squeaky R
 - **Blender is not always on the machine.** Run `apt-get update && apt-get install -y blender python3-numpy` once.
 - **The owner's preview pages could not be opened from the session of 2026-11-25** (claude.ai said "not found" for every address in this file, though the owner can open them). That session changed no page. If a page has to change and cannot be read, ask the owner for its link or publish a new one and give him the new address.
 - **To see the game itself in still frames**, serve the built game (`npm run build`, then `npx vite preview --port 4173`) and drive it with Playwright through `window.__grove` (`tests/browser/helpers.ts` shows how to pick a player, a hero and stand on a solid). The test browser draws in real time on the low tier; to step through a quick moment, hold `requestAnimationFrame` from an init script and run the held frame by hand, one frame a step.
-- **Backup branches that can be deleted** (their work is merged): every `claude/backup-*` branch on GitHub, `claude/backup-caputo-fishing`, `claude/backup-caputo-clips` and `claude/backup-handoff` among them.
+- **Backup branches**: `claude/backup-kick-and-slash` holds the moves and must be kept until they merge. Every other `claude/backup-*` branch on GitHub can be deleted (their work is merged or carried by that one): `claude/backup-rescue`, `claude/backup-moves-models`, `claude/backup-moves`, `claude/backup-caputo-fishing`, `claude/backup-caputo-clips` and `claude/backup-handoff` among them.
 
 ### The roadmap, in the owner's order
 
