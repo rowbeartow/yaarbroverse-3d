@@ -25,6 +25,7 @@ import { Sound } from './audio/mix';
 import { Player } from './audio/player';
 import { bossFighting, bossOpen } from './game/boss';
 import { PIKE, pikeFighting, pikeOpen } from './game/pike';
+import { ABILITY_NAME } from './game/ability';
 import { Game, IDLE, type GameEvent, type Input } from './game/game';
 import type { Difficulty } from './game/difficulty';
 import type { HeroName } from './game/hero';
@@ -61,6 +62,8 @@ type Mode = 'start' | 'playing' | 'paused' | 'ended';
  */
 interface PreviewHook {
   level?: string;
+  /** True: the hero has the new button (Walblum's kick, Claw Slash), whoever is playing. */
+  ability?: boolean;
   at?: string;
   difficulty?: Difficulty;
   hero?: HeroName;
@@ -79,7 +82,7 @@ const boot = (): void => {
   let choice: Choice = loadChoice();
   if (preview) choice = { hero: preview.hero ?? choice.hero, difficulty: preview.difficulty ?? choice.difficulty };
   let level: Level = entry.build(choice.difficulty);
-  let game = new Game(level, choice.difficulty, choice.hero);
+  let game = new Game(level, choice.difficulty, choice.hero, { ability: Boolean(preview?.ability) });
   /** How many huckleberries and hidden leaves the level that is up has. */
   let toFind = pickupCounts(level.pickups);
   let mode: Mode = 'start';
@@ -157,6 +160,7 @@ const boot = (): void => {
     document.querySelector<HTMLElement>('#stick-knob')!,
     document.querySelector<HTMLElement>('#jump-zone')!,
     document.querySelector<HTMLElement>('#move-button')!,
+    document.querySelector<HTMLElement>('#attack-button'),
   );
 
   /** What saving this run's huckleberries and hidden leaves said, for the end card. */
@@ -179,13 +183,16 @@ const boot = (): void => {
     return players.collect(who.id, { levelId: entry.id, difficulty: choice.difficulty, berries, leaves });
   };
 
+  /** Whether whoever is playing has won the new button. */
+  const hasAbility = (): boolean => Boolean(preview?.ability || (who && players.get(who.id)?.rescued));
   /** Builds the level and hero for the current choice and stands the hero at the start. */
   const setUp = (): void => {
     saveHaul();
     endFinds = null;
     endFish = null;
     level = entry.build(choice.difficulty);
-    game = new Game(level, choice.difficulty, choice.hero);
+    // The new button is won by rescuing Walblum, and from then on is there from the start of every level.
+    game = new Game(level, choice.difficulty, choice.hero, { ability: hasAbility() });
     toFind = pickupCounts(level.pickups);
     if (preview?.at) game.startOn(preview.at);
     before = { x: game.x, y: game.y, z: game.z };
@@ -222,6 +229,8 @@ const boot = (): void => {
       view?.show(game.level, choice.hero, entry.scenery);
       view?.snapCamera(game);
     };
+    // Yaarbro with the new button brings Walblum: his model comes with whatever level is picked.
+    view.companion = game.ability !== null && game.hero === 'Yaarbro';
     if (view.has(game.level)) {
       const waited = fetching;
       ready();
@@ -539,6 +548,8 @@ const boot = (): void => {
       screens.setLine(game.fishing?.phase === 'hooked' ? { strain: game.fishing.strain, fight: game.fishing.fight } : null);
       screens.setBreath(Number.isFinite(game.maxBreath) && (game.under || game.breath < game.maxBreath) ? game.breath / game.maxBreath : null);
       showBoss();
+      // The new button, for a hero who has it: named, and dimmed while Walblum (or the paw) is away.
+      screens.setAbility(game.ability ? ABILITY_NAME[game.hero] : null, game.ability?.phase === 'ready');
       screens.setFound(level.pickups?.length ? { berries: game.berries, berriesIn: toFind.berry, leaves: game.leaves, leavesIn: toFind.leaf } : null);
       if (game.complete && mode === 'playing') {
         mode = 'ended';
@@ -625,6 +636,10 @@ const boot = (): void => {
       /** The level's monster pike, if it has one: what is drawn, and what the rules have. */
       get pike() {
         return view && game.pike ? { ...view.pikeInfo(), phase: game.pike.phase, health: game.pike.health } : null;
+      },
+      /** The new button: what is drawn of it, and what the rules have, or null for a hero without it. */
+      get ability() {
+        return view && game.ability ? { ...view.abilityInfo(), phase: game.ability.phase, used: game.ability.used } : null;
       },
       /** The level's rescue (Walblum), if it has one: what is drawn, and what the rules have. */
       get rescue() {

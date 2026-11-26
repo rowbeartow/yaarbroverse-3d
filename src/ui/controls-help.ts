@@ -13,9 +13,11 @@ export interface ControlRow {
 }
 
 /** The controls for a keyboard or for touch, for this hero. */
-export const controlsFor = (touch: boolean, hero: HeroName): ControlRow[] => {
+export const controlsFor = (touch: boolean, hero: HeroName, ability: string | null = null): ControlRow[] => {
   const move = MOVE_NAME[hero];
-  return touch
+  // The new button, for a hero who has won it: after the hero's own move.
+  const more = (rows: ControlRow[]): ControlRow[] => (ability ? [...rows.slice(0, 3), { how: touch ? 'Orange button' : 'C', does: ability }, ...rows.slice(3)] : rows);
+  return more(touch
     ? [
         { how: 'Drag on the left', does: 'Move' },
         { how: 'Tap the right', does: 'Jump (hold for higher)' },
@@ -29,7 +31,7 @@ export const controlsFor = (touch: boolean, hero: HeroName): ControlRow[] => {
         { how: 'X or Shift in water', does: 'Dive' },
         { how: 'Esc', does: 'Pause' },
         { how: 'M', does: 'Sound off and on' },
-      ];
+      ]);
 };
 
 /** Fills `holder` with the controls, as a list of what to press and what it does. */

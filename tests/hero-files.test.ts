@@ -88,7 +88,7 @@ describe('the hero model files', () => {
   });
 
   it('Caputo: holds every clip the rig script writes', () => {
-    expect(clipNames('caputo.glb').sort()).toEqual(['falling', 'fish_cast', 'fish_reel', 'fish_show', 'idle', 'jump', 'landing', 'paddle', 'pounce', 'rope_catch', 'rope_hang', 'rope_reach', 'rope_release', 'run', 'shake', 'trot', 'underwater', 'walk']);
+    expect(clipNames('caputo.glb').sort()).toEqual(['claw_slash', 'falling', 'fish_cast', 'fish_reel', 'fish_show', 'idle', 'jump', 'landing', 'paddle', 'pounce', 'rope_catch', 'rope_hang', 'rope_reach', 'rope_release', 'run', 'shake', 'trot', 'underwater', 'walk']);
   });
 
   it('Caputo: has a spine, neck and head, a jaw that opens, shoulder blades, ears, four legs of three bones, and a tail of at least five', () => {

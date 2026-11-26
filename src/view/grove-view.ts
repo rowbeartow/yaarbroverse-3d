@@ -47,6 +47,8 @@ import { SPECIES, fishingPoint, type FishingEvent, type FishingState, type Speci
 import { FISH_MODELS, FishingView } from './fishing';
 import { PikeView } from './pike';
 import { RescueView, WALBLUM_MODEL } from './rescue';
+import { AbilityView } from './ability';
+import type { AbilityEvent } from '../game/ability';
 import { PickupsView } from './pickups';
 import { WeedBeds } from './weed-beds';
 import { ROUTE_CAMERA, cameraFor, followsRoute, forwardOf, placesCamera, turnToward } from './route-camera';
@@ -239,14 +241,22 @@ export class GroveView {
     return new GroveView(renderer, assets, start, !isTierName(asked), touch);
   }
 
+  /** Set when the hero about to play has Walblum's kick: his model is then fetched with whatever level is picked. */
+  companion = false;
+
+  private filesFor(level: Level): string[] {
+    const files = modelFilesOf(level);
+    return this.companion && !files.includes(WALBLUM_MODEL) ? [...files, WALBLUM_MODEL] : files;
+  }
+
   /** True when every model this level needs is here, so `show` can build it. */
   has(level: Level): boolean {
-    return modelFilesOf(level).every((file) => this.assets.models.has(file));
+    return this.filesFor(level).every((file) => this.assets.models.has(file));
   }
 
   /** Fetches the models this level needs that are not here yet. `onProgress` gets 0 to 1. */
   load(level: Level, onProgress?: (share: number) => void): Promise<void> {
-    return this.assets.loadModels(modelFilesOf(level), onProgress);
+    return this.assets.loadModels(this.filesFor(level), onProgress);
   }
 
   private constructor(
@@ -458,6 +468,7 @@ export class GroveView {
       } else if (event.type === 'boss' && event.what === 'hit') this.boss?.strike();
       else if (event.type === 'boss' && event.what === 'beaten') this.sinceOpen = 0;
       else if (event.type === 'pike' && event.what === 'hit') this.levelView?.pike?.strike();
+      else if (event.type === 'ability') this.abilityEvents.push(event);
       else if (event.type === 'pike' && event.what === 'beaten') this.sinceOpen = 0;
       else if (event.type === 'goal') this.sinceGoal = 0;
       if (event.type === 'splash' || event.type === 'dive' || event.type === 'surface' || event.type === 'climb') this.swimEvents.push(event);
@@ -522,6 +533,7 @@ export class GroveView {
         climbing: game.climbing > 0 ? 1 - game.climbing / SWIM.climbTime : null,
         rope: game.swinging ? 'hang' : ropeNear ? 'reach' : null,
         fishing: fishingPose(game.fishing),
+        strikes: game.ability?.used ?? 0,
       },
       dt,
     );
@@ -615,6 +627,12 @@ export class GroveView {
     this.fishingEvents = [];
     if (levelView.pike && game.pike) levelView.pike.update(game.pike, { x, z }, dt);
     if (levelView.rescue && game.rescue) levelView.rescue.update(game.rescue, { x, z }, dt);
+    if (game.ability || this.ability) {
+      const drawn = this.abilityFor(game.hero);
+      if (game.ability) for (const event of this.abilityEvents) drawn.event(event, game.ability);
+      drawn.update(game.ability, this.camera.position, dt);
+    }
+    this.abilityEvents = [];
 
     // Mushrooms and the golden leaf.
     for (const mushroom of levelView.mushrooms.values()) animateMushroom(mushroom, dt);
@@ -809,6 +827,27 @@ export class GroveView {
   /** What the boss on screen is showing, for the browser checks, or null when the level has none. */
   bossInfo(): ReturnType<BossView['info']> | null {
     return this.boss ? this.boss.info() : null;
+  }
+
+  /** The new button drawn, for the hero who is playing: made when first needed, and again when the hero changes. */
+  private ability: AbilityView | null = null;
+  private abilityEvents: AbilityEvent[] = [];
+  private abilityHero: HeroName | null = null;
+  private abilityFor(hero: HeroName): AbilityView {
+    if (this.ability && this.abilityHero === hero) return this.ability;
+    if (this.ability) {
+      this.scene.remove(this.ability.group);
+      this.ability.dispose();
+    }
+    this.ability = new AbilityView(hero, this.assets.models.get(WALBLUM_MODEL) ?? null, this.tier.simple);
+    this.abilityHero = hero;
+    this.scene.add(this.ability.group);
+    return this.ability;
+  }
+
+  /** The new button as drawn, or null when it has not been used. */
+  abilityInfo(): ReturnType<AbilityView['info']> | null {
+    return this.ability?.info() ?? null;
   }
 
   /** The level's rescue as drawn (Walblum), or null in a level with none. */

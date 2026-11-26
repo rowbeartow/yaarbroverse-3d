@@ -1318,3 +1318,37 @@ dl div.is-new .best {
   max-width: 360px;
   margin: 0 auto;
 }
+
+/* The new button (Walblum's kick, Claw Slash): beside the round move button, for a hero who has won it. */
+#attack-button {
+  position: absolute;
+  right: calc(max(28px, env(safe-area-inset-right)) + clamp(120px, 20vmin, 168px) * 0.62 + clamp(76px, 12.5vmin, 104px) + 14px);
+  bottom: calc(max(28px, env(safe-area-inset-bottom)) + clamp(120px, 20vmin, 168px) * 0.55);
+  width: clamp(76px, 12.5vmin, 104px);
+  aspect-ratio: 1;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  border: 3px solid rgba(255, 246, 221, 0.55);
+  background: rgba(176, 96, 38, 0.66);
+  color: #fff6dd;
+  font-size: clamp(15px, 2.4vmin, 20px);
+  font-weight: 700;
+  pointer-events: auto;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+#attack-button[hidden] {
+  display: none;
+}
+
+#attack-button.down {
+  transform: scale(0.94);
+  background: rgba(214, 128, 52, 0.85);
+}
+
+#attack-button[data-ready='false'] {
+  opacity: 0.45;
+}

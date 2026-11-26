@@ -38,7 +38,7 @@ import type { HeroInfo, HeroTackle, HeroView, Pose } from './heroes';
 /** How fast a roll clip turns at full rolling speed, against how it was made. */
 const ROLL_RATE = 1.6;
 
-export type ClipRole = 'idle' | 'walk' | 'trot' | 'run' | 'jump' | 'fall' | 'land' | 'roll' | 'tread' | 'swim' | 'under' | 'climb' | 'shake' | 'reach' | 'catch' | 'hang' | 'release' | 'cast' | 'reel' | 'show';
+export type ClipRole = 'idle' | 'walk' | 'trot' | 'run' | 'jump' | 'fall' | 'land' | 'roll' | 'tread' | 'swim' | 'under' | 'climb' | 'shake' | 'strike' | 'reach' | 'catch' | 'hang' | 'release' | 'cast' | 'reel' | 'show';
 
 /** The rope clips, in the order they play: reaching out, catching hold, hanging on, letting go. */
 const ROPE_ROLES = ['reach', 'catch', 'hang', 'release'] as const;
@@ -148,6 +148,8 @@ export const HERO_MODELS: Record<HeroName, HeroModelSpec> = {
       fall: ['falling'],
       land: ['landing'],
       roll: ['roll'],
+      // The new button: he lifts his elbow and Walblum shoots out from under his arm (made by tools/prepare-rigged.py).
+      strike: ['walblum_launch'],
       // From Meshy's animation library and Text to Motion, on a new rig of his model (tools/yaarbro.swim.json).
       tread: ['tread'],
       swim: ['swim'],
@@ -211,6 +213,8 @@ export const HERO_MODELS: Record<HeroName, HeroModelSpec> = {
       catch: ['rope_catch'],
       hang: ['rope_hang'],
       release: ['rope_release'],
+      // The new button: a swipe of his right forepaw (written by tools/rig-quadruped.py).
+      strike: ['claw_slash'],
       // Written by tools/rig-quadruped.py: the rod is in his jaws, so he fishes with his head and his whole body.
       cast: ['fish_cast'],
       reel: ['fish_reel'],
@@ -335,6 +339,9 @@ export class ModelHero implements HeroView {
   private deep = 0;
   /** How much of the shake-off shows (Caputo, after climbing out). */
   private shaking = 0;
+  /** How much of the new button's clip shows, and how many times the button had been sent when it last began. */
+  private strikeShown = 0;
+  private strikes = 0;
   /** The body's tip along a dive or a swim up, in radians. */
   private tip = 0;
   /** How much of each rope clip shows, 0 to 1, and the bones a rope is held by. */
@@ -401,7 +408,7 @@ export class ModelHero implements HeroView {
     this.root.add(this.body);
 
     this.mixer = new AnimationMixer(model);
-    for (const role of ['idle', 'walk', 'trot', 'run', 'jump', 'fall', 'land', 'roll', 'tread', 'swim', 'under', 'climb', 'shake', ...ROPE_ROLES, ...FISHING_ROLES] as const) {
+    for (const role of ['idle', 'walk', 'trot', 'run', 'jump', 'fall', 'land', 'roll', 'tread', 'swim', 'under', 'climb', 'shake', 'strike', ...ROPE_ROLES, ...FISHING_ROLES] as const) {
       const clip = findClip(source.animations, spec.clips[role]);
       if (!clip) continue;
       const action = this.mixer.clipAction(clip);
@@ -427,6 +434,11 @@ export class ModelHero implements HeroView {
     if (this.actions.climb && this.actions.climb !== this.actions.jump) {
       this.actions.climb.play();
       this.actions.climb.paused = true;
+    }
+    // The new button's own clip (Yaarbro's launch, Caputo's swipe) plays once each time it is sent.
+    if (this.actions.strike) {
+      this.actions.strike.setLoop(LoopOnce, 1);
+      this.actions.strike.clampWhenFinished = true;
     }
     if (this.actions.shake) {
       this.actions.shake.setLoop(LoopOnce, 1);
@@ -672,6 +684,24 @@ export class ModelHero implements HeroView {
         }
       }
       shake.setEffectiveWeight(this.shaking);
+    }
+    // The new button: its clip from the start each time it is sent, over everything else, eased out at its end.
+    const strike = actions.strike;
+    if (strike) {
+      const sent = pose.strikes ?? 0;
+      if (sent > this.strikes) {
+        strike.reset().play();
+        this.strikeShown = 1;
+      }
+      this.strikes = sent;
+      if (this.strikeShown > 0) {
+        const left = 1 - strike.time / Math.max(strike.getClip().duration, 0.001);
+        this.strikeShown = left <= 0 ? 0 : Math.min(1, left * 5);
+        for (const other of Object.values(actions)) {
+          if (other && other !== strike) other.setEffectiveWeight(other.getEffectiveWeight() * (1 - this.strikeShown));
+        }
+      }
+      strike.setEffectiveWeight(this.strikeShown);
     }
     // On a rope: reaching for it, catching it, hanging on, and letting go take over from everything else.
     const ropeTilt = this.ropeClips(pose, dt);

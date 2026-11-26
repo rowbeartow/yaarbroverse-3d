@@ -43,6 +43,8 @@ const KEY_UP = new Set(['ArrowUp', 'KeyW']);
 const KEY_DOWN = new Set(['ArrowDown', 'KeyS']);
 const KEY_JUMP = new Set(['Space']);
 const KEY_MOVE = new Set(['KeyX', 'ShiftLeft', 'ShiftRight']);
+/** The new button (Walblum's kick, Claw Slash), for a hero who has won it. */
+const KEY_ATTACK = new Set(['KeyC', 'KeyE']);
 
 export class Controls {
   private readonly held = new Set<string>();
@@ -56,6 +58,7 @@ export class Controls {
   private stickOrigin = { x: 0, y: 0 };
   private readonly jumpPointers = new Set<number>();
   private readonly movePointers = new Set<number>();
+  private readonly attackPointers = new Set<number>();
 
   constructor(
     stickZone: HTMLElement,
@@ -63,6 +66,8 @@ export class Controls {
     private readonly stickKnob: HTMLElement,
     private readonly jumpZone: HTMLElement,
     private readonly moveButton: HTMLElement,
+    /** The new button, beside the move button. It is hidden until a hero has it. */
+    private readonly attackButton: HTMLElement | null = null,
   ) {
     window.addEventListener('keydown', (event) => {
       if (event.metaKey || event.ctrlKey || event.altKey) return;
@@ -130,6 +135,24 @@ export class Controls {
     };
     moveButton.addEventListener('pointerup', endMove);
     moveButton.addEventListener('pointercancel', endMove);
+    // The new button works the same way.
+    if (attackButton) {
+      attackButton.addEventListener('pointerdown', (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        capture(attackButton, event.pointerId);
+        this.attackPointers.add(event.pointerId);
+        this.tapped.add('attack');
+        attackButton.classList.add('down');
+      });
+      const endAttack = (event: PointerEvent): void => {
+        event.stopPropagation();
+        this.attackPointers.delete(event.pointerId);
+        if (this.attackPointers.size === 0) attackButton.classList.remove('down');
+      };
+      attackButton.addEventListener('pointerup', endAttack);
+      attackButton.addEventListener('pointercancel', endAttack);
+    }
 
     // Stop the page from scrolling, zooming or opening menus under the thumbs.
     for (const zone of [stickZone, jumpZone, moveButton]) {
@@ -178,6 +201,8 @@ export class Controls {
     this.jumpZone.classList.remove('down');
     this.movePointers.clear();
     this.moveButton.classList.remove('down');
+    this.attackPointers.clear();
+    this.attackButton?.classList.remove('down');
     this.releaseStick();
   }
 
@@ -190,6 +215,7 @@ export class Controls {
       moveZ: useStick ? this.stick.moveZ : keys.moveZ,
       jump: this.any(KEY_JUMP) || this.jumpPointers.size > 0 || this.tapped.has('jump'),
       move: this.any(KEY_MOVE) || this.movePointers.size > 0 || this.tapped.has('move'),
+      attack: this.any(KEY_ATTACK) || this.attackPointers.size > 0 || this.tapped.has('attack'),
     };
     this.tapped.clear();
     return input;

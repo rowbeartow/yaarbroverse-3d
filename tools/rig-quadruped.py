@@ -28,7 +28,8 @@
 #      weights of the nearest part of the body. If the automatic weights fail
 #      on the mesh as it is, a clean copy of it is weighted and the weights
 #      are carried across.
-#   5. Writes the clips: idle, walk, trot, run, jump, falling, landing, pounce.
+#   5. Writes the clips: idle, walk, trot, run, jump, falling, landing, pounce,
+#      and those added since (swimming, rope, fishing, Claw Slash).
 #      They are a cat's (see the Quadruped class). Paws are placed by working the
 #      leg joints back from where the toes should be, so a paw on the ground
 #      stays where it is put, and the script stops if a clip asks a planted
@@ -1502,9 +1503,80 @@ class Quadruped:
     def fish_show(self, phase):
         self.fishing_pose(keyed(self.FISH_SHOW, phase), phase * self.FISH_SHOW_SECONDS, lash=14 * smoothstep((phase - 0.5) / 0.2), lash_rate=1.2)
 
+    # ----- Claw Slash (milestone eleven, part two) -----
+    #
+    # His new move: he rears a little off his front paws and swipes his right
+    # forepaw across in front of him, from high on his right to low on his
+    # left. The game's camera is behind and above him, so the paw goes up
+    # beside his shoulder where it shows, and the whole chest swings with it.
+    # The game sends the three claw marks off as the swipe crosses his middle.
+    # It starts and ends in the idle clip's first pose, so it blends from
+    # standing and back. The numbers a guide may change are in its "clips"
+    # under "claw_slash": seconds; rear (degrees the chest comes up); raised,
+    # across and low (the paw at the top of the wind-up, crossing his middle,
+    # and at the end of the swipe, each [metres ahead, up, out to his right]
+    # of where the paw stands); and wound, struck and down (seconds in: the
+    # paw is drawn back, the swipe is done, he is back on four paws).
+    CLAW_SLASH_SECONDS = 0.5
+
+    def claw_slash(self, phase):
+        seconds = self.setting('claw_slash', 'seconds', self.CLAW_SLASH_SECONDS)
+        wound = self.setting('claw_slash', 'wound', 0.08) / seconds
+        struck = self.setting('claw_slash', 'struck', 0.22) / seconds
+        down = self.setting('claw_slash', 'down', 0.5) / seconds
+        rear = self.setting('claw_slash', 'rear', 19.0)
+        raised = self.setting('claw_slash', 'raised', [0.05, 0.75, 0.4])
+        across = self.setting('claw_slash', 'across', [0.55, 0.62, -0.25])
+        low = self.setting('claw_slash', 'low', [0.3, 0.32, -0.82])
+        middle = (wound + struck) / 2
+        # Standing still from `down` to the end, when the clip is longer than the move.
+        rest = [(1.0, 0.0)] if down < 1.0 else []
+        # Standing as the idle clip does at its start.
+        idle_seconds = self.setting('idle', 'seconds', 8.0)
+        beat = lambda at, rate, peak=0.0: wave(at / idle_seconds * rate, peak)
+        breath, weight = beat(0.0, 2, 0.15), beat(0.0, 1, 0.2)
+        # How far he is reared up: up with the wind-up, held through the swipe, and down after it.
+        up = keyed([(0.0, 0.0), (wound, 0.85), (middle, 1.0), (struck, 0.9), (down, 0.0)] + rest, phase)
+        # The chest swings to his right as the paw draws back, and through to his left with the swipe.
+        swing = keyed([(0.0, 0.0), (wound, -1.0), (struck, 1.0), (down, 0.0)] + rest, phase)
+        self.trunk(
+            rise=0.008 * breath - 0.006 * weight * weight + 0.03 * up,
+            sway=0.024 * weight,
+            forward=0.05 * max(0.0, swing) * up,
+            lean=0.5 * breath + rear * up,
+            arch=-1.8 * breath - 6.0 * up,
+            hips_roll=1.4 * weight,
+            hips_yaw=0.8 * weight + 4.0 * swing,
+            chest_roll=-0.9 * weight - 12.0 * swing,
+            chest_yaw=26.0 * swing,
+        )
+        self.blade('l', rise=0.006 * breath + 0.012 * weight)
+        self.blade('r', rise=0.006 * breath - 0.012 * weight + 0.04 * up)
+        # He keeps his eyes on what he is striking, and snarls.
+        self.head(follow=0.35 + 0.45 * up, turn=yaw(6.0 * swing) @ pitch(0.8 * breath - 10.0 * up))
+        self.jaw(10.0 * bump(phase, wound * 0.5, struck + 0.15, 0.1))
+        self.ear('l', 26 * up)
+        self.ear('r', 26 * up)
+        self.tail_curve(
+            0.0,
+            sway=lambda at: 9 * beat(at, 1, 0.45) + 4 * beat(at, 2, 0.1) - 30 * swing,
+            lift=lambda at: 6 * beat(at, 2, 0.3) + 25 * up,
+            lag=0.16,
+            tip=lambda at: 0.0,
+        )
+        # The right forepaw: up beside his shoulder, across in front of him, down on his left, and home.
+        path = [(0.0, [0.0, 0.0, 0.0]), (wound, raised), (middle, across), (struck, low), (down, [0.0, 0.0, 0.0])] + ([(1.0, [0.0, 0.0, 0.0])] if down < 1.0 else [])
+        ahead, lift, out = (flowing([(time, place[i]) for time, place in path], phase) for i in range(3))
+        toes = keyed([(0.0, 0.0), (wound, -50.0), (middle, 10.0), (struck, 25.0), (down, 0.0)] + rest, phase)
+        self.paw('front_r', forward=ahead, lift=max(0.0, lift), out=out, toes=toes, soft=True)
+        # The left forepaw comes just off the ground while he is up, and hangs.
+        self.paw('front_l', forward=0.04 * up, lift=0.07 * up, toes=-18.0 * up, soft=True)
+        for leg in ('hind_l', 'hind_r'):
+            self.paw(leg)
+
     # Clips in which a paw on the ground may be asked for more than its leg's length.
     # In the water no paw is on the ground.
-    stretched = ('jump', 'falling', 'pounce', 'paddle', 'underwater', 'rope_reach', 'rope_catch', 'rope_hang', 'rope_release')
+    stretched = ('jump', 'falling', 'pounce', 'paddle', 'underwater', 'rope_reach', 'rope_catch', 'rope_hang', 'rope_release', 'claw_slash')
 
     def clips(self):
         """Every clip: its name, the function that poses it, and how long it lasts in seconds."""
@@ -1527,6 +1599,7 @@ class Quadruped:
             ('fish_cast', self.fish_cast, self.FISH_CAST_SECONDS),
             ('fish_reel', self.fish_reel, self.FISH_REEL_SECONDS),
             ('fish_show', self.fish_show, self.FISH_SHOW_SECONDS),
+            ('claw_slash', self.claw_slash, self.setting('claw_slash', 'seconds', self.CLAW_SLASH_SECONDS)),
         ]
 
     def report(self, lasts):

@@ -32,6 +32,8 @@ export interface Pose {
    * spent in that phase, and whether the button is reeling. Left out otherwise.
    */
   fishing?: { phase: 'aim' | 'cast' | 'wait' | 'hooked' | 'show'; timer: number; reeling: boolean } | null;
+  /** How many times the new button has been sent this run (see ability.ts): the hero's clip for it plays each time this goes up. */
+  strikes?: number;
 }
 
 /**

@@ -30,6 +30,8 @@ interface Place {
 
 const PLACES: Place[] = [
   // First, so the page opens on it: the newest thing to look at. It starts on the pier's landing, the fight's checkpoint.
+  // The new moves, for the owner's and the kids' OK: on the dock, with its scouts to send them at.
+  { id: 'moves', label: "Walblum's kick and Claw Slash", at: 'dock', until: 'none' },
   { id: 'pike', label: 'The monster pike', at: 'landing', until: 'none' },
   { id: 'fishing', label: 'Fishing from the jetty', at: 'jetty', until: 'none' },
   { id: 'logs', label: 'Sinking logs', at: 'headland', until: 'gravel-bar' },
@@ -79,6 +81,35 @@ const fish = (game: Game) => {
   }
   return fisher.input(game);
 };
+/**
+ * Watching the new moves: the hero stands on the dock, turns to the nearest scout and sends the button at it,
+ * again and again. The scouts stand still, do no harm and keep coming back, so the move is all there is to see.
+ */
+let pressFor = 0;
+const moves = (game: Game) => {
+  const dock = game.level.solids.find((s) => s.id === 'dock')!;
+  // Stand at the south-west of the dock, where the camera sees the whole of it.
+  const home = { x: dock.x - 1.5, z: dock.z + 2.4 };
+  const scouts = game.enemies.filter((enemy) => enemy.spot.id.startsWith('scout-dock'));
+  scouts.forEach((scout, index) => {
+    // Each stands still a few metres off, out in plain view and doing no harm, and is back a moment after it is beaten.
+    const at = { x: home.x + (index === 0 ? -2.2 : 2.6), z: home.z - (index === 0 ? 4.6 : 5.4) };
+    if (scout.phase === 'defeated') {
+      if (scout.timer > 1.6) Object.assign(scout, { phase: 'rest', timer: 0, hits: scout.maxHits, flash: 0 });
+      return;
+    }
+    Object.assign(scout, { phase: 'rest', timer: 0, x: at.x, z: at.z, acorn: null });
+  });
+  const live = scouts.filter((scout) => scout.phase !== 'defeated').sort((a, b) => Math.hypot(a.x - game.x, a.z - game.z) - Math.hypot(b.x - game.x, b.z - game.z))[0];
+  const off = Math.hypot(home.x - game.x, home.z - game.z);
+  if (off > 1.2 || !live) return { ...IDLE, moveX: off > 0.3 ? (home.x - game.x) / off : 0, moveZ: off > 0.3 ? (home.z - game.z) / off : 0 };
+  // A nudge toward the scout turns the hero to face it; then the button, pressed afresh each time it is ready.
+  const far = Math.hypot(live.x - game.x, live.z - game.z) || 1;
+  const facing = Math.atan2(live.x - game.x, live.z - game.z);
+  const turned = Math.abs(Math.atan2(Math.sin(facing - game.facing), Math.cos(facing - game.facing))) < 0.3;
+  pressFor = game.ability?.phase === 'ready' && turned ? pressFor + 1 : 0;
+  return { ...IDLE, moveX: turned ? 0 : ((live.x - game.x) / far) * 0.6, moveZ: turned ? 0 : ((live.z - game.z) / far) * 0.6, attack: pressFor > 20 && pressFor < 26 };
+};
 let playing: Game | null = null;
 /** The game time at which the bot came to stand where the place ends, or null. */
 let stoodSince: number | null = null;
@@ -87,6 +118,8 @@ const page = window as unknown as { __previewHold?: boolean };
 (window as unknown as { __grovePreview: unknown }).__grovePreview = {
   level: 'cocolalla',
   at: place.at,
+  // Everywhere on this page the hero has the new button, to try: C on a keyboard, the orange button on touch.
+  ability: true,
   difficulty,
   hero,
   pilot: watching
@@ -99,6 +132,7 @@ const page = window as unknown as { __previewHold?: boolean };
           fisher = null;
           caught = 0;
         }
+        if (place.id === 'moves') return moves(game);
         // The fishing bot goes after the ordinary fish; if the monster takes its lure, the test bot sees the fight through.
         if (place.id === 'fishing' && (!game.pike || game.pike.phase === 'lurking')) return fish(game);
         return bot.input(game);
@@ -156,7 +190,7 @@ const note = document.createElement('div');
 note.className = 'note';
 note.textContent = watching
   ? 'The test bot is playing, over and over. Tap the picture once to hear it.'
-  : 'Arrow keys or WASD to move, Space to jump. On the iPad, thumbs as in the game.';
+  : 'Arrow keys or WASD to move, Space to jump, X for the hero\'s own move, C for the new button (Kick or Slash). On touch, thumbs as in the game, and the orange button.';
 panel.append(note);
 const show = (): void => {
   document.body.append(panel);

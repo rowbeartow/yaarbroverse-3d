@@ -299,6 +299,19 @@ export class Screens {
    * arrow going down into waves) and "Dive". Out of the water it is the
    * hero's own move again. The page only changes when this does.
    */
+  /** The new button: shown with its name for a hero who has it (null hides it), and dimmed while it is away. The page only changes when this does. */
+  setAbility(name: string | null, ready = true): void {
+    const key = `${name}/${ready}`;
+    if (key === this.abilityShown) return;
+    this.abilityShown = key;
+    const button = el('#attack-button');
+    button.hidden = name === null;
+    button.textContent = name ?? '';
+    button.setAttribute('aria-label', name ?? '');
+    button.dataset.ready = String(ready);
+  }
+  private abilityShown = '';
+
   setSwimming(swimming: boolean): void {
     const key = swimming ? 'dive' : this.moveName;
     if (key === this.moveShown) return;
