@@ -455,7 +455,7 @@ const boot = (): void => {
       } else if (event.type === 'pike') {
         const words = pikeNews(event, level.pike?.name ?? 'The monster', level.pike?.numbers.guarded ?? false);
         if (event.what === 'reset') healedNews = event.healed ? words : null;
-        else if (words) news(words, event.what === 'beaten' ? 5 : 3);
+        else if (words) news(words, event.what === 'beaten' || event.what === 'dragged' ? 5 : 3);
       } else if (event.type === 'rescue') {
         const words = rescueNews(event, level.rescue?.name ?? 'Your friend');
         if (words) news(words, 4);
@@ -487,7 +487,8 @@ const boot = (): void => {
       {
         swimming: game.swimming,
         under: game.under,
-        entered: game.events.some((event) => event.type === 'splash'),
+        // Not over news the player has to read first (dragged in by the monster pike: "swim to the floating log"). The hint then waits for the next time in.
+        entered: game.events.some((event) => event.type === 'splash') && game.seconds >= newsUntil,
         nearPassage: water !== null && passageNear(game.level.solids, water, game.x, game.z),
       },
       STEP,
