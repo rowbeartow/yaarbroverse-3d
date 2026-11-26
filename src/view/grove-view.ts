@@ -46,6 +46,7 @@ import type { GLTF } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { SPECIES, fishingPoint, type FishingEvent, type FishingState, type Species } from '../game/fishing';
 import { FISH_MODELS, FishingView } from './fishing';
 import { PikeView } from './pike';
+import { RescueView, WALBLUM_MODEL } from './rescue';
 import { PickupsView } from './pickups';
 import { WeedBeds } from './weed-beds';
 import { ROUTE_CAMERA, cameraFor, followsRoute, forwardOf, placesCamera, turnToward } from './route-camera';
@@ -141,6 +142,8 @@ interface LevelView extends LevelSolids {
   fishing: FishingView | null;
   /** The level's monster pike drawn, if it has one. */
   pike: PikeView | null;
+  /** The level's rescue drawn (Walblum), if it has one. */
+  rescue: RescueView | null;
 }
 
 /**
@@ -371,8 +374,15 @@ export class GroveView {
       pike = new PikeView(level.pike, pikeModel, this.tier.simple, water);
       root.add(pike.group);
     }
+    this.levelView?.rescue?.dispose();
+    let rescue: RescueView | null = null;
+    const rescued = level.rescue ? this.assets.models.get(WALBLUM_MODEL) : undefined;
+    if (level.rescue && rescued) {
+      rescue = new RescueView(level.rescue, rescued, this.tier.simple, water);
+      root.add(rescue.group);
+    }
     this.fishingEvents = [];
-    this.levelView = { ...solids, root, forest, scatter, water, ropes, stones, under, pickups, weeds, fishing, pike };
+    this.levelView = { ...solids, root, forest, scatter, water, ropes, stones, under, pickups, weeds, fishing, pike, rescue };
     this.swimEvents = [];
     this.under = 0;
     this.hero = buildHero(heroName, this.assets, this.tier.simple);
@@ -604,6 +614,7 @@ export class GroveView {
     }
     this.fishingEvents = [];
     if (levelView.pike && game.pike) levelView.pike.update(game.pike, { x, z }, dt);
+    if (levelView.rescue && game.rescue) levelView.rescue.update(game.rescue, { x, z }, dt);
 
     // Mushrooms and the golden leaf.
     for (const mushroom of levelView.mushrooms.values()) animateMushroom(mushroom, dt);
@@ -798,6 +809,11 @@ export class GroveView {
   /** What the boss on screen is showing, for the browser checks, or null when the level has none. */
   bossInfo(): ReturnType<BossView['info']> | null {
     return this.boss ? this.boss.info() : null;
+  }
+
+  /** The level's rescue as drawn (Walblum), or null in a level with none. */
+  rescueInfo(): ReturnType<RescueView['info']> | null {
+    return this.levelView?.rescue?.info() ?? null;
   }
 
   /** The monster pike as drawn, or null in a level with none. */

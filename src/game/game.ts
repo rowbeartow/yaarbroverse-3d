@@ -13,6 +13,7 @@ import { MOVE, STEP, knockSpeed, type HeroName } from './hero';
 import { pushOutside, surfaceBelow, topAt, touchesFromAbove, type Level, type Solid } from './level';
 import { ownPieces, resetPieces, stepPieces, type PieceEvent } from './moving';
 import { PIKE, dragPike, hookPike, linePips, newPike, pikeFighting, pikeUp, resetPike, stepPike, strikePike, type Pike, type PikePhase, type PikeSees } from './pike';
+import { completeRescue, newRescue, rescueReady, stepRescue, type Rescue, type RescuePhase } from './rescue';
 import { HANG, ROPE, grab, handOf, handSpeed, letGo, newRope, ropeInReach, stepHeld, stepLoose, type RopeState } from './rope';
 import { SWIM, climbOut, inWater, inWeeds, waterAt, type Water } from './swim';
 
@@ -69,6 +70,9 @@ export type GameEvent =
   | { type: 'pike'; id: string; what: 'phase'; phase: PikePhase }
   | { type: 'pike'; id: string; what: 'hit'; how: Strike | 'line'; left: number }
   | { type: 'pike'; id: string; what: 'reset'; healed: boolean }
+  /** The level's rescue (see rescue.ts): the one stranded began something (`phase`), or was reached at the goal (`rescued`). */
+  | { type: 'rescue'; what: 'phase'; phase: RescuePhase }
+  | { type: 'rescue'; what: 'rescued'; name: string }
   /** The new button (see ability.ts): sent, reached its target, missed, or came back. */
   | ({ type: 'ability' } & AbilityEvent)
   /** Lost a heart. `left` is how many remain. */
@@ -114,6 +118,10 @@ export interface Summary {
   /** The ids of the hidden leaves found this run, and how many the level has. */
   leaves: string[];
   leavesIn: number;
+  /** True when this run ended with the level's rescue (Walblum, at the lake). */
+  rescued: boolean;
+  /** Who: the name the level gives. */
+  rescuedName?: string;
   /** The fish landed this run, in the order they were caught, and whether the level has anywhere to fish. */
   fish: Catch[];
   fishing: boolean;
@@ -161,6 +169,8 @@ export class Game {
   readonly boss: Boss | null;
   /** The level's monster pike, as it is now (see pike.ts), or null when the level has none. */
   readonly pike: Pike | null;
+  /** The level's rescue, as it is now (see rescue.ts), or null when the level has none. */
+  readonly rescue: Rescue | null;
   /** The new button, for a hero who has won it (see ability.ts), or null. */
   readonly ability: AbilityState | null;
   /** Hearts left, and hearts lost over the whole run. */
@@ -239,6 +249,7 @@ export class Game {
     this.ropes = (level.ropes ?? []).map(newRope);
     this.fishing = level.fishing ? newFishing(level.fishing) : null;
     this.pike = level.pike ? newPike(level.pike) : null;
+    this.rescue = level.rescue ? newRescue(level.rescue) : null;
     this.ability = options.ability ? newAbility() : null;
     const under = surfaceBelow(level, this.x, this.z, this.y, MOVE.footRadius);
     this.groundId = under ? under.id : null;
@@ -289,6 +300,8 @@ export class Game {
   /** True when the goal can be taken: always, but for a level whose boss is not yet beaten. */
   get goalOpen(): boolean {
     if (this.pike && this.pike.phase !== 'beaten') return false;
+    // The rescue is the last thing in the level: the leaf waits until whoever is rescued waits beside it.
+    if (this.rescue && !rescueReady(this.rescue)) return false;
     return !this.boss || this.boss.phase === 'defeated';
   }
 
@@ -319,6 +332,8 @@ export class Game {
       berriesIn: counts.berry,
       leaves: (this.level.pickups ?? []).filter((pickup) => pickup.kind === 'leaf' && this.collected.has(pickup.id)).map((pickup) => pickup.id),
       leavesIn: counts.leaf,
+      rescued: this.rescue?.phase === 'rescued',
+      ...(this.rescue?.phase === 'rescued' ? { rescuedName: this.rescue.spot.name } : {}),
       fish: [...this.catches],
       fishing: Boolean(this.level.fishing),
     };
@@ -799,6 +814,10 @@ export class Game {
     }
 
     this.pikeStep(previousY, dt);
+    if (this.rescue) {
+      const freed = !this.pike || this.pike.phase === 'beaten';
+      for (const phase of stepRescue(this.rescue, freed, this, dt)) this.events.push({ type: 'rescue', what: 'phase', phase });
+    }
 
     // The goal: touch the golden leaf. A level with a boss keeps it out of reach until the boss is beaten.
     const { leaf } = level;
@@ -816,6 +835,11 @@ export class Game {
     const distanceSquared = (this.x - leaf.x) ** 2 + (middleY - leaf.y) ** 2 + (this.z - leaf.z) ** 2;
     if (distanceSquared <= reach * reach && this.goalOpen) {
       this.complete = true;
+      // Reaching the leaf and whoever waits beside it is one moment.
+      if (this.rescue) {
+        completeRescue(this.rescue);
+        this.events.push({ type: 'rescue', what: 'rescued', name: this.rescue.spot.name });
+      }
       this.events.push({ type: 'goal' });
       return;
     }

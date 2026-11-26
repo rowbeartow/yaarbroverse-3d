@@ -415,6 +415,9 @@ export class Screens {
     // The run's catch, where the level has fishing: what was landed, and any biggest it set in the player's fish book.
     const caught: Partial<Record<Species, number>> = {};
     for (const each of summary.fish) caught[each.species] = (caught[each.species] ?? 0) + 1;
+    // Who the run rescued, where the level ends with a rescue.
+    el('#end-rescue-box').hidden = !summary.rescued;
+    el('#end-rescue').textContent = summary.rescued ? (summary.rescuedName ?? '') : '';
     el('#end-fish-box').hidden = !summary.fishing;
     el('#end-fish').textContent = catchWords(caught) || 'None';
     const records = fish ? biggestWords(fish.biggest) : '';

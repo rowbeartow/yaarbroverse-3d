@@ -24,8 +24,18 @@ export const pikeNews = (event: PikeEvent, name: string, guarded: boolean): stri
       if (event.phase === 'gape') return guarded ? 'Jaws! Step away along the log, then jump on it.' : 'Jaws! Step away, or jump on its head!';
       return null;
     case 'beaten':
-      return `${name} is beaten! The golden leaf waits at the end of the dock.`;
+      return `${name} is beaten!`;
     case 'reset':
       return `${name} is back to full strength.`;
   }
+};
+
+type RescueEvent = Extract<GameEvent, { type: 'rescue' }>;
+
+/** The line for something in a level's rescue (src/game/rescue.ts), or null. */
+export const rescueNews = (event: RescueEvent, name: string): string | null => {
+  if (event.what === 'rescued') return null;
+  if (event.phase === 'paddling') return `${name} is swimming for the dock! Meet him at the end of it.`;
+  if (event.phase === 'waiting') return `${name} is waiting under the golden leaf.`;
+  return null;
 };

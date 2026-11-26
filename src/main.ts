@@ -41,7 +41,7 @@ import { pickupCounts } from './game/collect';
 import { Players, endBests, ghostOn, isBiggestYet, type CatchOutcome, type EndBests, type HaulOutcome, type Player as SavedPlayer } from './save/players';
 import { DiveHint, diveHintText } from './ui/dive-hint';
 import { fishingButton, fishingHint, fishingNews } from './ui/fishing-words';
-import { pikeNews } from './ui/pike-words';
+import { pikeNews, rescueNews } from './ui/pike-words';
 import { onSpot } from './game/fishing';
 import { Picker } from './ui/picker';
 import { Screens, isTouchDevice, loadChoice, needsTurning, type Choice } from './ui/screens';
@@ -456,6 +456,9 @@ const boot = (): void => {
         const words = pikeNews(event, level.pike?.name ?? 'The monster', level.pike?.numbers.guarded ?? false);
         if (event.what === 'reset') healedNews = event.healed ? words : null;
         else if (words) news(words, event.what === 'beaten' ? 5 : 3);
+      } else if (event.type === 'rescue') {
+        const words = rescueNews(event, level.rescue?.name ?? 'Your friend');
+        if (words) news(words, 4);
       } else if (event.type === 'safe') safe = true;
       else if (event.type === 'goal') screens.say(level.goalLine ?? 'You made it!', 4);
     }
@@ -548,7 +551,9 @@ const boot = (): void => {
         // Only a run that reached the golden leaf is saved, for whoever is playing.
         if (who) {
           const { seconds, falls, complete } = game.summary();
-          const outcome = players.finish(who.id, { levelId: entry.id, hero: choice.hero, difficulty: choice.difficulty, seconds, falls, complete });
+          const outcome = players.finish(who.id, { levelId: entry.id, hero: choice.hero, difficulty: choice.difficulty, seconds, falls, complete, course: entry.course });
+          // Walblum rescued: remembered for the player. It is what wins the new button, once that is in the game.
+          if (game.summary().rescued) players.rescue(who.id);
           endCard = endBests(outcome);
           // The ghost is the recording of the best time: a new best takes its place.
           const slot = ghostSlot();
@@ -620,6 +625,10 @@ const boot = (): void => {
       /** The level's monster pike, if it has one: what is drawn, and what the rules have. */
       get pike() {
         return view && game.pike ? { ...view.pikeInfo(), phase: game.pike.phase, health: game.pike.health } : null;
+      },
+      /** The level's rescue (Walblum), if it has one: what is drawn, and what the rules have. */
+      get rescue() {
+        return view && game.rescue ? { ...view.rescueInfo(), phase: game.rescue.phase } : null;
       },
       /** The level's fishing spot, if it has one: what is drawn, and what the rules have (phase, fish, catches). */
       get fishing() {

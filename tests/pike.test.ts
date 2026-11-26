@@ -475,3 +475,84 @@ describe('the fight\'s water has a way out', () => {
     [...steps.slice(1), dock].forEach((next, i) => expect(next.top - steps[i].top).toBeLessThan(1.4));
   });
 });
+
+describe("Walblum's rescue", () => {
+  it.each(EACH)('on %s as %s he is stranded until the pike is beaten, then paddles to the dock, and reaching him and the leaf ends the level', (difficulty, hero) => {
+    const { game, bot } = atPier(difficulty, hero);
+    const rescue = game.rescue!;
+    const order: string[] = [];
+    let strandedUntilBeaten = true;
+    let leafBeforeHeWaits = false;
+    for (let i = 0; i < 300 / STEP && !game.complete; i += 1) {
+      if (game.pike!.phase !== 'beaten' && rescue.phase !== 'stranded') strandedUntilBeaten = false;
+      if (game.goalOpen && rescue.phase !== 'waiting') leafBeforeHeWaits = true;
+      game.step(bot.input(game));
+      for (const event of game.events) {
+        if (event.type === 'pike' && event.what === 'beaten') order.push('beaten');
+        if (event.type === 'rescue') order.push(event.what === 'phase' ? event.phase : 'rescued');
+        if (event.type === 'goal') order.push('goal');
+      }
+    }
+    expect(game.complete).toBe(true);
+    expect(strandedUntilBeaten).toBe(true);
+    expect(leafBeforeHeWaits).toBe(false);
+    expect(order).toEqual(['beaten', 'cheering', 'paddling', 'climbing', 'walking', 'waiting', 'rescued', 'goal']);
+    expect(game.summary().rescued).toBe(true);
+    // He waits on the dock, beside the leaf.
+    const { leaf } = game.level;
+    expect(Math.hypot(rescue.x - leaf.x, rescue.z - leaf.z)).toBeLessThan(1.5);
+    expect(rescue.y).toBe(game.level.solids.find((s) => s.id === 'dock')!.top);
+  });
+
+  it('stranded, he is on the log the pike circles, inside its circle', () => {
+    const game = new Game(buildLake('normal'), 'normal', 'Yaarbro');
+    for (let i = 0; i < 20 / STEP; i += 1) {
+      game.step(IDLE);
+      const pike = game.pike!;
+      expect(Math.hypot(game.rescue!.x - pike.spot.home.x, game.rescue!.z - pike.spot.home.z)).toBeLessThan(1);
+      expect(Math.hypot(pike.x - game.rescue!.x, pike.z - game.rescue!.z)).toBeGreaterThan(pike.spot.circle - 1.5);
+    }
+    expect(game.rescue!.phase).toBe('stranded');
+    expect(game.summary().rescued).toBe(false);
+  });
+
+  it('a hero who gets to the end of the dock before him cannot take the leaf until he is there', () => {
+    const { game, bot } = atPier('easy');
+    botUntil(game, bot, pikeDid('beaten'));
+    const { leaf } = game.level;
+    const dock = game.level.solids.find((s) => s.id === 'dock')!;
+    // Put right under the leaf, jumping, the moment the pike is beaten.
+    Object.assign(game, { x: leaf.x, z: leaf.z, y: dock.top, vx: 0, vy: 0, vz: 0, grounded: true, groundId: 'dock', swimming: false, waterId: null });
+    let waitedFor = 0;
+    for (let i = 0; i < 30 / STEP && !game.complete; i += 1) {
+      game.step({ ...IDLE, jump: i % 40 < 20 });
+      if (!game.complete) {
+        waitedFor = i * STEP;
+      }
+    }
+    expect(game.complete).toBe(true);
+    expect(game.rescue!.phase).toBe('rescued');
+    // It took him a few seconds to get there.
+    expect(waitedFor).toBeGreaterThan(3);
+    expect(waitedFor).toBeLessThan(15);
+  });
+
+  it('there is no case where he is sent back: a hero who then loses every heart finds him still on his way, and the pike still beaten', () => {
+    const { game, bot } = atPier('hard');
+    botUntil(game, bot, pikeDid('beaten'));
+    const events: GameEvent[] = [];
+    for (let i = 0; i < 60 / STEP && !events.some((event) => event.type === 'restored'); i += 1) {
+      game.protectedFor = 0;
+      game.hurt(game.x + 1, game.z);
+      game.step(IDLE);
+      events.push(...game.events);
+    }
+    expect(game.pike!.phase).toBe('beaten');
+    expect(game.rescue!.phase).not.toBe('stranded');
+    play(game, IDLE, 12);
+    expect(game.rescue!.phase).toBe('waiting');
+    // And the bot walks back along the pier and finishes.
+    for (let i = 0; i < 60 / STEP && !game.complete; i += 1) game.step(bot.input(game));
+    expect(game.complete).toBe(true);
+  });
+});
