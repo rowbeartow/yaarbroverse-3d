@@ -80,10 +80,10 @@ jobs:
             echo "newest=false" >> "$GITHUB_OUTPUT"
             echo "::notice::Nothing was published: main moved on to $head while this run was building ${{ github.sha }}. The run for that commit publishes it."
           fi
-      - uses: actions/upload-pages-artifact@v3
+      - uses: actions/upload-pages-artifact@v5
         if: steps.newest.outputs.newest == 'true'
         with:
           path: dist
       - id: deploy
         if: steps.newest.outputs.newest == 'true'
-        uses: actions/deploy-pages@v4
+        uses: actions/deploy-pages@v5

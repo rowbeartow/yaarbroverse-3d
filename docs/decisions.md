@@ -796,15 +796,20 @@ The owner's word: "Jetty frame rate on Hard as Yaarbro, Mac, Safari: 75 fps lowe
 - The dock is the lake's heaviest place, and the monster pike and Walblum go there. In the test browser the same place draws 825,006 triangles in 321 draw calls (`node tools/draw-measure.mjs cocolalla hard`).
 - The rule until now has been 60 or more on the Mac. Claude asked whether 75 itself is the floor for part two; until he answers, part two is planned to keep the jetty at 75, and he is told before anything is built that would take it lower.
 
+## 2026-11-25: The floor is still 60; 75 is the jetty's headroom, and the owner is told before the dock goes below 65
+
+The owner's answer to Claude's question: "The floor is still 60 fps, as decisions.md says. 75 is the jetty's measured headroom, not a new floor. Part two can spend it, but tell me before building anything that takes the dock below 65 on Hard, so there's margin left for later levels."
+
+This settles the question left open in the entry above: part two is not held to 75.
+
 ## 2026-11-25: Milestone eleven, part two: the owner's three rulings
 
 The owner's word, at the start of part two.
 
-- **Frame rate.** The floor is still 60 frames a second on Hard in Safari on the Mac. The jetty's 75 at the lowest after part one is headroom, not a new floor. Part two can spend it, but he is told before anything is built that would take the dock below 65 on Hard.
+- **Frame rate.** As the entry above: the floor is still 60 frames a second on Hard in Safari on the Mac, the jetty's 75 is headroom, and he is told before anything is built that would take the dock below 65 on Hard.
 - **Walblum's rescue is the last thing in the level.** There is no case where he gets sent back.
 - **The monster pike is the picked pike** (`pike-a.glb` on the `hero-models` release), much bigger and darker, unless the kids ask for its own model.
 - Also his: nothing the player does before the pike is beaten can end the level, and the golden leaf stays out of reach until then; every stretch of water keeps a way out, the fight's water half included; no iPad checks; new clips through Meshy or built in Blender, up to 100 credits; new sounds go on the sound board as recordings for his OK first; the kick and Claw Slash are shown on a preview page for his and the kids' OK before they go in the game.
-- Supersedes: "until he answers, part two is planned to keep the jetty at 75" in "The dock's frame rate with fishing: 75 at the lowest".
 
 ## 2026-11-25: How the monster pike fight is built
 
