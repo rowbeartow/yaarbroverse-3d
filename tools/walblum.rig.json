@@ -1,0 +1,25 @@
+{
+  "about": "Where Walblum's joints are, for tools/rig-walblum.py. Each point is [across, up, forward] in metres, measured with tools/joint-views.py on the model as it came, standing on the ground (he is 1.9 m tall there and faces forward): across is to his left, up is from the ground, forward is toward his nose. \"spine\" is his hips, the middle of his back, his chest and the base of his head; \"head_end\" the top of his head. An arm is shoulder, elbow, wrist and fingertips; a leg is hip, knee, ankle and toes; the right arm and leg mirror the left. \"tail\" runs from its base to its tip (it hangs behind him and to his left). \"middle\" is the point his body turns about in the paddle, kick and spin clips, and stays where it is when he stands: the game puts that point where it wants him. \"triangles\" is how many triangles he is thinned to (Meshy made about 31,000). \"fine\" is where more of them are kept: his face (above that height and ahead of that far forward) and his whiskers, which together keep \"triangles\" of them; edges sharper than \"smooth_up_to\" degrees stay sharp. \"picture\" is the size of the picture painted for the thinned mesh. \"clips\" changes a clip's numbers from the script's own.",
+  "triangles": 5000,
+  "fine": { "above": 1.15, "ahead_of": 0.15, "triangles": 2000, "smooth_up_to": 70 },
+  "picture": 1024,
+  "middle": [0.0, 0.95, 0.05],
+  "joints": {
+    "spine": [[0.0, 0.45, 0.03], [0.0, 0.72, 0.05], [0.0, 0.98, 0.07], [0.0, 1.22, 0.1]],
+    "head_end": [0.0, 1.85, 0.14],
+    "arm_left": [[0.38, 1.06, 0.07], [0.6, 1.0, 0.08], [0.76, 0.95, 0.08], [0.9, 0.92, 0.08]],
+    "leg_left": [[0.24, 0.38, 0.03], [0.26, 0.22, 0.06], [0.27, 0.08, 0.0], [0.3, 0.03, 0.33]],
+    "tail": [[0.0, 0.5, -0.28], [0.2, 0.3, -0.42], [0.42, 0.12, -0.5], [0.66, 0.05, -0.55]]
+  },
+  "whiskers_about": "His whiskers hang down in the model, and the owner asked for them straightened. A whisker is a run of pale points (saturation under, value over \"look\") further than \"beyond\" metres out from his middle, between the two heights of \"between\", further forward than \"ahead_of\", and at least \"at_least\" metres long. He has \"count\" of them. \"lift\" is how many degrees above level each one is turned to, the top whisker on each side first.",
+  "whiskers": {
+    "beyond": 0.215,
+    "between": [1.18, 1.5],
+    "ahead_of": 0.3,
+    "at_least": 0.1,
+    "count": 6,
+    "look": { "saturation": 0.35, "value": 0.6 },
+    "lift": [14, 4, -6]
+  },
+  "clips": {}
+}

@@ -1,15 +1,16 @@
 # Session handoff
 
-Last updated: 2026-11-26. Milestone eleven, part two is under way. **The monster pike fight is built** (rules, drawing, bot, tests); it arrived on `main` in the pull request that carried this version of the page. **Walblum's kick, Caputo's Claw Slash, Walblum's rescue and the new sounds are not in the game**: each waits for the owner's OK on its preview page. Everything under "The record" is as earlier sessions wrote it.
+Last updated: 2026-11-26. Milestone eleven, part two is under way. **The monster pike fight and Walblum's rescue are built** (rules, drawing, bot, tests): the fight merged as pull request 96, and the rescue arrived on `main` in the pull request that carried this version of the page. **Walblum's kick, Caputo's Claw Slash and the new sounds are not in the game**: each waits for the owner's OK on its preview page. Everything under "The record" is as earlier sessions wrote it.
 
 ## Start here
 
-**Where part two stands** (`docs/decisions.md`, 2026-11-25, "the owner's three rulings" and "How the monster pike fight is built"):
+**Where part two stands** (`docs/decisions.md`, 2026-11-25 and 2026-11-26):
 
 1. **The monster pike fight: in the game.** `src/game/pike.ts` (rules), `src/view/pike.ts` (drawing), `pike` in the lake's `difficulty.ts` (every number), `tests/pike.test.ts`, `tests/browser/pike.spec.ts`, and the recipe in `docs/adding-a-level.md` ("A monster to fish for"). Hooked from the jetty by a cast at its shadow; half its pips go in the tug of war; it drags the hero in; in the water it charges a swimmer and comes up beside the floating log (`pike-log`) to snap; a landing on it while it lies spent takes a pip. The leaf is hidden and cannot be taken until it is beaten. The dock's scouts run off when it is hooked. The pier's landing is a checkpoint on every difficulty. The preview page (the game itself, opening on the fight, the test bot playing): https://claude.ai/artifact/SSvdtsuMYmw5C9pEpiFd2B . It borrows the crocodile's sounds until its own are picked.
 2. **The new button's rules are in, switched off** (`src/game/ability.ts`, `tests/ability.test.ts`): nobody has the button, there is no button on the screen, and nothing draws it. `new Game(level, difficulty, hero, { ability: true })` gives a hero the button.
 3. **The new sounds wait for the owner's picks** on the sound board: https://claude.ai/artifact/YcLFsEG5DHJm1WWH6akkGF (A or B for each of pike hooked, line snap, pike surfacing, pike snap, Walblum's kick, Claw Slash, rescue). The table of sources is below.
-4. **Still to build**: the moves in the game (the button, Walblum flying and the claw marks drawn, each hero's clip) and Walblum's rescue. The models and clips for them are made but not merged: see "The models for the moves" below.
+4. **Walblum's rescue: in the game.** `src/game/rescue.ts`, `src/view/rescue.ts`, tests in `tests/pike.test.ts` ("Walblum's rescue") and `tests/rescue-save.test.ts`. He is stranded on a drifting log inside the pike's circle; when the pike is beaten he paddles to the dock and waits under the leaf, which shows only then; reaching it rescues him, ends the level, puts "Rescued: Walblum" on the end card and is saved on the player (`rescued`). The lake's old best times give way to the first run with the pike (`course: 2` on the lake's entry).
+5. **Still to build: the moves in the game.** The button on the screen and its key, Walblum flying and the claw marks drawn, each hero's clip played, and the player's `rescued` turned into `{ ability: true }` when a game is made (`src/main.ts`). Caputo's `claw_slash` and Yaarbro's `walblum_launch` clips are made but not merged: see "The models for the moves" below. **Show the moves on a preview page from the game's camera for the owner's and the kids' OK before any of it merges.**
 
 ### What part two is
 
@@ -42,7 +43,7 @@ Last updated: 2026-11-26. Milestone eleven, part two is under way. **The monster
 
 Built in Blender by script on 2026-11-25, on the branch `claude/backup-moves-models` (not on `main`: a change to a hero waits for the owner's OK):
 
-- **Walblum**: `tools/rig-walblum.py` with `tools/walblum.rig.json` rigs `walblum-b.glb` (20 bones; whiskers straightened; clips `idle`, `scared`, `paddle`, `cheer`, `kick`, `spin`), compressed to `assets/heroes/walblum.glb` (5,000 triangles, 356 KB).
+- **Walblum** himself is merged (he is in the rescue): `assets/heroes/walblum.glb`, with `kick` and `spin` clips ready for the kick.
 - **Caputo**: one clip more, `claw_slash` (0.5 s), in `tools/rig-quadruped.py` and `tools/caputo.rig.json`.
 - **Yaarbro**: one clip more, `walblum_launch` (0.6 s), made from keys in `tools/yaarbro.guide.json`, which also has the point Walblum leaves from (`"armpit"`).
 - Every clip the heroes already had is unchanged, key for key. `tests/hero-files.test.ts` needs the two new clip names when these merge.

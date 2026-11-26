@@ -46,6 +46,7 @@ import type { Difficulty } from '../../game/difficulty';
 import type { EnemySpot } from '../../game/enemy';
 import type { FishingSpot } from '../../game/fishing';
 import type { PikeSpot } from '../../game/pike';
+import type { RescueSpot } from '../../game/rescue';
 import type { Level, Section, Solid } from '../../game/level';
 import type { Motion } from '../../game/moving';
 import { ROPE, type Rope } from '../../game/rope';
@@ -66,13 +67,14 @@ export const LAKE_HINTS: Record<string, string> = {
   'reed-bar': 'Swim to the rocks and dive through the gap.',
   'cove-beach': 'Up the posts to the old pier!',
   landing: 'Along the boardwalk to the fishing dock!',
-  dock: 'Something huge is circling out there. Fish for it from the jetty!',
+  dock: 'Walblum is stranded on a log, and something huge is circling him. Fish for it from the jetty!',
   jetty: 'Cast at the big shadow!',
   'pike-log': 'When its jaws open, step away. When it lies still, jump on it!',
 };
 
-export const LAKE_GOAL_LINE = 'A golden leaf, at the end of the dock!';
+export const LAKE_GOAL_LINE = 'Walblum is safe, and the golden leaf is yours!';
 export const LAKE_PIKE_NAME = 'The Monster Pike';
+export const LAKE_RESCUED = 'Walblum';
 
 /** Fixed sizes that do not change with difficulty. */
 export const LAKE_SHAPE = {
@@ -273,6 +275,8 @@ export const LAKE_SHAPE = {
   pikeLogWidth: 2,
   pikeLogTop: 0.4,
   pikeMargin: 2.5,
+  /** Walblum waits this far west of the golden leaf, on the dock. */
+  walblumBeside: 1.1,
   fallY: -6,
   depth: -40,
 } as const;
@@ -773,6 +777,17 @@ export function buildLake(difficulty: Difficulty, numbers: LakeNumbers = LAKE_DI
   const walk = byId.get('boardwalk')!;
   for (let k = 0; k < 5; k += 1) over(`pier-${k + 1}`, walk, -walk.halfX + ((k + 0.5) * walk.halfX * 2) / 5);
 
+  // WALBLUM (see rescue.ts): stranded on the drifting log the pike circles. Freed, he paddles to the dock's north side
+  // below the golden leaf, climbs up and waits beside it: the last thing in the level.
+  const leaf = { x: x - shape.leafFromEast, y: deck + 1.3, z: pierZ, radius: 0.7 };
+  const rescue: RescueSpot = {
+    name: LAKE_RESCUED,
+    log: pike.home,
+    surface: shape.surface,
+    climbAt: { x: leaf.x - shape.walblumBeside, z: pierZ - shape.dockHalfWidth - 0.5 },
+    waitAt: { x: leaf.x - shape.walblumBeside, y: deck, z: pierZ },
+  };
+
   return {
     name: LAKE_NAME,
     pickups,
@@ -796,7 +811,8 @@ export function buildLake(difficulty: Difficulty, numbers: LakeNumbers = LAKE_DI
     },
     solids,
     spawn: { x: shape.beachLength / 2, y: shape.shoreTop, z: shape.shoreZ - 1 },
-    leaf: { x: x - shape.leafFromEast, y: deck + 1.3, z: pierZ, radius: 0.7 },
+    leaf,
+    rescue,
     water,
     ropes,
     ropeHelp: n.ropeHelp,

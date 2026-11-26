@@ -26,15 +26,21 @@ await page.goto(`http://localhost:4180/?quality=${quality}#place=pike&difficulty
 await page.waitForFunction(() => window.__grove?.ready && window.__grove.mode === 'playing', null, { timeout: 300_000 });
 await page.addStyleTag({ content: '#preview-panel{display:none}' });
 // A moment is a phase of the pike (or a thrash on the line) and how many seconds into it.
-const moments = [['hooked', 2.5], ['thrash', 0.4], ['dragging', 0.5], ['circling', 1.2], ['charge', 0.2], ['gape', 0.4], ['snap', 0.1], ['rest', 0.5], ['stagger', 0.3], ['beaten', 1.2], ['beaten', 9]];
+// MOMENTS (a list of names, with commas) picks some of them; left out, all are taken in turn. A moment the bot's fight
+// never reaches (a charge, when it is never in the water long enough) is skipped once the fight has passed it.
+const all = [['stranded', 4], ['hooked', 2.5], ['thrash', 0.4], ['dragging', 0.5], ['circling', 1.2], ['gape', 0.4], ['snap', 0.1], ['rest', 0.5], ['stagger', 0.3], ['beaten', 1.2], ['paddling', 1.2], ['waiting', 1], ['rescued', 0.3]];
+const wanted = process.env.MOMENTS?.split(',');
+const moments = wanted ? all.filter(([name]) => wanted.includes(name)) : all;
+
 for (const [phase, after] of moments) {
   await page.evaluate(() => (window.__previewHold = false));
   const reached = await page
     .waitForFunction(
       ([wanted, seconds]) => {
         const { game } = window.__grove;
-        if (game.complete) return 'over';
+        if (game.complete && wanted !== 'rescued') return 'over';
         if (wanted === 'thrash') return game.fishing.phase === 'hooked' && game.fishing.fight === 'thrash';
+        if (['stranded', 'paddling', 'waiting', 'rescued'].includes(wanted)) return game.rescue.phase === wanted && game.rescue.timer >= seconds;
         return game.pike.phase === wanted && game.pike.timer >= seconds;
       },
       [phase, after],
@@ -45,8 +51,8 @@ for (const [phase, after] of moments) {
   await page.evaluate(() => (window.__previewHold = true));
   await page.evaluate(() => new Promise((done) => requestAnimationFrame(() => requestAnimationFrame(done))));
   const doing = await page.evaluate(() => {
-    const { game, pike } = window.__grove;
-    return `${game.seconds.toFixed(1)} s, hero ${game.swimming ? 'swimming' : `on ${game.groundId}`}, hearts lost ${game.heartsLost}, pike ${JSON.stringify(pike)}`;
+    const { game, pike, rescue } = window.__grove;
+    return `${game.seconds.toFixed(1)} s, hero ${game.swimming ? 'swimming' : `on ${game.groundId}`}, hearts lost ${game.heartsLost}, pike ${JSON.stringify(pike)}, rescue ${JSON.stringify(rescue)}`;
   });
   if (reached === true) await page.screenshot({ path: join(out, `${difficulty}-${hero}-${phase}-${after}.png`) });
   console.log(`${phase} ${after}: ${reached === true ? doing : `not reached (${reached})`}`);

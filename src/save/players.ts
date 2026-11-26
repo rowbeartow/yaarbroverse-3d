@@ -52,6 +52,13 @@ export interface Best {
   seconds: number;
   /** The fewest falls in a run that reached the golden leaf. */
   falls: number;
+  /**
+   * Which course this was set on: a level whose way to the leaf has changed
+   * (the lake, once the monster pike stood before it) has a `course` number in
+   * its entry. Left out for the first course. A best from an older course
+   * gives way to the first run on the new one, however slow.
+   */
+  course?: number;
 }
 
 /**
@@ -123,6 +130,8 @@ export interface Player {
   finds?: Record<string, Finds>;
   /** This player's fish book. Left out until they land a fish. */
   fish?: FishBook;
+  /** True once this player has rescued Walblum at Cocolalla Lake: what wins the new button (see src/game/ability.ts). Left out until then. */
+  rescued?: true;
   /** Where this player has turned the ghost on or off themselves, by difficulty. Left out: on for Normal and Hard, off for Easy. */
   ghost?: Partial<Record<Difficulty, boolean>>;
 }
@@ -139,6 +148,8 @@ export interface Run {
   falls: number;
   /** True only when the golden leaf was reached. Nothing else is saved. */
   complete: boolean;
+  /** The level's course number (see `Best.course`). Left out: the first. */
+  course?: number;
 }
 
 /** What saving a run changed. */
@@ -184,7 +195,8 @@ const cleanBests = (saved: unknown): Bests => {
         if (!isDifficulty(difficulty) || !isRecord(best)) continue;
         // A time of nothing at all is not a run.
         if (!isCount(best.seconds) || best.seconds <= 0 || !isCount(best.falls)) continue;
-        ((bests[levelId] ??= {})[hero] ??= {})[difficulty] = { seconds: best.seconds, falls: Math.floor(best.falls) };
+        const course = isCount(best.course) && best.course >= 2 ? { course: Math.floor(best.course) } : {};
+        ((bests[levelId] ??= {})[hero] ??= {})[difficulty] = { seconds: best.seconds, falls: Math.floor(best.falls), ...course };
       }
     }
   }
@@ -241,6 +253,7 @@ const cleanPlayer = (saved: unknown): Player | null => {
     bests: cleanBests(saved.bests),
     ...(finds ? { finds } : {}),
     ...(fish ? { fish } : {}),
+    ...(saved.rescued === true ? { rescued: true as const } : {}),
     ...(ghost ? { ghost } : {}),
   };
 };
@@ -365,6 +378,7 @@ export class Players {
     player.bests = {};
     delete player.finds;
     delete player.fish;
+    delete player.rescued;
     removeGhostsOf(this.ghosts, id);
     this.save();
     return true;
@@ -430,6 +444,15 @@ export class Players {
     return outcome;
   }
 
+  /** Remembers that a player has rescued Walblum. Returns true when it is the first time. */
+  rescue(id: string): boolean {
+    const player = this.get(id);
+    if (!player || player.rescued) return false;
+    player.rescued = true;
+    this.save();
+    return true;
+  }
+
   /**
    * Saves a run for a player. Only a run that reached the golden leaf counts.
    * The best time and the fewest falls are each kept if this run beat them.
@@ -439,12 +462,16 @@ export class Players {
     const sound = ID.test(run.levelId) && isHeroName(run.hero) && isDifficulty(run.difficulty) && isCount(run.seconds) && run.seconds > 0 && isCount(run.falls);
     if (!player || !run.complete || !sound) return { counted: false, first: false, bestTime: false, fewestFalls: false, best: null, before: null };
     const slot = ((player.bests[run.levelId] ??= {})[run.hero] ??= {});
-    const before = slot[run.difficulty] ?? null;
+    const saved = slot[run.difficulty] ?? null;
+    const course = isCount(run.course) && run.course >= 2 ? Math.floor(run.course) : 1;
+    // A best set on an older course is not one to beat: the course has changed under it.
+    const before = saved && (saved.course ?? 1) === course ? saved : null;
     const bestTime = !before || run.seconds < before.seconds;
     const fewestFalls = !before || run.falls < before.falls;
     const best: Best = {
       seconds: bestTime ? run.seconds : before.seconds,
       falls: fewestFalls ? Math.floor(run.falls) : before.falls,
+      ...(course > 1 ? { course } : {}),
     };
     slot[run.difficulty] = best;
     if (bestTime || fewestFalls) this.save();

@@ -179,6 +179,14 @@ A level with somewhere to fish can end with a monster pike (`src/game/pike.ts`, 
 - **Its numbers** are a `PikeNumbers` for each difficulty in the level's `difficulty.ts`. On Easy choose numbers that need no timing: a long `snapTell` and `rest`, `guarded: false`, `aimLine: true`, and the fishing's own `snap: Infinity`. Give it an even `health`: half goes on the line.
 - The game does the rest: the pike and its shadow (`src/view/pike.ts`, drawn from the lake's pike model), its health bar, the words (`src/ui/pike-words.ts`) and its sounds. The test bot fights any pike built this way (`tests/helpers/pike-fighter.ts`); `tests/pike.test.ts` is the lake's.
 
+## A rescue at the very end
+
+A level can end with a rescue (`src/game/rescue.ts`): give the `Level` a `rescue`. Cocolalla Lake's Walblum is the example. Who is rescued, and where, is canon: it comes from the owner.
+
+- `log` is the middle of the drift of the log they are stranded on (the lake's is the middle of the pike's circle), `climbAt` a point in the water beside what they climb out by, and `waitAt` the ground beside the level's leaf where they wait.
+- They are stranded until the level's monster pike is beaten (at once, in a level with no pike), then make their own way to `waitAt`. The leaf cannot be taken until they wait there, and taking it is the rescue. Keep the swim from `log` to `climbAt` shorter than a hero's way back, so they are there first.
+- The game does the rest: the drawing (`src/view/rescue.ts`), the words, the line on the end card, and remembering it for the player.
+
 ## New enemies
 
 A level may reuse the marmot scout and the giant mosquito as they are. A new enemy is its own piece of work, done before the level: its behaviour in `src/game/enemy.ts`, its model made and rigged the way the handoff describes, and the owner's OK on the enemy preview page.

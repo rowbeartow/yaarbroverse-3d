@@ -151,6 +151,9 @@ export const skipBoss = (page: Page): Promise<void> =>
     if (game.boss) Object.assign(game.boss, { phase: 'defeated', health: 0, timer: 10 });
     // A monster pike counts the same way (the fight is played by tests/pike.test.ts and checked by pike.spec.ts).
     if (game.pike) Object.assign(game.pike, { phase: 'beaten', health: 0, timer: 10 });
+    // And whoever the level's rescue is of waits at the leaf already.
+    const rescue = (game as { rescue?: { phase: string; spot: { waitAt: { x: number; y: number; z: number } } } | null }).rescue;
+    if (rescue) Object.assign(rescue, { phase: 'waiting', ...rescue.spot.waitAt });
   });
 
 /**
