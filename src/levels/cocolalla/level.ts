@@ -13,5 +13,7 @@ export const COCOLALLA: LevelEntry = {
   blurbs: LAKE_BLURB,
   build: (difficulty) => buildLake(difficulty),
   scenery: 'lake',
+  // The monster pike stands before the leaf since milestone eleven, part two: times from before it are not ones to beat.
+  course: 2,
   music: 'lakeMusic',
 };

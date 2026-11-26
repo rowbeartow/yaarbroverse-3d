@@ -33,6 +33,11 @@ export interface LevelEntry {
   build(difficulty: Difficulty): Level;
   /** What is drawn around the level. */
   scenery: SceneryName;
+  /**
+   * The level's course number, when the way to its leaf has changed since it went live (2 for the first change). A
+   * player's best time from an older course gives way to their first run on this one (`Best.course` in src/save/players.ts).
+   */
+  course?: number;
   /** The music that loops while the level is up: a sound from `src/audio/sounds.ts`. */
   music: SoundName;
   /** The music that takes over while the level's boss fight is on, if the level has a boss. Left out: the level's own music plays on. */

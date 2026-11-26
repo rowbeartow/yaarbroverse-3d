@@ -30,6 +30,7 @@ import {
 } from 'three';
 import type { GLTF } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { clone as cloneRigged } from 'three/examples/jsm/utils/SkeletonUtils.js';
+import { WALBLUM_MODEL } from './rescue';
 import { CROC } from '../game/crocodile';
 import { fishModelFiles } from './fishing';
 import type { Level } from '../game/level';
@@ -101,6 +102,8 @@ export const modelFilesOf = (level: Level): string[] => {
   // The fish of a level with a fishing spot.
   if (level.fishing) for (const file of fishModelFiles()) files.add(file);
   if (level.boss) files.add(ENEMY_MODELS[level.boss.look.model].file);
+  // Whoever the level's rescue is of: Walblum.
+  if (level.rescue) files.add(WALBLUM_MODEL);
   return [...files];
 };
 

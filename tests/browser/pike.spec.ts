@@ -3,8 +3,8 @@ import { frames, open, play, snapshot, standOn } from './helpers';
 
 // The monster pike of Cocolalla Lake in a real browser: its shadow circling
 // its log, hooked from the jetty with the keys on Easy, the drag into the
-// lake, its health bar, a hit from the floating log, and the golden leaf that
-// only shows once it is beaten. The fight's rules are played start to finish
+// lake, its health bar, a hit from the floating log, Walblum's rescue, and the
+// golden leaf that only shows once the pike is beaten and Walblum waits under it. The fight's rules are played start to finish
 // by the bot in tests/pike.test.ts; here it is the drawing, the page and the
 // controls.
 
@@ -20,6 +20,7 @@ interface PikeInfo {
 }
 type Grove = { __grove: { pike: PikeInfo; leafShown: boolean; game: any } };
 const pike = (page: Page): Promise<PikeInfo> => page.evaluate(() => (window as unknown as Grove).__grove.pike);
+const rescue = (page: Page): Promise<{ visible: boolean; clip: string; phase: string }> => page.evaluate(() => (window as unknown as { __grove: { rescue: { visible: boolean; clip: string; phase: string } } }).__grove.rescue);
 const leafShown = (page: Page): Promise<boolean> => page.evaluate(() => (window as unknown as Grove).__grove.leafShown);
 const fishingState = (page: Page): Promise<{ phase: string; out: number; across: number }> =>
   page.evaluate(() => {
@@ -45,6 +46,9 @@ test('its shadow circles its log, the leaf is out of sight, and standing where t
   expect(seen.phase).toBe('lurking');
   expect(seen.shade).toBe(true);
   expect(seen.health).toBe(6);
+  // Walblum is out there on his log, in the middle of its circle.
+  const stranded = await rescue(page);
+  expect([stranded.visible, stranded.phase, stranded.clip]).toEqual([true, 'stranded', 'scared']);
   // Much bigger than the lake's other fish, the biggest of which is drawn about three metres long.
   expect(seen.long).toBeGreaterThan(3.3);
   await expect(page.locator('#boss')).toBeHidden();
@@ -124,11 +128,19 @@ test('beside the log its jaws open, a landing on it while it lies spent takes a 
   await drop();
   await expect.poll(async () => (await pike(page)).phase, { timeout: 30_000 }).toBe('beaten');
   await expect(page.locator('#message')).toContainText('is beaten');
+  // Walblum, stranded on his log till now, paddles for the dock; the leaf shows only once he waits under it.
+  expect(await leafShown(page)).toBe(false);
+  await expect.poll(async () => (await rescue(page)).phase, { timeout: 120_000 }).toBe('waiting');
   await expect.poll(() => leafShown(page)).toBe(true);
-  // And now the leaf ends the level.
+  const waiting = await rescue(page);
+  expect(waiting.visible).toBe(true);
+  expect(waiting.clip).toBe('cheer');
+  // Reaching him and the leaf ends the level, and the end card says who was rescued.
   await standOn(page, 'dock', 0);
   await page.keyboard.down('ArrowRight');
   await expect(page.locator('#end')).toBeVisible({ timeout: 60_000 });
   await page.keyboard.up('ArrowRight');
+  await expect(page.locator('#end-rescue-box')).toBeVisible();
+  await expect(page.locator('#end-rescue')).toHaveText('Walblum');
   expect(problems).toEqual([]);
 });
