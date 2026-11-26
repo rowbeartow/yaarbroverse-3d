@@ -25,13 +25,20 @@ The owner's order for part two is in `docs/decisions.md` ("Milestone eleven, par
 - **Drawn** by `src/view/pike.ts` from the picked pike's model, nine metres long and darkened, with its shadow on the water, and on Easy a line where a charge or a snap will go. Its words are `pikeNews` in `src/ui/fishing-words.ts`; its health bar is the boss's (`showBoss` in `src/main.ts`).
 - **The floating log** is the solid `pike-log`, west of the fishing water. The fishing dock is a checkpoint on every difficulty now.
 - **Tests:** `tests/pike.test.ts` (the tug of war: tiring, thrashing, the line snapping; the drag; the charge; the snap and the opening; each way of striking it; the regen rule; the level ending only after it is beaten; the bot beating it on every difficulty as each hero). `tests/water-exits.test.ts` covers the water the drag throws a hero into. `tests/browser/pike.spec.ts` checks it in a browser. The bot's way with it is `tests/helpers/pike-plan.ts`: it walks to the end of the dock first (and meets the scouts there), then fishes.
-- **The fight on a page the owner can watch:** the lake preview page opens on "The monster pike": PREVIEW_FIGHT
+- **The fight on a page the owner can watch:** the lake preview page opens on "The monster pike": https://claude.ai/artifact/JuzeQrFAEZtTTjsTr3QtAk (published 2026-11-26; the test bot plays the whole fight over and over, on the difficulty and hero picked, or the owner plays it). Rebuild it with `npm run assets` then `node tools/preview/lake.mjs <folder>`; `node tools/preview/lake-stills.mjs` takes still frames (`place=pike`).
 - **Not in it yet, and why:** jaws that open (the pike's model has no jaw bone: cut the lower jaw free in `tools/rig-fish.py` the way `weigh_jaw` in `tools/rig-quadruped.py` did for the crocodile, and show the owner on the enemy preview page first); Walblum and his log (step 4); a hit from the kick or Claw Slash (step 2: `pikeOpen` and `hitPike` in `src/game/pike.ts` are what the move calls); music of its own (the lake's plays on).
 - **What the bot's perfect run of the whole lake takes now:** about 96 s on Easy, 112 on Normal and 138 on Hard, the fight included (`RUN_TIME` in `tests/lake.test.ts`).
 
 ### What the pike costs to draw
 
-DRAW_COST
+Counted with `node tools/draw-measure.mjs cocolalla hard` (the test browser, high tier, Yaarbro), at the dock, the lake's heaviest place:
+
+| | Draw calls | Triangles |
+| --- | --- | --- |
+| Before part two | 377 | 828,942 |
+| With the pike and its floating log | 381 | 840,210 |
+
+That is 11,268 triangles more, 1.4%: one more skinned fish (5,000 triangles, no shadow), its shadow on the water and the log. The owner measured the jetty at 75 frames a second at the lowest before this; 1.4% more to draw is nowhere near what would take it to 65, so nothing needed his word first. He measures the frames. If the jetty drops: draw fewer fish first (`count` in `FISH`, the lake's `difficulty.ts`).
 
 ### What was not checked, and the owner is the one who can (on the Mac)
 
@@ -53,12 +60,12 @@ DRAW_COST
 
 - The dock is the lake's heaviest place, and it is where the pike and Walblum go.
 - **The floor is still 60 frames a second on the Mac** (`docs/decisions.md`). 75 is the jetty's measured headroom, not a new floor: part two can spend it. **Tell the owner before building anything that would take the dock below 65 on Hard**, so there is margin left for later levels (his answer, 2026-11-25).
-- A cloud session counts triangles, not frames. With fishing, the dock draws 825,006 triangles in 321 draw calls (`node tools/draw-measure.mjs cocolalla hard`, the test browser, high tier, Yaarbro). That is what 75 frames a second looks like in that tool. Count again after each piece of part two and give him the before and after; he measures the frames.
+- A cloud session counts triangles, not frames. Count again after each piece of part two and give him the before and after ("What the pike costs to draw", above); he measures the frames.
 - If the jetty drops: draw fewer fish first (`count` in `FISH`, the lake's `difficulty.ts`).
 
 ### Money and limits
 
-- **Meshy credits spent in milestone eleven: 233** (196 on the fish, 37 on Yaarbro's clips). The owner allowed 200 and then 40. Ask before spending more.
+- **Meshy credits spent in milestone eleven: 233** (196 on the fish, 37 on Yaarbro's clips), all in part one. Part two has spent none: the owner allowed up to 100, and there is no Meshy key in the session's environment.
 - **No iPad.** The owner has none to test on (his note, 2026-11-11, and again 2026-11-25: "skip iPad checks"). Ask him for nothing on an iPad. The checks on GitHub in WebKit at iPad size still run on every pull request and must pass.
 
 ### What exists now from part one
@@ -82,12 +89,12 @@ DRAW_COST
 
 ### The checks, as they run now
 
-- `npm test`: 1,327 rule tests pass. They come in two kinds (`tests/bot-runs.ts`): 790 in which a bot plays the game (any test file that uses a helper that plays it), and 537 quick ones. `npm run test:rules` and `npm run test:bot` run one kind each.
+- `npm test`: 1,389 rule tests pass. They come in two kinds (`tests/bot-runs.ts`): those in which a bot plays the game (any test file that uses a helper that plays it), and the quick ones. `npm run test:rules` and `npm run test:bot` run one kind each.
 - **On GitHub the bot's runs have a job of their own**, "Whole-level bot runs", with an hour to finish in, and each test in it may take five minutes (the owner's word, 2026-11-25: a slow machine must not fail a run). No bot-run test may set a time limit of its own; `tests/bot-runs.test.ts` fails if one does. The required check "Tests, build and browser checks" waits for the new job.
-- The browser checks pass in Chromium and in WebKit on every pull request. New: a whole catch as Caputo (`tests/browser/fishing.spec.ts`).
-- The whole download is 15.28 MB (budget 20 MB).
+- The browser checks pass in Chromium and in WebKit on every pull request. New: the monster pike (`tests/browser/pike.spec.ts`). Checks that walk to the lake's leaf count the pike as beaten first (`skipBoss` in `tests/browser/helpers.ts`).
+- The whole download is 15.29 MB (budget 20 MB).
 
-### Not checked, and the owner is the one who can (on the Mac)
+### Still not checked from part one, and the owner is the one who can
 
 1. **Caputo's fishing in the game, moving.** A cloud session saw still frames: the rod in his jaws through the cast and the reel, the heave, the turn, the fish on the boards and the rod beside him, from the middle of the jetty and from its end. Whether the turn and the fling read well at full speed is his to say.
 2. **Yaarbro's fishing in the game.** He said OK on the page; he has not said he has seen it in the game.
@@ -99,11 +106,11 @@ DRAW_COST
 - **Blender is not always on the machine.** Run `apt-get update && apt-get install -y blender python3-numpy` once.
 - **The owner's preview pages could not be opened from the session of 2026-11-25** (claude.ai said "not found" for every address in this file, though the owner can open them). That session changed no page. If a page has to change and cannot be read, ask the owner for its link or publish a new one and give him the new address.
 - **To see the game itself in still frames**, serve the built game (`npm run build`, then `npx vite preview --port 4173`) and drive it with Playwright through `window.__grove` (`tests/browser/helpers.ts` shows how to pick a player, a hero and stand on a solid). The test browser draws in real time on the low tier; to step through a quick moment, hold `requestAnimationFrame` from an init script and run the held frame by hand, one frame a step.
-- **Backup branches that can be deleted** (their work is merged): every `claude/backup-*` branch on GitHub, `claude/backup-caputo-fishing`, `claude/backup-caputo-clips` and `claude/backup-handoff` among them.
+- **Backup branches:** keep `claude/backup-moves` (the two moves and Walblum, waiting for the owner's OK) and `claude/backup-pike-sounds` (the sound candidates, waiting for his picks). Every other `claude/backup-*` branch on GitHub can be deleted: its work is merged.
 
 ### The roadmap, in the owner's order
 
-1. **Milestone eleven, part two: next.** Walblum's kick, Claw Slash, the monster pike fight and the rescue.
+1. **Milestone eleven, part two: under way** (the top of this page). Left: the owner's OK on the two moves, his picks of the sounds, then Walblum's rescue.
 2. **The Bouncing Grove reshaped by the route rule.** Today 92% of it runs away from the camera with no camera turns; it is on the route test's waiting list until then. Plan it the way the lake was planned: a map from above with the camera's facing in each part, for the owner's OK before anything is built.
 3. **Simple gripping hands for Yaarbro** (the owner's word, 2026-11-20), before skiing and climbing: one bone that curls his fingers and one for his thumb, on each hand.
 4. Skiing in the Selkirks, with Caputo on a snowboard.
