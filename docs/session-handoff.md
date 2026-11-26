@@ -1,17 +1,21 @@
 # Session handoff
 
-Last updated: 2026-11-25. Milestone eleven, part one (fishing at Cocolalla) is finished and live: both heroes fish with clips of their own. Caputo's are in the game, the rod in his jaws (pull request 92). The bot's whole-level runs have their own job on GitHub (pull request 91). **Next: milestone eleven, part two.** This page was rewritten on 2026-11-25; everything under "The record" is as earlier sessions wrote it.
+Last updated: 2026-11-26. Milestone eleven, part two is under way. **The monster pike fight is built** (rules, drawing, bot, tests); it arrived on `main` in the pull request that carried this version of the page. **Walblum's kick, Caputo's Claw Slash, Walblum's rescue and the new sounds are not in the game**: each waits for the owner's OK on its preview page. Everything under "The record" is as earlier sessions wrote it.
 
 ## Start here
 
-**Next: milestone eleven, part two. Walblum's kick, Caputo's Claw Slash, the monster pike fight and the rescue.** Start with a plan for the owner, as every milestone has. Nothing of part two is built.
+**Where part two stands** (`docs/decisions.md`, 2026-11-25, "the owner's three rulings" and "How the monster pike fight is built"):
+
+1. **The monster pike fight: in the game.** `src/game/pike.ts` (rules), `src/view/pike.ts` (drawing), `pike` in the lake's `difficulty.ts` (every number), `tests/pike.test.ts`, `tests/browser/pike.spec.ts`, and the recipe in `docs/adding-a-level.md` ("A monster to fish for"). Hooked from the jetty by a cast at its shadow; half its pips go in the tug of war; it drags the hero in; in the water it charges a swimmer and comes up beside the floating log (`pike-log`) to snap; a landing on it while it lies spent takes a pip. The leaf is hidden and cannot be taken until it is beaten. The dock's scouts run off when it is hooked. The pier's landing is a checkpoint on every difficulty. The preview page (the game itself, opening on the fight, the test bot playing): https://claude.ai/artifact/SSvdtsuMYmw5C9pEpiFd2B . It borrows the crocodile's sounds until its own are picked.
+2. **The new button's rules are in, switched off** (`src/game/ability.ts`, `tests/ability.test.ts`): nobody has the button, there is no button on the screen, and nothing draws it. `new Game(level, difficulty, hero, { ability: true })` gives a hero the button.
+3. **The new sounds wait for the owner's picks** on the sound board: https://claude.ai/artifact/YcLFsEG5DHJm1WWH6akkGF (A or B for each of pike hooked, line snap, pike surfacing, pike snap, Walblum's kick, Claw Slash, rescue). The table of sources is below.
+4. **Still to build**: the moves in the game (the button, Walblum flying and the claw marks drawn, each hero's clip) and Walblum's rescue. The models and clips for them are made but not merged: see "The models for the moves" below.
 
 ### What part two is
 
-- **The design is settled**: https://claude.ai/artifact/WM17aRk4LTHHDwveCCkfrs , with the owner's answers at its foot (`docs/decisions.md`, "The owner's answers on the fishing and pike design"). The fight starts as fishing: casting at the monster's shadow hooks it. A tug of war from the jetty takes half its pips; it then drags the hero into the lake; in the water it circles and charges, the hero climbs onto a floating log and strikes it when it surfaces to snap; beaten, it sinks, and **Walblum's rescue is the last thing in the level**: reaching him and the golden leaf at the dock is one moment. The new button (Walblum's kick for Yaarbro, Claw Slash for Caputo) is the reward, saved for the player and there from the start in every level from then on.
-- **Walblum's kick and Claw Slash** (`docs/decisions.md`, "Walblum and Caputo's new ability" and "The kids' picks"): Claw Slash is a swipe that sends three glowing claw marks to the nearest enemy in front of Caputo and hits it. It must stay as useful as Walblum's kick against every enemy and boss, the pike included.
-- **The monster pike** is the picked pike (`assets/fish/pike.glb`, 5,000 triangles), much bigger and darker, unless the kids ask for its own model. It needs jaws that snap: cut its lower jaw free in `tools/rig-fish.py` the way `weigh_jaw` in `tools/rig-quadruped.py` did for the crocodile.
-- **Walblum** is `walblum-b.glb` on the `hero-models` release (3,550,484 bytes, SHA-256 starts `b8c2d3a956888065`): https://github.com/rowbeartow/yaarbroverse-3d/releases/download/hero-models/walblum-b.glb . Never make him again. He was made standing with his arms out, so Meshy's rigging (`tools/meshy-rig-animate.mjs`) may take him. His whiskers hang down in the model and are to be straightened when he is rigged.
+- **The design is settled**: `docs/decisions.md`, "The owner's answers on the fishing and pike design" and the entries of 2026-11-25. (The design page, https://claude.ai/artifact/WM17aRk4LTHHDwveCCkfrs , cannot be opened from a cloud session.) Beaten, the pike sinks, and **Walblum's rescue is the last thing in the level**: reaching him and the golden leaf at the end of the dock is one moment. The new button (Walblum's kick for Yaarbro, Claw Slash for Caputo) is the reward, saved for the player and there from the start in every level from then on.
+- **Walblum's kick and Claw Slash** (`docs/decisions.md`, "Walblum and Caputo's new ability" and "The kids' picks"): Claw Slash is a swipe that sends three glowing claw marks to the nearest enemy in front of Caputo and hits it. It must stay as useful as Walblum's kick against every enemy and boss, the pike included: the rules give both the same numbers.
+- **Walblum** is `walblum-b.glb` on the `hero-models` release (3,550,484 bytes, SHA-256 starts `b8c2d3a956888065`). Never make him again.
 
 ### What part two can build on
 
@@ -22,17 +26,42 @@ Last updated: 2026-11-25. Milestone eleven, part one (fishing at Cocolalla) is f
 
 ### The frame budget: the dock's number
 
-**The owner measured the jetty on 2026-11-25: 75 frames a second at the lowest, on Hard, as Yaarbro, in Safari on his Mac.** His words: "Record it in the handoff as the dock's number for part two to stay above."
+**The floor is 60 frames a second on Hard in Safari on the Mac** (the owner's word, 2026-11-25). The jetty measured 75 at the lowest after part one: that is headroom, not a floor. **Tell him before building anything that would take the dock below 65 on Hard.**
 
-- The dock is the lake's heaviest place, and it is where the pike and Walblum go.
-- **The floor is still 60 frames a second on the Mac** (`docs/decisions.md`). 75 is the jetty's measured headroom, not a new floor: part two can spend it. **Tell the owner before building anything that would take the dock below 65 on Hard**, so there is margin left for later levels (his answer, 2026-11-25).
-- A cloud session counts triangles, not frames. With fishing, the dock draws 825,006 triangles in 321 draw calls (`node tools/draw-measure.mjs cocolalla hard`, the test browser, high tier, Yaarbro). That is what 75 frames a second looks like in that tool. Count again after each piece of part two and give him the before and after; he measures the frames.
+- A cloud session counts triangles, not frames (`node tools/draw-measure.mjs cocolalla hard`, the test browser, high tier, Yaarbro). At the dock on 2026-11-25: 828,942 triangles in 377 draw calls before the pike; 835,875 in 384 with it (0.8% more). Draw calls in that tool move by ten or more from run to run. Count again after each piece and give him the before and after; he measures the frames.
+- Nobody has measured frames a second with the pike in. The owner is the one who can.
 - If the jetty drops: draw fewer fish first (`count` in `FISH`, the lake's `difficulty.ts`).
 
 ### Money and limits
 
-- **Meshy credits spent in milestone eleven: 233** (196 on the fish, 37 on Yaarbro's clips). The owner allowed 200 and then 40. Ask before spending more.
-- **No iPad.** The owner has none to test on (his note, 2026-11-11, and again 2026-11-25: "skip iPad checks"). Ask him for nothing on an iPad. The checks on GitHub in WebKit at iPad size still run on every pull request and must pass.
+- **Meshy credits spent in milestone eleven: 233, all in part one.** Part two has spent none: Meshy cannot be reached from the cloud environment (no key is stored on it), so the new clips were built in Blender. The owner allowed up to 100 for part two.
+- **No iPad.** The owner has none to test on. Ask him for nothing on an iPad. The checks on GitHub in WebKit at iPad size still run on every pull request and must pass.
+- **The cloud environment** is `yaarbroverse` (made 2026-11-25): it allows `rowbeartow.github.io` (to open the live site), `opengameart.org` (CC0 recordings) and Playwright's download hosts (WebKit), and its setup script installs Blender and the game's packages. Start sessions on it.
+
+### The models for the moves (made, not merged)
+
+Built in Blender by script on 2026-11-25, on the branch `claude/backup-moves-models` (not on `main`: a change to a hero waits for the owner's OK):
+
+- **Walblum**: `tools/rig-walblum.py` with `tools/walblum.rig.json` rigs `walblum-b.glb` (20 bones; whiskers straightened; clips `idle`, `scared`, `paddle`, `cheer`, `kick`, `spin`), compressed to `assets/heroes/walblum.glb` (5,000 triangles, 356 KB).
+- **Caputo**: one clip more, `claw_slash` (0.5 s), in `tools/rig-quadruped.py` and `tools/caputo.rig.json`.
+- **Yaarbro**: one clip more, `walblum_launch` (0.6 s), made from keys in `tools/yaarbro.guide.json`, which also has the point Walblum leaves from (`"armpit"`).
+- Every clip the heroes already had is unchanged, key for key. `tests/hero-files.test.ts` needs the two new clip names when these merge.
+
+### The sound choices on the board
+
+All CC0 from OpenGameArt, cut mono at 32,000 samples a second. The cut files exist only on the machine that made them: cut them again from the downloads.
+
+| Sound | A | B |
+| --- | --- | --- |
+| Pike hooked | `splash_04` (rubberduck's water pack) with `thwack-03` ("Thwack Sounds", AntumDeluge) | `qubodupPunch02` ("Punch", qubodup) with `qubodup-wobble2` at 0.8 speed ("Wood wobbling, rattling"), 0.7 s |
+| Line snap | first 0.45 s of `spring_03` ("100 CC0 SFX", rubberduck) | `swish-1` (artisticdude) with `snap_of_the_fingers3` (vinrax) 0.1 s in |
+| Pike surfacing | first 1.4 s of `splash_07` at 0.8 speed (rubberduck) | first 1.1 s of `splash1_0` ("Water Splash and sand footsteps", peludo) |
+| Pike snap | `NPC/beetle/bite-small` at 0.6 speed ("RPG Sound Pack", artisticdude) | `chop` ("50 RPG sound effects", Kenney) with `qubodupPunch02`, 0.3 s |
+| Walblum's kick | `swish-10` with `thwack-09` 0.09 s in | "Squeaky Rat" (qubodup) with `battle/swing2` (artisticdude) and `hit10` ("37 hits/punches", Independent.nu) |
+| Claw Slash | `swish-4`, `swish-5`, `swish-6`, 0.12 s apart | `knifeSlice2` (Kenney) with `battle/swing` (artisticdude) |
+| Rescue | first 2.9 s of `WinVibraphone` ("Win Jingle", Fupi) | first 3 s of `newthingget_0` ("New thing get!", congusbongus) |
+
+Nobody has heard them: they were chosen by name, length and loudness. "Squeaky Rat" says it was made from two freesound recordings that were CC0 at the time. When he picks: the pike's four belong to the lake (`home: ['cocolalla']`; the lake's own sounds stand at 1.83 MB of 2.5 MB), the kick, the slash and the rescue to every level (shared sounds must stay under 1 MB together).
 
 ### What exists now from part one
 
@@ -55,10 +84,10 @@ Last updated: 2026-11-25. Milestone eleven, part one (fishing at Cocolalla) is f
 
 ### The checks, as they run now
 
-- `npm test`: 1,327 rule tests pass. They come in two kinds (`tests/bot-runs.ts`): 790 in which a bot plays the game (any test file that uses a helper that plays it), and 537 quick ones. `npm run test:rules` and `npm run test:bot` run one kind each.
+- `npm test`: 1,399 rule tests pass. They come in two kinds (`tests/bot-runs.ts`): those in which a bot plays the game (any test file that uses a helper that plays it), and the quick ones. `npm run test:rules` and `npm run test:bot` run one kind each.
 - **On GitHub the bot's runs have a job of their own**, "Whole-level bot runs", with an hour to finish in, and each test in it may take five minutes (the owner's word, 2026-11-25: a slow machine must not fail a run). No bot-run test may set a time limit of its own; `tests/bot-runs.test.ts` fails if one does. The required check "Tests, build and browser checks" waits for the new job.
 - The browser checks pass in Chromium and in WebKit on every pull request. New: a whole catch as Caputo (`tests/browser/fishing.spec.ts`).
-- The whole download is 15.28 MB (budget 20 MB).
+- The whole download is 15.34 MB (budget 20 MB).
 
 ### Not checked, and the owner is the one who can (on the Mac)
 
@@ -76,7 +105,7 @@ Last updated: 2026-11-25. Milestone eleven, part one (fishing at Cocolalla) is f
 
 ### The roadmap, in the owner's order
 
-1. **Milestone eleven, part two: next.** Walblum's kick, Claw Slash, the monster pike fight and the rescue.
+1. **Milestone eleven, part two: under way.** The monster pike fight is in; Walblum's kick, Claw Slash and the rescue are next, each after the owner's OK (see the top of this page).
 2. **The Bouncing Grove reshaped by the route rule.** Today 92% of it runs away from the camera with no camera turns; it is on the route test's waiting list until then. Plan it the way the lake was planned: a map from above with the camera's facing in each part, for the owner's OK before anything is built.
 3. **Simple gripping hands for Yaarbro** (the owner's word, 2026-11-20), before skiing and climbing: one bone that curls his fingers and one for his thumb, on each hand.
 4. Skiing in the Selkirks, with Caputo on a snowboard.

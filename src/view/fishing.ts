@@ -452,6 +452,8 @@ export class FishingView {
       }
     }
     for (const fish of state.fish) {
+      // The monster pike is drawn by its own view (pike.ts).
+      if (fish.monster) continue;
       let view = this.viewFor(fish);
       if (!view) {
         view = this.fish.find((each) => each.species === fish.species && each.fishId === null) ?? null;

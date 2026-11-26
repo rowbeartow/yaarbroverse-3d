@@ -10,6 +10,7 @@ import { MOVE, STEP } from '../../src/game/hero';
 import { surfaceBelow, topAt, touchesFromAbove, type Level, type Solid } from '../../src/game/level';
 import { SWIM, type Water } from '../../src/game/swim';
 import { steadyFor } from '../../src/game/moving';
+import { newPikeFighter, pikeInput, pikeWants } from './pike-fighter';
 
 /** The spot on a solid the bot heads for: its middle if round, else the nearest point well inside. */
 const aimPoint = (s: Solid, x: number, z: number): { x: number; z: number } => {
@@ -39,6 +40,8 @@ export class Bot {
   private swingingFor = 0;
   /** The enemy the bot is in the air over, on its way to landing on it. */
   private stomping: Enemy | null = null;
+  /** What the bot keeps in mind while it deals with a monster pike (see pike-fighter.ts). */
+  pike_ = newPikeFighter();
 
   /** The level is read from the game on every step, so moving pieces are where they are now. */
   constructor(_level?: Level) {}
@@ -50,6 +53,8 @@ export class Bot {
     for (const event of game.events) {
       if (event.type === 'bounce') this.index = level.route.indexOf(event.solidId);
     }
+    // A monster pike: once the bot has taken it on, it sees it through, in the water and out.
+    if (game.pike && game.pike.phase !== 'lurking' && pikeWants(this.pike_, game)) return pikeInput(this.pike_, game);
     if (game.grounded && game.groundId) this.index = level.route.indexOf(game.groundId);
     if (game.swimming && game.waterId) {
       const swum = level.route.indexOf(game.waterId);
@@ -104,6 +109,9 @@ export class Bot {
       if (!game.grounded && game.vy <= 0) this.holdingJump = false;
       return { moveX: distance > 1e-6 ? (dx / distance) * push : 0, moveZ: distance > 1e-6 ? (dz / distance) * push : 0, jump: this.holdingJump };
     }
+
+    // A monster pike to fish for, with no scout to deal with first.
+    if (game.pike && pikeWants(this.pike_, game)) return pikeInput(this.pike_, game);
 
     // A boss in the way: fight it. The goal cannot be taken until it is beaten.
     const boss = game.boss;
@@ -541,7 +549,7 @@ const roomIn = (arena: BossSpot['arena'], knockback: number): BossSpot['arena'] 
 const copyGame = (game: Game): Game => Object.assign(Object.create(Game.prototype) as Game, structuredClone({ ...game }));
 
 /** A copy of the bot, for playing its plan forward. */
-const copyBot = (bot: Bot): Bot => Object.assign(Object.create(Bot.prototype) as Bot, { ...bot, stomping: null, escape: null, dodge_: null });
+const copyBot = (bot: Bot): Bot => Object.assign(Object.create(Bot.prototype) as Bot, { ...bot, stomping: null, escape: null, dodge_: null, pike_: { ...bot.pike_ } });
 
 /**
  * Plays a copy of a game (see `copyGame`) forward for up to `seconds` with `choose` deciding

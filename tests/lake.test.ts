@@ -47,9 +47,10 @@ const cleanRun = (difficulty: Difficulty, hero: (typeof HEROES)[number] = 'Yaarb
 
 /** How long a perfect run of the whole lake should take on each difficulty, in seconds. */
 const RUN_TIME: Record<Difficulty, [number, number]> = {
-  easy: [45, 75],
-  normal: [55, 90],
-  hard: [65, 110],
+  // With the monster pike at the end: about 60, 76 and 85 seconds to the dock, then the fight.
+  easy: [75, 120],
+  normal: [100, 155],
+  hard: [125, 190],
 };
 
 describe('the eight sections', () => {
@@ -116,7 +117,9 @@ describe.each(DIFFICULTIES)('the lake on %s', (difficulty) => {
   it('every section is a few seconds long, and none takes over the run (a swim with crocodiles to get past may take longer)', () => {
     let last = 0;
     for (const section of sections) {
-      const end = reached.get(section.solids[section.solids.length - 1]) ?? seconds;
+      // A section ends on the last of its solids that is on the route: the pier's jetty, steps and floating log are off it.
+      const onRoute = section.solids.filter((id) => level.route.includes(id));
+      const end = reached.get(onRoute[onRoute.length - 1]) ?? seconds;
       expect(end - last, section.name).toBeGreaterThan(3);
       expect(end - last, section.name).toBeLessThan(30);
       last = end;
@@ -576,7 +579,7 @@ describe('the scouts and the mosquito', () => {
     expect(buildLake('easy').enemies!.some((each) => each.id === 'scout-point')).toBe(false);
   });
 
-  it.each(DIFFICULTIES.flatMap((d) => HEROES.map((h) => [d, h] as const)))('on %s the bot, as %s, finishes with no heart lost and beats the dock\'s scouts on the way to the leaf', (difficulty, hero) => {
+  it.each(DIFFICULTIES.flatMap((d) => HEROES.map((h) => [d, h] as const)))('on %s the bot, as %s, finishes with no heart lost: the dock\'s scouts run off when the pike is hooked', (difficulty, hero) => {
     const level = buildLake(difficulty);
     const game = new Game(level, difficulty, hero);
     const bot = new Bot(level);

@@ -116,7 +116,29 @@ export const FISHING = {
   depth: 0.45,
 } as const;
 
-export type FishMood = 'idle' | 'coming' | 'nibbling' | 'biting' | 'hooked' | 'fleeing' | 'landed';
+export type FishMood = 'idle' | 'coming' | 'nibbling' | 'biting' | 'hooked' | 'fleeing' | 'landed' | 'fighting';
+
+/**
+ * A monster on the line (the lake's monster pike: see pike.ts). It is fished
+ * for like any fish, but it is never landed: every `pull` metres of line won
+ * takes one of its `pips`, and when they are gone it drags the hero in.
+ */
+export interface MonsterNumbers {
+  pips: number;
+  pull: number;
+  /** Seconds it tires for between thrashes, seconds a thrash lasts, and how fast it takes line while it thrashes. */
+  calm: number;
+  thrash: number;
+  run: number;
+  /** How much of the usual reeling speed its weight leaves: under 1, it comes in slowly. */
+  heavy: number;
+}
+
+/** The id of the monster among the fish, and how long it is in centimetres. */
+export const MONSTER_ID = 0;
+export const MONSTER_SIZE = 330;
+/** With help (Easy), a cast whose ring is within this far of the monster lands beside it. */
+const MONSTER_HELP = 5;
 
 /** One fish in the water. `out` and `across` are metres from the spot, along `ahead` and to its right. */
 export interface Fish {
@@ -134,6 +156,8 @@ export interface Fish {
   loop: number;
   /** Seconds it has left to sulk, or (landed) until another takes its place. */
   wait: number;
+  /** True for the monster: the game moves it while it is idle (it circles its log), and it is never landed. */
+  monster?: boolean;
 }
 
 export type FishingPhase = 'off' | 'aim' | 'cast' | 'wait' | 'bite' | 'hooked' | 'show' | 'lost';
@@ -141,7 +165,10 @@ export type FishingPhase = 'off' | 'aim' | 'cast' | 'wait' | 'bite' | 'hooked' |
 export type FishingEvent =
   | { what: 'start' | 'stop' | 'cast' | 'plop' | 'scared' | 'missed' | 'snapped' | 'away' }
   | { what: 'nibble' | 'bite' | 'hooked' | 'tell' | 'thrash' | 'calm'; species: Species }
-  | { what: 'landed'; species: Species; size: number };
+  | { what: 'landed'; species: Species; size: number }
+  /** The monster lost a pip on the line (`left` still to go on the line), or lost its last one there and drags the hero in. */
+  | { what: 'pip'; left: number }
+  | { what: 'dragged' };
 
 /** A fish that has been landed this run. */
 export interface Catch {
@@ -176,6 +203,10 @@ export interface FishingState {
   /** Whether the button was held on the last step. */
   held: boolean;
   jumpHeld: boolean;
+  /** The monster's numbers while there is one in the water, how many pips it has left on the line, and the line length that takes the next. */
+  monster: MonsterNumbers | null;
+  pips: number;
+  pipAt: number;
   /** The source of every chance here: the same run always meets the same fish. */
   seed: number;
   nextId: number;
@@ -215,11 +246,23 @@ const stock = (state: FishingState, spot: FishingSpot, species: Species): Fish =
 export const newFishing = (spot: FishingSpot, seed = 20261119): FishingState => {
   const state: FishingState = {
     phase: 'off', timer: 0, out: spot.near, across: 0, sliding: 1, fish: [], taker: null, nibbles: 0, next: 0,
-    line: 0, strain: 0, fight: 'calm', fightFor: 0, reeling: false, shown: null, held: false, jumpHeld: false, seed, nextId: 1,
+    line: 0, strain: 0, fight: 'calm', fightFor: 0, reeling: false, shown: null, held: false, jumpHeld: false, monster: null, pips: 0, pipAt: 0, seed, nextId: 1,
   };
   for (const species of SPECIES) for (let i = 0; i < spot.numbers.species[species].count; i += 1) state.fish.push(stock(state, spot, species));
   return state;
 };
+
+/** Puts the monster in the water at (out, across), to be fished for; or takes it out again (`numbers` null). */
+export const setMonster = (state: FishingState, numbers: MonsterNumbers | null, out = 0, across = 0): void => {
+  state.fish = state.fish.filter((fish) => !fish.monster);
+  if (state.taker === MONSTER_ID) state.taker = null;
+  state.monster = numbers;
+  if (!numbers) return;
+  state.fish.push({ id: MONSTER_ID, species: 'pike', size: MONSTER_SIZE, out, across, heading: 0, mood: 'idle', home: { out, across }, loop: 0, wait: 0, monster: true });
+};
+
+/** The monster among the fish, if it is in the water. */
+export const monsterOf = (state: FishingState): Fish | null => state.fish.find((fish) => fish.monster) ?? null;
 
 /** True when a hero standing at (x, z) on the solid `groundId` is on the spot. */
 export const onSpot = (spot: FishingSpot, groundId: string | null, x: number, z: number): boolean =>
@@ -268,7 +311,8 @@ const stepFish = (state: FishingState, spot: FishingSpot, dt: number): void => {
       if (there && fish.wait <= 0) fish.mood = 'idle';
       continue;
     }
-    if (fish.mood !== 'idle') continue;
+    // The monster circles its log: the game moves it.
+    if (fish.mood !== 'idle' || fish.monster) continue;
     // A slow figure of eight round home, each fish at its own place in it.
     fish.loop = (fish.loop + dt / 14) % 1;
     const angle = fish.loop * Math.PI * 2;
@@ -277,7 +321,8 @@ const stepFish = (state: FishingState, spot: FishingSpot, dt: number): void => {
 };
 
 const scare = (state: FishingState, fish: Fish): void => {
-  fish.mood = 'fleeing';
+  // The monster does not flee: it goes back to circling its log.
+  fish.mood = fish.monster ? 'idle' : 'fleeing';
   fish.wait = FISHING.sulk;
   if (state.taker === fish.id) state.taker = null;
 };
@@ -308,6 +353,8 @@ const fishFor = (state: FishingState, spot: FishingSpot, out: number, across: nu
   for (const fish of state.fish) {
     if (fish.mood !== 'idle') continue;
     const far = Math.hypot(fish.out - out, fish.across - across);
+    // The monster takes a lure in its reach before any other fish dares.
+    if (fish.monster && far <= spot.numbers.notice) return fish;
     if (far <= nearest) {
       best = fish;
       nearest = far;
@@ -379,6 +426,9 @@ export const stepFishing = (state: FishingState, spot: FishingSpot, input: Fishi
           if (fish.mood !== 'idle') continue;
           if (!nearest || Math.hypot(fish.out - state.out, fish.across - state.across) < Math.hypot(nearest.out - state.out, nearest.across - state.across)) nearest = fish;
         }
+        // A cast anywhere near the monster's shadow is a cast at the monster.
+        const monster = monsterOf(state);
+        if (monster && monster.mood === 'idle' && Math.hypot(monster.out - state.out, monster.across - state.across) <= MONSTER_HELP) nearest = monster;
         if (nearest) {
           state.out = Math.max(spot.near, Math.min(spot.far, nearest.out - 0.6));
           state.across = nearest.across;
@@ -422,7 +472,8 @@ export const stepFishing = (state: FishingState, spot: FishingSpot, input: Fishi
         if (!swimTo(fish, state.out, state.across, FISHING.approach, dt)) break;
         fish.mood = 'nibbling';
         const [least, most] = n.species[fish.species].nibbles;
-        state.nibbles = least + Math.floor(chance(state) * (most - least + 1)) + (most > 0 ? n.moreNibbles : 0);
+        // The monster never nibbles: it takes the lure whole.
+        state.nibbles = fish.monster ? 0 : least + Math.floor(chance(state) * (most - least + 1)) + (most > 0 ? n.moreNibbles : 0);
         state.next = FISHING.nibbleGap * 0.6;
         break;
       }
@@ -461,7 +512,12 @@ export const stepFishing = (state: FishingState, spot: FishingSpot, input: Fishi
         state.line = Math.hypot(fish.out, fish.across);
         state.strain = 0;
         state.fight = 'calm';
-        state.fightFor = n.species[fish.species].calm * (0.7 + 0.3 * chance(state));
+        state.fightFor = (fish.monster && state.monster ? state.monster.calm : n.species[fish.species].calm) * (0.7 + 0.3 * chance(state));
+        if (fish.monster && state.monster) {
+          // Each pip is `pull` metres of line won, and the last is won well short of the spot.
+          state.pips = state.monster.pips;
+          state.pipAt = state.line - Math.min(state.monster.pull, (state.line - FISHING.landAt - 1.5) / state.pips);
+        }
         events.push({ what: 'hooked', species: fish.species });
         break;
       }
@@ -483,7 +539,8 @@ export const stepFishing = (state: FishingState, spot: FishingSpot, input: Fishi
         state.phase = 'off';
         break;
       }
-      const kind = n.species[fish.species];
+      const monster = fish.monster ? state.monster : null;
+      const kind = monster ?? n.species[fish.species];
       state.reeling = input.button;
       state.fightFor -= dt;
       if (state.fightFor <= 0) {
@@ -493,7 +550,7 @@ export const stepFishing = (state: FishingState, spot: FishingSpot, input: Fishi
           events.push({ what: 'tell', species: fish.species });
         } else if (state.fight === 'tell') {
           state.fight = 'thrash';
-          state.fightFor = kind.thrash * (0.7 + 0.7 * bigness(spot, fish));
+          state.fightFor = monster ? monster.thrash : kind.thrash * (0.7 + 0.7 * bigness(spot, fish));
           events.push({ what: 'thrash', species: fish.species });
         } else {
           state.fight = 'calm';
@@ -508,7 +565,7 @@ export const stepFishing = (state: FishingState, spot: FishingSpot, input: Fishi
         if (!state.reeling && n.snap !== Infinity) state.line += kind.run * dt;
       } else {
         state.strain = Math.max(0, state.strain - FISHING.ease * dt);
-        if (state.reeling) state.line -= n.reel * dt;
+        if (state.reeling) state.line -= n.reel * (monster ? monster.heavy : 1) * dt;
         else state.line += n.drift * dt;
       }
       // The fish is at the end of the line, weaving a little as it comes.
@@ -526,13 +583,27 @@ export const stepFishing = (state: FishingState, spot: FishingSpot, input: Fishi
         state.strain = 0;
         state.reeling = false;
         events.push({ what: 'snapped' });
+      } else if (monster && state.line <= state.pipAt) {
+        // A pip: and with the last one on the line it drags the hero in.
+        state.pips -= 1;
+        state.pipAt -= Math.min(monster.pull, (state.pipAt - FISHING.landAt - 1.5) / Math.max(1, state.pips));
+        events.push({ what: 'pip', left: state.pips });
+        if (state.pips <= 0) {
+          fish.mood = 'fighting';
+          state.phase = 'off';
+          state.timer = 0;
+          state.taker = null;
+          state.strain = 0;
+          state.reeling = false;
+          events.push({ what: 'dragged' });
+        }
       } else if (state.line >= spot.far + FISHING.spare) {
         scare(state, fish);
         state.phase = 'lost';
         state.timer = 0;
         state.reeling = false;
         events.push({ what: 'away' });
-      } else if (state.line <= FISHING.landAt) {
+      } else if (!monster && state.line <= FISHING.landAt) {
         fish.mood = 'landed';
         fish.wait = FISHING.restock;
         state.shown = { species: fish.species, size: fish.size };

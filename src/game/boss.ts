@@ -238,6 +238,24 @@ export const bossOpen = (boss: Boss): boolean => {
   return boss.phase === 'idle' || boss.phase === 'warning' || boss.phase === 'attack';
 };
 
+/**
+ * A strike from a distance (Walblum's kick, Claw Slash: see ability.ts),
+ * flying along (alongX, alongZ). It counts exactly when a landing on top
+ * would: while the boss is open, and not in a moment of show. Returns
+ * 'struck' (the boss is then staggered, or beaten), or 'blocked'.
+ */
+export const strikeBoss = (boss: Boss, alongX: number, alongZ: number): 'struck' | 'blocked' => {
+  const settled = bossFighting(boss) && boss.phase !== 'intro' && boss.phase !== 'stagger' && boss.phase !== 'roar';
+  if (!settled || !bossOpen(boss)) return 'blocked';
+  boss.health = Math.max(0, boss.health - 1);
+  boss.acorns = [];
+  const along = Math.hypot(alongX, alongZ);
+  boss.shove = along > 1e-6 ? { x: (alongX / along) * BOSS.knock, z: (alongZ / along) * BOSS.knock, left: BOSS.knockTime } : { x: 0, z: 0, left: 0 };
+  boss.phase = boss.health <= 0 ? 'defeated' : 'stagger';
+  boss.timer = 0;
+  return 'struck';
+};
+
 /** True while touching it would hurt. */
 export const bossDangerous = (boss: Boss): boolean => boss.phase === 'idle' || (boss.phase === 'attack' && boss.attack === 'charge');
 

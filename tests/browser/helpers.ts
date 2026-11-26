@@ -142,12 +142,15 @@ export const standOn = (page: Page, solidId: string, back = 0): Promise<void> =>
  * Counts the level's boss as beaten, if it has one, so a check about the end
  * of a run (the leaf, the end card, saved bests) does not have to fight it
  * first. The fight itself is played by the rule tests (tests/boss.test.ts)
- * and checked in a browser by boss.spec.ts.
+ * and checked in a browser by boss.spec.ts. A level's monster pike is counted
+ * as beaten the same way.
  */
 export const skipBoss = (page: Page): Promise<void> =>
   page.evaluate(() => {
-    const { game } = (window as unknown as { __grove: { game: { boss: { phase: string; health: number; timer: number } | null } } }).__grove;
+    const { game } = (window as unknown as { __grove: { game: { boss: { phase: string; health: number; timer: number } | null; pike?: { phase: string; health: number; timer: number } | null } } }).__grove;
     if (game.boss) Object.assign(game.boss, { phase: 'defeated', health: 0, timer: 10 });
+    // A monster pike counts the same way (the fight is played by tests/pike.test.ts and checked by pike.spec.ts).
+    if (game.pike) Object.assign(game.pike, { phase: 'beaten', health: 0, timer: 10 });
   });
 
 /**

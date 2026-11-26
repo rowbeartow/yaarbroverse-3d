@@ -45,6 +45,7 @@ import { CROC } from '../../game/crocodile';
 import type { Difficulty } from '../../game/difficulty';
 import type { EnemySpot } from '../../game/enemy';
 import type { FishingSpot } from '../../game/fishing';
+import type { PikeSpot } from '../../game/pike';
 import type { Level, Section, Solid } from '../../game/level';
 import type { Motion } from '../../game/moving';
 import { ROPE, type Rope } from '../../game/rope';
@@ -65,9 +66,13 @@ export const LAKE_HINTS: Record<string, string> = {
   'reed-bar': 'Swim to the rocks and dive through the gap.',
   'cove-beach': 'Up the posts to the old pier!',
   landing: 'Along the boardwalk to the fishing dock!',
+  dock: 'Something huge is circling out there. Fish for it from the jetty!',
+  jetty: 'Cast at the big shadow!',
+  'pike-log': 'When its jaws open, step away. When it lies still, jump on it!',
 };
 
 export const LAKE_GOAL_LINE = 'A golden leaf, at the end of the dock!';
+export const LAKE_PIKE_NAME = 'The Monster Pike';
 
 /** Fixed sizes that do not change with difficulty. */
 export const LAKE_SHAPE = {
@@ -253,6 +258,21 @@ export const LAKE_SHAPE = {
   fishingNear: 3,
   fishingFar: 24,
   fishingHalfWidth: 7,
+  /**
+   * The monster pike. The drifting log it circles: how far out from the fishing spot and how far to the side (west is
+   * negative), and how far out it circles. The floating log a hero fights it from: how far west of the spot its middle is
+   * (clear of the water a cast can reach), from how far out to how far out it lies, its width and how high its top floats
+   * (low enough to climb onto from the water). And how far from the pool's edges the pike keeps.
+   */
+  pikeHomeOut: 15,
+  pikeHomeAside: -1.5,
+  pikeCircle: 4.5,
+  pikeLogAside: -9.5,
+  pikeLogFrom: 4.5,
+  pikeLogTo: 12.5,
+  pikeLogWidth: 2,
+  pikeLogTop: 0.4,
+  pikeMargin: 2.5,
   fallY: -6,
   depth: -40,
 } as const;
@@ -499,7 +519,8 @@ export function buildLake(difficulty: Difficulty, numbers: LakeNumbers = LAKE_DI
   // north of the rocky point, beside the second post, which is still low enough to hop back onto from it.
   add({ id: 'post-rock', kind: 'boulder', shape: 'round', x: coveX + shape.postRockAside, z: shape.rockNorth - shape.postRockOut, halfX: shape.postRockRadius, halfZ: shape.postRockRadius, top: shape.postRockTop, bottom: shape.depth }, false);
   // A square landing where the pier turns: room to stand while the camera comes round.
-  box('landing', 'deck', coveX - shape.landingHalf, coveX + shape.landingHalf, z - shape.landingHalf * 2, z, deck, deck - 0.4);
+  // It is the doorstep of the pike fight, so it is a checkpoint on every difficulty: losing to the pike costs the fight, not the posts.
+  box('landing', 'deck', coveX - shape.landingHalf, coveX + shape.landingHalf, z - shape.landingHalf * 2, z, deck, deck - 0.4, { safe: true });
   const pierZ = z - shape.landingHalf;
 
   // 8. THE OLD PIER: the boardwalk east out over the lake, and the fishing dock.
@@ -537,6 +558,11 @@ export function buildLake(difficulty: Difficulty, numbers: LakeNumbers = LAKE_DI
     halfWidth: shape.fishingHalfWidth,
     numbers: n.fishing,
   };
+  // THE MONSTER PIKE (see pike.ts). It circles a drifting log out in the fishing water, where a cast reaches it. West of
+  // that water, clear of every cast, floats the log a hero fights it from once it has dragged them in.
+  const logX = fishing.x + shape.pikeLogAside;
+  box('pike-log', 'log', logX - shape.pikeLogWidth / 2, logX + shape.pikeLogWidth / 2, fishing.z - shape.pikeLogTo, fishing.z - shape.pikeLogFrom, shape.surface + shape.pikeLogTop, shape.surface - 0.5, {}, false);
+  sections[sections.length - 1].solids.push('pike-log');
 
   // The water. Each pool's edge that is not shore or rock is where a log boom floats.
   pool('shore-water', -shape.westOfBeach, channelWest, shape.woodedSouth, shape.shoreZ);
@@ -546,6 +572,20 @@ export function buildLake(difficulty: Difficulty, numbers: LakeNumbers = LAKE_DI
   pool('open-water', reedX, barX, northEdge, shape.shoreZ);
   pool('tunnel-water', westEdge, reedX, shape.rockNorth, shape.shoreZ);
   pool('pier-water', westEdge, reedX, northEdge, shape.rockNorth);
+  const pierWater = water[water.length - 1];
+  const pike: PikeSpot = {
+    id: 'monster-pike',
+    name: LAKE_PIKE_NAME,
+    water: pierWater.id,
+    surface: shape.surface,
+    home: { x: fishing.x + shape.pikeHomeAside, z: fishing.z - shape.pikeHomeOut },
+    circle: shape.pikeCircle,
+    log: 'pike-log',
+    ahead: fishing.ahead,
+    // North of the jetty only: it never comes in under the dock.
+    patch: { minX: pierWater.minX + shape.pikeMargin, maxX: pierWater.maxX - shape.pikeMargin, minZ: pierWater.minZ + shape.pikeMargin, maxZ: jettyNorth - shape.pikeMargin },
+    numbers: n.pike,
+  };
 
   // The crocodiles: spread along the long swim, each `crocAside` to the side of the way down, taking turns west and east.
   const enemies: EnemySpot[] = [];
@@ -661,6 +701,8 @@ export function buildLake(difficulty: Difficulty, numbers: LakeNumbers = LAKE_DI
     const dock = find('dock');
     for (let i = 0; i < n.dockScouts; i += 1) {
       const side = i === 0 ? 1 : -1;
+      // They take fright and run off when the monster pike is hooked.
+      (pike.scares ??= []).push(`scout-dock-${i + 1}`);
       enemies.push({ id: `scout-dock-${i + 1}`, kind: 'marmot', x: dock.x + (i === 0 ? 0.5 : -0.5), y: dock.top, z: dock.z + side * (dock.halfZ - shape.scoutIn), beat: { x: dock.x + (i === 0 ? 0.5 : -0.5), z: dock.z + side * 0.8 }, arena: patch(dock, shape.scoutInset), notice: shape.scoutInset });
     }
   }
@@ -759,6 +801,7 @@ export function buildLake(difficulty: Difficulty, numbers: LakeNumbers = LAKE_DI
     ropes,
     ropeHelp: n.ropeHelp,
     fishing,
+    pike,
     lightEnemies: true,
     enemySight: shape.enemySight,
     jumpAssist: n.jumpAssist,

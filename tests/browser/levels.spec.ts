@@ -55,6 +55,8 @@ test.describe('the level list', () => {
       const { game } = (window as unknown as { __grove: { game: { enemies: Array<{ kind: string; phase: string }> } } }).__grove;
       for (const enemy of game.enemies) if (enemy.kind === 'marmot') enemy.phase = 'defeated';
     });
+    // So is the monster pike (tests/pike.test.ts plays the fight, pike.spec.ts shows it): counted as beaten, the leaf shows.
+    await skipBoss(page);
     await standOn(page, 'dock', 0);
     await expect.poll(() => page.evaluate(() => Math.abs((window as unknown as { __grove: { facing: number } }).__grove.facing)), { timeout: 30_000 }).toBeLessThan(5);
     await page.keyboard.down('ArrowRight');

@@ -150,6 +150,19 @@ export class GameSounds {
         else if (event.what === 'landed') sound.play('fishLanded');
       }
       else if (event.type === 'strike') sound.play(event.kind === 'crocodile' ? 'crocHit' : 'strike');
+      else if (event.type === 'pike') {
+        // The monster pike. Until its own recordings are picked on the sound board it borrows the crocodile's, which
+        // the owner picked for a big thing in the water: the growl as a warning, the chomp, the heavy splash, the thump.
+        if (event.what === 'dragged') sound.play('crocSplash');
+        else if (event.what === 'hit') sound.play('crocHit', event.how === 'line' ? { volume: 0.6 } : undefined);
+        else if (event.what === 'blocked') sound.play('bounce');
+        else if (event.what === 'beaten') sound.play('bossBeaten');
+        else if (event.what === 'phase' && event.phase === 'charge-tell') sound.play('crocTell');
+        else if (event.what === 'phase' && event.phase === 'gape') {
+          sound.play('crocSplash', { volume: 0.7 });
+          sound.play('crocTell');
+        } else if (event.what === 'phase' && event.phase === 'snap') sound.play('crocBite');
+      }
       else if (event.type === 'goal') sound.playTune('leafTune');
       else if (event.type === 'boss') {
         // A boss is loud enough to be heard across its arena: no fading with distance.

@@ -24,6 +24,7 @@ import { GameSounds } from './audio/game-sounds';
 import { Sound } from './audio/mix';
 import { Player } from './audio/player';
 import { bossFighting, bossOpen } from './game/boss';
+import { PIKE, pikeFighting, pikeOpen } from './game/pike';
 import { Game, IDLE, type GameEvent, type Input } from './game/game';
 import type { Difficulty } from './game/difficulty';
 import type { HeroName } from './game/hero';
@@ -40,6 +41,7 @@ import { pickupCounts } from './game/collect';
 import { Players, endBests, ghostOn, isBiggestYet, type CatchOutcome, type EndBests, type HaulOutcome, type Player as SavedPlayer } from './save/players';
 import { DiveHint, diveHintText } from './ui/dive-hint';
 import { fishingButton, fishingHint, fishingNews } from './ui/fishing-words';
+import { pikeNews } from './ui/pike-words';
 import { onSpot } from './game/fishing';
 import { Picker } from './ui/picker';
 import { Screens, isTouchDevice, loadChoice, needsTurning, type Choice } from './ui/screens';
@@ -396,6 +398,12 @@ const boot = (): void => {
   const showBoss = (): void => {
     const boss = game.boss;
     const shown = boss && (bossFighting(boss) || (boss.phase === 'defeated' && boss.timer < 2.5));
+    // The monster pike has the same bar: up from the moment it is hooked.
+    const pike = game.pike;
+    if (pike && (pikeFighting(pike) || (pike.phase === 'beaten' && pike.timer < PIKE.fade))) {
+      screens.setBoss({ name: pike.spot.name, health: pike.health, of: pike.spot.numbers.health, open: pikeOpen(pike) });
+      return;
+    }
     screens.setBoss(boss && shown ? { name: boss.spot.name, health: boss.health, of: boss.spot.numbers.health, open: bossOpen(boss) && boss.phase !== 'intro' } : null);
   };
 
@@ -444,6 +452,10 @@ const boot = (): void => {
           news(`${name} is beaten! The golden leaf is yours.`, 5);
           sound.setMusic(entry.music);
         } else if (event.what === 'reset' && event.healed) healedNews = `${name} is back to full strength.`;
+      } else if (event.type === 'pike') {
+        const words = pikeNews(event, level.pike?.name ?? 'The monster', level.pike?.numbers.guarded ?? false);
+        if (event.what === 'reset') healedNews = event.healed ? words : null;
+        else if (words) news(words, event.what === 'beaten' ? 5 : 3);
       } else if (event.type === 'safe') safe = true;
       else if (event.type === 'goal') screens.say(level.goalLine ?? 'You made it!', 4);
     }
@@ -604,6 +616,10 @@ const boot = (): void => {
       /** The boss on screen, if the level has one, and whether the golden leaf is drawn. */
       get boss() {
         return view ? view.bossInfo() : null;
+      },
+      /** The level's monster pike, if it has one: what is drawn, and what the rules have. */
+      get pike() {
+        return view && game.pike ? { ...view.pikeInfo(), phase: game.pike.phase, health: game.pike.health } : null;
       },
       /** The level's fishing spot, if it has one: what is drawn, and what the rules have (phase, fish, catches). */
       get fishing() {

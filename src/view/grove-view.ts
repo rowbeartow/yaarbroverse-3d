@@ -45,6 +45,7 @@ import { nearestRopeEnd } from '../game/rope';
 import type { GLTF } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { SPECIES, fishingPoint, type FishingEvent, type FishingState, type Species } from '../game/fishing';
 import { FISH_MODELS, FishingView } from './fishing';
+import { PikeView } from './pike';
 import { PickupsView } from './pickups';
 import { WeedBeds } from './weed-beds';
 import { ROUTE_CAMERA, cameraFor, followsRoute, forwardOf, placesCamera, turnToward } from './route-camera';
@@ -138,6 +139,8 @@ interface LevelView extends LevelSolids {
   weeds: WeedBeds | null;
   /** The level's fishing spot drawn, if it has one. */
   fishing: FishingView | null;
+  /** The level's monster pike drawn, if it has one. */
+  pike: PikeView | null;
 }
 
 /**
@@ -361,8 +364,15 @@ export class GroveView {
       fishing = new FishingView(level.fishing, models, this.tier.simple, water, deck?.top ?? level.fishing.surface, deck ?? null);
       root.add(fishing.group);
     }
+    this.levelView?.pike?.dispose();
+    let pike: PikeView | null = null;
+    const pikeModel = level.pike ? this.assets.models.get(FISH_MODELS.pike) : undefined;
+    if (level.pike && pikeModel) {
+      pike = new PikeView(level.pike, pikeModel, this.tier.simple, water);
+      root.add(pike.group);
+    }
     this.fishingEvents = [];
-    this.levelView = { ...solids, root, forest, scatter, water, ropes, stones, under, pickups, weeds, fishing };
+    this.levelView = { ...solids, root, forest, scatter, water, ropes, stones, under, pickups, weeds, fishing, pike };
     this.swimEvents = [];
     this.under = 0;
     this.hero = buildHero(heroName, this.assets, this.tier.simple);
@@ -437,6 +447,8 @@ export class GroveView {
         this.enemies[index]?.strike();
       } else if (event.type === 'boss' && event.what === 'hit') this.boss?.strike();
       else if (event.type === 'boss' && event.what === 'beaten') this.sinceOpen = 0;
+      else if (event.type === 'pike' && event.what === 'hit') this.levelView?.pike?.strike();
+      else if (event.type === 'pike' && event.what === 'beaten') this.sinceOpen = 0;
       else if (event.type === 'goal') this.sinceGoal = 0;
       if (event.type === 'splash' || event.type === 'dive' || event.type === 'surface' || event.type === 'climb') this.swimEvents.push(event);
     }
@@ -591,6 +603,7 @@ export class GroveView {
       levelView.fishing.update(game.fishing, { x, y, z }, game.hero, dt, hero);
     }
     this.fishingEvents = [];
+    if (levelView.pike && game.pike) levelView.pike.update(game.pike, { x, z }, dt);
 
     // Mushrooms and the golden leaf.
     for (const mushroom of levelView.mushrooms.values()) animateMushroom(mushroom, dt);
@@ -785,6 +798,11 @@ export class GroveView {
   /** What the boss on screen is showing, for the browser checks, or null when the level has none. */
   bossInfo(): ReturnType<BossView['info']> | null {
     return this.boss ? this.boss.info() : null;
+  }
+
+  /** The monster pike as drawn, or null in a level with none. */
+  pikeInfo(): ReturnType<PikeView['info']> | null {
+    return this.levelView?.pike?.info() ?? null;
   }
 
   /** The fishing spot as drawn, or null in a level with none. */

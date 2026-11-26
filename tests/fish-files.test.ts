@@ -39,7 +39,10 @@ describe('the fish model files', () => {
     it(`${name}: has the one fish skeleton and the four clips`, () => {
       expect(root().listSkins().length).toBe(1);
       expect(root().listSkins()[0].listJoints().map((joint) => joint.getName()).sort()).toEqual(expect.arrayContaining(BONES.filter((bone) => bone !== 'root')));
-      expect(root().listAnimations().map((clip) => clip.getName()).sort()).toEqual(CLIPS);
+      // The pike is also the monster pike, drawn much bigger: it has a jaw that opens, and three clips more.
+      const monster = name === 'pike' ? ['beaten', 'gape', 'snap'] : [];
+      expect(root().listAnimations().map((clip) => clip.getName()).sort()).toEqual([...CLIPS, ...monster].sort());
+      expect(root().listSkins()[0].listJoints().some((joint) => joint.getName() === 'jaw')).toBe(name === 'pike');
     });
 
     it(`${name}: every clip happens on the spot, because the rules own where a fish is`, () => {

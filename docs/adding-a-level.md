@@ -166,6 +166,19 @@ A level can have a place to fish from (`src/game/fishing.ts`, whose top says how
 - The game does the rest: the fish and their shadows, the ring, bobber, line and rod (`src/view/fishing.ts`), the button's label and the line bar, the words (`src/ui/fishing-words.ts`), and the run's catches on its summary. The fish models are fetched with the level's own files.
 - `tests/helpers/fisher.ts` is a bot that fishes: use it to prove every kind can be caught on every difficulty as each hero.
 
+## A monster to fish for
+
+A level with somewhere to fish can end with a monster pike (`src/game/pike.ts`, whose top says how the fight goes): give the `Level` a `pike`. Cocolalla Lake's is the example. The level's goal cannot be taken until it is beaten.
+
+- **Its log and its circle**: `home` is the middle of the circle it swims (`circle` metres out), and every point of that circle must be inside the water a cast can reach, so a cast at its shadow hooks it.
+- **The floating log** (`log`): a `log` solid in the same pool, off the route, outside the water a cast can reach (a lure must never land on it), low enough to climb onto from the water (0.4 m over it) and long enough to step clear of a snap: more than twice the snap's reach plus 3.6 m. The pike comes up on the side of it that faces `home`.
+- **`ahead`** is the way a hooked pike drags the hero (the fishing spot's own), and `patch` the water it keeps to. Keep the patch away from the level's ways out of the water, so a hero who wants to leave can.
+- **A way out and back**: the pool needs a way out that leads back to the goal by ordinary jumps (the lake's dock steps), within 26 m of where the drag drops a hero.
+- **A checkpoint just before it**, on every difficulty, clear of any enemy: the regen rule sends a beaten hero there, and the pike is back at full health.
+- **`scares`**: the ids of enemies that share the ground beside it. They run off when it is hooked, so nothing stacks on the fight.
+- **Its numbers** are a `PikeNumbers` for each difficulty in the level's `difficulty.ts`. On Easy choose numbers that need no timing: a long `snapTell` and `rest`, `guarded: false`, `aimLine: true`, and the fishing's own `snap: Infinity`. Give it an even `health`: half goes on the line.
+- The game does the rest: the pike and its shadow (`src/view/pike.ts`, drawn from the lake's pike model), its health bar, the words (`src/ui/pike-words.ts`) and its sounds. The test bot fights any pike built this way (`tests/helpers/pike-fighter.ts`); `tests/pike.test.ts` is the lake's.
+
 ## New enemies
 
 A level may reuse the marmot scout and the giant mosquito as they are. A new enemy is its own piece of work, done before the level: its behaviour in `src/game/enemy.ts`, its model made and rigged the way the handoff describes, and the owner's OK on the enemy preview page.

@@ -154,7 +154,8 @@ describe.each(LEVELS.map((level) => [level.id, level] as const))('the level %s',
         for (const event of game.events) if (event.type === 'bounce') touch(event.solidId);
       }
       expect(game.complete).toBe(true);
-      expect(touched).toEqual(level.route);
+      // A level with a monster pike takes the bot off the route to fish for it and fight it, and back.
+      expect(touched.filter((id) => level.route.includes(id))).toEqual(level.route);
       expect(heard.size).toBeGreaterThan(3);
       for (const name of heard) expect(soundAt(name, entry.id), `${name} in ${entry.id}`).toBe(true);
     });
