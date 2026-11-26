@@ -452,6 +452,8 @@ export class FishingView {
       }
     }
     for (const fish of state.fish) {
+      // The level's monster is drawn by its own view (src/view/pike.ts), bigger and darker than any fish here.
+      if (fish.monster) continue;
       let view = this.viewFor(fish);
       if (!view) {
         view = this.fish.find((each) => each.species === fish.species && each.fishId === null) ?? null;

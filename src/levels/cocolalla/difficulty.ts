@@ -260,7 +260,7 @@ const FISH: Record<Species, SpeciesNumbers> = {
 export const LAKE_DIFFICULTY: Record<Difficulty, LakeNumbers> = {
   easy: {
     fishing: { castHelp: true, sweep: 5, notice: 3, spook: 0, biteWindow: Infinity, moreNibbles: 0, nibbleScares: false, snap: Infinity, tell: 1, drift: 0, reel: 3.2, species: FISH },
-    monster: { cruise: 1.6, pips: 2, dragAt: 4, calm: 2.5, thrash: 0.9, run: 0, pull: 3 },
+    monster: { cruise: 1.6, pips: 2, dragAt: 4, calm: 2.5, thrash: 0.9, run: 0, pull: 2 },
     pike: { health: 4, swimSpeed: 2.2, pause: 3, chargeWarning: 2.2, chargeSpeed: 6, chargeReach: 8, snapWarning: 2.4, rest: 5, aimLine: true },
     boulderCount: 5, boulderRadius: 1.6, boulderGap: 0.9,
     crossing: 34,
@@ -278,7 +278,7 @@ export const LAKE_DIFFICULTY: Record<Difficulty, LakeNumbers> = {
   },
   normal: {
     fishing: { castHelp: false, sweep: 7, notice: 2.5, spook: 0, biteWindow: 1.5, moreNibbles: 0, nibbleScares: false, snap: 1.5, tell: 0.7, drift: 0.3, reel: 3, species: FISH },
-    monster: { cruise: 2.2, pips: 3, dragAt: 4, calm: 2, thrash: 1, run: 2, pull: 1 },
+    monster: { cruise: 2.2, pips: 3, dragAt: 4, calm: 2, thrash: 1.3, run: 2, pull: 1 },
     pike: { health: 6, swimSpeed: 3, pause: 2.2, chargeWarning: 1.1, chargeSpeed: 10, chargeReach: 10, snapWarning: 1.2, rest: 2.8, aimLine: false },
     boulderCount: 6, boulderRadius: 1.2, boulderGap: 1.8,
     crossing: 48,

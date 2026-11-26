@@ -802,3 +802,30 @@ The owner's answer to Claude's question: "The floor is still 60 fps, as decision
 
 This settles the question left open in the entry above: part two is not held to 75.
 
+
+## 2026-11-25: Milestone eleven, part two: the owner's word
+
+The owner's prompt for part two (Walblum's kick, Caputo's Claw Slash, the monster pike fight and Walblum's rescue):
+
+- **Frame rate.** The floor is still 60 frames a second on Hard in Safari on the Mac. The jetty measured 75 at the lowest after part one; that is headroom, not a new floor. Part two can spend it, but he is told before anything is built that would take the dock below 65 on Hard.
+- **Walblum's rescue is the last thing in the level.** There is no case where he gets sent back.
+- **The monster pike is the picked pike** (`pike-a.glb` on the `hero-models` release), much bigger and darker, unless the kids ask for its own model.
+- **The order of work:** measure the dock first; the two moves on a preview page from the game's camera for the owner's and the kids' OK before they go in the game (new clips through Meshy or built in Blender on the hero's own rig, up to 100 credits without asking); the pike fight; the rescue and the golden leaf at the end of the long dock, reached only after the pike is beaten; the new sounds on the sound board as recordings for his OK first; one pull request for each step that changes the game, with private preview pages published before merging.
+- **Rules:** nothing the player does before the pike is beaten can end the level; every stretch of water keeps a way out, and the escape test covers the fight's water half; the keyboard test passes on Easy and Normal; no iPad checks (there is no iPad).
+
+## 2026-11-26: The monster pike fight, as built
+
+Claude's calls, building the fight the owner set out (2026-11-19) and the kids approved. The rules are `src/game/pike.ts` and the monster in `src/game/fishing.ts`; every number is `monster` and `pike` in the lake's `difficulty.ts`.
+
+- **It is nine metres long**, the picked pike's model darkened, with a shadow on the water far bigger than any fish's. The fish in the fishing water are drawn at three times their real size (a big pike is over three metres on screen), so six metres did not read as a monster.
+- **The hook.** Its shadow swims a circle 4 m wide in the fishing water, 13.5 m out from the jetty. A lure near it hooks it like any fish. On Easy the cast is drawn to it when the ring is anywhere about it (`pull`), so a short cast still goes to the nearest perch.
+- **The tug of war** is fishing's own (reel while it tires, let the line run while it thrashes, or the line snaps). Each stretch of line reeled in takes a pip: 2 of 4 on Easy, 3 of 6 on Normal, 4 of 8 on Hard. A snapped line, a hit, or leaving the spot, and it is off the hook with every pip back. On Easy the line cannot snap and holding the button is enough.
+- **The drag.** With the tug's last pip it throws the hero from the jetty into the lake, 6.5 m out and 5 m west: the stick cannot spoil the throw and nothing hurts on the way.
+- **The water half is fought from a floating log** west of the fishing water (7 m long, 1.6 m wide, its top 0.5 m over the water: a climb out, and the way to strike it). The pike circles under the water. A swimmer is charged: a tell, then a rush along a line fixed at the tell; swimming out of the line is enough. A hero on the log is snapped at: it comes to the nearer end, shows its jaws (the tell), and throws itself up the log to where the hero stood, never more than 58% of the way, so the far part of the log is always safe. Then it lies spent with its head on the log: the opening. Landing on its head, a roll or a pounce takes a pip.
+- **Easy needs no timing:** a charge's tell is 2.2 s and a snap's 2.4 s, each with a line drawn on the water, and it lies spent for 5 s.
+- **The regen rule:** a hero sent back to a safe bank finds the pike at full health, back in the fishing water. The fishing dock is a checkpoint on every difficulty (the boss recipe's doorstep), so losing to the pike costs the fight and not the pier.
+- **The way back:** the steps on the dock's south side, built in part one. The golden leaf stays out of sight and out of reach until the pike is beaten.
+- **The dock's scouts stay.** The test bot walks to the end of the dock first, as a player would, meets them there, finds no leaf and goes back to fish.
+- **Its sounds are stand-ins** until the owner picks from the sound board: the crocodile's growl, splash and bite, and the grove's boss-beaten jingle. It has no music of its own: the lake's plays on.
+- **Not built yet:** jaws that open (the model has no jaw bone; cutting one free changes the model, which the owner sees first), and Walblum on his drifting log (the rescue is the next step).
+- A perfect run of the whole lake by the bot now takes about 96 s on Easy, 112 on Normal and 138 on Hard, the fight included.

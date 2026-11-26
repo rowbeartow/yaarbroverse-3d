@@ -56,8 +56,9 @@ describe('a ghost replays the path it recorded', () => {
       total += off;
     }
     // Between samples the ghost goes in a straight line, so it cuts the corner
-    // where a mushroom turns a drop into a bounce. That is the most it is ever out.
-    expect(worst).toBeLessThan(0.6);
+    // where a mushroom turns a drop into a bounce, or where the lake's pike throws the hero
+    // into the water and the water stops them. That is the most it is ever out.
+    expect(worst).toBeLessThan(0.9);
     // Over the whole run it is within a couple of centimetres of where the hero really was.
     expect(total / path.length).toBeLessThan(0.03);
     // On the beat of a sample it is where the hero was, to the nearest 2 cm.

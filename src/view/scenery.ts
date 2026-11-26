@@ -1070,8 +1070,8 @@ export const buildSolids = (level: Level, materials: Materials, decor: Decor, ra
     }
     else {
       shape.add(log(s, materials));
-      // A snag holds up each end that does not rest on a bank or a root shelf.
-      shape.add(logPosts(s, materials, (end) => endRests(s, end, level)));
+      // A snag holds up each end that does not rest on a bank or a root shelf. The log a monster pike is fought from floats free.
+      if (s.id !== level.pike?.log) shape.add(logPosts(s, materials, (end) => endRests(s, end, level)));
     }
     group.add(shape);
     // A few metres to spare each way: rock swells out below a bank, and the last bough runs on into the cedar.

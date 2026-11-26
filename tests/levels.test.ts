@@ -154,7 +154,8 @@ describe.each(LEVELS.map((level) => [level.id, level] as const))('the level %s',
         for (const event of game.events) if (event.type === 'bounce') touch(event.solidId);
       }
       expect(game.complete).toBe(true);
-      expect(touched).toEqual(level.route);
+      // Pieces off the route (a pike's floating log, the steps back up to a dock) may be stood on too: the route's own come in order.
+      expect(touched.filter((id) => level.route.includes(id))).toEqual(level.route);
       expect(heard.size).toBeGreaterThan(3);
       for (const name of heard) expect(soundAt(name, entry.id), `${name} in ${entry.id}`).toBe(true);
     });

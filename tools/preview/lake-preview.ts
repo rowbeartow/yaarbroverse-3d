@@ -18,6 +18,7 @@ import { SPECIES } from '../../src/game/fishing';
 import { IDLE } from '../../src/game/game';
 import { Bot } from '../../tests/helpers/bot';
 import { Fisher } from '../../tests/helpers/fisher';
+import { PikePlan } from '../../tests/helpers/pike-plan';
 
 interface Place {
   id: string;
@@ -29,7 +30,8 @@ interface Place {
 }
 
 const PLACES: Place[] = [
-  // First, so the page opens on it: the newest thing to look at. It starts on the jetty, well away from the golden leaf.
+  // First, so the page opens on it: the newest thing to look at. The whole fight, from the cast at the big shadow to the golden leaf.
+  { id: 'pike', label: 'The monster pike', at: 'jetty', until: 'none' },
   { id: 'fishing', label: 'Fishing from the jetty', at: 'jetty', until: 'none' },
   { id: 'logs', label: 'Sinking logs', at: 'headland', until: 'gravel-bar' },
   { id: 'open', label: 'The Open Water', at: 'gravel-bar', until: 'reed-bar' },
@@ -78,6 +80,15 @@ const fish = (game: Game) => {
   }
   return fisher.input(game);
 };
+/** Watching the pike fight: the rule tests' way with the pike, straight from the jetty, then the bot's own way back to the leaf. */
+let pikePlan = new PikePlan(true);
+const fightPike = (game: Game) => {
+  // Nothing on the dock in the way: the fight is what is being looked at.
+  for (const enemy of game.enemies) Object.assign(enemy, { phase: 'defeated', timer: 99 });
+  return pikePlan.input(game) ?? bot.input(game);
+};
+/** When the run on screen was finished, in real time, or null. */
+let finishedAt: number | null = null;
 let playing: Game | null = null;
 /** The game time at which the bot came to stand where the place ends, or null. */
 let stoodSince: number | null = null;
@@ -97,13 +108,22 @@ const page = window as unknown as { __previewHold?: boolean };
           stoodSince = null;
           fisher = null;
           caught = 0;
+          pikePlan = new PikePlan(true);
+          finishedAt = null;
         }
+        if (place.id === 'pike') return fightPike(game);
         if (place.id === 'fishing') return fish(game);
         return bot.input(game);
       }
     : undefined,
   again: (game: Game) => {
     if (!watching) return false;
+    // The pike fight starts over a few seconds after the golden leaf is reached.
+    if (place.id === 'pike') {
+      if (!game.complete) return false;
+      finishedAt ??= performance.now();
+      return performance.now() - finishedAt > 4000;
+    }
     const there = game.grounded && game.groundId === place.until;
     if (!there) stoodSince = null;
     else if (stoodSince === null) stoodSince = game.seconds;

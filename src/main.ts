@@ -24,6 +24,7 @@ import { GameSounds } from './audio/game-sounds';
 import { Sound } from './audio/mix';
 import { Player } from './audio/player';
 import { bossFighting, bossOpen } from './game/boss';
+import { pikeFighting, pikeOpen } from './game/pike';
 import { Game, IDLE, type GameEvent, type Input } from './game/game';
 import type { Difficulty } from './game/difficulty';
 import type { HeroName } from './game/hero';
@@ -39,7 +40,7 @@ import { loadGhost, saveGhost, type GhostSlot } from './save/ghosts';
 import { pickupCounts } from './game/collect';
 import { Players, endBests, ghostOn, isBiggestYet, type CatchOutcome, type EndBests, type HaulOutcome, type Player as SavedPlayer } from './save/players';
 import { DiveHint, diveHintText } from './ui/dive-hint';
-import { fishingButton, fishingHint, fishingNews } from './ui/fishing-words';
+import { fishingButton, fishingHint, fishingNews, pikeNews } from './ui/fishing-words';
 import { onSpot } from './game/fishing';
 import { Picker } from './ui/picker';
 import { Screens, isTouchDevice, loadChoice, needsTurning, type Choice } from './ui/screens';
@@ -396,7 +397,11 @@ const boot = (): void => {
   const showBoss = (): void => {
     const boss = game.boss;
     const shown = boss && (bossFighting(boss) || (boss.phase === 'defeated' && boss.timer < 2.5));
-    screens.setBoss(boss && shown ? { name: boss.spot.name, health: boss.health, of: boss.spot.numbers.health, open: bossOpen(boss) && boss.phase !== 'intro' } : null);
+    // A monster pike has the same bar, from the moment it is hooked.
+    const pike = game.pike;
+    const pikeShown = pike && (pikeFighting(pike) || (pike.phase === 'defeated' && pike.timer < 2.5));
+    if (pike && pikeShown) screens.setBoss({ name: pike.spot.name, health: pike.health, of: pike.spot.numbers.health, open: pikeOpen(pike) });
+    else screens.setBoss(boss && shown ? { name: boss.spot.name, health: boss.health, of: boss.spot.numbers.health, open: bossOpen(boss) && boss.phase !== 'intro' } : null);
   };
 
   /** What the rules reported this step, turned into messages. */
@@ -431,12 +436,13 @@ const boot = (): void => {
         // The older player's rule. It follows "Back to safety" on the screen, so it waits a moment.
         healedNews = event.kind === 'marmot' ? 'The marmot scout is back to full strength.' : 'The mosquito is back to full strength.';
       } else if (event.type === 'boss') {
-        const name = level.boss?.name ?? 'The boss';
+        const name = (event.id === level.pike?.id ? level.pike.name : level.boss?.name) ?? 'The boss';
         if (event.what === 'begin') {
           news(`${name}!`, 2.5);
           // Its music takes over for as long as the fight is on.
           if (entry.bossMusic) sound.setMusic(entry.bossMusic);
-        } else if (event.what === 'hit' && event.left > 0) news(`${name} hit! ${event.left} more to go.`, 2.5);
+        } else if (event.what === 'hit' && event.how === 'reel') news(`${name} is tiring! ${event.left} more to go.`, 2.5);
+        else if (event.what === 'hit' && event.left > 0) news(`${name} hit! ${event.left} more to go.`, 2.5);
         else if (event.what === 'blocked') news('It shrugs that off. Hit it while it rests!', 2.5);
         else if (event.what === 'stage') news(`${name} is getting angry!`, 2.5);
         else if (event.what === 'call') news(`${name} calls its sidekicks!`, 2.5);
@@ -444,6 +450,13 @@ const boot = (): void => {
           news(`${name} is beaten! The golden leaf is yours.`, 5);
           sound.setMusic(entry.music);
         } else if (event.what === 'reset' && event.healed) healedNews = `${name} is back to full strength.`;
+      } else if (event.type === 'pike') {
+        // The monster pike's fight, said once each: what it is doing and what to do about it.
+        const words = pikeNews(event.what, level.pike?.numbers.aimLine ?? false);
+        if (words && (event.what === 'dragged' || !met.has(`pike-${event.what}`))) {
+          met.add(`pike-${event.what}`);
+          news(words.text, words.seconds);
+        }
       } else if (event.type === 'safe') safe = true;
       else if (event.type === 'goal') screens.say(level.goalLine ?? 'You made it!', 4);
     }
@@ -606,6 +619,10 @@ const boot = (): void => {
         return view ? view.bossInfo() : null;
       },
       /** The level's fishing spot, if it has one: what is drawn, and what the rules have (phase, fish, catches). */
+      /** The monster pike, if the level has one: what the rules have, and what is drawn. */
+      get pike() {
+        return view && game.pike ? { ...view.pikeInfo(), phase: game.pike.phase, health: game.pike.health, of: game.pike.spot.numbers.health } : null;
+      },
       get fishing() {
         return view && game.fishing ? { ...view.fishingInfo(), phase: game.fishing.phase, catches: game.catches.length } : null;
       },

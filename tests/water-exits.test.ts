@@ -33,6 +33,24 @@ describe('every stretch of water has a way out', () => {
           expect(stuck).toEqual([]);
         });
       }
+
+      // The water half of a monster pike's fight (src/game/pike.ts): the hero is thrown into it, off the route.
+      const { pike } = level;
+      if (pike) {
+        it(`${entry.id} on ${difficulty}: the water the monster pike drags a hero into has a way out close by, wherever they are in it`, () => {
+          const log = level.solids.find((s) => s.id === pike.log)!;
+          const points = [{ ...pike.landAt, near: 'where the drag lands' }];
+          // All round its circle, and all round the floating log.
+          for (let i = 0; i < 8; i += 1) {
+            const angle = (i * Math.PI) / 4;
+            points.push({ x: pike.home.x + Math.cos(angle) * pike.circle, z: pike.home.z + Math.sin(angle) * pike.circle, near: 'its circle' });
+            points.push({ x: log.x + Math.cos(angle) * (log.halfX + 3), z: log.z + Math.sin(angle) * (log.halfZ + 3), near: 'the floating log' });
+          }
+          for (const point of points) expect(waterAt(level.water, point.x, point.z)?.id, point.near).toBe(pike.water);
+          const stuck = HEROES.flatMap((hero) => points.filter((point) => escapeFrom(level, difficulty, hero, point, 45, EXIT_WITHIN) === null).map((point) => `${hero}: ${point.near} at ${point.x.toFixed(0)}, ${point.z.toFixed(0)}`));
+          expect(stuck).toEqual([]);
+        });
+      }
     }
   }
 });

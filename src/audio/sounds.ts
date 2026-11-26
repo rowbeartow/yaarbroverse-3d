@@ -79,6 +79,8 @@ export interface SoundDef {
 const GROVE = ['bouncing-grove', 'sandbox'] as const;
 /** Sounds only Cocolalla Lake plays. */
 const LAKE = ['cocolalla'] as const;
+/** Every level that ends with a boss: the grove's chief, the sandbox's practice boss and the lake's monster pike. */
+const BOSSES = ['bouncing-grove', 'sandbox', 'cocolalla'] as const;
 /** The marmot scout's sounds, for the levels that have one. */
 const SCOUTS = ['bouncing-grove', 'sandbox', 'cocolalla'] as const;
 /** The creak of wood that is about to move: the grove's tipping logs, and the lake's sinking logs and posts. */
@@ -335,7 +337,7 @@ export const SOUNDS = {
     source: { files: ['button.wav'] },
   },
   bossBeaten: {
-    home: GROVE,
+    home: BOSSES,
     group: 'Enemies', label: 'Boss beaten', mix: 'cue', level: 2,
     what: 'Rising chime notes that ring out over two and a half seconds, the moment a boss is beaten.',
     source: { files: ['boss-beaten.wav'] },

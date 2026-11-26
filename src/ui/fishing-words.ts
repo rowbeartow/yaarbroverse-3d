@@ -2,6 +2,7 @@
 // each moment. No browser code, so the tests read it.
 
 import type { FishingEvent, FishingPhase, Species } from '../game/fishing';
+import type { PikePhase } from '../game/pike';
 
 export const SPECIES_NAME: Record<Species, string> = { perch: 'Perch', bass: 'Bass', trout: 'Trout', pike: 'Pike' };
 
@@ -28,8 +29,10 @@ export const fishingNews = (event: FishingEvent, touch: boolean, easy: boolean, 
     case 'plop':
       return { text: 'Wait for a bite. Jump winds the line in.', seconds: 3 };
     case 'bite':
+      if (event.monster) return { text: easy ? `The monster pike has it! Hold ${button} to reel.` : `The monster pike has it! Press ${button} now!`, seconds: 2.5 };
       return { text: easy ? `A bite! Hold ${button} to reel it in.` : `A bite! Press ${button} now!`, seconds: 2.5 };
     case 'hooked':
+      if (event.monster) return null;
       return { text: easy ? `Hooked! Hold ${button} to reel.` : `Hooked! Hold ${button} to reel. Let go when it thrashes.`, seconds: 3.5 };
     case 'thrash':
       return easy ? null : { text: 'It is thrashing! Let the line run.', seconds: 1.5 };
@@ -45,6 +48,24 @@ export const fishingNews = (event: FishingEvent, touch: boolean, easy: boolean, 
       return { text: 'It took all the line and got away.', seconds: 3 };
     case 'landed':
       return { text: `${SPECIES_NAME[event.species]}! ${event.size} cm.${biggest ? ' Your biggest yet!' : ''}`, seconds: 3.5 };
+    default:
+      return null;
+  }
+};
+
+/** What the game says at a moment of the monster pike's fight (see src/game/pike.ts), or null for nothing. `easy` is true where lines show where it will go. */
+export const pikeNews = (what: PikePhase | 'dragged', easy: boolean): { text: string; seconds: number } | null => {
+  switch (what) {
+    case 'hooked':
+      return { text: easy ? 'Hooked! Hold to reel it in.' : 'Hooked! Reel while it tires. Let go when it thrashes.', seconds: 3.5 };
+    case 'dragged':
+      return { text: 'It drags you into the lake! Swim for the floating log.', seconds: 4 };
+    case 'chargeTell':
+      return { text: easy ? 'It is coming! Swim off the line.' : 'It is coming! Swim out of its way.', seconds: 2.5 };
+    case 'snapTell':
+      return { text: 'Its jaws are up! Run down the log.', seconds: 2.5 };
+    case 'rest':
+      return { text: 'It is spent. Jump on its head!', seconds: 3 };
     default:
       return null;
   }

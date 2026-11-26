@@ -35,6 +35,12 @@ export class PikePlan {
   /** Fishing: presses must be fresh, and how long the line has waited with the monster not coming. */
   private up = true;
   private idle = 0;
+  /** The bot has been to where the leaf will be, and found none. A plan made with `straightAway` fishes without going there first. */
+  private beenToEnd: boolean;
+
+  constructor(straightAway = false) {
+    this.beenToEnd = straightAway;
+  }
   /** In the water: whether Jump was pressed on the last step (a climb needs a fresh press). */
   private pressed = false;
   /** On the log: in the air on the way to its head, and whether Jump is still held. */
@@ -63,6 +69,9 @@ export class PikePlan {
     const busy = state.phase !== 'off';
     const last = level.route[level.route.length - 1];
     if (!busy && game.groundId !== last && game.groundId !== spot.solid) return null;
+    // First on to the end of the route, as a player would, past whatever waits there: no leaf yet, so back to fish for the pike.
+    if (Math.hypot(level.leaf.x - game.x, level.leaf.z - game.z) < 1.5) this.beenToEnd = true;
+    if (!busy && !this.beenToEnd) return null;
     if (!busy && !onSpot(spot, game.groundId, game.x, game.z)) {
       // Walk to the spot, well inside it.
       const go = toward(game, spot.x, spot.z, 1);

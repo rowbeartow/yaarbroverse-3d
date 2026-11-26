@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
-import { frames, open, pickPlayer, play, standOn } from './helpers';
+import { frames, open, pickPlayer, play, skipBoss, standOn } from './helpers';
 
 // Fishing in a real browser: the spot on the lake's jetty, the button that
 // says what it does, and a whole catch on Easy, where nothing needs timing.
@@ -120,7 +120,8 @@ test.describe('on the keyboard', () => {
     // The first of its kind is the biggest yet.
     await expect(page.locator('#message')).toContainText('Your biggest yet!');
     await expect.poll(async () => (await fishing(page)).phase, { timeout: 30_000 }).toBe('off');
-    // On to the golden leaf: the end card says what was caught.
+    // On to the golden leaf (with the monster pike counted as beaten: its fight is pike.spec.ts's): the end card says what was caught.
+    await skipBoss(page);
     await standOn(page, 'dock', 0);
     await page.keyboard.down('ArrowRight');
     await expect(page.locator('#end')).toBeVisible({ timeout: 30_000 });

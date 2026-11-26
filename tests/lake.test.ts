@@ -47,9 +47,9 @@ const cleanRun = (difficulty: Difficulty, hero: (typeof HEROES)[number] = 'Yaarb
 
 /** How long a perfect run of the whole lake should take on each difficulty, in seconds. */
 const RUN_TIME: Record<Difficulty, [number, number]> = {
-  easy: [45, 75],
-  normal: [55, 90],
-  hard: [65, 110],
+  easy: [80, 115],
+  normal: [95, 135],
+  hard: [115, 165],
 };
 
 describe('the eight sections', () => {

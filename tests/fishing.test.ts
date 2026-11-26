@@ -9,6 +9,7 @@ import { Game, IDLE, type GameEvent } from '../src/game/game';
 import { STEP, type HeroName } from '../src/game/hero';
 import { buildLake } from '../src/levels/cocolalla/layout';
 import { LAKE_DIFFICULTY } from '../src/levels/cocolalla/difficulty';
+import { playWithBot } from './helpers/bot';
 import { Fisher, catchOne } from './helpers/fisher';
 
 const spotOn = (difficulty: Difficulty): FishingSpot => buildLake(difficulty).fishing!;
@@ -45,7 +46,7 @@ describe('the fishing spot', () => {
     const spot = spotOn('normal');
     const state = newFishing(spot);
     for (const species of SPECIES) {
-      const fish = state.fish.filter((each) => each.species === species);
+      const fish = state.fish.filter((each) => each.species === species && !each.monster);
       const numbers = spot.numbers.species[species];
       expect(fish.length, species).toBe(numbers.count);
       for (const each of fish) {
@@ -544,19 +545,15 @@ describe('fishing in the game', () => {
     }
   }
 
-  it('fishing takes nothing from the run: the leaf is still there to reach', () => {
+  it('fishing takes nothing from the run: with the pike beaten, the leaf is still there to reach', () => {
     const level = buildLake('easy');
     const game = new Game(level, 'easy', 'Yaarbro');
     game.startOn('jetty');
     expect(catchOne(game, 'perch')).not.toBeNull();
-    // Let the hero put the fish back, then walk to the leaf on the dock.
+    // Let the hero put the fish back, then beat the pike and go to the leaf on the dock.
     for (let i = 0; i < 4 / STEP; i += 1) game.step(IDLE);
-    for (let i = 0; i < 20 / STEP && !game.complete; i += 1) {
-      const dx = level.leaf.x - game.x;
-      const dz = level.leaf.z - game.z;
-      const far = Math.hypot(dx, dz) || 1;
-      game.step({ moveX: dx / far, moveZ: dz / far, jump: Math.hypot(dx, dz) < 1.2 });
-    }
+    for (const enemy of game.enemies) Object.assign(enemy, { phase: 'defeated', timer: 99 });
+    playWithBot(game, 200);
     expect(game.complete).toBe(true);
     expect(game.summary().fish).toEqual([{ species: 'perch', size: expect.any(Number) }]);
   });

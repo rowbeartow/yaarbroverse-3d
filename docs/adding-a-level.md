@@ -166,6 +166,18 @@ A level can have a place to fish from (`src/game/fishing.ts`, whose top says how
 - The game does the rest: the fish and their shadows, the ring, bobber, line and rod (`src/view/fishing.ts`), the button's label and the line bar, the words (`src/ui/fishing-words.ts`), and the run's catches on its summary. The fish models are fetched with the level's own files.
 - `tests/helpers/fisher.ts` is a bot that fishes: use it to prove every kind can be caught on every difficulty as each hero.
 
+## A monster on the line
+
+A level with a fishing spot can end with a monster pike (`src/game/pike.ts`, whose top says how the fight goes): hooked from the spot, a tug of war, then fought in the water from a floating log. Cocolalla Lake's is the example.
+
+- **In the fishing water:** give the fishing numbers a `monster` (`MonsterNumbers` in `src/game/fishing.ts`): the middle of the circle its shadow swims and how wide, how many pips the tug of war takes, and how it fights on the line. Keep its whole circle inside the water a cast can reach, and far enough out that there is line to reel in before `dragAt`.
+- **The fight in the water** is `pike` on the `Level` (`PikeSpot`): its pool, the same circle in the level's own coordinates, the floating log, and where the drag puts the hero. Its numbers for the difficulty are a `PikeNumbers` in the level's `difficulty.ts`: half its `health` must be the monster's `pips`.
+- **The floating log** is a `log` solid in that pool, off the route, at least 6 m long, its top no more than 1.35 m over the water so a swimmer climbs onto it, and outside the fishing water so no cast lands on it. Put it in the last section's `solids` so the camera keeps its facing.
+- **Make the spot's ground a checkpoint** on every difficulty (`safe: true`, with `safeAt` away from the edge): under the regen rule losing to the pike costs the whole fight, and it should not cost the level too.
+- **A way back** from the pike's water to the end of the route by ordinary hops (the lake's dock steps): `tests/pike.test.ts` checks there is one.
+- The game does the rest: the goal is kept back until it is beaten, its health bar, its words (`pikeNews` in `src/ui/fishing-words.ts`), its drawing from the pike's model (`src/view/pike.ts`) and the lines that show its attacks where `aimLine` is true (Easy only).
+- The test bot hooks it, wins the tug of war and beats it from the log (`tests/helpers/pike-plan.ts`), then finds the way back. If the bot cannot beat it, look at its numbers before the bot.
+
 ## New enemies
 
 A level may reuse the marmot scout and the giant mosquito as they are. A new enemy is its own piece of work, done before the level: its behaviour in `src/game/enemy.ts`, its model made and rigged the way the handoff describes, and the owner's OK on the enemy preview page.

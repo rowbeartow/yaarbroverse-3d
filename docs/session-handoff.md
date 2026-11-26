@@ -1,24 +1,47 @@
 # Session handoff
 
-Last updated: 2026-11-25. Milestone eleven, part one (fishing at Cocolalla) is finished and live: both heroes fish with clips of their own. Caputo's are in the game, the rod in his jaws (pull request 92). The bot's whole-level runs have their own job on GitHub (pull request 91). **Next: milestone eleven, part two.** This page was rewritten on 2026-11-25; everything under "The record" is as earlier sessions wrote it.
+Last updated: 2026-11-26. Milestone eleven, part two is under way. **The monster pike fight is built** (the pull request this version of the handoff arrived in: if you are reading this on `main`, it has merged). Walblum's rescue, the two new moves and the pike's own sounds are not in the game yet: each waits on the owner (below). Everything under "The record" is as earlier sessions wrote it.
 
 ## Start here
 
-**Next: milestone eleven, part two. Walblum's kick, Caputo's Claw Slash, the monster pike fight and the rescue.** Start with a plan for the owner, as every milestone has. Nothing of part two is built.
+### Where part two stands
 
-### What part two is
+The owner's order for part two is in `docs/decisions.md` ("Milestone eleven, part two: the owner's word", 2026-11-25). Step by step:
 
-- **The design is settled**: https://claude.ai/artifact/WM17aRk4LTHHDwveCCkfrs , with the owner's answers at its foot (`docs/decisions.md`, "The owner's answers on the fishing and pike design"). The fight starts as fishing: casting at the monster's shadow hooks it. A tug of war from the jetty takes half its pips; it then drags the hero into the lake; in the water it circles and charges, the hero climbs onto a floating log and strikes it when it surfaces to snap; beaten, it sinks, and **Walblum's rescue is the last thing in the level**: reaching him and the golden leaf at the dock is one moment. The new button (Walblum's kick for Yaarbro, Claw Slash for Caputo) is the reward, saved for the player and there from the start in every level from then on.
-- **Walblum's kick and Claw Slash** (`docs/decisions.md`, "Walblum and Caputo's new ability" and "The kids' picks"): Claw Slash is a swipe that sends three glowing claw marks to the nearest enemy in front of Caputo and hits it. It must stay as useful as Walblum's kick against every enemy and boss, the pike included.
-- **The monster pike** is the picked pike (`assets/fish/pike.glb`, 5,000 triangles), much bigger and darker, unless the kids ask for its own model. It needs jaws that snap: cut its lower jaw free in `tools/rig-fish.py` the way `weigh_jaw` in `tools/rig-quadruped.py` did for the crocodile.
-- **Walblum** is `walblum-b.glb` on the `hero-models` release (3,550,484 bytes, SHA-256 starts `b8c2d3a956888065`): https://github.com/rowbeartow/yaarbroverse-3d/releases/download/hero-models/walblum-b.glb . Never make him again. He was made standing with his arms out, so Meshy's rigging (`tools/meshy-rig-animate.mjs`) may take him. His whiskers hang down in the model and are to be straightened when he is rigged.
+1. **The dock measured first: done.** Before anything was built, on Hard (`node tools/draw-measure.mjs cocolalla hard`, the test browser, high tier, Yaarbro): 828,942 triangles in 377 draw calls at the dock. Draw calls in that tool move by tens from run to run (the handoff before this one had 321 for the same build).
+2. **Walblum's kick and Claw Slash: on a preview page, waiting for the owner's and the kids' OK. Not in the game.** PREVIEW_MOVES
+3. **The monster pike fight: built** (this pull request). What it is: `docs/decisions.md`, "The monster pike fight, as built". Where it is in the code: below.
+4. **Walblum's rescue: not built.** It needs Walblum's model rigged with his clips (part of step 2's work, waiting for the OK) and then: Walblum on a drifting log in the middle of the pike's circle, paddling to the dock when the pike is beaten, and reaching him and the golden leaf as one moment that ends the level; the rescue saved for the player, and the new button there from the start in every level from then on.
+5. **The new sounds: on the sound board, waiting for the owner's picks.** https://claude.ai/artifact/MuruPdJayZchXcq4MxRYde , the last group on the page: two recordings each for the pike hooked, the line snapping, the pike surfacing, its jaws snapping, Walblum's kick, Claw Slash and the rescue. He replies with seven letters. The fourteen cut files, their sources, checksums and the exact cuts are on the branch `claude/backup-pike-sounds` under `tools/sound-candidates/pike/` (its README says what to do once he picks). Until then the pike borrows the crocodile's growl, splash and bite and the grove's boss-beaten jingle (`src/audio/game-sounds.ts`, the `pike` events).
 
-### What part two can build on
+### The monster pike, as built
 
-- The tug of war is fishing's own (`src/game/fishing.ts`: `hooked`, `fight`, `strain`), so the first half of the fight is a bigger fish with pips.
-- Bosses are `src/game/boss.ts`. The pike is the first in water; the crocodile (`src/game/crocodile.ts`) is the model for circling, a tell and a charge. The golden leaf is already kept back until a boss is beaten.
-- **The way out of the water at the dock is built**: steps up the dock's south side (`dock-step-*` in the lake's `layout.ts`), away from the fishing. `tests/water-exits.test.ts` holds every stretch of water to having a way out.
-- Both heroes hold a rod and land a fish with clips of their own, placed by one piece of code (`src/view/held-tackle.ts`). A fight on the line can use the reel clips as they are.
+- **Rules:** `src/game/pike.ts` (the water half; its top says how the fight goes) and the `monster` in `src/game/fishing.ts` (its shadow's circle, the hook, the pips of the tug of war, the drag, getting away). `game.ts` joins the two (`fished`, `dragged`, `fightPike`) and keeps the goal shut until it is beaten (`goalOpen`). The level gives a `pike` (`PikeSpot`) beside its `fishing`.
+- **Numbers:** `monster` and `pike` in the lake's `difficulty.ts`; where things are, `pike*` in `LAKE_SHAPE` in its `layout.ts`. Easy 4 pips, Normal 6, Hard 8; the tug of war takes half.
+- **Drawn** by `src/view/pike.ts` from the picked pike's model, nine metres long and darkened, with its shadow on the water, and on Easy a line where a charge or a snap will go. Its words are `pikeNews` in `src/ui/fishing-words.ts`; its health bar is the boss's (`showBoss` in `src/main.ts`).
+- **The floating log** is the solid `pike-log`, west of the fishing water. The fishing dock is a checkpoint on every difficulty now.
+- **Tests:** `tests/pike.test.ts` (the tug of war: tiring, thrashing, the line snapping; the drag; the charge; the snap and the opening; each way of striking it; the regen rule; the level ending only after it is beaten; the bot beating it on every difficulty as each hero). `tests/water-exits.test.ts` covers the water the drag throws a hero into. `tests/browser/pike.spec.ts` checks it in a browser. The bot's way with it is `tests/helpers/pike-plan.ts`: it walks to the end of the dock first (and meets the scouts there), then fishes.
+- **The fight on a page the owner can watch:** the lake preview page opens on "The monster pike": PREVIEW_FIGHT
+- **Not in it yet, and why:** jaws that open (the pike's model has no jaw bone: cut the lower jaw free in `tools/rig-fish.py` the way `weigh_jaw` in `tools/rig-quadruped.py` did for the crocodile, and show the owner on the enemy preview page first); Walblum and his log (step 4); a hit from the kick or Claw Slash (step 2: `pikeOpen` and `hitPike` in `src/game/pike.ts` are what the move calls); music of its own (the lake's plays on).
+- **What the bot's perfect run of the whole lake takes now:** about 96 s on Easy, 112 on Normal and 138 on Hard, the fight included (`RUN_TIME` in `tests/lake.test.ts`).
+
+### What the pike costs to draw
+
+DRAW_COST
+
+### What was not checked, and the owner is the one who can (on the Mac)
+
+1. **The frame rate at the jetty and on the floating log, on Hard, in Safari with `?fps`.** A cloud session counts triangles, not frames. The floor is 60; he is to be told before the dock goes below 65.
+2. **The fight moving, and how it feels.** A cloud session saw still frames. Whether the big shadow reads as something to cast at, whether the drag is fun or a shock, whether the jaws coming up are warning enough on Hard, whether Easy needs no timing for the younger player.
+3. **How the stand-in sounds sit** until he picks the pike's own.
+
+### Things this session learned
+
+- **Start a session in the `yaarbroverse` environment.** This one was started in the `digglesworth` environment, whose network rules allow neither `opengameart.org` (every CC0 recording so far) nor `rowbeartow.github.io` (the live site). The owner approved moving the session's network onto `yaarbroverse`, which allows both.
+- **There is no Meshy key in either environment** (no network secret for `api.meshy.ai`). Clips are built in Blender on the hero's own rig, which costs nothing.
+- **The fishing and pike design page could not be opened** (https://claude.ai/artifact/WM17aRk4LTHHDwveCCkfrs : "not found" from a cloud session, as the handoff before this one warned). The fight was built from `docs/decisions.md`.
+- **The private repo** (`digglesworth`) can be added to a session read only with the `add_repo` tool. Its notes on Walblum: a small brown muskrat, terrified of pike, not human, no clothes, mostly body language and little dialogue; rescued from pike at Cocolalla Lake by fishing (an approved adaptation there).
+- **Never `git add -A` while a side job has a worktree open** under `.claude/worktrees/`: it sweeps the worktree in as a stray entry. This session did, and took it back out in the next commit.
 
 ### The frame budget: the dock's number
 
@@ -84,9 +107,30 @@ Last updated: 2026-11-25. Milestone eleven, part one (fishing at Cocolalla) is f
 
 ---
 
+---
+
 # The record
 
 Everything below is the record of earlier work, kept as it was written at the time. Where it disagrees with "Start here", "Start here" is right.
+
+## The top of this page as it stood on 2026-11-25, before part two
+
+**Next: milestone eleven, part two. Walblum's kick, Caputo's Claw Slash, the monster pike fight and the rescue.** Start with a plan for the owner, as every milestone has. Nothing of part two is built.
+
+**What part two is**
+
+- **The design is settled**: https://claude.ai/artifact/WM17aRk4LTHHDwveCCkfrs , with the owner's answers at its foot (`docs/decisions.md`, "The owner's answers on the fishing and pike design"). The fight starts as fishing: casting at the monster's shadow hooks it. A tug of war from the jetty takes half its pips; it then drags the hero into the lake; in the water it circles and charges, the hero climbs onto a floating log and strikes it when it surfaces to snap; beaten, it sinks, and **Walblum's rescue is the last thing in the level**: reaching him and the golden leaf at the dock is one moment. The new button (Walblum's kick for Yaarbro, Claw Slash for Caputo) is the reward, saved for the player and there from the start in every level from then on.
+- **Walblum's kick and Claw Slash** (`docs/decisions.md`, "Walblum and Caputo's new ability" and "The kids' picks"): Claw Slash is a swipe that sends three glowing claw marks to the nearest enemy in front of Caputo and hits it. It must stay as useful as Walblum's kick against every enemy and boss, the pike included.
+- **The monster pike** is the picked pike (`assets/fish/pike.glb`, 5,000 triangles), much bigger and darker, unless the kids ask for its own model. It needs jaws that snap: cut its lower jaw free in `tools/rig-fish.py` the way `weigh_jaw` in `tools/rig-quadruped.py` did for the crocodile.
+- **Walblum** is `walblum-b.glb` on the `hero-models` release (3,550,484 bytes, SHA-256 starts `b8c2d3a956888065`): https://github.com/rowbeartow/yaarbroverse-3d/releases/download/hero-models/walblum-b.glb . Never make him again. He was made standing with his arms out, so Meshy's rigging (`tools/meshy-rig-animate.mjs`) may take him. His whiskers hang down in the model and are to be straightened when he is rigged.
+
+**What part two can build on**
+
+- The tug of war is fishing's own (`src/game/fishing.ts`: `hooked`, `fight`, `strain`), so the first half of the fight is a bigger fish with pips.
+- Bosses are `src/game/boss.ts`. The pike is the first in water; the crocodile (`src/game/crocodile.ts`) is the model for circling, a tell and a charge. The golden leaf is already kept back until a boss is beaten.
+- **The way out of the water at the dock is built**: steps up the dock's south side (`dock-step-*` in the lake's `layout.ts`), away from the fishing. `tests/water-exits.test.ts` holds every stretch of water to having a way out.
+- Both heroes hold a rod and land a fish with clips of their own, placed by one piece of code (`src/view/held-tackle.ts`). A fight on the line can use the reel clips as they are.
+
 
 ## Milestone eleven, part one, as written on 2026-11-20
 

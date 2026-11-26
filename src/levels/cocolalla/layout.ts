@@ -265,7 +265,7 @@ export const LAKE_SHAPE = {
   pikeOut: 13.5,
   pikeAcross: -2.5,
   pikeCircle: 4,
-  pikeLength: 6,
+  pikeLength: 9,
   /**
    * The floating log a hero fights it from, west of the fishing water so no cast lands on it: how far to the side its
    * middle is, from how far out to how far out it lies, its width, and how high its top floats (low enough to climb onto).

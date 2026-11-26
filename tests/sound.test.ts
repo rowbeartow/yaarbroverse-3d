@@ -715,3 +715,32 @@ describe('the crocodile', () => {
     expect(heard({ type: 'strike', id, kind: 'crocodile', how: 'stomp', left: 0 })).not.toContain('strike');
   });
 });
+
+describe('the monster pike', () => {
+  it('is heard at every turn of its fight, with sounds the lake has fetched: its tells, its rush, its snap, each hit and being beaten', () => {
+    const game = new Game(buildLake('normal'), 'normal', 'Yaarbro');
+    const { speaker, sounds } = listening(game);
+    const heard = (event: (typeof game.events)[number]): string[] => {
+      speaker.played.length = 0;
+      game.events = [event];
+      sounds.step(game);
+      return speaker.names();
+    };
+    const id = game.pike!.spot.id;
+    // Until the owner picks its own sounds it borrows the crocodile's.
+    expect(heard({ type: 'pike', id, what: 'hooked' })).toEqual(['crocSplash']);
+    expect(heard({ type: 'pike', id, what: 'dragged' })).toEqual(['crocTell']);
+    expect(heard({ type: 'pike', id, what: 'chargeTell' })).toEqual(['crocTell']);
+    expect(heard({ type: 'pike', id, what: 'charge' })).toEqual(['crocSplash']);
+    expect(heard({ type: 'pike', id, what: 'snapTell' }).sort()).toEqual(['crocSplash', 'crocTell']);
+    expect(heard({ type: 'pike', id, what: 'snap' })).toEqual(['crocBite']);
+    expect(heard({ type: 'pike', id, what: 'stagger' })).toEqual(['crocSplash']);
+    // Circling and lying spent make no sound of their own.
+    expect(heard({ type: 'pike', id, what: 'circling' })).toEqual([]);
+    expect(heard({ type: 'pike', id, what: 'rest' })).toEqual([]);
+    // A pip off, on the line or from the log, and the end of it.
+    expect(heard({ type: 'boss', id, what: 'hit', how: 'reel', left: 5 })).toEqual(['strike']);
+    expect(heard({ type: 'boss', id, what: 'hit', how: 'stomp', left: 1 })).toEqual(['strike']);
+    expect(heard({ type: 'boss', id, what: 'beaten' })).toEqual(['bossBeaten']);
+  });
+});
