@@ -29,7 +29,8 @@
 #     in the guide: Yaarbro reeling, and holding up a landed fish): a few
 #     moments say where the rod is and where his palms are, and how the body
 #     leans. The arms are bent to carry the middle of each palm (`"grips"`
-#     in the guide) there, and the feet stay where they stood.
+#     in the guide) there, and the feet stay where they stood. The same keys
+#     make his Walblum launch, which begins and ends standing as he was.
 #   - Carries over a clip made on a later Meshy rig of the same character
 #     (`"retarget": true` in the guide): same bones, different rest pose.
 #
@@ -601,7 +602,9 @@ def reach(body, upper, lower, end, target, pole):
     aim(body, lower, end, start + along * far)
 
 
-MADE_FIELDS = {'hips': 3, 'left': 3, 'right': 3, 'butt': 3, 'heading': 1, 'pitch': 1, 'free': 1, 'left_off': 1, 'left_palm': 3, 'lean': 1, 'side': 1, 'twist': 1, 'nod': 1, 'turn': 1, 'shrug': 1}
+MADE_FIELDS = {'hips': 3, 'left': 3, 'right': 3, 'butt': 3, 'heading': 1, 'pitch': 1, 'free': 1, 'left_off': 1, 'left_palm': 3, 'lean': 1, 'side': 1, 'twist': 1, 'nod': 1, 'turn': 1, 'shrug': 1, 'right_palm': 3, 'elbow': 3, 'takes': 1}
+# What a number is when no key has yet given it, where that is not nothing: a made pose takes over wholly from the standing one.
+MADE_STARTS = {'takes': 1.0}
 
 
 def made_at(keys, share):
@@ -609,7 +612,7 @@ def made_at(keys, share):
     filled = []
     for key in sorted(keys, key=lambda k: k['at']):
         last = filled[-1] if filled else {}
-        filled.append({field: key.get(field, last.get(field, [0.0] * size if size > 1 else 0.0)) for field, size in MADE_FIELDS.items()} | {'at': key['at']})
+        filled.append({field: key.get(field, last.get(field, MADE_STARTS.get(field, [0.0] * size if size > 1 else 0.0))) for field, size in MADE_FIELDS.items()} | {'at': key['at']})
     before = max((k for k in filled if k['at'] <= share), key=lambda k: k['at'], default=filled[0])
     after = min((k for k in filled if k['at'] > share), key=lambda k: k['at'], default=before)
     span = after['at'] - before['at']
@@ -681,6 +684,14 @@ def made_clip(body, spec, source, grips):
     frames = max(1, round(made['seconds'] * FPS))
     up = Vector((0, 0, 1))
     poses = []
+    # A clip that is not fishing (Yaarbro launching Walblum) may say more: "takes" in a key is how far the made
+    # pose has taken over from the pose he starts in (0 to 1), so a clip can begin and end standing as he was;
+    # "elbow" in a key is the way the elbows are pushed at that moment; "keeps" names bones that stay as they
+    # are in the pose he starts in (an arm that takes no part); and "right_palm" is the way his free right palm
+    # faces, as "left_palm" is for his left.
+    standing = read_pose(armature)
+    eased_in = any('takes' in key for key in made['keys'])
+    own_elbows = any('elbow' in key for key in made['keys'])
     for frame in range(frames + 1):
         share = frame / frames
         now = made_at(made['keys'], share)
@@ -706,7 +717,8 @@ def made_clip(body, spec, source, grips):
         off = {'right': now['free'], 'left': max(now['free'], now['left_off'])}
         tip = math.radians(made.get('cradle', 0))
         cradled = {'right': Vector((-math.sin(tip), 0, math.cos(tip))), 'left': Vector((math.sin(tip), 0, math.cos(tip)))}
-        faces = {'right': cradled['right'], 'left': now['left_palm'].normalized() if now['left_palm'].length > 0.1 else cradled['left']}
+        faces = {'right': now['right_palm'].normalized() if now['right_palm'].length > 0.1 else cradled['right'], 'left': now['left_palm'].normalized() if now['left_palm'].length > 0.1 else cradled['left']}
+        elbows = list(now['elbow']) if own_elbows else made.get('elbows', [0.8, 0.5, -0.7])
         for side, out in (('right', -1), ('left', 1)):
             thigh, shin, foot = bones[side]['leg']
             reach(body, thigh, shin, foot, feet[side][0], Vector((0.2 * out, -1, 0)))
@@ -727,7 +739,7 @@ def made_clip(body, spec, source, grips):
                 point = made.get('fingers', [1, 0, 0])
                 return held.slerp(facing(palm, fingers, faces[side], Vector((out * point[0], point[1], point[2])) if tray else forearm), off[side])
 
-            place_hand(body, bones[side] | {'out': out, 'pole': made.get('elbows', [0.8, 0.5, -0.7])}, grip, on_rod[side].lerp(now[side], off[side]), turn_for)
+            place_hand(body, bones[side] | {'out': out, 'pole': elbows}, grip, on_rod[side].lerp(now[side], off[side]), turn_for)
             if side == 'right':
                 # The rod lies on his right palm, so its middle is its own thickness off the skin; his left palm comes up under it.
                 hand = armature.matrix_world @ armature.pose.bones[bones[side]['arm'][2]].matrix
@@ -735,7 +747,12 @@ def made_clip(body, spec, source, grips):
                 on_rod['left'] = middle + along * made.get('apart', 0.4) - under * thick
         lean(body, bones['head'], (1, 0, 0), now['nod'])
         lean(body, bones['head'], (0, 0, 1), now['turn'])
-        poses.append(read_pose(armature))
+        pose = read_pose(armature)
+        for name in made.get('keeps', []):
+            pose[name] = standing[name].copy()
+        if eased_in:
+            pose = blend_poses(standing, pose, min(1.0, max(0.0, now['takes'])))
+        poses.append(pose)
     armature.animation_data.action = None
     say(f"clip {spec['name']}: {frames / FPS:.2f} s, made here from {len(made['keys'])} keys")
     return write_clip(body, spec['name'], poses)

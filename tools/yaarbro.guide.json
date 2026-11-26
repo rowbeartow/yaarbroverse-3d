@@ -4,7 +4,7 @@
   "body": "Meshy_AI_Animation_Idle_11_withSkin.glb",
   "hips": "Hips",
 
-  "clips_about": "stay: the hips are held over one spot. airborne: a body in the air is brought down to stand on the ground. lift: a body pushed into the ground is lifted out. hands_on_ground: these arms are raised until their hands are not below the ground. parts: two pieces of the clip joined together. made: the clip is made by tools/prepare-rigged.py itself (Meshy has no fishing): keys are moments in the clip (at: a share of it, 0 to 1). butt is where his right palm holds the rod, heading and pitch are which way the rod points (degrees to his left of straight ahead, and up), and apart is how far along the rod his left palm is. free is how far both hands have let go of the rod (0 to 1) and left_off how far his left alone has; left and right are where his free palms are, turned up with the fingers pointing out to each hand's own side, as under a tray, unless left_palm says which way his left faces. hips is how far the hips have moved; lean is degrees the back leans forward (less than nothing for back), side to one side, twist the hips' turn, nod the head tipping down, turn the head turning, shrug the shoulders rising. A key that leaves a number out keeps the one before. elbows is the way the elbows are pushed (out to the side, behind, up), out, back and down unless it says. cradle tips his upturned palms toward each other by so many degrees (less than nothing tips them apart, which drops his wrists when his fingers point outward). waves come and go on top, so many turns a clip: a pull goes there and back, a swing one way then the other.",
+  "clips_about": "stay: the hips are held over one spot. airborne: a body in the air is brought down to stand on the ground. lift: a body pushed into the ground is lifted out. hands_on_ground: these arms are raised until their hands are not below the ground. parts: two pieces of the clip joined together. made: the clip is made by tools/prepare-rigged.py itself (Meshy has no fishing): keys are moments in the clip (at: a share of it, 0 to 1). butt is where his right palm holds the rod, heading and pitch are which way the rod points (degrees to his left of straight ahead, and up), and apart is how far along the rod his left palm is. free is how far both hands have let go of the rod (0 to 1) and left_off how far his left alone has; left and right are where his free palms are, turned up with the fingers pointing out to each hand's own side, as under a tray, unless left_palm says which way his left faces. hips is how far the hips have moved; lean is degrees the back leans forward (less than nothing for back), side to one side, twist the hips' turn, nod the head tipping down, turn the head turning, shrug the shoulders rising. A key that leaves a number out keeps the one before. elbows is the way the elbows are pushed (out to the side, behind, up), out, back and down unless it says. cradle tips his upturned palms toward each other by so many degrees (less than nothing tips them apart, which drops his wrists when his fingers point outward). waves come and go on top, so many turns a clip: a pull goes there and back, a swing one way then the other. walblum_launch is made the same way and is not fishing (free is 1 throughout, so right is where his right palm is): takes is how far the made pose has taken over from the pose he stands in (0 to 1), so the clip begins and ends in idle; right_palm is the way his right palm faces; elbow is the way the elbows are pushed at that moment; keeps names the bones that stay as they are while he stands (his left arm). He lifts his right elbow high and out to the side with his hand in front of his chest, so his armpit opens forward (lifted by 0.12 s), holds, snaps the arm down at 0.25 s as Walblum shoots out, and is back in idle by 0.6 s.",
   "clips": [
     { "name": "idle", "file": "Meshy_AI_Animation_Idle_11_withSkin.glb", "loop": true },
     { "name": "walk", "file": "Meshy_AI_Animation_Walking_withSkin.glb", "loop": true },
@@ -64,6 +64,21 @@
         { "at": 0.88, "hips": [0, 0, 0.02], "lean": -2, "nod": -8, "shrug": 16, "left": [0.28, -0.47, 3.08], "right": [-0.28, -0.47, 3.08] },
         { "at": 1, "hips": [0, 0, 0], "lean": -2, "nod": -8, "left": [0.28, -0.47, 3.06], "right": [-0.28, -0.47, 3.06] }
       ]
+    } },
+    { "name": "walblum_launch", "file": "Meshy_AI_Animation_Idle_11_withSkin.glb", "made": {
+      "seconds": 0.6,
+      "keeps": ["LeftShoulder", "LeftArm", "LeftForeArm", "LeftHand"],
+      "bones": { "back": "Spine02", "head": "Head",
+        "left": { "shoulder": "LeftShoulder", "arm": ["LeftArm", "LeftForeArm", "LeftHand"], "leg": ["LeftUpLeg", "LeftLeg", "LeftFoot"] },
+        "right": { "shoulder": "RightShoulder", "arm": ["RightArm", "RightForeArm", "RightHand"], "leg": ["RightUpLeg", "RightLeg", "RightFoot"] } },
+      "keys": [
+        { "at": 0, "takes": 0, "free": 1, "right": [-0.34, -0.42, 1.94], "right_palm": [0, 0, -1], "elbow": [1, 0.1, 0.55] },
+        { "at": 0.2, "takes": 1, "hips": [0, -0.03, -0.03], "twist": 12, "lean": 5, "shrug": 10, "nod": -3 },
+        { "at": 0.37, "hips": [0, -0.04, -0.03], "twist": 14, "lean": 6, "shrug": 14 },
+        { "at": 0.45, "hips": [0, -0.07, -0.07], "twist": 2, "lean": 11, "shrug": -4, "nod": 4, "right": [-0.74, -0.14, 1.08], "right_palm": [1, 0, 0], "elbow": [0.8, 0.5, -0.7] },
+        { "at": 0.62, "hips": [0, -0.04, -0.04], "twist": 0, "lean": 6, "shrug": 0, "nod": 0 },
+        { "at": 1, "takes": 0, "hips": [0, 0, 0], "lean": 0 }
+      ]
     } }
   ],
 
@@ -72,6 +87,9 @@
     "right": { "bone": "RightHand", "at": [-5.89, 28.82, 2.74], "palm": [-0.844, 0.161, -0.511], "fingers": [0.444, 0.745, -0.498], "rod": [0.3, -0.647, -0.7], "reel": [-0.283, 0.641, -0.714] },
     "left": { "bone": "LeftHand", "at": [7.49, 27.89, 2.62], "palm": [0.87, 0.182, -0.458], "fingers": [-0.403, 0.797, -0.45] }
   },
+
+  "armpit_about": "Where Walblum leaves from when Yaarbro launches him: a point on the skin under his right arm, in the Spine bone's own space as the model comes (the same units as the grips). It was measured on the skin in the held pose of walblum_launch (0.2 s in), where it faces forward under his lifted elbow; while he stands it is 5 cm inside his closed armpit.",
+  "armpit": { "bone": "Spine", "at": [-44.16, 1.12, 12.96] },
 
   "cleanup_about": "Each part fixes something seen to be wrong in a pose test. belt: the belt and buckle stay with the hips. beard: the lower beard stays on the chest, and the cloth in front of the chest stays off the head. shading: smooth, with edges kept sharp on the buckle and the boot soles, and at any fold sharper than smooth_up_to degrees.",
   "cleanup": {
